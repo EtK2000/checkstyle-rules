@@ -20,26 +20,9 @@ public class ThreadAnnotationCheck extends AbstractCheck {
 	private static final String MSG_KEY = "thread.annotation.missing";
 
 	@CheckReturnValue
-	@Nonnull
-	private static String annotationName(@Nonnull DetailAST annotation) {
-		final var ident = annotation.findFirstToken(TokenTypes.IDENT);
-		if (ident != null)
-			return ident.getText();
-
-		final var dot = annotation.findFirstToken(TokenTypes.DOT);
-		if (dot != null) {
-			var last = dot.getFirstChild();
-			while (last.getNextSibling() != null)
-				last = last.getNextSibling();
-			return last.getText();
-		}
-		return "";
-	}
-
-	@CheckReturnValue
 	private static boolean hasThreadAnnotation(@Nonnull DetailAST modifiers) {
 		for (var child = modifiers.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.ANNOTATION && THREAD_ANNOTATIONS.contains(annotationName(child)))
+			if (child.getType() == TokenTypes.ANNOTATION && THREAD_ANNOTATIONS.contains(AstUtil.annotationName(child)))
 				return true;
 		}
 		return false;

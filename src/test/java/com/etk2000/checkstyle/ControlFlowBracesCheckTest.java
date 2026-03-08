@@ -22,7 +22,7 @@ public class ControlFlowBracesCheckTest {
 		assertEquals(7, violations.get(2).getLine());
 		assertEquals(8, violations.get(3).getLine());
 		assertEquals(14, violations.get(4).getLine());
-		for (final var v : violations)
+		for (var v : violations)
 			assertTrue(v.getMessage().contains("on its own line"));
 	}
 
@@ -36,7 +36,7 @@ public class ControlFlowBracesCheckTest {
 		assertEquals(17, violations.get(3).getLine());
 		assertEquals(21, violations.get(4).getLine());
 		assertEquals(24, violations.get(5).getLine());
-		for (final var v : violations)
+		for (var v : violations)
 			assertTrue(v.getMessage().contains("unnecessary braces"));
 	}
 
@@ -49,7 +49,7 @@ public class ControlFlowBracesCheckTest {
 		assertEquals(13, violations.get(2).getLine());
 		assertEquals(17, violations.get(3).getLine());
 		assertEquals(26, violations.get(4).getLine());
-		for (final var v : violations)
+		for (var v : violations)
 			assertTrue(v.getMessage().contains("add braces"));
 	}
 

@@ -19,7 +19,7 @@ public class MultilineCallFormattingCheckTest {
 		assertEquals(2, violations.size());
 		assertEquals(5, violations.get(0).getLine());
 		assertEquals(10, violations.get(1).getLine());
-		for (final var v : violations)
+		for (var v : violations)
 			assertTrue(v.getMessage().contains("opening"));
 	}
 
@@ -29,7 +29,7 @@ public class MultilineCallFormattingCheckTest {
 		assertEquals(2, violations.size());
 		assertEquals(8, violations.get(0).getLine());
 		assertEquals(11, violations.get(1).getLine());
-		for (final var v : violations)
+		for (var v : violations)
 			assertTrue(v.getMessage().contains("closing"));
 	}
 
@@ -155,7 +155,7 @@ public class MultilineCallFormattingCheckTest {
 		// definition shared-line violations
 		assertEquals(19, violations.get(2).getLine());
 		assertEquals(26, violations.get(3).getLine());
-		for (final var v : violations)
+		for (var v : violations)
 			assertTrue(v.getMessage().contains("own line"));
 	}
 

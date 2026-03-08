@@ -32,28 +32,28 @@ class BaseCheckTest {
 		final var violations = new ArrayList<AuditEvent>();
 		checker.addListener(new AuditListener() {
 			@Override
-			public void addError(AuditEvent event) {
+			public void addError(@Nonnull AuditEvent event) {
 				violations.add(event);
 			}
 
 			@Override
-			public void addException(AuditEvent event, Throwable throwable) {
+			public void addException(@Nonnull AuditEvent event, @Nonnull Throwable throwable) {
 			}
 
 			@Override
-			public void auditFinished(AuditEvent event) {
+			public void auditFinished(@Nonnull AuditEvent event) {
 			}
 
 			@Override
-			public void auditStarted(AuditEvent event) {
+			public void auditStarted(@Nonnull AuditEvent event) {
 			}
 
 			@Override
-			public void fileFinished(AuditEvent event) {
+			public void fileFinished(@Nonnull AuditEvent event) {
 			}
 
 			@Override
-			public void fileStarted(AuditEvent event) {
+			public void fileStarted(@Nonnull AuditEvent event) {
 			}
 		});
 

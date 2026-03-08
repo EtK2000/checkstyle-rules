@@ -26,7 +26,7 @@ public class NoCaseBracesCheckTest {
 		assertEquals(2, violations.size());
 		assertEquals(7, violations.get(0).getLine());
 		assertEquals(12, violations.get(1).getLine());
-		for (final var v : violations)
+		for (var v : violations)
 			assertTrue(v.getMessage().contains("variable"));
 	}
 }

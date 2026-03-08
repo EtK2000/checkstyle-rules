@@ -19,7 +19,7 @@ public class NoBlankLineBetweenSingleCasesCheck extends AbstractCheck {
 		// a case is "single-line" if the case label + body spans exactly 2 lines
 		// (one for the case label, one for the return/throw/yield statement)
 		final var startLine = caseGroup.getLineNo();
-		final var endLine = lastLine(caseGroup);
+		final var endLine = AstUtil.lastLine(caseGroup);
 		if (endLine - startLine != 1)
 			return false;
 
@@ -57,17 +57,6 @@ public class NoBlankLineBetweenSingleCasesCheck extends AbstractCheck {
 		return false;
 	}
 
-	@CheckReturnValue
-	private static int lastLine(@Nonnull DetailAST ast) {
-		var max = ast.getLineNo();
-		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
-			final var childMax = lastLine(child);
-			if (childMax > max)
-				max = childMax;
-		}
-		return max;
-	}
-
 	@Nonnull
 	@Override
 	public int[] getAcceptableTokens() {
@@ -98,7 +87,7 @@ public class NoBlankLineBetweenSingleCasesCheck extends AbstractCheck {
 
 			if (isSingleLineCase(child)) {
 				if (prevSingleCase != null) {
-					final var prevEnd = lastLine(prevSingleCase);
+					final var prevEnd = AstUtil.lastLine(prevSingleCase);
 					final var currStart = child.getLineNo();
 					if (currStart - prevEnd > 1)
 						log(child, MSG_KEY);

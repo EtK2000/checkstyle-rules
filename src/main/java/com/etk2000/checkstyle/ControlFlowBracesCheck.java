@@ -25,7 +25,7 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 	private static int bodyLineCount(@Nonnull DetailAST body) {
 		if (body.getType() == TokenTypes.SLIST)
 			return bodyLineCountOfBlock(body);
-		return lastLine(body) - body.getLineNo() + 1;
+		return AstUtil.lastLine(body) - body.getLineNo() + 1;
 	}
 
 	@CheckReturnValue
@@ -38,18 +38,12 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	private static DetailAST getBody(@Nonnull DetailAST ast) {
-		switch (ast.getType()) {
-			case TokenTypes.LITERAL_DO:
-				return ast.getFirstChild();
-
-			case TokenTypes.LITERAL_FOR:
-			case TokenTypes.LITERAL_IF:
-			case TokenTypes.LITERAL_WHILE:
-				return ast.findFirstToken(TokenTypes.RPAREN).getNextSibling();
-
-			default:
-				throw new IllegalArgumentException("Unexpected token: " + ast);
-		}
+		return switch (ast.getType()) {
+			case TokenTypes.LITERAL_DO -> ast.getFirstChild();
+			case TokenTypes.LITERAL_FOR, TokenTypes.LITERAL_IF, TokenTypes.LITERAL_WHILE ->
+					ast.findFirstToken(TokenTypes.RPAREN).getNextSibling();
+			default -> throw new IllegalArgumentException("Unexpected token: " + ast);
+		};
 	}
 
 	@CheckReturnValue
@@ -57,17 +51,6 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 		if (body.getType() == TokenTypes.SLIST)
 			return false;
 		return body.getLineNo() == keyword.getLineNo();
-	}
-
-	@CheckReturnValue
-	private static int lastLine(@Nonnull DetailAST ast) {
-		var last = ast.getLineNo();
-		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
-			final var childLast = lastLine(child);
-			if (childLast > last)
-				last = childLast;
-		}
-		return last;
 	}
 
 	private void checkBody(@Nonnull DetailAST keyword, @Nonnull DetailAST body) {

@@ -42,15 +42,15 @@ import javax.annotation.Nullable;
  * a parameter typed as {@code Context}, or calling directly on one of those methods.
  */
 public class MultilineCallFormattingCheck extends AbstractCheck {
-	// methods whose return value is always a Context (used for getString tracking)
-	private static final Set<String> CONTEXT_RETURNING_METHODS = Set.of(
-			"getActivity", "getContext", "requireActivity", "requireContext"
-	);
-
 	// method names that qualify as inline block args; value = allowed receiver class names (empty = any receiver)
 	private static final Map<String, Set<String>> SPECIAL_INLINE_METHODS = Map.of(
 			"asList", Set.of("Arrays"),
 			"of", Set.of("List", "Map")
+	);
+
+	// methods whose return value is always a Context (used for getString tracking)
+	private static final Set<String> CONTEXT_RETURNING_METHODS = Set.of(
+			"getActivity", "getContext", "requireActivity", "requireContext"
 	);
 
 	private static final String MSG_CLOSING = "multiline.args.on.closing.paren";
@@ -92,30 +92,17 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 	@CheckReturnValue
 	@Nullable
 	private static DetailAST findFirstArg(@Nonnull DetailAST ast) {
-		switch (ast.getType()) {
-			case TokenTypes.METHOD_CALL: {
+		return switch (ast.getType()) {
+			case TokenTypes.METHOD_CALL, TokenTypes.LITERAL_NEW, TokenTypes.SUPER_CTOR_CALL -> {
 				final var elist = ast.findFirstToken(TokenTypes.ELIST);
-				return elist == null ? null : elist.getFirstChild();
+				yield elist == null ? null : elist.getFirstChild();
 			}
-
-			case TokenTypes.CTOR_DEF, TokenTypes.METHOD_DEF: {
+			case TokenTypes.CTOR_DEF, TokenTypes.METHOD_DEF -> {
 				final var params = ast.findFirstToken(TokenTypes.PARAMETERS);
-				return params == null ? null : params.findFirstToken(TokenTypes.PARAMETER_DEF);
+				yield params == null ? null : params.findFirstToken(TokenTypes.PARAMETER_DEF);
 			}
-
-			case TokenTypes.LITERAL_NEW: {
-				final var elist = ast.findFirstToken(TokenTypes.ELIST);
-				return elist == null ? null : elist.getFirstChild();
-			}
-
-			case TokenTypes.SUPER_CTOR_CALL: {
-				final var elist = ast.findFirstToken(TokenTypes.ELIST);
-				return elist == null ? null : elist.getFirstChild();
-			}
-
-			default:
-				return null;
-		}
+			default -> null;
+		};
 	}
 
 	@CheckReturnValue
@@ -139,6 +126,17 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 			default:
 				return null;
 		}
+	}
+
+	@CheckReturnValue
+	private static int firstLine(@Nonnull DetailAST ast) {
+		var first = ast.getLineNo();
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
+			final var childFirst = firstLine(child);
+			if (childFirst < first)
+				first = childFirst;
+		}
+		return first;
 	}
 
 	@CheckReturnValue
@@ -173,13 +171,6 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
-	private static boolean isDirectBracelessLambda(@Nonnull DetailAST ast) {
-		final var node = ast.getType() == TokenTypes.EXPR ? ast.getFirstChild() : ast;
-		return node != null && node.getType() == TokenTypes.LAMBDA
-				&& node.findFirstToken(TokenTypes.SLIST) == null;
-	}
-
-	@CheckReturnValue
 	private static boolean isContextType(@Nonnull DetailAST type) {
 		// simple: Context
 		final var ident = type.findFirstToken(TokenTypes.IDENT);
@@ -189,13 +180,19 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 		// fully qualified: android.content.Context (DOT tree, last IDENT is "Context")
 		final var dot = type.findFirstToken(TokenTypes.DOT);
 		if (dot != null) {
-			final var lastIdent = dot.findFirstToken(TokenTypes.IDENT);
 			for (var child = dot.getFirstChild(); child != null; child = child.getNextSibling()) {
 				if (child.getType() == TokenTypes.IDENT && "Context".equals(child.getText()) && child.getNextSibling() == null)
 					return true;
 			}
 		}
 		return false;
+	}
+
+	@CheckReturnValue
+	private static boolean isDirectBracelessLambda(@Nonnull DetailAST ast) {
+		final var node = ast.getType() == TokenTypes.EXPR ? ast.getFirstChild() : ast;
+		return node != null && node.getType() == TokenTypes.LAMBDA
+				&& node.findFirstToken(TokenTypes.SLIST) == null;
 	}
 
 	@CheckReturnValue
@@ -321,28 +318,6 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
-	private static int firstLine(@Nonnull DetailAST ast) {
-		var first = ast.getLineNo();
-		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
-			final var childFirst = firstLine(child);
-			if (childFirst < first)
-				first = childFirst;
-		}
-		return first;
-	}
-
-	@CheckReturnValue
-	private static int lastLine(@Nonnull DetailAST ast) {
-		var last = ast.getLineNo();
-		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
-			final var childLast = lastLine(child);
-			if (childLast > last)
-				last = childLast;
-		}
-		return last;
-	}
-
-	@CheckReturnValue
 	@Nullable
 	private static DetailAST lastChildOfType(@Nonnull DetailAST parent, int type) {
 		DetailAST last = null;
@@ -388,7 +363,7 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 		if (argList == null)
 			return;
 
-		final boolean isParams = argList.getType() == TokenTypes.PARAMETERS;
+		final var isParams = argList.getType() == TokenTypes.PARAMETERS;
 		DetailAST prev = null;
 		for (var child = argList.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (isParams) {
@@ -398,7 +373,7 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 			else if (child.getType() == TokenTypes.COMMA)
 				continue;
 
-			if (prev != null && child.getLineNo() <= lastLine(prev))
+			if (prev != null && child.getLineNo() <= AstUtil.lastLine(prev))
 				log(child, MSG_SHARED_LINE);
 			prev = child;
 		}
@@ -613,21 +588,21 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 				log(openToken, MSG_TERNARY_NOT_ON_OPENING);
 
 			// check ? and : positioning when ternary body spans multiple lines
-			if (condition != null && question != null) {
+			if (condition != null) {
 				final var colon = question.findFirstToken(TokenTypes.COLON);
-				if (question.getLineNo() != lastLine(condition)
+				if (question.getLineNo() != AstUtil.lastLine(condition)
 						|| (colon != null && colon.getLineNo() != question.getLineNo())) {
-					if (question.getLineNo() != lastLine(condition) + 1)
+					if (question.getLineNo() != AstUtil.lastLine(condition) + 1)
 						log(question, MSG_TERNARY_QUESTION_LINE);
 					final var trueExpr = condition.getNextSibling();
-					if (colon != null && trueExpr != null && colon.getLineNo() != lastLine(trueExpr) + 1)
+					if (colon != null && trueExpr != null && colon.getLineNo() != AstUtil.lastLine(trueExpr) + 1)
 						log(colon, MSG_TERNARY_COLON_LINE);
 
 					// multiline ternary: closing paren on its own line
-					if (ternaryArg != null && lastLine(ternaryArg) == closeLine)
+					if (ternaryArg != null && AstUtil.lastLine(ternaryArg) == closeLine)
 						log(rparen, MSG_CLOSING);
 				}
-				else if (ternaryArg != null && lastLine(ternaryArg) != closeLine) {
+				else if (ternaryArg != null && AstUtil.lastLine(ternaryArg) != closeLine) {
 					// single-line ternary: closing paren on the same line
 					log(rparen, MSG_TERNARY_NOT_ON_CLOSING);
 				}
@@ -642,14 +617,13 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 
 			final var lastArg = findLastArg(ast);
 			if (lastArg != null) {
-				if ((isDirectBracelessLambda(lastArg) || containsChainedConstructor(lastArg)) && lastLine(lastArg) != openLine) {
+				if ((isDirectBracelessLambda(lastArg) || containsChainedConstructor(lastArg)) && AstUtil.lastLine(lastArg) != openLine) {
 					// braceless lambda spanning past opening line: closing paren on its own line
-					if (lastLine(lastArg) == closeLine)
+					if (AstUtil.lastLine(lastArg) == closeLine)
 						log(rparen, MSG_CLOSING);
 				}
-				else if (lastLine(lastArg) != closeLine) {
+				else if (AstUtil.lastLine(lastArg) != closeLine)
 					log(rparen, MSG_LAMBDA_NOT_ON_CLOSING);
-				}
 			}
 			return;
 		}
@@ -658,7 +632,7 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 			log(openToken, MSG_OPENING);
 
 		final var lastArg = findLastArg(ast);
-		if (lastArg != null && lastLine(lastArg) == closeLine)
+		if (lastArg != null && AstUtil.lastLine(lastArg) == closeLine)
 			log(rparen, MSG_CLOSING);
 
 		if (ast.getType() != TokenTypes.METHOD_CALL || !isStaticSpecialInlineMethodCall(ast))

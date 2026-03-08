@@ -1,5 +1,6 @@
 plugins {
     id 'java-gradle-plugin'
+    id 'checkstyle'
     id 'com.gradle.plugin-publish' version '1.3.1'
 }
 
@@ -29,10 +30,30 @@ gradlePlugin {
     }
 }
 
+checkstyle {
+    toolVersion = checkstyleVersion
+    configFile = file('src/main/resources/com/etk2000/checkstyle/checkstyle.xml')
+    configDirectory = file('config/checkstyle')
+}
+
+processResources {
+    filesMatching('**/plugin.properties') {
+        expand project.properties
+    }
+}
+
 dependencies {
-    compileOnly 'com.puppycrawl.tools:checkstyle:10.22.0'
+    checkstyle files(sourceSets.main.output.classesDirs)
+    checkstyle "com.puppycrawl.tools:checkstyle:${checkstyleVersion}"
+    checkstyle 'com.google.code.findbugs:jsr305:3.0.2'
+
+    compileOnly "com.puppycrawl.tools:checkstyle:${checkstyleVersion}"
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
-    testImplementation 'com.puppycrawl.tools:checkstyle:10.22.0'
+    testImplementation "com.puppycrawl.tools:checkstyle:${checkstyleVersion}"
     testImplementation 'junit:junit:4.13.2'
+}
+
+tasks.withType(Checkstyle).configureEach {
+    dependsOn classes
 }
