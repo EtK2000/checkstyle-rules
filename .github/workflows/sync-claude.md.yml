@@ -1,0 +1,19 @@
+name: Sync CLAUDE.md
+on:
+  schedule:
+    - cron: '0 0 * * 1-4'   # At 00:00 on every day-of-week from Monday through Thursday
+  workflow_dispatch:        # Manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: EtK2000/CLAUDE.md-sync@v1
+        with:
+          source-repo: EtK2000/CLAUDE.md
+          source-path: CLAUDE-java.md
