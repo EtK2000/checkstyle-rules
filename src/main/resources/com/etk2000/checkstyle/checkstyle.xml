@@ -1,0 +1,145 @@
+<?xml version="1.0"?><!DOCTYPE module PUBLIC
+	"-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+	"https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<module name="Checker">
+	<property name="charset" value="UTF-8" />
+	<property name="severity" value="error" />
+
+	<module name="SuppressionFilter">
+		<property name="file" value="${config_loc}/suppressions.xml" />
+		<property name="optional" value="true" />
+	</module>
+
+	<!-- TABs for indentation (flag lines starting with spaces, excluding Javadoc/block comment continuation).
+		 Regex: `^ ` matches a line starting with a space. `(?!\*)` excludes Javadoc/block comment
+		 continuation lines (which start with ` *`). `(?!@)` excludes annotation lines that
+		 Checkstyle itself indents with spaces in error messages. -->
+	<module name="RegexpSingleline">
+		<property name="id" value="NoSpaceIndent" />
+		<property name="format" value="^ (?!\*)(?!@)" />
+		<property name="message" value="Use TABs for indentation, not spaces." />
+	</module>
+
+	<!-- No blank line after class/interface/enum/record opening brace -->
+	<module name="RegexpMultiline">
+		<property name="id" value="NoBlankLineAfterClassBrace" />
+		<property name="format" value="(class|interface|enum|record)\s+\w[^{]*\{\s*\n\s*\n" />
+		<property name="message" value="No blank line at start of a class/interface/enum/record." />
+	</module>
+
+	<!-- No blank line before closing brace -->
+	<module name="RegexpMultiline">
+		<property name="id" value="NoBlankLineBeforeClosingBrace" />
+		<property name="format" value="\n[^\S\n]*\n[^\S\n]*\}" />
+		<property name="message" value="No blank line before closing brace." />
+	</module>
+
+	<!-- No double blank lines -->
+	<module name="RegexpMultiline">
+		<property name="id" value="NoDoubleBlankLines" />
+		<property name="format" value="\n\s*\n\s*\n" />
+		<property name="message" value="No double blank lines." />
+	</module>
+
+	<!-- Blank line after break; before next case/default.
+		 Regex: `break\s*;` matches a break statement. `\n` then a new line immediately follows
+		 (no blank line). `[^\S\n]*` matches horizontal whitespace only — `[^\S]` is "not
+		 non-whitespace" (i.e. whitespace), and adding `\n` to the exclusion makes it "whitespace
+		 except newline" (spaces/tabs). Then `case ` or `default` follows directly. -->
+	<module name="RegexpMultiline">
+		<property name="id" value="BlankLineAfterBreak" />
+		<property name="format" value="break\s*;\n[^\S\n]*(case |default[\s:])" />
+		<property name="message"
+			value="Add a blank line after break; before the next case/default." />
+	</module>
+
+	<!-- Method parameters never final (exclude enhanced for-each which contains " : ").
+		 Regex: `^(?!.*\s:\s)` negative lookahead excludes lines with ` : ` (for-each loops like
+		 `for (final var x : list)`). `(\(final |,\s*final )` matches `final` after an opening
+		 paren or comma (i.e. a parameter position). `\S` ensures `final` is followed by a type
+		 name, not just the word "final" in a comment or string. -->
+	<module name="RegexpSingleline">
+		<property name="id" value="NoFinalParameters" />
+		<property name="format" value="^(?!.*\s:\s).*(\(final |,\s*final )\S" />
+		<property name="message" value="Method parameters must not be final." />
+	</module>
+
+	<!-- No trailing whitespace (also ensures blank lines are completely empty) -->
+	<module name="RegexpSingleline">
+		<property name="id" value="NoTrailingWhitespace" />
+		<property name="format" value="[ \t]+$" />
+		<property name="message" value="No trailing whitespace." />
+	</module>
+
+	<!-- No trailing newline at end of file -->
+	<module name="RegexpMultiline">
+		<property name="id" value="NoTrailingNewline" />
+		<property name="format" value="\n\z" />
+		<property name="message" value="File must not end with a trailing newline." />
+	</module>
+
+	<module name="TreeWalker">
+		<!-- Custom: Annotations must be sorted alphabetically -->
+		<module name="com.etk2000.checkstyle.AnnotationAlphabeticalOrderCheck" />
+
+		<!-- Custom: Class structure must follow defined section order -->
+		<module name="com.etk2000.checkstyle.ClassStructureOrderCheck" />
+
+		<!-- Custom: Control flow brace rules -->
+		<module name="com.etk2000.checkstyle.ControlFlowBracesCheck" />
+
+		<!-- Custom: Multiline call/signature formatting -->
+		<module name="com.etk2000.checkstyle.MultilineCallFormattingCheck" />
+
+		<!-- Custom: No trailing comma in array initializers -->
+		<module name="com.etk2000.checkstyle.NoArrayTrailingCommaCheck" />
+
+		<!-- Custom: No blank line between consecutive single-line switch cases -->
+		<module name="com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck" />
+
+		<!-- Custom: No unnecessary braces in case/default blocks -->
+		<module name="com.etk2000.checkstyle.NoCaseBracesCheck" />
+
+		<!-- Custom: No unnecessary this. usage -->
+		<module name="com.etk2000.checkstyle.NoUnnecessaryThisCheck" />
+
+		<!-- Custom: Overloaded methods ordered by ascending parameter count -->
+		<module name="com.etk2000.checkstyle.OverloadMethodOrderCheck" />
+
+		<!-- Custom: Prefer prefix increment/decrement over postfix -->
+		<module name="com.etk2000.checkstyle.PreferPrefixIncrementCheck" />
+
+		<!-- Custom: All types must have a thread annotation -->
+		<module name="com.etk2000.checkstyle.ThreadAnnotationCheck" />
+
+		<!-- No unused imports -->
+		<module name="UnusedImports" />
+
+		<!-- Blank line between methods/constructors/classes -->
+		<module name="EmptyLineSeparator">
+			<property name="allowNoEmptyLineBetweenFields" value="true" />
+			<property name="allowMultipleEmptyLines" value="false" />
+			<property name="allowMultipleEmptyLinesInsideClassMembers" value="false" />
+		</module>
+
+		<!-- else/catch/finally on own line -->
+		<module name="RightCurly">
+			<property name="option" value="alone" />
+			<property name="tokens" value="LITERAL_ELSE,LITERAL_CATCH,LITERAL_FINALLY" />
+		</module>
+
+		<!-- No trailing comma after last enum value -->
+		<module name="NoEnumTrailingComma" />
+
+		<!-- Local variables final wherever possible (except for-each iteration variables) -->
+		<module name="FinalLocalVariable">
+			<property name="validateEnhancedForLoopVariable" value="false" />
+		</module>
+
+		<!-- Annotations on class/method/constructor each on own line -->
+		<module name="AnnotationLocation">
+			<property name="allowSamelineSingleParameterlessAnnotation" value="false" />
+		</module>
+	</module>
+</module>
