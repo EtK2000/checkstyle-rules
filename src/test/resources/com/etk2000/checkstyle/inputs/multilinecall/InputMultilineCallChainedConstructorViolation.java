@@ -4,7 +4,7 @@ import org.json.JSONObject;
 
 class InputMultilineCallChainedConstructorViolation {
 	void chainedConstructorNotOnOpeningLine() {
-		method( // violation line 7 — chained constructor not on opening paren line
+		method( // violation: chained constructor not on opening paren line
 				new JSONObject()
 						.put("key", "value")
 						.put("key2", "value2")
@@ -14,7 +14,7 @@ class InputMultilineCallChainedConstructorViolation {
 	void chainedConstructorClosingOnChainLine() {
 		method(new JSONObject()
 				.put("key", "value")
-				.put("key2", "value2")); // violation line 17 — closing paren on chain end line
+				.put("key2", "value2")); // violation: closing paren on chain end line
 	}
 
 	void method(Object a) {

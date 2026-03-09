@@ -2,7 +2,7 @@ package com.etk2000.checkstyle.inputs.multilinecall;
 
 class InputMultilineCallTernaryPositionViolation {
 	void questionOnConditionLine() {
-		method(true ? // violation line 5 — ? on condition line
+		method(true ? // violation: ? on condition line
 				"a"
 				: "b"
 		);
@@ -11,14 +11,14 @@ class InputMultilineCallTernaryPositionViolation {
 	void questionTwoLinesAfterCondition() {
 		method(true
 
-				? "a" // violation line 14 — ? not immediately after condition
+				? "a" // violation: ? not immediately after condition
 				: "b"
 		);
 	}
 
 	void colonOnQuestionLine() {
 		method(true
-				? "a" : "b" // violation line 21 — : on ? line
+				? "a" : "b" // violation: : on ? line
 		);
 	}
 
@@ -26,7 +26,7 @@ class InputMultilineCallTernaryPositionViolation {
 		method(true
 				? "a"
 
-				: "b" // violation line 29 — : not immediately after true branch
+				: "b" // violation: : not immediately after true branch
 		);
 	}
 

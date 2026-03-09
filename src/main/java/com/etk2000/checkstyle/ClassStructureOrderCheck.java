@@ -33,9 +33,9 @@ public class ClassStructureOrderCheck extends AbstractCheck {
 		if (ident != null)
 			return ident.getText();
 		return switch (ast.getType()) {
-			case TokenTypes.STATIC_INIT -> "<static init>";
-			case TokenTypes.INSTANCE_INIT -> "<instance init>";
 			case TokenTypes.COMPACT_CTOR_DEF -> "<compact ctor>";
+			case TokenTypes.INSTANCE_INIT -> "<instance init>";
+			case TokenTypes.STATIC_INIT -> "<static init>";
 			default -> "<unknown>";
 		};
 	}
@@ -51,10 +51,10 @@ public class ClassStructureOrderCheck extends AbstractCheck {
 		return switch (ast.getType()) {
 			case TokenTypes.CLASS_DEF, TokenTypes.ENUM_DEF, TokenTypes.INTERFACE_DEF,
 			     TokenTypes.RECORD_DEF -> 1;
-			case TokenTypes.VARIABLE_DEF -> hasModifier(ast, TokenTypes.LITERAL_STATIC) ? 2 : 5;
-			case TokenTypes.STATIC_INIT -> 3;
+			case TokenTypes.COMPACT_CTOR_DEF, TokenTypes.CTOR_DEF, TokenTypes.INSTANCE_INIT -> 6;
 			case TokenTypes.METHOD_DEF -> hasModifier(ast, TokenTypes.LITERAL_STATIC) ? 4 : 7;
-			case TokenTypes.CTOR_DEF, TokenTypes.COMPACT_CTOR_DEF, TokenTypes.INSTANCE_INIT -> 6;
+			case TokenTypes.STATIC_INIT -> 3;
+			case TokenTypes.VARIABLE_DEF -> hasModifier(ast, TokenTypes.LITERAL_STATIC) ? 2 : 5;
 			default -> 0;
 		};
 	}

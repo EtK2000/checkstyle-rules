@@ -12,7 +12,20 @@ import javax.annotation.Nonnull;
  * (case + one statement like return/throw/yield).
  */
 public class NoBlankLineBetweenSingleCasesCheck extends AbstractCheck {
+	private static final String MSG_BRACED = "no.blank.line.after.braced.case";
 	private static final String MSG_KEY = "no.blank.line.between.single.cases";
+
+	@CheckReturnValue
+	private static boolean isBracedCase(@Nonnull DetailAST caseGroup) {
+		final var slist = caseGroup.findFirstToken(TokenTypes.SLIST);
+		if (slist == null)
+			return false;
+		for (var child = slist.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.SLIST)
+				return true;
+		}
+		return false;
+	}
 
 	@CheckReturnValue
 	private static boolean isSingleLineCase(@Nonnull DetailAST caseGroup) {
@@ -27,15 +40,14 @@ public class NoBlankLineBetweenSingleCasesCheck extends AbstractCheck {
 		if (slist == null) {
 			for (var child = caseGroup.getFirstChild(); child != null; child = child.getNextSibling()) {
 				switch (child.getType()) {
+					case TokenTypes.LITERAL_CASE, TokenTypes.LITERAL_DEFAULT -> {}
 					case TokenTypes.LITERAL_RETURN, TokenTypes.LITERAL_THROW,
-					     TokenTypes.LITERAL_YIELD:
+					     TokenTypes.LITERAL_YIELD -> {
 						return true;
-
-					case TokenTypes.LITERAL_CASE, TokenTypes.LITERAL_DEFAULT:
-						break;
-
-					default:
+					}
+					default -> {
 						return false;
+					}
 				}
 			}
 			return false;
@@ -44,14 +56,13 @@ public class NoBlankLineBetweenSingleCasesCheck extends AbstractCheck {
 		for (var child = slist.getFirstChild(); child != null; child = child.getNextSibling()) {
 			switch (child.getType()) {
 				case TokenTypes.LITERAL_RETURN, TokenTypes.LITERAL_THROW,
-				     TokenTypes.LITERAL_YIELD:
+				     TokenTypes.LITERAL_YIELD -> {
 					return true;
-
-				case TokenTypes.SEMI, TokenTypes.RCURLY:
-					break;
-
-				default:
+				}
+				case TokenTypes.RCURLY, TokenTypes.SEMI -> {}
+				default -> {
 					return false;
+				}
 			}
 		}
 		return false;
@@ -77,12 +88,24 @@ public class NoBlankLineBetweenSingleCasesCheck extends AbstractCheck {
 
 	@Override
 	public void visitToken(@Nonnull DetailAST ast) {
+		DetailAST prevCase = null;
+		var prevBraced = false;
 		DetailAST prevSingleCase = null;
 
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() != TokenTypes.CASE_GROUP) {
+				prevCase = null;
+				prevBraced = false;
 				prevSingleCase = null;
 				continue;
+			}
+
+			// check blank line after braced case
+			if (prevBraced && prevCase != null) {
+				final var prevEnd = AstUtil.lastLine(prevCase);
+				final var currStart = child.getLineNo();
+				if (currStart - prevEnd > 1)
+					log(child, MSG_BRACED);
 			}
 
 			if (isSingleLineCase(child)) {
@@ -96,6 +119,9 @@ public class NoBlankLineBetweenSingleCasesCheck extends AbstractCheck {
 			}
 			else
 				prevSingleCase = null;
+
+			prevBraced = isBracedCase(child);
+			prevCase = child;
 		}
 	}
 }

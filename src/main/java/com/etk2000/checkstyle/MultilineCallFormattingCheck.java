@@ -93,13 +93,13 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 	@Nullable
 	private static DetailAST findFirstArg(@Nonnull DetailAST ast) {
 		return switch (ast.getType()) {
-			case TokenTypes.METHOD_CALL, TokenTypes.LITERAL_NEW, TokenTypes.SUPER_CTOR_CALL -> {
-				final var elist = ast.findFirstToken(TokenTypes.ELIST);
-				yield elist == null ? null : elist.getFirstChild();
-			}
 			case TokenTypes.CTOR_DEF, TokenTypes.METHOD_DEF -> {
 				final var params = ast.findFirstToken(TokenTypes.PARAMETERS);
 				yield params == null ? null : params.findFirstToken(TokenTypes.PARAMETER_DEF);
+			}
+			case TokenTypes.LITERAL_NEW, TokenTypes.METHOD_CALL, TokenTypes.SUPER_CTOR_CALL -> {
+				final var elist = ast.findFirstToken(TokenTypes.ELIST);
+				yield elist == null ? null : elist.getFirstChild();
 			}
 			default -> null;
 		};
@@ -109,20 +109,18 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 	@Nullable
 	private static DetailAST findLastArg(@Nonnull DetailAST ast) {
 		switch (ast.getType()) {
-			case TokenTypes.METHOD_CALL, TokenTypes.LITERAL_NEW, TokenTypes.SUPER_CTOR_CALL: {
-				final var elist = ast.findFirstToken(TokenTypes.ELIST);
-				if (elist == null)
-					return null;
-				return lastNonCommaChild(elist);
-			}
-
 			case TokenTypes.CTOR_DEF, TokenTypes.METHOD_DEF: {
 				final var params = ast.findFirstToken(TokenTypes.PARAMETERS);
 				if (params == null)
 					return null;
 				return lastChildOfType(params, TokenTypes.PARAMETER_DEF);
 			}
-
+			case TokenTypes.LITERAL_NEW, TokenTypes.METHOD_CALL, TokenTypes.SUPER_CTOR_CALL: {
+				final var elist = ast.findFirstToken(TokenTypes.ELIST);
+				if (elist == null)
+					return null;
+				return lastNonCommaChild(elist);
+			}
 			default:
 				return null;
 		}
@@ -354,10 +352,10 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 
 		// args span multiple lines — each must be on its own line
 		final var argList = switch (ast.getType()) {
-			case TokenTypes.METHOD_CALL, TokenTypes.LITERAL_NEW, TokenTypes.SUPER_CTOR_CALL ->
-					ast.findFirstToken(TokenTypes.ELIST);
 			case TokenTypes.CTOR_DEF, TokenTypes.METHOD_DEF ->
 					ast.findFirstToken(TokenTypes.PARAMETERS);
+			case TokenTypes.LITERAL_NEW, TokenTypes.METHOD_CALL, TokenTypes.SUPER_CTOR_CALL ->
+					ast.findFirstToken(TokenTypes.ELIST);
 			default -> null;
 		};
 		if (argList == null)

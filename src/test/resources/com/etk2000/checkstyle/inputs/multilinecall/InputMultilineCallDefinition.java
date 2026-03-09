@@ -7,23 +7,23 @@ class InputMultilineCallDefinition {
 	) {
 	}
 
-	void openingViolation(int a, // violation line 10 — param on opening paren line
+	void openingViolation(int a, // violation: param on opening paren line
 			int b
 	) {
 	}
 
 	void closingViolation(
 			int a,
-			int b) { // violation line 17 — param on closing paren line
+			int b) { // violation: param on closing paren line
 	}
 
-	InputMultilineCallDefinition(int a, // violation line 20 — param on opening paren line
+	InputMultilineCallDefinition(int a, // violation: param on opening paren line
 			int b
 	) {
 	}
 
 	InputMultilineCallDefinition(
 			int a,
-			int b) { // violation line 27 — param on closing paren line
+			int b) { // violation: param on closing paren line
 	}
 }

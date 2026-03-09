@@ -14,13 +14,6 @@ public class NoCaseBracesCheckTest {
 	}
 
 	@Test
-	public void testUnnecessaryBraces() throws Exception {
-		final var violations = BaseCheckTest.runCheck(NoCaseBracesCheck.class, DIR + "InputCaseBracesViolation.java");
-		assertEquals(1, violations.size());
-		assertEquals(6, violations.getFirst().getLine());
-	}
-
-	@Test
 	public void testMissingRequiredBraces() throws Exception {
 		final var violations = BaseCheckTest.runCheck(NoCaseBracesCheck.class, DIR + "InputCaseBracesMissingViolation.java");
 		assertEquals(2, violations.size());
@@ -28,5 +21,12 @@ public class NoCaseBracesCheckTest {
 		assertEquals(12, violations.get(1).getLine());
 		for (var v : violations)
 			assertTrue(v.getMessage().contains("variable"));
+	}
+
+	@Test
+	public void testUnnecessaryBraces() throws Exception {
+		final var violations = BaseCheckTest.runCheck(NoCaseBracesCheck.class, DIR + "InputCaseBracesViolation.java");
+		assertEquals(1, violations.size());
+		assertEquals(6, violations.getFirst().getLine());
 	}
 }

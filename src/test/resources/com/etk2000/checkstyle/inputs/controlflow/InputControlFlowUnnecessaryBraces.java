@@ -2,26 +2,26 @@ package com.etk2000.checkstyle.inputs.controlflow;
 
 class InputControlFlowUnnecessaryBraces {
 	void method(int x) {
-		if (x > 0) { // violation line 5
+		if (x > 0) { // violation: unnecessary braces
 			System.out.println("positive");
 		}
 
-		while (x > 0) { // violation line 9
+		while (x > 0) { // violation: unnecessary braces
 			--x;
 		}
 
-		for (int i = 0; i < x; ++i) { // violation line 13
+		for (int i = 0; i < x; ++i) { // violation: unnecessary braces
 			System.out.println(i);
 		}
 
-		do { // violation line 17
+		do { // violation: unnecessary braces
 			--x;
 		} while (x > 0);
 
-		if (x > 0) { // violation line 21
+		if (x > 0) { // violation: unnecessary braces
 			System.out.println("positive");
 		}
-		else { // violation line 24
+		else { // violation: unnecessary braces
 			System.out.println("negative");
 		}
 	}

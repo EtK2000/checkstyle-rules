@@ -50,15 +50,21 @@
    c. Android built-ins (sorted by type name)
    d. Library types (sorted by type name)
    e. App-defined types (sorted by type name)
+   Array types sort right after their base type (`int`, then `int[]`, then `int[][]`). This
+   applies within each category (primitive arrays stay with primitives, reference arrays stay
+   with reference types).
    Visibility (public/private) does NOT affect ordering.
 3. Multiple fields of the same type on a single line if not setting a value, sorted alphabetically
    by field name
 
 ## Method Sorting
 
-- Overloads: fewer params first; when equal, called-by-others above callers; otherwise follow field
-  sorting rules for params
-- Example: `func(int a)` before `func(Object a)`, `func(int a)` before `func(int a, int b)`
+- Methods sorted alphabetically by name within their section (static methods, instance methods)
+- Overloads: fewer params first; when param counts are equal, sort by parameter types left-to-right
+  following field sorting rules (primitives before reference types, alphabetical within each group).
+  When types also match, called-by-others above callers
+- Example: `func(int a)` before `func(Object a)`, `func(int a)` before `func(int a, int b)`,
+  `func(char a)` before `func(int a)`
 
 ## Formatting
 
@@ -81,9 +87,17 @@
   (`stmt`), so it doesn't
 - Never one-line simple ifs/whiles/fors/do-whiles
 - In switch statements: blank line after `break;` before the next case; no blank line between
-  single-line cases (case label + one statement like `return`/`throw`/`yield`)
+  single-line cases (case label + one statement like `return`/`throw`/`yield`). No blank line
+  after a braced case (the closing brace provides visual separation)
 - No braces on `case`/`default` blocks unless required (i.e. a variable is defined in the case's
   direct scope)
+- Switch cases sorted: alphabetically for names, numerically for literals. Named constants
+  sort before numeric literals. For fall-through labels (`case A: case B:`), sort by the first
+  label. For comma-separated labels (`case A, B ->`), sort within the list AND sort cases by
+  their first label. `default` must always be last
+- Prefer enhanced (arrow) switch syntax (`case X ->`) over traditional (`case X:`) when each
+  case has a single statement (with break), return, throw, or yield. Fall-through labels
+  (no body) are fine, they become comma-separated in enhanced syntax
 - `else`/`catch`/`finally` on their own line, not cuddled with the closing brace (i.e. `}\nelse`,
   not `} else`)
 - No unused imports
@@ -122,6 +136,9 @@
   `getString` is only recognized with a known Context receiver (parameter typed as `Context`,
   variable assigned from `requireContext()`/`getContext()`/`requireActivity()`/`getActivity()`, or
   calling directly on one of those)
+- No empty switch statements, if bodies, or else bodies. Remove them, but preserve any side effects
+  in the condition/expression. Example: `if (++i < 5);` becomes `++i;`,
+  `switch (a.mutate()) {}` becomes `a.mutate();`
 - Early returns and guard clauses preferred over deep nesting
 
 ## Naming & Comments

@@ -14,6 +14,12 @@ public class OverloadMethodOrderCheckTest {
 	}
 
 	@Test
+	public void testTypeOrderViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(OverloadMethodOrderCheck.class, DIR + "InputOverloadTypeViolation.java");
+		assertEquals(6, violations.size());
+	}
+
+	@Test
 	public void testViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(OverloadMethodOrderCheck.class, DIR + "InputOverloadViolation.java");
 		assertEquals(1, violations.size());

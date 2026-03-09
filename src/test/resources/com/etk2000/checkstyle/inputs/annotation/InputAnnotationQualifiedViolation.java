@@ -6,6 +6,6 @@ import javax.annotation.Nonnull;
 
 class InputAnnotationQualifiedViolation {
 	@Nonnull
-	@AnyThread // violation line 9
+	@AnyThread // violation: annotations not in alphabetical order
 	void method() {}
 }

@@ -4,6 +4,6 @@ class InputThisInstanceInitViolation {
 	int field;
 
 	{
-		System.out.println(this.field); // violation line 7
+		System.out.println(this.field); // violation: unnecessary this
 	}
 }

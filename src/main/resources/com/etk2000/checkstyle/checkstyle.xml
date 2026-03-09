@@ -89,11 +89,23 @@
 		<!-- Custom: Control flow brace rules -->
 		<module name="com.etk2000.checkstyle.ControlFlowBracesCheck" />
 
+		<!-- Custom: No empty if/else bodies -->
+		<module name="com.etk2000.checkstyle.EmptyBodyCheck" />
+
+		<!-- Custom: No empty switch statements -->
+		<module name="com.etk2000.checkstyle.EmptySwitchCheck" />
+
+		<!-- Custom: Methods sorted alphabetically within their section -->
+		<module name="com.etk2000.checkstyle.MethodAlphabeticalOrderCheck" />
+
 		<!-- Custom: Multiline call/signature formatting -->
 		<module name="com.etk2000.checkstyle.MultilineCallFormattingCheck" />
 
 		<!-- Custom: No trailing comma in array initializers -->
 		<module name="com.etk2000.checkstyle.NoArrayTrailingCommaCheck" />
+
+		<!-- Custom: Prefer enhanced (arrow) switch syntax when possible -->
+		<module name="com.etk2000.checkstyle.PreferEnhancedSwitchCheck" />
 
 		<!-- Custom: No blank line between consecutive single-line switch cases -->
 		<module name="com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck" />
@@ -109,6 +121,9 @@
 
 		<!-- Custom: Prefer prefix increment/decrement over postfix -->
 		<module name="com.etk2000.checkstyle.PreferPrefixIncrementCheck" />
+
+		<!-- Custom: Switch cases must be sorted -->
+		<module name="com.etk2000.checkstyle.SwitchCaseOrderCheck" />
 
 		<!-- Custom: All types must have a thread annotation -->
 		<module name="com.etk2000.checkstyle.ThreadAnnotationCheck" />

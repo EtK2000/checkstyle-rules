@@ -6,7 +6,7 @@ class InputSingleCaseThrowViolation {
 			case 1:
 				throw new RuntimeException("one");
 
-			case 2: // violation line 9
+			case 2: // violation: blank line between single-line cases
 				throw new RuntimeException("two");
 			default:
 				throw new RuntimeException("default");

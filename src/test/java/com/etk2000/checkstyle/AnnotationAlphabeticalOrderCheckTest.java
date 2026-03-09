@@ -14,11 +14,6 @@ public class AnnotationAlphabeticalOrderCheckTest {
 	}
 
 	@Test
-	public void testSingleAnnotation() throws Exception {
-		assertTrue(BaseCheckTest.runCheck(AnnotationAlphabeticalOrderCheck.class, DIR + "InputAnnotationSingleAnnotation.java").isEmpty());
-	}
-
-	@Test
 	public void testImportedAnnotationViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(AnnotationAlphabeticalOrderCheck.class, DIR + "InputAnnotationQualifiedViolation.java");
 		assertEquals(1, violations.size());
@@ -30,6 +25,11 @@ public class AnnotationAlphabeticalOrderCheckTest {
 		final var violations = BaseCheckTest.runCheck(AnnotationAlphabeticalOrderCheck.class, DIR + "InputAnnotationQualifiedNameViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(5, violations.getFirst().getLine());
+	}
+
+	@Test
+	public void testSingleAnnotation() throws Exception {
+		assertTrue(BaseCheckTest.runCheck(AnnotationAlphabeticalOrderCheck.class, DIR + "InputAnnotationSingleAnnotation.java").isEmpty());
 	}
 
 	@Test

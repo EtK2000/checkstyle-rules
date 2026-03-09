@@ -14,15 +14,15 @@ public class NoUnnecessaryThisCheckTest {
 	}
 
 	@Test
-	public void testMethodCallViolation() throws Exception {
-		final var violations = BaseCheckTest.runCheck(NoUnnecessaryThisCheck.class, DIR + "InputThisMethodCall.java");
+	public void testInstanceInitViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(NoUnnecessaryThisCheck.class, DIR + "InputThisInstanceInitViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(7, violations.getFirst().getLine());
 	}
 
 	@Test
-	public void testInstanceInitViolation() throws Exception {
-		final var violations = BaseCheckTest.runCheck(NoUnnecessaryThisCheck.class, DIR + "InputThisInstanceInitViolation.java");
+	public void testMethodCallViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(NoUnnecessaryThisCheck.class, DIR + "InputThisMethodCall.java");
 		assertEquals(1, violations.size());
 		assertEquals(7, violations.getFirst().getLine());
 	}

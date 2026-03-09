@@ -14,6 +14,27 @@ public class ControlFlowBracesCheckTest {
 	}
 
 	@Test
+	public void testMissingBraces() throws Exception {
+		final var violations = BaseCheckTest.runCheck(ControlFlowBracesCheck.class, DIR + "InputControlFlowMissingBraces.java");
+		assertEquals(5, violations.size());
+		assertEquals(5, violations.get(0).getLine());
+		assertEquals(9, violations.get(1).getLine());
+		assertEquals(13, violations.get(2).getLine());
+		assertEquals(17, violations.get(3).getLine());
+		assertEquals(26, violations.get(4).getLine());
+		for (var v : violations)
+			assertTrue(v.getMessage().contains("add braces"));
+	}
+
+	@Test
+	public void testNestedIndependentLevels() throws Exception {
+		final var violations = BaseCheckTest.runCheck(ControlFlowBracesCheck.class, DIR + "InputControlFlowNested.java");
+		assertEquals(2, violations.size());
+		assertEquals(12, violations.get(0).getLine());
+		assertEquals(19, violations.get(1).getLine());
+	}
+
+	@Test
 	public void testOneLiners() throws Exception {
 		final var violations = BaseCheckTest.runCheck(ControlFlowBracesCheck.class, DIR + "InputControlFlowOneLiner.java");
 		assertEquals(5, violations.size());
@@ -38,26 +59,5 @@ public class ControlFlowBracesCheckTest {
 		assertEquals(24, violations.get(5).getLine());
 		for (var v : violations)
 			assertTrue(v.getMessage().contains("unnecessary braces"));
-	}
-
-	@Test
-	public void testMissingBraces() throws Exception {
-		final var violations = BaseCheckTest.runCheck(ControlFlowBracesCheck.class, DIR + "InputControlFlowMissingBraces.java");
-		assertEquals(5, violations.size());
-		assertEquals(5, violations.get(0).getLine());
-		assertEquals(9, violations.get(1).getLine());
-		assertEquals(13, violations.get(2).getLine());
-		assertEquals(17, violations.get(3).getLine());
-		assertEquals(26, violations.get(4).getLine());
-		for (var v : violations)
-			assertTrue(v.getMessage().contains("add braces"));
-	}
-
-	@Test
-	public void testNestedIndependentLevels() throws Exception {
-		final var violations = BaseCheckTest.runCheck(ControlFlowBracesCheck.class, DIR + "InputControlFlowNested.java");
-		assertEquals(2, violations.size());
-		assertEquals(12, violations.get(0).getLine());
-		assertEquals(19, violations.get(1).getLine());
 	}
 }

@@ -67,13 +67,15 @@ public class NoUnnecessaryThisCheck extends AbstractCheck {
 	private static DetailAST findEnclosingMethodOrCtor(@Nonnull DetailAST ast) {
 		for (var parent = ast.getParent(); parent != null; parent = parent.getParent()) {
 			switch (parent.getType()) {
-				case TokenTypes.METHOD_DEF, TokenTypes.CTOR_DEF, TokenTypes.COMPACT_CTOR_DEF:
-					return parent;
-
 				// stop at class boundaries
 				case TokenTypes.CLASS_DEF, TokenTypes.ENUM_DEF,
-				     TokenTypes.INTERFACE_DEF, TokenTypes.RECORD_DEF:
+				     TokenTypes.INTERFACE_DEF, TokenTypes.RECORD_DEF -> {
 					return null;
+				}
+				case TokenTypes.COMPACT_CTOR_DEF, TokenTypes.CTOR_DEF, TokenTypes.METHOD_DEF -> {
+					return parent;
+				}
+				default -> {}
 			}
 		}
 		return null;

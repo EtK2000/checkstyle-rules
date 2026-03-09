@@ -2,19 +2,19 @@ package com.etk2000.checkstyle.inputs.controlflow;
 
 class InputControlFlowMissingBraces {
 	void method(int x) {
-		if (x > 0) // violation line 5
+		if (x > 0) // violation: missing braces on multi-line body
 			for (int i = 0; i < x; ++i)
 				System.out.println(i);
 
-		while (x > 0) // violation line 9
+		while (x > 0) // violation: missing braces on multi-line body
 			if (x > 5)
 				--x;
 
-		for (int i = 0; i < x; ++i) // violation line 13
+		for (int i = 0; i < x; ++i) // violation: missing braces on multi-line body
 			if (i > 0)
 				System.out.println(i);
 
-		do // violation line 17
+		do // violation: missing braces on multi-line body
 			if (x > 0)
 				--x;
 		while (x > 0);
@@ -23,7 +23,7 @@ class InputControlFlowMissingBraces {
 	void elseMethod(int x) {
 		if (x > 0)
 			System.out.println("positive");
-		else // violation line 26
+		else // violation: missing braces on multi-line body
 			for (int i = 0; i < x; ++i)
 				System.out.println(i);
 	}

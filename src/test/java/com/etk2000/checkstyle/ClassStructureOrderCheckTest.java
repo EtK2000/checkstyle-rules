@@ -42,6 +42,13 @@ public class ClassStructureOrderCheckTest {
 	}
 
 	@Test
+	public void testInstanceInitAfterMethodViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(ClassStructureOrderCheck.class, DIR + "InputClassStructureInstanceInitViolation.java");
+		assertEquals(1, violations.size());
+		assertEquals(6, violations.getFirst().getLine());
+	}
+
+	@Test
 	public void testMultipleViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(ClassStructureOrderCheck.class, DIR + "InputClassStructureMultipleViolations.java");
 		assertEquals(2, violations.size());
@@ -65,13 +72,6 @@ public class ClassStructureOrderCheckTest {
 	@Test
 	public void testOnlyStatic() throws Exception {
 		assertTrue(BaseCheckTest.runCheck(ClassStructureOrderCheck.class, DIR + "InputClassStructureOnlyStatic.java").isEmpty());
-	}
-
-	@Test
-	public void testInstanceInitAfterMethodViolation() throws Exception {
-		final var violations = BaseCheckTest.runCheck(ClassStructureOrderCheck.class, DIR + "InputClassStructureInstanceInitViolation.java");
-		assertEquals(1, violations.size());
-		assertEquals(6, violations.getFirst().getLine());
 	}
 
 	@Test

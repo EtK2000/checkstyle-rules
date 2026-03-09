@@ -1,10 +1,10 @@
 package com.etk2000.checkstyle.inputs.thread;
 
-enum InputThreadEnumViolation { // violation line 3
+enum InputThreadEnumViolation { // violation: missing thread annotation
 }
 
-interface InputThreadInterfaceViolation { // violation line 6
+interface InputThreadInterfaceViolation { // violation: missing thread annotation
 }
 
-record InputThreadRecordViolation() { // violation line 9
+record InputThreadRecordViolation() { // violation: missing thread annotation
 }

@@ -14,11 +14,6 @@ public class ThreadAnnotationCheckTest {
 	}
 
 	@Test
-	public void testInnerClassesSkipped() throws Exception {
-		assertTrue(BaseCheckTest.runCheck(ThreadAnnotationCheck.class, DIR + "InputThreadInnerClassSkipped.java").isEmpty());
-	}
-
-	@Test
 	public void testEnumInterfaceRecordClean() throws Exception {
 		assertTrue(BaseCheckTest.runCheck(ThreadAnnotationCheck.class, DIR + "InputThreadEnumInterfaceRecordClean.java").isEmpty());
 	}
@@ -30,6 +25,11 @@ public class ThreadAnnotationCheckTest {
 		assertEquals(3, violations.get(0).getLine());
 		assertEquals(6, violations.get(1).getLine());
 		assertEquals(9, violations.get(2).getLine());
+	}
+
+	@Test
+	public void testInnerClassesSkipped() throws Exception {
+		assertTrue(BaseCheckTest.runCheck(ThreadAnnotationCheck.class, DIR + "InputThreadInnerClassSkipped.java").isEmpty());
 	}
 
 	@Test

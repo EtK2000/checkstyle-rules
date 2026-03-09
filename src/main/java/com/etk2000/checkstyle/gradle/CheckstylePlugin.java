@@ -20,9 +20,6 @@ import javax.annotation.Nonnull;
 
 public class CheckstylePlugin implements Plugin<Project> {
 	public static abstract class ExtractCheckstyleConfig extends DefaultTask {
-		@OutputFile
-		public abstract RegularFileProperty getOutputFile();
-
 		@TaskAction
 		public void extract() {
 			final var outputFile = getOutputFile().get().getAsFile();
@@ -39,6 +36,9 @@ public class CheckstylePlugin implements Plugin<Project> {
 				throw new RuntimeException("Failed to extract checkstyle.xml", e);
 			}
 		}
+
+		@OutputFile
+		public abstract RegularFileProperty getOutputFile();
 	}
 
 	private static final String CHECKSTYLE_VERSION;

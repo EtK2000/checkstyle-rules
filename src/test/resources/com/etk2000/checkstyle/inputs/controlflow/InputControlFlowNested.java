@@ -9,14 +9,14 @@ class InputControlFlowNested {
 	}
 
 	void outerMissingBraces(int x) {
-		for (int i = 0; i < x; ++i) // violation line 12
+		for (int i = 0; i < x; ++i) // violation: missing braces on multi-line body
 			if (i > 0)
 				System.out.println(i);
 	}
 
 	void deepNesting(int x) {
 		if (x > 0) { // correct — braced body is multi-line
-			for (int i = 0; i < x; ++i) // violation (missing braces — body is multi-line)
+			for (int i = 0; i < x; ++i) // violation: missing braces on multi-line body
 				if (i > 0)
 					System.out.println(i);
 		}

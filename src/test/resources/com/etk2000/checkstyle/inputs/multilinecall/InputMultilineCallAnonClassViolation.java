@@ -2,12 +2,12 @@ package com.etk2000.checkstyle.inputs.multilinecall;
 
 class InputMultilineCallAnonClassViolation {
 	void anonClassNotOnOpening() {
-		method( // violation line 5 — anon class not on opening paren line
+		method( // violation: anon class not on opening paren line
 				new Runnable() {
 					public void run() {
 					}
 				}
-		); // violation line 10 — closing brace not on closing paren line
+		); // violation: closing brace not on closing paren line
 	}
 
 	void anonClassClosingNotOnClosing() {
@@ -15,7 +15,7 @@ class InputMultilineCallAnonClassViolation {
 			public void run() {
 			}
 		}
-		); // violation line 18 — closing brace not on closing paren line
+		); // violation: closing brace not on closing paren line
 	}
 
 	void method(Runnable r) {
