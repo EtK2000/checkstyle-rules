@@ -22,4 +22,12 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(11, violations.get(1).getLine());
 		assertTrue(violations.get(1).getMessage().contains("getFirst"));
 	}
+
+	@Test
+	public void testMinSdkSuppressesCheck() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiViolation.java", "minSdk", "34"
+		);
+		assertTrue(violations.isEmpty());
+	}
 }

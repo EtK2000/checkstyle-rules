@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
  * (sequential access pattern).
  */
 public class PreferSpecificApiCheck extends AbstractCheck {
+	private static final int MIN_SDK_GET_FIRST_LAST = 35;
 	private static final String MSG_GET_FIRST = "prefer.api.getFirst";
 	private static final String MSG_GET_LAST = "prefer.api.getLast";
 
@@ -126,6 +127,8 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		return sb.toString();
 	}
 
+	private int minSdk = Integer.MAX_VALUE;
+
 	@Nonnull
 	@Override
 	public int[] getAcceptableTokens() {
@@ -150,8 +153,20 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		return getDefaultTokens();
 	}
 
+	/**
+	 * Sets the minimum SDK version for the target platform.
+	 * APIs not available below this SDK level will not be suggested.
+	 * For example, {@code .getFirst()}/{@code .getLast()} require Android API 35+.
+	 */
+	public void setMinSdk(int minSdk) {
+		this.minSdk = minSdk;
+	}
+
 	@Override
 	public void visitToken(@Nonnull DetailAST ast) {
+		if (minSdk < MIN_SDK_GET_FIRST_LAST)
+			return;
+
 		final var getCalls = new ArrayList<DetailAST>();
 		collectGetCalls(ast, getCalls);
 		if (getCalls.isEmpty())

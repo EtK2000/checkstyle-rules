@@ -28,6 +28,7 @@ checkstyle {
     toolVersion = checkstyleVersion
     configFile = file('src/main/resources/com/etk2000/checkstyle/checkstyle.xml')
     configDirectory = file('config/checkstyle')
+    configProperties = ['minSdk': String.valueOf(Integer.MAX_VALUE)]
 }
 
 processResources {
@@ -42,6 +43,7 @@ dependencies {
     checkstyle 'com.google.code.findbugs:jsr305:3.0.2'
 
     compileOnly "com.puppycrawl.tools:checkstyle:${checkstyleVersion}"
+    compileOnly 'org.jetbrains:annotations:26.0.2'
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
     testImplementation "com.puppycrawl.tools:checkstyle:${checkstyleVersion}"

@@ -17,7 +17,18 @@ import javax.annotation.Nonnull;
 class BaseCheckTest {
 	@Nonnull
 	static List<AuditEvent> runCheck(@Nonnull Class<? extends AbstractCheck> checkClass, @Nonnull String inputPath) throws Exception {
+		return runCheck(checkClass, inputPath, new String[0]);
+	}
+
+	@Nonnull
+	static List<AuditEvent> runCheck(
+			@Nonnull Class<? extends AbstractCheck> checkClass,
+			@Nonnull String inputPath,
+			@Nonnull String... properties
+	) throws Exception {
 		final var checkConfig = new DefaultConfiguration(checkClass.getName());
+		for (var i = 0; i < properties.length; i += 2)
+			checkConfig.addProperty(properties[i], properties[i + 1]);
 
 		final var treeWalkerConfig = new DefaultConfiguration(TreeWalker.class.getName());
 		treeWalkerConfig.addChild(checkConfig);

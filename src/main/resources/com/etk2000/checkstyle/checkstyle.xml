@@ -114,7 +114,9 @@
 		<module name="com.etk2000.checkstyle.PreferEnhancedSwitchCheck" />
 
 		<!-- Custom: Prefer specific API methods over generic ones -->
-		<module name="com.etk2000.checkstyle.PreferSpecificApiCheck" />
+		<module name="com.etk2000.checkstyle.PreferSpecificApiCheck">
+			<property name="minSdk" value="${minSdk}" />
+		</module>
 
 		<!-- Custom: Prefer pattern matching instanceof over cast-after-check -->
 		<module name="com.etk2000.checkstyle.PreferPatternMatchingInstanceofCheck" />

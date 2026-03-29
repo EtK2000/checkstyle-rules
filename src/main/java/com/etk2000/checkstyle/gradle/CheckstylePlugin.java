@@ -9,12 +9,14 @@ import org.gradle.api.plugins.quality.Checkstyle;
 import org.gradle.api.plugins.quality.CheckstyleExtension;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 
@@ -42,6 +44,9 @@ public class CheckstylePlugin implements Plugin<Project> {
 	}
 
 	private static final String CHECKSTYLE_VERSION;
+	private static final Pattern MANIFEST_MIN_SDK = Pattern.compile(
+			"android:minSdkVersion\\s*=\\s*\"(\\d+)\""
+	);
 
 	static {
 		final var props = new Properties();
@@ -70,6 +75,23 @@ public class CheckstylePlugin implements Plugin<Project> {
 		}
 		if (pluginJar != null)
 			checkstyleConfig.getDependencies().add(project.getDependencies().create(project.files(new File(pluginJar))));
+	}
+
+	@VisibleForTesting
+	static String readMinSdkFromManifest(@Nonnull Project project) {
+		final var manifest = new File(project.getProjectDir(), "src/main/AndroidManifest.xml");
+		if (!manifest.exists())
+			return null;
+
+		try {
+			final var content = Files.readString(manifest.toPath());
+			final var matcher = MANIFEST_MIN_SDK.matcher(content);
+			if (matcher.find())
+				return matcher.group(1);
+		}
+		catch (IOException ignored) {
+		}
+		return null;
 	}
 
 	private static void registerTasks(@Nonnull Project project, @Nonnull String extractTaskName) {
@@ -104,6 +126,30 @@ public class CheckstylePlugin implements Plugin<Project> {
 		});
 	}
 
+	@VisibleForTesting
+	static String resolveMinSdk(@Nonnull Project project) {
+		// try Android plugin's minSdk from build.gradle
+		try {
+			final var android = project.getExtensions().findByName("android");
+			if (android != null) {
+				final var defaultConfig = android.getClass().getMethod("getDefaultConfig").invoke(android);
+				final var minSdkObj = defaultConfig.getClass().getMethod("getMinSdk").invoke(defaultConfig);
+				if (minSdkObj != null)
+					return minSdkObj.toString();
+			}
+		}
+		catch (Exception ignored) {
+		}
+
+		// fallback: try AndroidManifest.xml
+		final var manifestMinSdk = readMinSdkFromManifest(project);
+		if (manifestMinSdk != null)
+			return manifestMinSdk;
+
+		// non-Android: assume latest Java (all APIs available)
+		return String.valueOf(Integer.MAX_VALUE);
+	}
+
 	@Override
 	public void apply(@Nonnull Project project) {
 		project.getPluginManager().apply("checkstyle");
@@ -120,6 +166,8 @@ public class CheckstylePlugin implements Plugin<Project> {
 		ext.getConfigDirectory().set(project.file("config/checkstyle"));
 		ext.setConfigFile(configFile);
 		ext.setToolVersion(CHECKSTYLE_VERSION);
+
+		project.afterEvaluate(p -> ext.getConfigProperties().put("minSdk", resolveMinSdk(p)));
 
 		final var checkstyleConfig = project.getConfigurations().getByName("checkstyle");
 		addDependencies(project, checkstyleConfig);
