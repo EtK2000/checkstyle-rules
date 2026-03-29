@@ -95,6 +95,9 @@
 		<!-- Custom: No empty switch statements -->
 		<module name="com.etk2000.checkstyle.EmptySwitchCheck" />
 
+		<!-- Custom: For-each loops must use var -->
+		<module name="com.etk2000.checkstyle.ForEachVarCheck" />
+
 		<!-- Custom: Methods sorted alphabetically within their section -->
 		<module name="com.etk2000.checkstyle.MethodAlphabeticalOrderCheck" />
 
@@ -106,6 +109,11 @@
 
 		<!-- Custom: Prefer enhanced (arrow) switch syntax when possible -->
 		<module name="com.etk2000.checkstyle.PreferEnhancedSwitchCheck" />
+
+		<!-- Custom: Prefer imports over fully qualified names (warning, not error) -->
+		<module name="com.etk2000.checkstyle.PreferImportCheck">
+			<property name="severity" value="warning" />
+		</module>
 
 		<!-- Custom: No blank line between consecutive single-line switch cases -->
 		<module name="com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck" />

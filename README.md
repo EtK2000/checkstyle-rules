@@ -34,13 +34,20 @@ root. It will be picked up automatically.
 | AnnotationAlphabeticalOrderCheck   | Annotations must be sorted alphabetically                                                                                                |
 | ClassStructureOrderCheck           | Class members must follow section ordering (inner types, static fields, static methods, instance fields, constructors, instance methods) |
 | ControlFlowBracesCheck             | No one-liners, no unnecessary braces on single-line bodies, braces required on multi-line bodies                                         |
+| EmptyBodyCheck                     | No empty if/else bodies                                                                                                                  |
+| EmptySwitchCheck                   | No empty switch statements                                                                                                               |
+| ForEachVarCheck                    | For-each loops must use `var` instead of an explicit type                                                                                |
+| MethodAlphabeticalOrderCheck       | Methods sorted alphabetically within their section (static/instance)                                                                     |
 | MultilineCallFormattingCheck       | Multiline call/signature formatting with ternary and inline block exceptions                                                             |
 | NoArrayTrailingCommaCheck          | No trailing comma in array initializers                                                                                                  |
 | NoBlankLineBetweenSingleCasesCheck | No blank lines between consecutive single-line switch cases                                                                              |
 | NoCaseBracesCheck                  | No unnecessary braces in case blocks, braces required when a variable is defined                                                         |
 | NoUnnecessaryThisCheck             | No `this.` unless shadowing or in field assignment                                                                                       |
 | OverloadMethodOrderCheck           | Overloaded methods ordered by ascending parameter count                                                                                  |
+| PreferEnhancedSwitchCheck          | Prefer enhanced (arrow) switch syntax when each case is a single statement                                                               |
+| PreferImportCheck                  | Prefer imports over fully qualified names (warning)                                                                                      |
 | PreferPrefixIncrementCheck         | Use `++i`/`--i` instead of `i++`/`i--`                                                                                                   |
+| SwitchCaseOrderCheck               | Switch cases sorted alphabetically/numerically, `default` last                                                                           |
 | ThreadAnnotationCheck              | Top-level classes must have a thread annotation                                                                                          |
 
 ### Regex rules
