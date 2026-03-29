@@ -7,20 +7,20 @@ import javax.annotation.Nonnull;
 @interface NonNull {}
 
 class InputAnnotationClean {
-	@AnyThread
-	@CheckResult
-	@NonNull
-	void method() {}
+	@javax.annotation.CheckResult
+	@javax.annotation.Nonnull
+	void fullyQualifiedMethod() {}
 
 	@CheckResult
 	@Nonnull
 	void importedMethod() {}
 
 	@AnyThread
+	@CheckResult
+	@NonNull
+	void method() {}
+
+	@AnyThread
 	@Nonnull
 	void mixedMethod() {}
-
-	@javax.annotation.CheckResult
-	@javax.annotation.Nonnull
-	void fullyQualifiedMethod() {}
 }

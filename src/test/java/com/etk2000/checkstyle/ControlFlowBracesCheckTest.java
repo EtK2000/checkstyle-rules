@@ -16,12 +16,13 @@ public class ControlFlowBracesCheckTest {
 	@Test
 	public void testMissingBraces() throws Exception {
 		final var violations = BaseCheckTest.runCheck(ControlFlowBracesCheck.class, DIR + "InputControlFlowMissingBraces.java");
-		assertEquals(5, violations.size());
-		assertEquals(5, violations.get(0).getLine());
-		assertEquals(9, violations.get(1).getLine());
-		assertEquals(13, violations.get(2).getLine());
-		assertEquals(17, violations.get(3).getLine());
+		assertEquals(6, violations.size());
+		assertEquals(7, violations.get(0).getLine());
+		assertEquals(13, violations.get(1).getLine());
+		assertEquals(17, violations.get(2).getLine());
+		assertEquals(21, violations.get(3).getLine());
 		assertEquals(26, violations.get(4).getLine());
+		assertEquals(30, violations.get(5).getLine());
 		for (var v : violations)
 			assertTrue(v.getMessage().contains("add braces"));
 	}
@@ -30,19 +31,20 @@ public class ControlFlowBracesCheckTest {
 	public void testNestedIndependentLevels() throws Exception {
 		final var violations = BaseCheckTest.runCheck(ControlFlowBracesCheck.class, DIR + "InputControlFlowNested.java");
 		assertEquals(2, violations.size());
-		assertEquals(12, violations.get(0).getLine());
-		assertEquals(19, violations.get(1).getLine());
+		assertEquals(6, violations.get(0).getLine());
+		assertEquals(13, violations.get(1).getLine());
 	}
 
 	@Test
 	public void testOneLiners() throws Exception {
 		final var violations = BaseCheckTest.runCheck(ControlFlowBracesCheck.class, DIR + "InputControlFlowOneLiner.java");
-		assertEquals(5, violations.size());
-		assertEquals(5, violations.get(0).getLine());
-		assertEquals(6, violations.get(1).getLine());
-		assertEquals(7, violations.get(2).getLine());
-		assertEquals(8, violations.get(3).getLine());
-		assertEquals(14, violations.get(4).getLine());
+		assertEquals(6, violations.size());
+		assertEquals(7, violations.get(0).getLine());
+		assertEquals(11, violations.get(1).getLine());
+		assertEquals(12, violations.get(2).getLine());
+		assertEquals(13, violations.get(3).getLine());
+		assertEquals(15, violations.get(4).getLine());
+		assertEquals(16, violations.get(5).getLine());
 		for (var v : violations)
 			assertTrue(v.getMessage().contains("on its own line"));
 	}
@@ -50,13 +52,14 @@ public class ControlFlowBracesCheckTest {
 	@Test
 	public void testUnnecessaryBraces() throws Exception {
 		final var violations = BaseCheckTest.runCheck(ControlFlowBracesCheck.class, DIR + "InputControlFlowUnnecessaryBraces.java");
-		assertEquals(6, violations.size());
+		assertEquals(7, violations.size());
 		assertEquals(5, violations.get(0).getLine());
 		assertEquals(9, violations.get(1).getLine());
 		assertEquals(13, violations.get(2).getLine());
-		assertEquals(17, violations.get(3).getLine());
-		assertEquals(21, violations.get(4).getLine());
-		assertEquals(24, violations.get(5).getLine());
+		assertEquals(18, violations.get(3).getLine());
+		assertEquals(22, violations.get(4).getLine());
+		assertEquals(26, violations.get(5).getLine());
+		assertEquals(29, violations.get(6).getLine());
 		for (var v : violations)
 			assertTrue(v.getMessage().contains("unnecessary braces"));
 	}

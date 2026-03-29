@@ -12,17 +12,6 @@ class InputSingleCaseClean {
 		}
 	}
 
-	void throwCases(int x) {
-		switch (x) {
-			case 1:
-				throw new RuntimeException("one");
-			case 2:
-				throw new RuntimeException("two");
-			default:
-				throw new RuntimeException("default");
-		}
-	}
-
 	int multiLineCaseBreaksChain(int x) {
 		switch (x) {
 			case 1:
@@ -37,5 +26,27 @@ class InputSingleCaseClean {
 			default:
 				return 0;
 		}
+	}
+
+	void throwCases(int x) {
+		switch (x) {
+			case 1:
+				throw new RuntimeException("one");
+			case 2:
+				throw new RuntimeException("two");
+			default:
+				throw new RuntimeException("default");
+		}
+	}
+
+	int yieldCases(int x) {
+		return switch (x) {
+			case 1:
+				yield 1;
+			case 2:
+				yield 2;
+			default:
+				yield 0;
+		};
 	}
 }

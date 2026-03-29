@@ -16,6 +16,6 @@ public class EmptyBodyCheckTest {
 	@Test
 	public void testEmptyBodyViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(EmptyBodyCheck.class, DIR + "InputEmptyBodyViolation.java");
-		assertEquals(5, violations.size());
+		assertEquals(10, violations.size());
 	}
 }

@@ -1,10 +1,11 @@
 package com.etk2000.checkstyle.inputs.controlflow;
 
 class InputControlFlowNested {
-	void outerNeedsBracesInnerDoesNot(int x) {
-		for (int i = 0; i < x; ++i) {
-			if (i > 0)
-				System.out.println(i);
+	void deepNesting(int x) {
+		if (x > 0) { // correct — braced body is multi-line
+			for (int i = 0; i < x; ++i) // violation: missing braces on multi-line body
+				if (i > 0)
+					System.out.println(i);
 		}
 	}
 
@@ -14,11 +15,10 @@ class InputControlFlowNested {
 				System.out.println(i);
 	}
 
-	void deepNesting(int x) {
-		if (x > 0) { // correct — braced body is multi-line
-			for (int i = 0; i < x; ++i) // violation: missing braces on multi-line body
-				if (i > 0)
-					System.out.println(i);
+	void outerNeedsBracesInnerDoesNot(int x) {
+		for (int i = 0; i < x; ++i) {
+			if (i > 0)
+				System.out.println(i);
 		}
 	}
 }

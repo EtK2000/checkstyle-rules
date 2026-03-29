@@ -10,32 +10,6 @@ class InputMultilineCallGetStringNotContext {
 		);
 	}
 
-	void unknownReceiverGetString() {
-		final var bundle = getBundle();
-		method(
-				bundle.getString(
-						"key"
-				)
-		);
-	}
-
-	void nonContextParameterGetString(String notContext) {
-		method(
-				notContext.getString(
-						1
-				)
-		);
-	}
-
-	void nonContextAssignmentGetString() {
-		final var res = getResources();
-		method(
-				res.getString(
-						1
-				)
-		);
-	}
-
 	void dottedNonContextMethodGetString() {
 		method(
 				something.notAContextMethod().getString(
@@ -48,14 +22,40 @@ class InputMultilineCallGetStringNotContext {
 		return null;
 	}
 
-	String getString(int id) {
-		return null;
-	}
-
 	Object getResources() {
 		return null;
 	}
 
+	String getString(int id) {
+		return null;
+	}
+
 	void method(Object a) {
+	}
+
+	void nonContextAssignmentGetString() {
+		final var res = getResources();
+		method(
+				res.getString(
+						1
+				)
+		);
+	}
+
+	void nonContextParameterGetString(String notContext) {
+		method(
+				notContext.getString(
+						1
+				)
+		);
+	}
+
+	void unknownReceiverGetString() {
+		final var bundle = getBundle();
+		method(
+				bundle.getString(
+						"key"
+				)
+		);
 	}
 }

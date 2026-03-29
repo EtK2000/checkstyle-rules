@@ -11,10 +11,20 @@ class InputMultilineCallGetQuantityStringNotContext {
 		);
 	}
 
-	void unknownReceiverGetResources() {
-		final var bundle = getBundle();
+	Object getBundle() {
+		return null;
+	}
+
+	Object getResources() {
+		return null;
+	}
+
+	void method(Object a) {
+	}
+
+	void noGetResourcesInChain(Context ctx) {
 		method(
-				bundle.getResources().getQuantityString(
+				ctx.getQuantityString(
 						1,
 						2
 				)
@@ -30,23 +40,13 @@ class InputMultilineCallGetQuantityStringNotContext {
 		);
 	}
 
-	void noGetResourcesInChain(Context ctx) {
+	void unknownReceiverGetResources() {
+		final var bundle = getBundle();
 		method(
-				ctx.getQuantityString(
+				bundle.getResources().getQuantityString(
 						1,
 						2
 				)
 		);
-	}
-
-	Object getBundle() {
-		return null;
-	}
-
-	Object getResources() {
-		return null;
-	}
-
-	void method(Object a) {
 	}
 }

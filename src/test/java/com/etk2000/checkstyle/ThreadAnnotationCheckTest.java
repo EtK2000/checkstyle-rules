@@ -9,6 +9,11 @@ public class ThreadAnnotationCheckTest {
 	private static final String DIR = "thread/";
 
 	@Test
+	public void testAllAnnotationVariantsClean() throws Exception {
+		assertTrue(BaseCheckTest.runCheck(ThreadAnnotationCheck.class, DIR + "InputThreadAllAnnotationsClean.java").isEmpty());
+	}
+
+	@Test
 	public void testCleanWithAnnotation() throws Exception {
 		assertTrue(BaseCheckTest.runCheck(ThreadAnnotationCheck.class, DIR + "InputThreadClean.java").isEmpty());
 	}

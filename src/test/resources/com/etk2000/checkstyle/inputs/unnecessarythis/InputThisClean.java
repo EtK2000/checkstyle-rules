@@ -11,12 +11,12 @@ class InputThisClean {
 		this.field = 42;
 	}
 
-	void method(int field) {
+	void localShadowing() {
+		int field = 42;
 		System.out.println(this.field);
 	}
 
-	void localShadowing() {
-		int field = 42;
+	void method(int field) {
 		System.out.println(this.field);
 	}
 }

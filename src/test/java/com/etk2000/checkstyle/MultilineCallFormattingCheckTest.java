@@ -12,12 +12,12 @@ public class MultilineCallFormattingCheckTest {
 	public void testAnonClassViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallAnonClassViolation.java");
 		assertEquals(3, violations.size());
-		// first case: anon class not on opening AND closing brace not on closing
-		assertEquals(5, violations.get(0).getLine());
-		assertTrue(violations.get(0).getMessage().contains("opening paren"));
-		assertEquals(10, violations.get(1).getLine());
-		assertTrue(violations.get(1).getMessage().contains("closing paren"));
-		// second case: closing brace not on closing paren line
+		// first case: closing brace not on closing paren line
+		assertEquals(9, violations.get(0).getLine());
+		assertTrue(violations.get(0).getMessage().contains("closing paren"));
+		// second case: anon class not on opening AND closing brace not on closing
+		assertEquals(13, violations.get(1).getLine());
+		assertTrue(violations.get(1).getMessage().contains("opening paren"));
 		assertEquals(18, violations.get(2).getLine());
 		assertTrue(violations.get(2).getMessage().contains("closing paren"));
 	}
@@ -26,12 +26,12 @@ public class MultilineCallFormattingCheckTest {
 	public void testChainedConstructorViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallChainedConstructorViolation.java");
 		assertEquals(2, violations.size());
-		// first case: chained constructor not on opening paren line
-		assertEquals(7, violations.get(0).getLine());
-		assertTrue(violations.get(0).getMessage().contains("opening paren"));
-		// second case: closing paren on chain end line
-		assertEquals(17, violations.get(1).getLine());
-		assertTrue(violations.get(1).getMessage().contains("closing"));
+		// first case: closing paren on chain end line
+		assertEquals(9, violations.get(0).getLine());
+		assertTrue(violations.get(0).getMessage().contains("closing"));
+		// second case: chained constructor not on opening paren line
+		assertEquals(13, violations.get(1).getLine());
+		assertTrue(violations.get(1).getMessage().contains("opening paren"));
 	}
 
 	@Test
@@ -53,12 +53,12 @@ public class MultilineCallFormattingCheckTest {
 	public void testConstructorViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallConstructorViolation.java");
 		assertEquals(3, violations.size());
-		// first case: constructor not on opening AND closing paren not on closing
-		assertEquals(5, violations.get(0).getLine());
-		assertTrue(violations.get(0).getMessage().contains("opening paren"));
-		assertEquals(9, violations.get(1).getLine());
-		assertTrue(violations.get(1).getMessage().contains("closing paren"));
-		// second case: closing paren not on closing paren line
+		// first case: closing paren not on closing paren line
+		assertEquals(8, violations.get(0).getLine());
+		assertTrue(violations.get(0).getMessage().contains("closing paren"));
+		// second case: constructor not on opening AND closing paren not on closing
+		assertEquals(12, violations.get(1).getLine());
+		assertTrue(violations.get(1).getMessage().contains("opening paren"));
 		assertEquals(16, violations.get(2).getLine());
 		assertTrue(violations.get(2).getMessage().contains("closing paren"));
 	}
@@ -67,10 +67,10 @@ public class MultilineCallFormattingCheckTest {
 	public void testDefinitionViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallDefinition.java");
 		assertEquals(4, violations.size());
-		assertEquals(10, violations.get(0).getLine());
-		assertEquals(17, violations.get(1).getLine());
-		assertEquals(20, violations.get(2).getLine());
-		assertEquals(27, violations.get(3).getLine());
+		assertEquals(4, violations.get(0).getLine());
+		assertEquals(11, violations.get(1).getLine());
+		assertEquals(22, violations.get(2).getLine());
+		assertEquals(25, violations.get(3).getLine());
 	}
 
 	@Test
@@ -87,17 +87,17 @@ public class MultilineCallFormattingCheckTest {
 	public void testLambdaViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallLambdaViolation.java");
 		assertEquals(4, violations.size());
-		// first case: lambda not on opening AND closing brace not on closing
-		assertEquals(5, violations.get(0).getLine());
-		assertTrue(violations.get(0).getMessage().contains("opening paren"));
-		assertEquals(9, violations.get(1).getLine());
-		assertTrue(violations.get(1).getMessage().contains("closing paren"));
+		// first case: braceless lambda closing paren on body line
+		assertEquals(6, violations.get(0).getLine());
+		assertTrue(violations.get(0).getMessage().contains("closing"));
 		// second case: closing brace not on closing paren line
-		assertEquals(16, violations.get(2).getLine());
-		assertTrue(violations.get(2).getMessage().contains("closing paren"));
-		// third case: braceless lambda closing paren on body line
+		assertEquals(13, violations.get(1).getLine());
+		assertTrue(violations.get(1).getMessage().contains("closing paren"));
+		// third case: lambda not on opening AND closing brace not on closing
+		assertEquals(17, violations.get(2).getLine());
+		assertTrue(violations.get(2).getMessage().contains("opening paren"));
 		assertEquals(21, violations.get(3).getLine());
-		assertTrue(violations.get(3).getMessage().contains("closing"));
+		assertTrue(violations.get(3).getMessage().contains("closing paren"));
 	}
 
 	@Test
@@ -114,38 +114,38 @@ public class MultilineCallFormattingCheckTest {
 	public void testPostDelayedViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallPostDelayedViolation.java");
 		assertEquals(4, violations.size());
-		// first case: lambda not on opening AND delay not on closing
-		assertEquals(5, violations.get(0).getLine());
-		assertTrue(violations.get(0).getMessage().contains("opening paren"));
-		assertEquals(10, violations.get(1).getLine());
-		assertTrue(violations.get(1).getMessage().contains("closing paren"));
-		// second case: delay not on closing paren line
-		assertEquals(18, violations.get(2).getLine());
-		assertTrue(violations.get(2).getMessage().contains("closing paren"));
-		// third case: lambda not on opening only (delay IS on closing)
-		assertEquals(22, violations.get(3).getLine());
-		assertTrue(violations.get(3).getMessage().contains("opening paren"));
+		// first case: delay not on closing paren line
+		assertEquals(9, violations.get(0).getLine());
+		assertTrue(violations.get(0).getMessage().contains("closing paren"));
+		// second case: lambda not on opening only (delay IS on closing)
+		assertEquals(13, violations.get(1).getLine());
+		assertTrue(violations.get(1).getMessage().contains("opening paren"));
+		// third case: lambda not on opening AND delay not on closing
+		assertEquals(20, violations.get(2).getLine());
+		assertTrue(violations.get(2).getMessage().contains("opening paren"));
+		assertEquals(25, violations.get(3).getLine());
+		assertTrue(violations.get(3).getMessage().contains("closing paren"));
 	}
 
 	@Test
 	public void testResourceIdInlineBlockViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallResourceIdViolation.java");
 		assertEquals(6, violations.size());
-		// first case: R.xxx+lambda not on opening AND closing brace not on closing
+		// first case: android.R.xxx+lambda not on opening AND closing brace not on closing
 		assertEquals(5, violations.get(0).getLine());
 		assertTrue(violations.get(0).getMessage().contains("opening paren"));
 		assertEquals(9, violations.get(1).getLine());
 		assertTrue(violations.get(1).getMessage().contains("closing paren"));
-		// second case: closing brace not on closing paren line
-		assertEquals(16, violations.get(2).getLine());
-		assertTrue(violations.get(2).getMessage().contains("closing paren"));
-		// third case: braceless lambda closing paren on body line
-		assertEquals(21, violations.get(3).getLine());
-		assertTrue(violations.get(3).getMessage().contains("closing"));
-		// fourth case: android.R.xxx+lambda not on opening AND closing brace not on closing
-		assertEquals(25, violations.get(4).getLine());
+		// second case: braceless lambda closing paren on body line
+		assertEquals(17, violations.get(2).getLine());
+		assertTrue(violations.get(2).getMessage().contains("closing"));
+		// third case: closing brace not on closing paren line
+		assertEquals(24, violations.get(3).getLine());
+		assertTrue(violations.get(3).getMessage().contains("closing paren"));
+		// fourth case: R.xxx+lambda not on opening AND closing brace not on closing
+		assertEquals(28, violations.get(4).getLine());
 		assertTrue(violations.get(4).getMessage().contains("opening paren"));
-		assertEquals(29, violations.get(5).getLine());
+		assertEquals(32, violations.get(5).getLine());
 		assertTrue(violations.get(5).getMessage().contains("closing paren"));
 	}
 
@@ -153,10 +153,11 @@ public class MultilineCallFormattingCheckTest {
 	public void testSharedLineViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallSharedLineViolation.java");
 		assertEquals(4, violations.size());
-		assertEquals(6, violations.get(0).getLine());
-		assertEquals(14, violations.get(1).getLine());
 		// definition shared-line violations
-		assertEquals(19, violations.get(2).getLine());
+		assertEquals(5, violations.get(0).getLine());
+		assertEquals(12, violations.get(1).getLine());
+		// call shared-line violations
+		assertEquals(18, violations.get(2).getLine());
 		assertEquals(26, violations.get(3).getLine());
 		for (var v : violations)
 			assertTrue(v.getMessage().contains("own line"));
@@ -166,12 +167,12 @@ public class MultilineCallFormattingCheckTest {
 	public void testSpecialMethodViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallSpecialMethodViolation.java");
 		assertEquals(3, violations.size());
-		// first case: List.of not on opening AND closing paren not on closing
-		assertEquals(7, violations.get(0).getLine());
-		assertTrue(violations.get(0).getMessage().contains("opening paren"));
-		assertEquals(11, violations.get(1).getLine());
-		assertTrue(violations.get(1).getMessage().contains("closing paren"));
-		// second case: closing paren not on closing paren line
+		// first case: closing paren not on closing paren line
+		assertEquals(10, violations.get(0).getLine());
+		assertTrue(violations.get(0).getMessage().contains("closing paren"));
+		// second case: List.of not on opening AND closing paren not on closing
+		assertEquals(14, violations.get(1).getLine());
+		assertTrue(violations.get(1).getMessage().contains("opening paren"));
 		assertEquals(18, violations.get(2).getLine());
 		assertTrue(violations.get(2).getMessage().contains("closing paren"));
 	}
@@ -195,25 +196,25 @@ public class MultilineCallFormattingCheckTest {
 	public void testTernaryPositionViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallTernaryPositionViolation.java");
 		assertEquals(4, violations.size());
-		assertEquals(5, violations.get(0).getLine());
-		assertTrue(violations.get(0).getMessage().contains("?"));
+		assertEquals(6, violations.get(0).getLine());
+		assertTrue(violations.get(0).getMessage().contains(":"));
 		assertEquals(14, violations.get(1).getLine());
-		assertTrue(violations.get(1).getMessage().contains("?"));
-		assertEquals(21, violations.get(2).getLine());
-		assertTrue(violations.get(2).getMessage().contains(":"));
-		assertEquals(29, violations.get(3).getLine());
-		assertTrue(violations.get(3).getMessage().contains(":"));
+		assertTrue(violations.get(1).getMessage().contains(":"));
+		assertEquals(22, violations.get(2).getLine());
+		assertTrue(violations.get(2).getMessage().contains("?"));
+		assertEquals(31, violations.get(3).getLine());
+		assertTrue(violations.get(3).getMessage().contains("?"));
 	}
 
 	@Test
 	public void testTernaryViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallTernaryViolation.java");
 		assertEquals(3, violations.size());
-		assertEquals(5, violations.get(0).getLine());
-		assertTrue(violations.get(0).getMessage().contains("Ternary"));
-		assertEquals(15, violations.get(1).getLine());
-		assertTrue(violations.get(1).getMessage().contains("closing"));
-		assertEquals(20, violations.get(2).getLine());
+		assertEquals(9, violations.get(0).getLine());
+		assertTrue(violations.get(0).getMessage().contains("closing"));
+		assertEquals(13, violations.get(1).getLine());
+		assertTrue(violations.get(1).getMessage().contains("Ternary"));
+		assertEquals(23, violations.get(2).getLine());
 		assertTrue(violations.get(2).getMessage().contains("closing"));
 	}
 
@@ -221,34 +222,34 @@ public class MultilineCallFormattingCheckTest {
 	public void testThisInlineBlockViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallThisViolation.java");
 		assertEquals(4, violations.size());
-		// first case: this+lambda not on opening AND closing brace not on closing
-		assertEquals(5, violations.get(0).getLine());
-		assertTrue(violations.get(0).getMessage().contains("opening paren"));
-		assertEquals(9, violations.get(1).getLine());
-		assertTrue(violations.get(1).getMessage().contains("closing paren"));
+		// first case: braceless lambda closing paren on body line
+		assertEquals(9, violations.get(0).getLine());
+		assertTrue(violations.get(0).getMessage().contains("closing"));
 		// second case: closing brace not on closing paren line
-		assertEquals(16, violations.get(2).getLine());
-		assertTrue(violations.get(2).getMessage().contains("closing paren"));
-		// third case: braceless lambda closing paren on body line
-		assertEquals(21, violations.get(3).getLine());
-		assertTrue(violations.get(3).getMessage().contains("closing"));
+		assertEquals(16, violations.get(1).getLine());
+		assertTrue(violations.get(1).getMessage().contains("closing paren"));
+		// third case: this+lambda not on opening AND closing brace not on closing
+		assertEquals(20, violations.get(2).getLine());
+		assertTrue(violations.get(2).getMessage().contains("opening paren"));
+		assertEquals(24, violations.get(3).getLine());
+		assertTrue(violations.get(3).getMessage().contains("closing paren"));
 	}
 
 	@Test
 	public void testThisTernaryViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallThisTernaryViolation.java");
 		assertEquals(4, violations.size());
-		// first case: this + ternary not on opening
-		assertEquals(5, violations.get(0).getLine());
+		// first case: R.xxx + ternary not on opening
+		assertEquals(8, violations.get(0).getLine());
 		assertTrue(violations.get(0).getMessage().contains("Ternary"));
-		// second case: this + ternary on closing
-		assertEquals(15, violations.get(1).getLine());
+		// second case: this + single-line ternary wrong close
+		assertEquals(17, violations.get(1).getLine());
 		assertTrue(violations.get(1).getMessage().contains("closing"));
-		// third case: this + single-line ternary wrong close
-		assertEquals(20, violations.get(2).getLine());
-		assertTrue(violations.get(2).getMessage().contains("closing"));
-		// fourth case: R.xxx + ternary not on opening
-		assertEquals(24, violations.get(3).getLine());
-		assertTrue(violations.get(3).getMessage().contains("Ternary"));
+		// third case: this + ternary not on opening
+		assertEquals(21, violations.get(2).getLine());
+		assertTrue(violations.get(2).getMessage().contains("Ternary"));
+		// fourth case: this + ternary on closing
+		assertEquals(31, violations.get(3).getLine());
+		assertTrue(violations.get(3).getMessage().contains("closing"));
 	}
 }

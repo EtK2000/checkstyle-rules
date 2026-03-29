@@ -36,6 +36,13 @@ public class NoBlankLineBetweenSingleCasesCheckTest {
 	}
 
 	@Test
+	public void testBlankLineBetweenYieldCases() throws Exception {
+		final var violations = BaseCheckTest.runCheck(NoBlankLineBetweenSingleCasesCheck.class, DIR + "InputSingleCaseYieldViolation.java");
+		assertEquals(1, violations.size());
+		assertEquals(9, violations.getFirst().getLine());
+	}
+
+	@Test
 	public void testCleanNoBlankLines() throws Exception {
 		assertTrue(BaseCheckTest.runCheck(NoBlankLineBetweenSingleCasesCheck.class, DIR + "InputSingleCaseClean.java").isEmpty());
 	}

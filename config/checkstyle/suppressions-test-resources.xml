@@ -1,0 +1,11 @@
+<?xml version="1.0"?><!DOCTYPE suppressions PUBLIC
+	"-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+	"https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<suppressions>
+	<!-- Suppress ordering checks in directories whose test inputs intentionally violate them -->
+	<suppress checks="AnnotationAlphabeticalOrderCheck" files="inputs[\\/]annotation[\\/]" />
+	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]methodorder[\\/]" />
+	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]overload[\\/]" />
+	<suppress checks="OverloadMethodOrderCheck" files="inputs[\\/]overload[\\/]" />
+</suppressions>

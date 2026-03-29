@@ -51,3 +51,15 @@ dependencies {
 tasks.withType(Checkstyle).configureEach {
     dependsOn classes
 }
+
+tasks.register('checkstyleTestResources', Checkstyle) {
+    source fileTree('src/test/resources')
+    include '**/*.java'
+    classpath = files()
+    configFile = file('config/checkstyle/checkstyle-test-resources.xml')
+    configDirectory = file('config/checkstyle')
+}
+
+tasks.named('check') {
+    dependsOn 'checkstyleTestResources'
+}

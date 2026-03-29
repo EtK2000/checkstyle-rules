@@ -8,9 +8,23 @@ import java.util.Map;
 import org.json.JSONObject;
 
 class InputMultilineCallClean {
-	void singleLineCalls() {
-		System.out.println("hello");
-		Math.max(1, 2);
+	void allArgsOnSameLine() {
+		method(
+				1, 2, 3
+		);
+	}
+
+	void androidResourceIdAndLambda() {
+		method(android.R.string.ok, x -> {
+			System.out.println(x);
+		});
+	}
+
+	void cleanMultilineDefinition(
+			int a,
+			int b,
+			int c
+	) {
 	}
 
 	void correctMultiline() {
@@ -27,152 +41,23 @@ class InputMultilineCallClean {
 		);
 	}
 
-	void allArgsOnSameLine() {
-		method(
-				1, 2, 3
-		);
-	}
-
 	void emptyMultiline() {
 		method(
 		);
 	}
 
-	void nestedSingleLine() {
-		method(
-				Math.max(1, 2),
-				Math.min(3, 4)
-		);
+	Object getActivity() {
+		return null;
 	}
 
-	void singleBracelessLambdaMultiline() {
-		method(v ->
-				System.out.println(v)
-		);
+	Object getContext() {
+		return null;
 	}
 
-	void singleLambdaOnCallLine() {
-		method(x -> {
-			System.out.println(x);
-		});
-	}
-
-	void singleLambdaWithParens() {
-		method((a, b) -> {
-			System.out.println(a + b);
-		});
-	}
-
-	void singleAnonClassOnCallLine() {
-		method(new Runnable() {
-			public void run() {
-			}
-		});
-	}
-
-	void singleConstructorOnCallLine() {
-		method(new java.util.ArrayList<>(
-				java.util.Arrays.asList(1, 2, 3)
-		));
-	}
-
-	void thisAndBracelessLambdaMultiline() {
-		method(this, v ->
-				System.out.println(v)
-		);
-	}
-
-	void thisAndLambda() {
-		method(this, x -> {
-			System.out.println(x);
-		});
-	}
-
-	void thisAndConstructor() {
-		method(this, new java.util.ArrayList<>(
-				java.util.Arrays.asList(1, 2, 3)
-		));
-	}
-
-	void thisAndAnonClass() {
-		method(this, new Runnable() {
-			public void run() {
-			}
-		});
-	}
-
-	void resourceIdAndBracelessLambdaMultiline() {
-		method(R.string.ok, v ->
-				System.out.println(v)
-		);
-	}
-
-	void resourceIdAndLambda() {
-		method(R.string.ok, x -> {
-			System.out.println(x);
-		});
-	}
-
-	void androidResourceIdAndLambda() {
-		method(android.R.string.ok, x -> {
-			System.out.println(x);
-		});
-	}
-
-	void postDelayedWithBracedLambda() {
-		handler.postDelayed(() -> {
-			System.out.println("delayed");
-		}, 1000);
-	}
-
-	void postDelayedWithBracelessLambda() {
-		handler.postDelayed(
-				() -> System.out.println("delayed"),
-				1000
-		);
-	}
-
-	void singleListOf() {
-		method(List.of(
-				1, 2, 3
-		));
-	}
-
-	void singleMapOf() {
-		method(Map.of(
-				"a", 1,
-				"b", 2
-		));
-	}
-
-	void singleArraysAsList() {
-		method(Arrays.asList(
-				1, 2, 3
-		));
-	}
-
-	void thisAndListOf() {
-		method(this, List.of(
-				1, 2, 3
-		));
-	}
-
-	void getStringDirectReceiver() {
-		method(requireContext().getString(
-				1
-		));
-	}
-
-	void getStringTrackedVariable() {
-		final var ctx = requireContext();
-		method(ctx.getString(
-				1
-		));
-	}
-
-	void getStringContextParameter(Context ctx) {
-		method(ctx.getString(
-				1
+	void getQuantityStringContextParameter(Context ctx) {
+		method(ctx.getResources().getQuantityString(
+				1,
+				2
 		));
 	}
 
@@ -191,69 +76,22 @@ class InputMultilineCallClean {
 		));
 	}
 
-	void getQuantityStringContextParameter(Context ctx) {
-		method(ctx.getResources().getQuantityString(
-				1,
-				2
+	void getStringContextParameter(Context ctx) {
+		method(ctx.getString(
+				1
 		));
 	}
 
-	void singleTernaryArg() {
-		method(true
-				? "a"
-				: "b"
-		);
+	void getStringDirectReceiver() {
+		method(requireContext().getString(
+				1
+		));
 	}
 
-	void singleLineTernaryOnOpening() {
-		method(true ? "a" : "b");
-	}
-
-	void thisAndSingleLineTernary() {
-		method(this, true ? "a" : "b");
-	}
-
-	void thisAndTernary() {
-		method(this, true
-				? "a"
-				: "b"
-		);
-	}
-
-	void resourceIdAndTernary() {
-		method(R.string.ok, true
-				? "a"
-				: "b"
-		);
-	}
-
-	void resourceIdAndSingleLineTernary() {
-		method(R.string.ok, true ? "a" : "b");
-	}
-
-	void singleLineChainedConstructor() {
-		method(new ArrayList<>().size());
-	}
-
-	void multiLineChainedConstructor() {
-		method(new JSONObject()
-				.put("key", "value")
-				.put("key2", "value2")
-		);
-	}
-
-	void thisAndChainedConstructor() {
-		method(this, new JSONObject()
-				.put("key", "value")
-				.put("key2", "value2")
-		);
-	}
-
-	void resourceIdAndChainedConstructor() {
-		method(R.string.ok, new JSONObject()
-				.put("key", "value")
-				.put("key2", "value2")
-		);
+	void getStringDottedContextCall() {
+		method(fragment.getContext().getString(
+				1
+		));
 	}
 
 	void getStringFullyQualifiedContextParameter(android.content.Context ctx) {
@@ -280,25 +118,59 @@ class InputMultilineCallClean {
 		));
 	}
 
-	void getStringDottedContextCall() {
-		method(fragment.getContext().getString(
+	void getStringTrackedVariable() {
+		final var ctx = requireContext();
+		method(ctx.getString(
 				1
 		));
 	}
 
-	void cleanMultilineDefinition(
-			int a,
-			int b,
-			int c
-	) {
+	void method() {
 	}
 
-	Object getActivity() {
-		return null;
+	void method(Object a) {
 	}
 
-	Object getContext() {
-		return null;
+	void method(Runnable r) {
+	}
+
+	void method(java.util.function.BiConsumer<Integer, Integer> c) {
+	}
+
+	void method(java.util.function.Consumer<Integer> c) {
+	}
+
+	void method(Object a, Object b) {
+	}
+
+	void method(int a, int b, int c) {
+	}
+
+	void multiLineChainedConstructor() {
+		method(new JSONObject()
+				.put("key", "value")
+				.put("key2", "value2")
+		);
+	}
+
+	void nestedSingleLine() {
+		method(
+				Math.max(1, 2),
+				Math.min(3, 4)
+		);
+	}
+
+	void postDelayedWithBracedLambda() {
+		handler.postDelayed(() -> {
+			System.out.println("delayed");
+		}, 1000);
+	}
+
+	void postDelayedWithBracelessLambda() {
+		handler.postDelayed(
+				() -> System.out.println("delayed"),
+				1000
+		);
 	}
 
 	Object requireActivity() {
@@ -309,24 +181,152 @@ class InputMultilineCallClean {
 		return null;
 	}
 
-	void method() {
+	void resourceIdAndBracelessLambdaMultiline() {
+		method(R.string.ok, v ->
+				System.out.println(v)
+		);
 	}
 
-	void method(int a, int b, int c) {
+	void resourceIdAndChainedConstructor() {
+		method(R.string.ok, new JSONObject()
+				.put("key", "value")
+				.put("key2", "value2")
+		);
 	}
 
-	void method(Object a) {
+	void resourceIdAndLambda() {
+		method(R.string.ok, x -> {
+			System.out.println(x);
+		});
 	}
 
-	void method(Object a, Object b) {
+	void resourceIdAndSingleLineTernary() {
+		method(R.string.ok, true ? "a" : "b");
 	}
 
-	void method(Runnable r) {
+	void resourceIdAndTernary() {
+		method(R.string.ok, true
+				? "a"
+				: "b"
+		);
 	}
 
-	void method(java.util.function.Consumer<Integer> c) {
+	void singleAnonClassOnCallLine() {
+		method(new Runnable() {
+			public void run() {
+			}
+		});
 	}
 
-	void method(java.util.function.BiConsumer<Integer, Integer> c) {
+	void singleArraysAsList() {
+		method(Arrays.asList(
+				1, 2, 3
+		));
+	}
+
+	void singleBracelessLambdaMultiline() {
+		method(v ->
+				System.out.println(v)
+		);
+	}
+
+	void singleConstructorOnCallLine() {
+		method(new java.util.ArrayList<>(
+				java.util.Arrays.asList(1, 2, 3)
+		));
+	}
+
+	void singleLambdaOnCallLine() {
+		method(x -> {
+			System.out.println(x);
+		});
+	}
+
+	void singleLambdaWithParens() {
+		method((a, b) -> {
+			System.out.println(a + b);
+		});
+	}
+
+	void singleLineCalls() {
+		System.out.println("hello");
+		Math.max(1, 2);
+	}
+
+	void singleLineChainedConstructor() {
+		method(new ArrayList<>().size());
+	}
+
+	void singleLineTernaryOnOpening() {
+		method(true ? "a" : "b");
+	}
+
+	void singleListOf() {
+		method(List.of(
+				1, 2, 3
+		));
+	}
+
+	void singleMapOf() {
+		method(Map.of(
+				"a", 1,
+				"b", 2
+		));
+	}
+
+	void singleTernaryArg() {
+		method(true
+				? "a"
+				: "b"
+		);
+	}
+
+	void thisAndAnonClass() {
+		method(this, new Runnable() {
+			public void run() {
+			}
+		});
+	}
+
+	void thisAndBracelessLambdaMultiline() {
+		method(this, v ->
+				System.out.println(v)
+		);
+	}
+
+	void thisAndChainedConstructor() {
+		method(this, new JSONObject()
+				.put("key", "value")
+				.put("key2", "value2")
+		);
+	}
+
+	void thisAndConstructor() {
+		method(this, new java.util.ArrayList<>(
+				java.util.Arrays.asList(1, 2, 3)
+		));
+	}
+
+	void thisAndLambda() {
+		method(this, x -> {
+			System.out.println(x);
+		});
+	}
+
+	void thisAndListOf() {
+		method(this, List.of(
+				1, 2, 3
+		));
+	}
+
+	void thisAndSingleLineTernary() {
+		method(this, true ? "a" : "b");
+	}
+
+	void thisAndTernary() {
+		method(this, true
+				? "a"
+				: "b"
+		);
 	}
 }

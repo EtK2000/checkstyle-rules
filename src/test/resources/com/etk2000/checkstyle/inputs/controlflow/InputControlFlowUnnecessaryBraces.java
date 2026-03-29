@@ -14,6 +14,11 @@ class InputControlFlowUnnecessaryBraces {
 			System.out.println(i);
 		}
 
+		final var list = java.util.List.of("a", "b");
+		for (var item : list) { // violation: unnecessary braces
+			System.out.println(item);
+		}
+
 		do { // violation: unnecessary braces
 			--x;
 		} while (x > 0);
