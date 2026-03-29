@@ -47,6 +47,7 @@ root. It will be picked up automatically.
 | PreferImportCheck                    | Prefer imports over fully qualified names (warning)                                                                                      |
 | PreferPatternMatchingInstanceofCheck | Prefer `instanceof Foo f` over `instanceof` followed by cast                                                                             |
 | PreferPrefixIncrementCheck           | Use `++i`/`--i` instead of `i++`/`i--`                                                                                                   |
+| PreferSpecificApiCheck               | Prefer `.getFirst()` over `.get(0)`, `.getLast()` over `.get(size()-1)`                                                                  |
 | PreferVarCheck                       | For-each loops and try-with-resources must use `var`                                                                                     |
 | SwitchCaseOrderCheck                 | Switch cases sorted alphabetically/numerically, `default` last                                                                           |
 | ThreadAnnotationCheck                | Top-level classes must have a thread annotation                                                                                          |
