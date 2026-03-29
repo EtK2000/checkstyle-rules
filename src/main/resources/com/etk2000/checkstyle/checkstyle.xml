@@ -110,6 +110,9 @@
 		<!-- Custom: Prefer enhanced (arrow) switch syntax when possible -->
 		<module name="com.etk2000.checkstyle.PreferEnhancedSwitchCheck" />
 
+		<!-- Custom: Prefer pattern matching instanceof over cast-after-check -->
+		<module name="com.etk2000.checkstyle.PreferPatternMatchingInstanceofCheck" />
+
 		<!-- Custom: Prefer imports over fully qualified names (warning, not error) -->
 		<module name="com.etk2000.checkstyle.PreferImportCheck">
 			<property name="severity" value="warning" />
