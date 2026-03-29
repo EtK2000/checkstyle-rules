@@ -95,8 +95,8 @@
 		<!-- Custom: No empty switch statements -->
 		<module name="com.etk2000.checkstyle.EmptySwitchCheck" />
 
-		<!-- Custom: For-each loops must use var -->
-		<module name="com.etk2000.checkstyle.ForEachVarCheck" />
+		<!-- Custom: For-each loops and try-with-resources must use var -->
+		<module name="com.etk2000.checkstyle.PreferVarCheck" />
 
 		<!-- Custom: Methods sorted alphabetically within their section -->
 		<module name="com.etk2000.checkstyle.MethodAlphabeticalOrderCheck" />

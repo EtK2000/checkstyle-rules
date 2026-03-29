@@ -36,7 +36,6 @@ root. It will be picked up automatically.
 | ControlFlowBracesCheck             | No one-liners, no unnecessary braces on single-line bodies, braces required on multi-line bodies                                         |
 | EmptyBodyCheck                     | No empty if/else bodies                                                                                                                  |
 | EmptySwitchCheck                   | No empty switch statements                                                                                                               |
-| ForEachVarCheck                    | For-each loops must use `var` instead of an explicit type                                                                                |
 | MethodAlphabeticalOrderCheck       | Methods sorted alphabetically within their section (static/instance)                                                                     |
 | MultilineCallFormattingCheck       | Multiline call/signature formatting with ternary and inline block exceptions                                                             |
 | NoArrayTrailingCommaCheck          | No trailing comma in array initializers                                                                                                  |
@@ -47,6 +46,7 @@ root. It will be picked up automatically.
 | PreferEnhancedSwitchCheck          | Prefer enhanced (arrow) switch syntax when each case is a single statement                                                               |
 | PreferImportCheck                  | Prefer imports over fully qualified names (warning)                                                                                      |
 | PreferPrefixIncrementCheck         | Use `++i`/`--i` instead of `i++`/`i--`                                                                                                   |
+| PreferVarCheck                     | For-each loops and try-with-resources must use `var`                                                                                     |
 | SwitchCaseOrderCheck               | Switch cases sorted alphabetically/numerically, `default` last                                                                           |
 | ThreadAnnotationCheck              | Top-level classes must have a thread annotation                                                                                          |
 
