@@ -33,6 +33,7 @@ root. It will be picked up automatically.
 |--------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
 | AnnotationAlphabeticalOrderCheck     | Annotations must be sorted alphabetically                                                                                                |
 | ClassStructureOrderCheck             | Class members must follow section ordering (inner types, static fields, static methods, instance fields, constructors, instance methods) |
+| ConstructorAssignmentOrderCheck      | Constructor field assignments alphabetical: simple one-liners first, then multi-line                                                     |
 | ControlFlowBracesCheck               | No one-liners, no unnecessary braces on single-line bodies, braces required on multi-line bodies                                         |
 | EmptyBodyCheck                       | No empty if/else bodies                                                                                                                  |
 | EmptySwitchCheck                     | No empty switch statements                                                                                                               |

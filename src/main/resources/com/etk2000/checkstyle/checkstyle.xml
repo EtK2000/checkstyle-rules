@@ -86,6 +86,9 @@
 		<!-- Custom: Class structure must follow defined section order -->
 		<module name="com.etk2000.checkstyle.ClassStructureOrderCheck" />
 
+		<!-- Custom: Constructor/initializer field assignments must be ordered -->
+		<module name="com.etk2000.checkstyle.ConstructorAssignmentOrderCheck" />
+
 		<!-- Custom: Control flow brace rules -->
 		<module name="com.etk2000.checkstyle.ControlFlowBracesCheck" />
 
