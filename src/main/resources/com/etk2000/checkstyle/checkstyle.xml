@@ -95,6 +95,9 @@
 		<!-- Custom: No empty if/else bodies -->
 		<module name="com.etk2000.checkstyle.EmptyBodyCheck" />
 
+		<!-- Custom: Fields sorted by immutability, type, and name -->
+		<module name="com.etk2000.checkstyle.FieldSortingCheck" />
+
 		<!-- Custom: No empty switch statements -->
 		<module name="com.etk2000.checkstyle.EmptySwitchCheck" />
 

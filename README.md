@@ -36,6 +36,7 @@ root. It will be picked up automatically.
 | ConstructorAssignmentOrderCheck      | Constructor field assignments alphabetical: simple one-liners first, then multi-line                                                     |
 | ControlFlowBracesCheck               | No one-liners, no unnecessary braces on single-line bodies, braces required on multi-line bodies                                         |
 | EmptyBodyCheck                       | No empty if/else bodies                                                                                                                  |
+| FieldSortingCheck                    | Fields sorted: finals with values, finals without, non-finals; primitives before references; alphabetical                                |
 | EmptySwitchCheck                     | No empty switch statements                                                                                                               |
 | MethodAlphabeticalOrderCheck         | Methods sorted alphabetically within their section (static/instance)                                                                     |
 | MultilineCallFormattingCheck         | Multiline call/signature formatting with ternary and inline block exceptions                                                             |

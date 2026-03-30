@@ -43,10 +43,10 @@ public class CheckstylePlugin implements Plugin<Project> {
 		public abstract RegularFileProperty getOutputFile();
 	}
 
-	private static final String CHECKSTYLE_VERSION;
 	private static final Pattern MANIFEST_MIN_SDK = Pattern.compile(
 			"android:minSdkVersion\\s*=\\s*\"(\\d+)\""
 	);
+	private static final String CHECKSTYLE_VERSION;
 
 	static {
 		final var props = new Properties();
