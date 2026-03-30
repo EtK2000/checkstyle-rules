@@ -47,6 +47,7 @@ root. It will be picked up automatically.
 | NoUnnecessaryThisCheck               | No `this.` unless shadowing or in field assignment                                                                                       |
 | OverloadMethodOrderCheck             | Overloaded methods ordered by ascending parameter count                                                                                  |
 | PreferImportCheck                    | Prefer imports over fully qualified names (warning)                                                                                      |
+| PreferLiteralSuffixCheck             | Prefer `100L` over `(long) x * 100` when a literal suffix can replace a widening cast                                                    |
 | PreferPatternMatchingInstanceofCheck | Prefer `instanceof Foo f` over `instanceof` followed by cast                                                                             |
 | PreferPrefixIncrementCheck           | Use `++i`/`--i` instead of `i++`/`i--`                                                                                                   |
 | PreferSpecificApiCheck               | Prefer `.getFirst()` over `.get(0)`, `.getLast()` over `.get(size()-1)`                                                                  |
