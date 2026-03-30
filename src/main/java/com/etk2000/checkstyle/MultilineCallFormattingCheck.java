@@ -108,22 +108,21 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 	@CheckReturnValue
 	@Nullable
 	private static DetailAST findLastArg(@Nonnull DetailAST ast) {
-		switch (ast.getType()) {
-			case TokenTypes.CTOR_DEF, TokenTypes.METHOD_DEF: {
+		return switch (ast.getType()) {
+			case TokenTypes.CTOR_DEF, TokenTypes.METHOD_DEF -> {
 				final var params = ast.findFirstToken(TokenTypes.PARAMETERS);
 				if (params == null)
-					return null;
-				return lastChildOfType(params, TokenTypes.PARAMETER_DEF);
+					yield null;
+				yield lastChildOfType(params, TokenTypes.PARAMETER_DEF);
 			}
-			case TokenTypes.LITERAL_NEW, TokenTypes.METHOD_CALL, TokenTypes.SUPER_CTOR_CALL: {
+			case TokenTypes.LITERAL_NEW, TokenTypes.METHOD_CALL, TokenTypes.SUPER_CTOR_CALL -> {
 				final var elist = ast.findFirstToken(TokenTypes.ELIST);
 				if (elist == null)
-					return null;
-				return lastNonCommaChild(elist);
+					yield null;
+				yield lastNonCommaChild(elist);
 			}
-			default:
-				return null;
-		}
+			default -> null;
+		};
 	}
 
 	@CheckReturnValue

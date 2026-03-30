@@ -45,7 +45,6 @@ root. It will be picked up automatically.
 | NoCaseBracesCheck                    | No unnecessary braces in case blocks, braces required when a variable is defined                                                         |
 | NoUnnecessaryThisCheck               | No `this.` unless shadowing or in field assignment                                                                                       |
 | OverloadMethodOrderCheck             | Overloaded methods ordered by ascending parameter count                                                                                  |
-| PreferEnhancedSwitchCheck            | Prefer enhanced (arrow) switch syntax when each case is a single statement                                                               |
 | PreferImportCheck                    | Prefer imports over fully qualified names (warning)                                                                                      |
 | PreferPatternMatchingInstanceofCheck | Prefer `instanceof Foo f` over `instanceof` followed by cast                                                                             |
 | PreferPrefixIncrementCheck           | Use `++i`/`--i` instead of `i++`/`i--`                                                                                                   |
@@ -68,4 +67,6 @@ root. It will be picked up automatically.
 ### Built-in checkstyle checks
 
 UnusedImports, EmptyLineSeparator, RightCurly (else/catch/finally on own line),
-NoEnumTrailingComma, FinalLocalVariable, AnnotationLocation
+NoEnumTrailingComma, FinalLocalVariable, AnnotationLocation, HexLiteralCase,
+IllegalSymbol, LineEnding (LF), MissingOverrideOnRecordAccessor,
+PatternVariableAssignment, UnnecessaryNullCheckWithInstanceOf, UseEnhancedSwitch

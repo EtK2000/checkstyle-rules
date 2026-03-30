@@ -116,8 +116,8 @@
 		<!-- Custom: No trailing comma in array initializers -->
 		<module name="com.etk2000.checkstyle.NoArrayTrailingCommaCheck" />
 
-		<!-- Custom: Prefer enhanced (arrow) switch syntax when possible -->
-		<module name="com.etk2000.checkstyle.PreferEnhancedSwitchCheck" />
+		<!-- Prefer enhanced (arrow) switch syntax when possible -->
+		<module name="UseEnhancedSwitch" />
 
 		<!-- Custom: Prefer specific API methods over generic ones -->
 		<module name="com.etk2000.checkstyle.PreferSpecificApiCheck">
