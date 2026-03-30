@@ -46,15 +46,6 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
-	@Nonnull
-	private static String getArgText(@Nonnull DetailAST methodCall) {
-		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
-		if (elist == null || elist.getChildCount() != 1)
-			return "";
-		return childText(elist.getFirstChild());
-	}
-
-	@CheckReturnValue
 	private static boolean isGetCall(@Nonnull DetailAST methodCall) {
 		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
 		if (dot == null)
@@ -157,7 +148,9 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 	 * Sets the minimum SDK version for the target platform.
 	 * APIs not available below this SDK level will not be suggested.
 	 * For example, {@code .getFirst()}/{@code .getLast()} require Android API 35+.
+	 * <p>Called by Checkstyle via reflection when {@code minSdk} is set in the config.</p>
 	 */
+	@SuppressWarnings("unused")
 	public void setMinSdk(int minSdk) {
 		this.minSdk = minSdk;
 	}
