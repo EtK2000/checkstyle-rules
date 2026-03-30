@@ -95,6 +95,9 @@
 		<!-- Custom: Control flow brace rules -->
 		<module name="com.etk2000.checkstyle.ControlFlowBracesCheck" />
 
+		<!-- Custom: instanceof should come before cast to same type in && -->
+		<module name="com.etk2000.checkstyle.InstanceofBeforeCastCheck" />
+
 		<!-- Custom: No empty if/else bodies -->
 		<module name="com.etk2000.checkstyle.EmptyBodyCheck" />
 
