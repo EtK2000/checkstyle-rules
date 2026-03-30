@@ -177,6 +177,9 @@
 		<!-- Enforce JLS modifier order (public static final, not final static public) -->
 		<module name="ModifierOrder" />
 
+		<!-- Enforce lowercase 0x/0b prefixes and uppercase L suffix -->
+		<module name="NumericalPrefixesInfixesSuffixesCharacterCase" />
+
 		<!-- One statement per line -->
 		<module name="OneStatementPerLine" />
 

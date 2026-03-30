@@ -69,7 +69,8 @@ root. It will be picked up automatically.
 AnnotationLocation, AvoidNoArgumentSuperConstructorCall, CovariantEquals,
 EmptyLineSeparator, ExplicitInitialization, FinalLocalVariable, HexLiteralCase,
 IllegalSymbol, LineEnding (LF), MissingOverride, MissingOverrideOnRecordAccessor,
-ModifierOrder, NoEnumTrailingComma, OneStatementPerLine, PatternVariableAssignment,
+ModifierOrder, NoEnumTrailingComma, NumericalPrefixesInfixesSuffixesCharacterCase,
+OneStatementPerLine, PatternVariableAssignment,
 RedundantImport, RedundantModifier, RightCurly (else/catch/finally on own line),
 SimplifyBooleanExpression, StringLiteralEquality, UnnecessaryNullCheckWithInstanceOf,
 UnusedImports, UnusedLocalVariable, UpperEll, UseEnhancedSwitch

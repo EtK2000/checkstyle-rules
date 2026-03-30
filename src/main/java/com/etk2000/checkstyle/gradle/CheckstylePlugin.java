@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 
 public class CheckstylePlugin implements Plugin<Project> {
-	public static abstract class ExtractCheckstyleConfig extends DefaultTask {
+	public abstract static class ExtractCheckstyleConfig extends DefaultTask {
 		@TaskAction
 		public void extract() {
 			final var outputFile = getOutputFile().get().getAsFile();
