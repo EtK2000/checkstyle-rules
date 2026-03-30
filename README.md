@@ -51,6 +51,7 @@ root. It will be picked up automatically.
 | PreferPrefixIncrementCheck           | Use `++i`/`--i` instead of `i++`/`i--`                                                                                                   |
 | PreferSpecificApiCheck               | Prefer `.getFirst()` over `.get(0)`, `.getLast()` over `.get(size()-1)`                                                                  |
 | PreferVarCheck                       | For-each loops, try-with-resources, and local variables must use `var`                                                                   |
+| RedundantCastCheck                   | Flag redundant casts: same-type casts and implicit widening primitive casts in assignments/returns                                       |
 | RedundantNumericSuffixCheck          | Flag redundant `L`/`f`/`d` suffixes when the target type is known from context                                                           |
 | SwitchCaseOrderCheck                 | Switch cases sorted alphabetically/numerically, `default` last                                                                           |
 | ThreadAnnotationCheck                | Top-level classes must have a thread annotation                                                                                          |

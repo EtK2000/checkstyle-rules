@@ -150,6 +150,9 @@
 		<!-- Custom: Prefer prefix increment/decrement over postfix -->
 		<module name="com.etk2000.checkstyle.PreferPrefixIncrementCheck" />
 
+		<!-- Custom: Flag redundant type casts (same-type or implicit widening) -->
+		<module name="com.etk2000.checkstyle.RedundantCastCheck" />
+
 		<!-- Custom: Flag redundant numeric suffixes (L, f, d) -->
 		<module name="com.etk2000.checkstyle.RedundantNumericSuffixCheck" />
 
