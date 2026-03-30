@@ -66,11 +66,13 @@ root. It will be picked up automatically.
 
 ### Built-in checkstyle checks
 
-AnnotationLocation, EmptyLineSeparator, FinalLocalVariable, HexLiteralCase,
-IllegalSymbol, LineEnding (LF), MissingOverrideOnRecordAccessor, NoEnumTrailingComma,
-PatternVariableAssignment, RightCurly (else/catch/finally on own line),
-UnnecessaryNullCheckWithInstanceOf, UnusedImports, UnusedLocalVariable,
-UseEnhancedSwitch
+AnnotationLocation, AvoidNoArgumentSuperConstructorCall, CovariantEquals,
+EmptyLineSeparator, ExplicitInitialization, FinalLocalVariable, HexLiteralCase,
+IllegalSymbol, LineEnding (LF), MissingOverride, MissingOverrideOnRecordAccessor,
+ModifierOrder, NoEnumTrailingComma, OneStatementPerLine, PatternVariableAssignment,
+RedundantImport, RedundantModifier, RightCurly (else/catch/finally on own line),
+SimplifyBooleanExpression, StringLiteralEquality, UnnecessaryNullCheckWithInstanceOf,
+UnusedImports, UnusedLocalVariable, UpperEll, UseEnhancedSwitch
 
 ### TODO: Enable when upgrading to Java 22+
 

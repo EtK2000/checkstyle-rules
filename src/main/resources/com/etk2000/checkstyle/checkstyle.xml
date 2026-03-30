@@ -153,17 +153,47 @@
 		<!-- Custom: All types must have a thread annotation -->
 		<module name="com.etk2000.checkstyle.ThreadAnnotationCheck" />
 
+		<!-- Flag redundant super() calls -->
+		<module name="AvoidNoArgumentSuperConstructorCall" />
+
+		<!-- Flag equals(Foo) without equals(Object) -->
+		<module name="CovariantEquals" />
+
+		<!-- Flag explicit initialization to default values (int x = 0, Object o = null) -->
+		<module name="ExplicitInitialization" />
+
 		<!-- Enforce uppercase hex literal digits (A-F, not a-f) -->
 		<module name="HexLiteralCase" />
 
 		<!-- Block emoji and special Unicode symbols in code -->
 		<module name="IllegalSymbol" />
 
+		<!-- Require @Override on all overriding methods -->
+		<module name="MissingOverride" />
+
 		<!-- Require @Override on explicitly declared record accessor methods -->
 		<module name="MissingOverrideOnRecordAccessor" />
 
+		<!-- Enforce JLS modifier order (public static final, not final static public) -->
+		<module name="ModifierOrder" />
+
+		<!-- One statement per line -->
+		<module name="OneStatementPerLine" />
+
 		<!-- Flag reassignment of pattern variables from instanceof -->
 		<module name="PatternVariableAssignment" />
+
+		<!-- Flag duplicate or java.lang imports -->
+		<module name="RedundantImport" />
+
+		<!-- Flag implied modifiers (public on interface methods, etc.) -->
+		<module name="RedundantModifier" />
+
+		<!-- Simplify boolean expressions (b == true, !false, etc.) -->
+		<module name="SimplifyBooleanExpression" />
+
+		<!-- Flag == on String comparisons -->
+		<module name="StringLiteralEquality" />
 
 		<!-- Flag redundant null checks paired with instanceof -->
 		<module name="UnnecessaryNullCheckWithInstanceOf" />
@@ -173,6 +203,9 @@
 
 		<!-- No unused local variables -->
 		<module name="UnusedLocalVariable" />
+
+		<!-- Require L not l for long literals -->
+		<module name="UpperEll" />
 
 		<!-- Blank line between methods/constructors/classes -->
 		<module name="EmptyLineSeparator">
