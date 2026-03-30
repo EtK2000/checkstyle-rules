@@ -9,6 +9,7 @@ import org.gradle.api.plugins.quality.Checkstyle;
 import org.gradle.api.plugins.quality.CheckstyleExtension;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.work.DisableCachingByDefault;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import java.io.File;
@@ -21,6 +22,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 
 public class CheckstylePlugin implements Plugin<Project> {
+	@DisableCachingByDefault(because = "Extracts a static resource from the plugin JAR; no trackable inputs to cache against")
 	public abstract static class ExtractCheckstyleConfig extends DefaultTask {
 		@TaskAction
 		public void extract() {

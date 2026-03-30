@@ -1,5 +1,7 @@
 # checkstyle-rules
 
+[![Release](https://jitpack.io/v/com.etk2000/checkstyle-rules.svg)](https://jitpack.io/#com.etk2000/checkstyle-rules)
+
 > **Warning:** This project is vibecoded slop. Proceed with caution.
 
 A Gradle plugin that bundles custom checkstyle checks and configuration. Apply one plugin and get
