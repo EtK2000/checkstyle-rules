@@ -66,7 +66,13 @@ root. It will be picked up automatically.
 
 ### Built-in checkstyle checks
 
-UnusedImports, EmptyLineSeparator, RightCurly (else/catch/finally on own line),
-NoEnumTrailingComma, FinalLocalVariable, AnnotationLocation, HexLiteralCase,
-IllegalSymbol, LineEnding (LF), MissingOverrideOnRecordAccessor,
-PatternVariableAssignment, UnnecessaryNullCheckWithInstanceOf, UseEnhancedSwitch
+AnnotationLocation, EmptyLineSeparator, FinalLocalVariable, HexLiteralCase,
+IllegalSymbol, LineEnding (LF), MissingOverrideOnRecordAccessor, NoEnumTrailingComma,
+PatternVariableAssignment, RightCurly (else/catch/finally on own line),
+UnnecessaryNullCheckWithInstanceOf, UnusedImports, UnusedLocalVariable,
+UseEnhancedSwitch
+
+### TODO: Enable when upgrading to Java 22+
+
+- `UnusedCatchParameterShouldBeUnnamed` -- flags unused catch params that should be `_`
+- `UnusedLambdaParameterShouldBeUnnamed` -- flags unused lambda params that should be `_`
