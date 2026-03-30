@@ -17,7 +17,7 @@ class InputMultilineCallThisViolation {
 	}
 
 	void thisLambdaNotOnOpening() {
-		method( // violation: args not on opening paren line
+		method( // violation: inline block not on opening paren line
 				this, x -> {
 					System.out.println(x);
 				}
