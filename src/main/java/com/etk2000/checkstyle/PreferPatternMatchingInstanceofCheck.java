@@ -46,16 +46,47 @@ public class PreferPatternMatchingInstanceofCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
-	private static DetailAST findIfBody(@Nonnull DetailAST instanceofAst) {
-		// walk up to find the enclosing LITERAL_IF
+	private static boolean hasCastInThenBranch(
+			@Nonnull DetailAST instanceofAst,
+			@Nonnull String typeName,
+			@Nonnull String exprStr
+	) {
 		var parent = instanceofAst.getParent();
-		while (parent != null && parent.getType() != TokenTypes.LITERAL_IF)
+		while (parent != null) {
+			if (parent.getType() == TokenTypes.LITERAL_IF) {
+				final var slist = parent.findFirstToken(TokenTypes.SLIST);
+				return slist != null && containsCastTo(slist, typeName, exprStr);
+			}
+			// &&: right operand only executes when instanceof is true
+			if (parent.getType() == TokenTypes.LAND
+					&& isInFirstChild(parent, instanceofAst)) {
+				final var rightOperand = parent.getFirstChild().getNextSibling();
+				if (rightOperand != null && containsCastTo(rightOperand, typeName, exprStr))
+					return true;
+				// continue walking up to check if-body or outer &&
+			}
+			if (parent.getType() == TokenTypes.QUESTION
+					&& isInFirstChild(parent, instanceofAst)) {
+				// search true-branch: children between condition and COLON
+				for (var child = parent.getFirstChild().getNextSibling();
+				     child != null && child.getType() != TokenTypes.COLON;
+				     child = child.getNextSibling()) {
+					if (containsCastTo(child, typeName, exprStr))
+						return true;
+				}
+				return false;
+			}
 			parent = parent.getParent();
-		if (parent == null)
-			return null;
+		}
+		return false;
+	}
 
-		// the "then" body is the SLIST or single statement after RPAREN
-		return parent.findFirstToken(TokenTypes.SLIST);
+	@CheckReturnValue
+	private static boolean isInFirstChild(@Nonnull DetailAST parent, @Nonnull DetailAST target) {
+		var node = target;
+		while (node != null && node.getParent() != parent)
+			node = node.getParent();
+		return node != null && node == parent.getFirstChild();
 	}
 
 	@CheckReturnValue
@@ -105,11 +136,7 @@ public class PreferPatternMatchingInstanceofCheck extends AbstractCheck {
 		if (typeName.isEmpty())
 			return;
 
-		final var body = findIfBody(ast);
-		if (body == null)
-			return;
-
-		if (containsCastTo(body, typeName, exprStr))
+		if (hasCastInThenBranch(ast, typeName, exprStr))
 			log(ast, MSG_KEY, typeName);
 	}
 }

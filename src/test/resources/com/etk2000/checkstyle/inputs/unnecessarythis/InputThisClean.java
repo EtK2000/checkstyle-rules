@@ -11,6 +11,11 @@ class InputThisClean {
 		this.field = 42;
 	}
 
+	// lambda: this.field needed because outer method param shadows it
+	void lambdaWithShadowing(int field) {
+		Runnable r = () -> System.out.println(this.field);
+	}
+
 	void localShadowing() {
 		int field = 42;
 		System.out.println(this.field);

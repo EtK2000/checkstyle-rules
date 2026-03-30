@@ -6,6 +6,12 @@ class InputPatternInstanceofClean {
 			System.out.println(s);
 	}
 
+	// &&: cast is BEFORE instanceof (left operand) -- bad code, but not this check's concern
+	void andCastBeforeInstanceof(Object obj) {
+		if (((String) obj).isEmpty() && obj instanceof String)
+			System.out.println("ok");
+	}
+
 	void instanceofWithoutCast(Object obj) {
 		if (obj instanceof String)
 			System.out.println("is a string");
@@ -14,5 +20,10 @@ class InputPatternInstanceofClean {
 	void instanceofWithUnrelatedCast(Object obj, Object other) {
 		if (obj instanceof String)
 			System.out.println((String) other);
+	}
+
+	// ternary: no cast in true-branch
+	boolean ternaryNoCast(Object obj) {
+		return obj instanceof String ? true : false;
 	}
 }

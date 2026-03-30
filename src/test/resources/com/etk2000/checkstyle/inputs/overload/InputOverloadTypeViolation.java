@@ -30,4 +30,9 @@ class InputOverloadTypeViolation {
 	void prim(int a) {}
 
 	void prim(char a) {} // violation: char must appear before int
+
+	// varargs before non-varargs — wrong
+	void vararg(int... a) {}
+
+	void vararg(int a) {} // violation: int must appear before int...
 }

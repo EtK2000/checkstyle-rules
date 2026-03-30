@@ -21,6 +21,13 @@ public class NoUnnecessaryThisCheckTest {
 	}
 
 	@Test
+	public void testLambdaViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(NoUnnecessaryThisCheck.class, DIR + "InputThisLambdaViolation.java");
+		assertEquals(1, violations.size());
+		assertEquals(7, violations.getFirst().getLine());
+	}
+
+	@Test
 	public void testMethodCallViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(NoUnnecessaryThisCheck.class, DIR + "InputThisMethodCall.java");
 		assertEquals(1, violations.size());

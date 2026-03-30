@@ -16,8 +16,9 @@ public class NoArrayTrailingCommaCheckTest {
 	@Test
 	public void testTrailingCommaViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(NoArrayTrailingCommaCheck.class, DIR + "InputArrayCommaViolation.java");
-		assertEquals(2, violations.size());
+		assertEquals(3, violations.size());
 		assertEquals(4, violations.getFirst().getLine());
 		assertEquals(5, violations.get(1).getLine());
+		assertEquals(8, violations.get(2).getLine());
 	}
 }

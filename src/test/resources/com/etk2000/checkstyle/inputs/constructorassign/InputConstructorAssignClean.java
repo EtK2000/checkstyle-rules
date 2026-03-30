@@ -16,4 +16,16 @@ class InputConstructorAssignClean {
 			}
 		};
 	}
+
+	// multiple constructors: each checked independently
+	InputConstructorAssignClean(int alpha, int beta) {
+		this.alpha = alpha;
+		this.beta = beta;
+	}
+
+	// instance initializer: also checked
+	{
+		this.alpha = 1;
+		this.beta = 2;
+	}
 }

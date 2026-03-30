@@ -16,7 +16,7 @@ public class OverloadMethodOrderCheckTest {
 	@Test
 	public void testTypeOrderViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(OverloadMethodOrderCheck.class, DIR + "InputOverloadTypeViolation.java");
-		assertEquals(6, violations.size());
+		assertEquals(7, violations.size());
 	}
 
 	@Test

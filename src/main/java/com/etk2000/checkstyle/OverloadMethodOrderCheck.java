@@ -83,8 +83,14 @@ public class OverloadMethodOrderCheck extends AbstractCheck {
 				continue;
 
 			final var type = param.findFirstToken(TokenTypes.TYPE);
-			if (type != null)
-				types.add(getTypeName(type));
+			if (type != null) {
+				final var typeName = getTypeName(type);
+				// varargs: append "..." so it sorts after the non-varargs version
+				if (param.findFirstToken(TokenTypes.ELLIPSIS) != null)
+					types.add(typeName + "...");
+				else
+					types.add(typeName);
+			}
 		}
 		return types;
 	}
@@ -108,18 +114,17 @@ public class OverloadMethodOrderCheck extends AbstractCheck {
 		if (arrayDimensions == 0)
 			return base;
 
-		final var sb = new StringBuilder(base);
-		for (var i = 0; i < arrayDimensions; ++i)
-			sb.append("[]");
-		return sb.toString();
+		return base + "[]".repeat(Math.max(0, arrayDimensions));
 	}
 
 	@CheckReturnValue
 	private static boolean isPrimitive(@Nonnull String typeName) {
-		// strip array suffixes — int[] is still a primitive type for sorting purposes
-		final var base = typeName.endsWith("[]")
-				? typeName.substring(0, typeName.indexOf('['))
-				: typeName;
+		// strip array/varargs suffixes — int[] and int... are still primitive for sorting
+		var base = typeName;
+		if (base.endsWith("..."))
+			base = base.substring(0, base.length() - 3);
+		else if (base.endsWith("[]"))
+			base = base.substring(0, base.indexOf('['));
 		return switch (base) {
 			case "boolean", "byte", "char", "double", "float", "int", "long", "short" -> true;
 			default -> false;

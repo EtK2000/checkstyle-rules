@@ -46,4 +46,9 @@ class InputOverloadClean {
 	void typed(char a) {}
 
 	void typed(int a) {}
+
+	// varargs sorts after non-varargs with same base type
+	void vararg(int a) {}
+
+	void vararg(int... a) {}
 }

@@ -16,8 +16,11 @@ public class PreferPrefixIncrementCheckTest {
 	@Test
 	public void testPostfixViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferPrefixIncrementCheck.class, DIR + "InputPrefixViolation.java");
-		assertEquals(2, violations.size());
-		assertEquals(6, violations.getFirst().getLine());
-		assertEquals(7, violations.get(1).getLine());
+		assertEquals(5, violations.size());
+		assertEquals(9, violations.get(0).getLine());
+		assertEquals(15, violations.get(1).getLine());
+		assertEquals(19, violations.get(2).getLine());
+		assertEquals(26, violations.get(3).getLine());
+		assertEquals(27, violations.get(4).getLine());
 	}
 }
