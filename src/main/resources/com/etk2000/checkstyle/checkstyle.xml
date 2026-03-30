@@ -79,6 +79,9 @@
 		<property name="message" value="File must not end with a trailing newline." />
 	</module>
 
+	<!-- Enforce consistent line endings (LF) -->
+	<module name="LineEnding" />
+
 	<module name="TreeWalker">
 		<!-- Custom: Annotations must be sorted alphabetically -->
 		<module name="com.etk2000.checkstyle.AnnotationAlphabeticalOrderCheck" />
@@ -149,6 +152,21 @@
 
 		<!-- Custom: All types must have a thread annotation -->
 		<module name="com.etk2000.checkstyle.ThreadAnnotationCheck" />
+
+		<!-- Enforce uppercase hex literal digits (A-F, not a-f) -->
+		<module name="HexLiteralCase" />
+
+		<!-- Block emoji and special Unicode symbols in code -->
+		<module name="IllegalSymbol" />
+
+		<!-- Require @Override on explicitly declared record accessor methods -->
+		<module name="MissingOverrideOnRecordAccessor" />
+
+		<!-- Flag reassignment of pattern variables from instanceof -->
+		<module name="PatternVariableAssignment" />
+
+		<!-- Flag redundant null checks paired with instanceof -->
+		<module name="UnnecessaryNullCheckWithInstanceOf" />
 
 		<!-- No unused imports -->
 		<module name="UnusedImports" />

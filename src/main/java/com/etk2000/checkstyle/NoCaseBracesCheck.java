@@ -55,12 +55,12 @@ public class NoCaseBracesCheck extends AbstractCheck {
 				continue;
 
 			hasBlock = true;
-			// braces without a variable definition → unnecessary
+			// braces without a variable definition -> unnecessary
 			if (!hasVarDef(child))
 				log(child, MSG_UNNECESSARY);
 		}
 
-		// no braces but the case body defines a variable → missing required braces
+		// no braces but the case body defines a variable -> missing required braces
 		if (!hasBlock && hasVarDef(slist))
 			log(slist, MSG_MISSING);
 	}

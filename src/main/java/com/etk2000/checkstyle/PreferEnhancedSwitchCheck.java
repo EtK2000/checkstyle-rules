@@ -98,7 +98,7 @@ public class PreferEnhancedSwitchCheck extends AbstractCheck {
 				return;
 		}
 
-		// empty switch → no violation
+		// empty switch -> no violation
 		if (hasCaseGroup)
 			log(ast, MSG_KEY);
 	}

@@ -14,8 +14,8 @@ import javax.annotation.Nonnull;
  * Checkstyle check that flags generic API calls where a more specific
  * method is available. Currently detects:
  * <ul>
- *     <li>{@code .get(0)} → use {@code .getFirst()}</li>
- *     <li>{@code .get(size() - 1)} → use {@code .getLast()}</li>
+ *     <li>{@code .get(0)} -> use {@code .getFirst()}</li>
+ *     <li>{@code .get(size() - 1)} -> use {@code .getLast()}</li>
  * </ul>
  * Suppresses {@code .get(0)} when the same receiver also calls
  * {@code .get(N)} with other indices in the same method scope
