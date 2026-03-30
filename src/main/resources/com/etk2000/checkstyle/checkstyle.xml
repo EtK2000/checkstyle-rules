@@ -147,6 +147,9 @@
 		<!-- Custom: Prefer prefix increment/decrement over postfix -->
 		<module name="com.etk2000.checkstyle.PreferPrefixIncrementCheck" />
 
+		<!-- Custom: Flag redundant numeric suffixes (L, f, d) -->
+		<module name="com.etk2000.checkstyle.RedundantNumericSuffixCheck" />
+
 		<!-- Custom: Switch cases must be sorted -->
 		<module name="com.etk2000.checkstyle.SwitchCaseOrderCheck" />
 
