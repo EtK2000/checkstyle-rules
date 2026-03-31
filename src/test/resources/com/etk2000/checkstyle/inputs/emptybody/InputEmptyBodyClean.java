@@ -1,6 +1,18 @@
 package com.etk2000.checkstyle.inputs.emptybody;
 
 class InputEmptyBodyClean {
+	void bracedDoWhile(int x) {
+		do {
+			--x;
+		} while (x > 0);
+	}
+
+	void bracedFor(int x) {
+		for (int i = 0; i < x; ++i) {
+			System.out.println(i);
+		}
+	}
+
 	void bracedIf(int x) {
 		if (x > 0) {
 			System.out.println("positive");
@@ -47,5 +59,21 @@ class InputEmptyBodyClean {
 			System.out.println("negative");
 		else
 			System.out.println("zero");
+	}
+
+	void normalWhile(int x) {
+		while (x > 0)
+			--x;
+	}
+
+	void singleLineDoWhile(int x) {
+		do
+			--x;
+		while (x > 0);
+	}
+
+	void singleLineFor(int x) {
+		for (int i = 0; i < x; ++i)
+			System.out.println(i);
 	}
 }

@@ -16,7 +16,7 @@ public class RedundantCastCheckTest {
 	@Test
 	public void testViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(RedundantCastCheck.class, DIR + "InputRedundantCastViolation.java");
-		assertEquals(38, violations.size());
+		assertEquals(49, violations.size());
 
 		// same-type casts on literals
 		assertEquals(7, violations.get(0).getLine());
@@ -26,100 +26,104 @@ public class RedundantCastCheckTest {
 		assertEquals(11, violations.get(4).getLine());
 		assertEquals(12, violations.get(5).getLine());
 
+		// widening casts in compound assignments (&=, |=, >>>=, ^=, /=, -=, %=, +=, <<=, >>=, *=)
+		for (var i = 6; i < 17; ++i)
+			assertEquals(18 + (i - 6), violations.get(i).getLine());
+
 		// null cast in assignment (different target)
-		assertEquals(16, violations.get(6).getLine());
+		assertEquals(33, violations.get(17).getLine());
 
 		// null cast in assignment (matching target)
-		assertEquals(21, violations.get(7).getLine());
+		assertEquals(38, violations.get(18).getLine());
 
 		// null cast in return (matching target)
-		assertEquals(26, violations.get(8).getLine());
+		assertEquals(43, violations.get(19).getLine());
 
 		// null cast in return (different target)
-		assertEquals(31, violations.get(9).getLine());
+		assertEquals(48, violations.get(20).getLine());
 
 		// same-type cast on field
-		assertEquals(36, violations.get(10).getLine());
+		assertEquals(53, violations.get(21).getLine());
 
 		// same-type cast on for-each variable
-		assertEquals(42, violations.get(11).getLine());
+		assertEquals(59, violations.get(22).getLine());
 
 		// same-type cast on for-init variable
-		assertEquals(48, violations.get(12).getLine());
+		assertEquals(65, violations.get(23).getLine());
 
 		// same-type cast on new
-		assertEquals(53, violations.get(13).getLine());
+		assertEquals(70, violations.get(24).getLine());
 
 		// same-type cast on parameter (reference type)
-		assertEquals(58, violations.get(14).getLine());
+		assertEquals(75, violations.get(25).getLine());
 
 		// same-type cast on this
-		assertEquals(63, violations.get(15).getLine());
+		assertEquals(80, violations.get(26).getLine());
 
 		// same-type cast on variable (primitive)
-		assertEquals(69, violations.get(16).getLine());
+		assertEquals(86, violations.get(27).getLine());
 
 		// same-type cast on variable (reference type)
-		assertEquals(75, violations.get(17).getLine());
+		assertEquals(92, violations.get(28).getLine());
 
 		// same-type cast on nested cast
-		assertEquals(80, violations.get(18).getLine());
+		assertEquals(97, violations.get(29).getLine());
 
 		// widening byte to int
-		assertEquals(86, violations.get(19).getLine());
+		assertEquals(103, violations.get(30).getLine());
 
 		// widening byte to short
-		assertEquals(92, violations.get(20).getLine());
+		assertEquals(109, violations.get(31).getLine());
 
 		// widening char to int
-		assertEquals(98, violations.get(21).getLine());
+		assertEquals(115, violations.get(32).getLine());
 
 		// widening float to double
-		assertEquals(104, violations.get(22).getLine());
+		assertEquals(121, violations.get(33).getLine());
 
 		// widening in return
-		assertEquals(110, violations.get(23).getLine());
+		assertEquals(127, violations.get(34).getLine());
 
 		// widening in return (method returns wider primitive)
-		assertEquals(116, violations.get(24).getLine());
+		assertEquals(133, violations.get(35).getLine());
 
 		// widening int to double
-		assertEquals(122, violations.get(25).getLine());
+		assertEquals(139, violations.get(36).getLine());
 
 		// widening int to float
-		assertEquals(128, violations.get(26).getLine());
+		assertEquals(145, violations.get(37).getLine());
 
 		// widening int to long
-		assertEquals(134, violations.get(27).getLine());
+		assertEquals(151, violations.get(38).getLine());
 
 		// widening long to double
-		assertEquals(140, violations.get(28).getLine());
+		assertEquals(157, violations.get(39).getLine());
 
 		// widening long to float
-		assertEquals(146, violations.get(29).getLine());
+		assertEquals(163, violations.get(40).getLine());
 
 		// widening from parameter
-		assertEquals(151, violations.get(30).getLine());
+		assertEquals(168, violations.get(41).getLine());
 
 		// widening short to int
-		assertEquals(157, violations.get(31).getLine());
+		assertEquals(174, violations.get(42).getLine());
 
 		// widening short to long
-		assertEquals(163, violations.get(32).getLine());
+		assertEquals(180, violations.get(43).getLine());
 
 		// sibling already double (1.5 literal)
-		assertEquals(169, violations.get(33).getLine());
+		assertEquals(186, violations.get(44).getLine());
 
 		// sibling already float (1.5f literal)
-		assertEquals(175, violations.get(34).getLine());
+		assertEquals(192, violations.get(45).getLine());
 
 		// sibling already long (100L literal)
-		assertEquals(181, violations.get(35).getLine());
+		assertEquals(198, violations.get(46).getLine());
 
 		// sibling already long (variable)
-		assertEquals(188, violations.get(36).getLine());
+		assertEquals(205, violations.get(47).getLine());
 
 		// widening in comparison (sibling is wider)
-		assertEquals(195, violations.get(37).getLine());
+		assertEquals(212, violations.get(48).getLine());
 	}
 }

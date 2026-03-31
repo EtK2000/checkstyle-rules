@@ -11,6 +11,12 @@ class InputThisClean {
 		this.field = 42;
 	}
 
+	// instance initializer: this.field needed because local variable shadows it
+	{
+		int field = 99;
+		System.out.println(this.field);
+	}
+
 	// lambda: this.field needed because outer method param shadows it
 	void lambdaWithShadowing(int field) {
 		Runnable r = () -> System.out.println(this.field);

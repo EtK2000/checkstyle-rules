@@ -29,6 +29,36 @@ class AstUtil {
 		return "";
 	}
 
+	@CheckReturnValue
+	static boolean containsCastTo(@Nonnull DetailAST ast, @Nonnull String typeName, @Nonnull String exprText) {
+		if (ast.getType() == TokenTypes.TYPECAST) {
+			final var castType = ast.findFirstToken(TokenTypes.TYPE);
+			final var rparen = ast.findFirstToken(TokenTypes.RPAREN);
+			final var castExpr = rparen != null ? rparen.getNextSibling() : null;
+			if (castType != null && castExpr != null
+					&& typeName.equals(typeText(castType))
+					&& exprText.equals(exprText(castExpr)))
+				return true;
+		}
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (containsCastTo(child, typeName, exprText))
+				return true;
+		}
+		return false;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	static String exprText(@Nonnull DetailAST ast) {
+		if (ast.getChildCount() == 0)
+			return ast.getText();
+
+		final var sb = new StringBuilder();
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			sb.append(exprText(child));
+		return sb.toString();
+	}
+
 	/**
 	 * Extracts the method name from the last child of a METHOD_CALL's DOT.
 	 */
@@ -151,6 +181,18 @@ class AstUtil {
 	}
 
 	@CheckReturnValue
+	static boolean isEmptyBody(@Nonnull DetailAST body) {
+		return switch (body.getType()) {
+			// empty statement: if (x);
+			case TokenTypes.EMPTY_STAT -> true;
+			// empty block: if (x) {}
+			case TokenTypes.SLIST -> body.getChildCount() == 1
+					&& body.getFirstChild().getType() == TokenTypes.RCURLY;
+			default -> false;
+		};
+	}
+
+	@CheckReturnValue
 	static int lastLine(@Nonnull DetailAST ast) {
 		var last = ast.getLineNo();
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
@@ -161,11 +203,6 @@ class AstUtil {
 		return last;
 	}
 
-	/**
-	 * Walks up the AST from the given node searching for a variable
-	 * declaration (local, parameter, or field) with the given name,
-	 * and returns its declared type name.
-	 */
 	@CheckReturnValue
 	@Nullable
 	static String resolveVariableType(@Nonnull DetailAST from, @Nonnull String varName) {
@@ -191,6 +228,19 @@ class AstUtil {
 			}
 		}
 		return null;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	static String typeText(@Nonnull DetailAST type) {
+		final var ident = type.findFirstToken(TokenTypes.IDENT);
+		if (ident != null)
+			return ident.getText();
+
+		final var dot = type.findFirstToken(TokenTypes.DOT);
+		if (dot != null)
+			return exprText(dot);
+		return "";
 	}
 
 	@CheckReturnValue

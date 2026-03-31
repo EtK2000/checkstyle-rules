@@ -1,11 +1,12 @@
 package com.etk2000.checkstyle.inputs.multilinecall;
 
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
-import org.json.JSONObject;
+import java.util.Set;
 
 class InputMultilineCallClean {
 	void allArgsOnSameLine() {
@@ -153,10 +154,29 @@ class InputMultilineCallClean {
 		);
 	}
 
+	void nestedChainedConstructorInWrapper() {
+		method(
+				wrapper(new JSONObject().put("key", "value"))
+		);
+	}
+
+	void nestedLambdaInPostDelayed() {
+		handler.postDelayed(
+				wrapper(() -> System.out.println("delayed")),
+				1000
+		);
+	}
+
 	void nestedSingleLine() {
 		method(
 				Math.max(1, 2),
 				Math.min(3, 4)
+		);
+	}
+
+	void nestedSpecialMethodInWrapper() {
+		method(
+				wrapper(List.of(1, 2, 3))
 		);
 	}
 
@@ -261,9 +281,21 @@ class InputMultilineCallClean {
 		method(true ? "a" : "b");
 	}
 
+	void singleListCopyOf() {
+		method(List.copyOf(
+				Arrays.asList(1, 2, 3)
+		));
+	}
+
 	void singleListOf() {
 		method(List.of(
 				1, 2, 3
+		));
+	}
+
+	void singleMapCopyOf(Map<String, Integer> m) {
+		method(Map.copyOf(
+				m
 		));
 	}
 
@@ -271,6 +303,18 @@ class InputMultilineCallClean {
 		method(Map.of(
 				"a", 1,
 				"b", 2
+		));
+	}
+
+	void singleSetCopyOf(Set<Integer> s) {
+		method(Set.copyOf(
+				s
+		));
+	}
+
+	void singleSetOf() {
+		method(Set.of(
+				1, 2, 3
 		));
 	}
 
@@ -328,5 +372,9 @@ class InputMultilineCallClean {
 				? "a"
 				: "b"
 		);
+	}
+
+	Object wrapper(Object a) {
+		return a;
 	}
 }

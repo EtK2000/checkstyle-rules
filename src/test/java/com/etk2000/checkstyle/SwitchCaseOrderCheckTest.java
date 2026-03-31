@@ -9,6 +9,12 @@ public class SwitchCaseOrderCheckTest {
 	private static final String DIR = "switchorder/";
 
 	@Test
+	public void testCharLiteralViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(SwitchCaseOrderCheck.class, DIR + "InputSwitchOrderCharLiteralViolation.java");
+		assertEquals(2, violations.size());
+	}
+
+	@Test
 	public void testCleanSwitchOrder() throws Exception {
 		assertTrue(BaseCheckTest.runCheck(SwitchCaseOrderCheck.class, DIR + "InputSwitchOrderClean.java").isEmpty());
 	}

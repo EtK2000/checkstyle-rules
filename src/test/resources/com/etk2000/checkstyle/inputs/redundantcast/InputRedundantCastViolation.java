@@ -11,6 +11,23 @@ class InputRedundantCastViolation {
 	long sameTypeLong = (long) 5L; // violation: redundant cast to long
 	String sameTypeString = (String) "hello"; // violation: redundant cast to String
 
+	// widening cast in compound assignments (always redundant)
+	void compoundAssignments() {
+		long x = 5;
+		int y = 10;
+		x &= (long) y; // violation
+		x |= (long) y; // violation
+		x >>>= (long) y; // violation
+		x ^= (long) y; // violation
+		x /= (long) y; // violation
+		x -= (long) y; // violation
+		x %= (long) y; // violation
+		x += (long) y; // violation
+		x <<= (long) y; // violation
+		x >>= (long) y; // violation
+		x *= (long) y; // violation
+	}
+
 	// null cast in assignment (cast type differs from target)
 	void nullCastDifferentTarget() {
 		Object o = (String) null; // violation: null assignable without cast

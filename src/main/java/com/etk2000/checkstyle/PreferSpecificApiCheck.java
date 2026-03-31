@@ -19,18 +19,22 @@ import javax.annotation.Nonnull;
  * <ul>
  *     <li>{@code .get(0)} -> use {@code .getFirst()}</li>
  *     <li>{@code .get(size() - 1)} -> use {@code .getLast()}</li>
+ *     <li>{@code .size() == 0} / {@code .size() != 0} -> use {@code .isEmpty()} / {@code !.isEmpty()}</li>
+ *     <li>{@code .collect(Collectors.toList())} -> use {@code .toList()}</li>
  * </ul>
  * Suppresses {@code .get(0)} when the same receiver also calls
  * {@code .get(N)} with other indices in the same method scope
  * (sequential access pattern).
  * <p>
  * Uses reflection to verify the receiver type actually has
- * {@code getFirst()}/{@code getLast()} before suggesting them.
+ * the suggested method before flagging.
  */
 public class PreferSpecificApiCheck extends AbstractCheck {
 	private static final int MIN_SDK_GET_FIRST_LAST = 35;
 	private static final String MSG_GET_FIRST = "prefer.api.getFirst";
 	private static final String MSG_GET_LAST = "prefer.api.getLast";
+	private static final String MSG_IS_EMPTY = "prefer.api.isEmpty";
+	private static final String MSG_TO_LIST = "prefer.api.toList";
 
 	@CheckReturnValue
 	@Nonnull
@@ -44,11 +48,59 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		return sb.toString();
 	}
 
+	private static void collectCollectToListCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+		if (ast.getType() == TokenTypes.METHOD_CALL && isCollectToListCall(ast))
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectCollectToListCalls(child, results);
+	}
+
 	private static void collectGetCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isGetCall(ast))
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectGetCalls(child, results);
+	}
+
+	private static void collectSizeEmptyComparisons(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+		if (isSizeEmptyComparison(ast))
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectSizeEmptyComparisons(child, results);
+	}
+
+	@CheckReturnValue
+	private static boolean isCollectToListCall(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return false;
+
+		// last child of DOT is the method name
+		var last = dot.getFirstChild();
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		if (!"collect".equals(last.getText()))
+			return false;
+
+		// single argument: Collectors.toList()
+		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
+		if (elist == null || elist.getChildCount() != 1)
+			return false;
+
+		final var arg = elist.getFirstChild();
+		final var inner = arg.getType() == TokenTypes.EXPR ? arg.getFirstChild() : arg;
+		if (inner == null || inner.getType() != TokenTypes.METHOD_CALL)
+			return false;
+
+		final var innerDot = inner.findFirstToken(TokenTypes.DOT);
+		if (innerDot == null)
+			return false;
+
+		final var receiver = innerDot.getFirstChild();
+		final var method = receiver != null ? receiver.getNextSibling() : null;
+		return receiver != null && method != null
+				&& receiver.getType() == TokenTypes.IDENT && "Collectors".equals(receiver.getText())
+				&& method.getType() == TokenTypes.IDENT && "toList".equals(method.getText());
 	}
 
 	@CheckReturnValue
@@ -65,12 +117,79 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
+	private static boolean isLiteralOne(@Nonnull DetailAST expr) {
+		final var inner = expr.getType() == TokenTypes.EXPR ? expr.getFirstChild() : expr;
+		return inner != null
+				&& inner.getType() == TokenTypes.NUM_INT
+				&& "1".equals(inner.getText());
+	}
+
+	@CheckReturnValue
 	private static boolean isLiteralZero(@Nonnull DetailAST expr) {
 		// handle EXPR wrapper
 		final var inner = expr.getType() == TokenTypes.EXPR ? expr.getFirstChild() : expr;
 		return inner != null
 				&& inner.getType() == TokenTypes.NUM_INT
 				&& "0".equals(inner.getText());
+	}
+
+	@CheckReturnValue
+	private static boolean isSizeCall(@Nonnull DetailAST ast) {
+		final var inner = ast.getType() == TokenTypes.EXPR ? ast.getFirstChild() : ast;
+		if (inner == null || inner.getType() != TokenTypes.METHOD_CALL)
+			return false;
+
+		final var dot = inner.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return false;
+
+		var last = dot.getFirstChild();
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		if (!"size".equals(last.getText()))
+			return false;
+
+		// must have no arguments
+		final var elist = inner.findFirstToken(TokenTypes.ELIST);
+		return elist == null || elist.getChildCount() == 0;
+	}
+
+	/**
+	 * Detects comparisons equivalent to isEmpty/!isEmpty:
+	 * {@code size()==0}, {@code size()!=0}, {@code size()>0},
+	 * {@code size()>=1}, {@code size()<1}, {@code size()<=0},
+	 * and their reversed-operand forms.
+	 */
+	@CheckReturnValue
+	private static boolean isSizeEmptyComparison(@Nonnull DetailAST ast) {
+		final var left = ast.getFirstChild();
+		final var right = left != null ? left.getNextSibling() : null;
+		if (left == null || right == null)
+			return false;
+
+		return switch (ast.getType()) {
+			// size() == 0, size() != 0 (and reversed)
+			case TokenTypes.EQUAL, TokenTypes.NOT_EQUAL ->
+					(isSizeCall(left) && isLiteralZero(right))
+							|| (isLiteralZero(left) && isSizeCall(right));
+			// size() >= 1, 0 >= size()
+			case TokenTypes.GE ->
+					(isSizeCall(left) && isLiteralOne(right))
+							|| (isLiteralZero(left) && isSizeCall(right));
+			// size() > 0, 1 > size()
+			case TokenTypes.GT ->
+					(isSizeCall(left) && isLiteralZero(right))
+							|| (isLiteralOne(left) && isSizeCall(right));
+			// size() <= 0, 1 <= size()
+			case TokenTypes.LE ->
+					(isSizeCall(left) && isLiteralZero(right))
+							|| (isLiteralOne(left) && isSizeCall(right));
+			// size() < 1, 0 < size()
+			case TokenTypes.LT ->
+					(isSizeCall(left) && isLiteralOne(right))
+							|| (isLiteralZero(left) && isSizeCall(right));
+			default -> false;
+		};
 	}
 
 	@CheckReturnValue
@@ -122,6 +241,20 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			sb.append(childText(child));
 		}
 		return sb.toString();
+	}
+
+	/**
+	 * Returns the METHOD_CALL node for the .size() call inside a comparison,
+	 * checking both operand positions.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static DetailAST sizeCallFromComparison(@Nonnull DetailAST comparison) {
+		final var left = comparison.getFirstChild();
+		final var right = left != null ? left.getNextSibling() : null;
+		if (left != null && isSizeCall(left))
+			return left.getType() == TokenTypes.EXPR ? left.getFirstChild() : left;
+		return right != null && right.getType() == TokenTypes.EXPR ? right.getFirstChild() : right;
 	}
 
 	private final Set<String> imports = new HashSet<>();
@@ -191,7 +324,17 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		this.minSdk = minSdk;
 	}
 
+	private void visitCollectToList(@Nonnull DetailAST ast) {
+		final var calls = new ArrayList<DetailAST>();
+		collectCollectToListCalls(ast, calls);
+		for (var call : calls)
+			log(call, MSG_TO_LIST);
+	}
+
 	private void visitMethodScope(@Nonnull DetailAST ast) {
+		visitSizeEqualsZero(ast);
+		visitCollectToList(ast);
+
 		if (minSdk < MIN_SDK_GET_FIRST_LAST)
 			return;
 
@@ -236,6 +379,16 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		for (var call : lastGets) {
 			if (receiverHasMethod(call, "getLast"))
 				log(call, MSG_GET_LAST);
+		}
+	}
+
+	private void visitSizeEqualsZero(@Nonnull DetailAST ast) {
+		final var comparisons = new ArrayList<DetailAST>();
+		collectSizeEmptyComparisons(ast, comparisons);
+		for (var comparison : comparisons) {
+			final var sizeCall = sizeCallFromComparison(comparison);
+			if (sizeCall != null && receiverHasMethod(sizeCall, "isEmpty"))
+				log(comparison, MSG_IS_EMPTY);
 		}
 	}
 

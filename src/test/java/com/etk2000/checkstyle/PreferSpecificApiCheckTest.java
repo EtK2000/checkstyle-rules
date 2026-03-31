@@ -14,6 +14,13 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testCollectToListViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiToListViolation.java");
+		assertEquals(1, violations.size());
+		assertTrue(violations.getFirst().getMessage().contains("toList"));
+	}
+
+	@Test
 	public void testGetFirstAndGetLastViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiViolation.java");
 		assertEquals(2, violations.size());
@@ -21,6 +28,14 @@ public class PreferSpecificApiCheckTest {
 		assertTrue(violations.getFirst().getMessage().contains("getLast"));
 		assertEquals(11, violations.get(1).getLine());
 		assertTrue(violations.get(1).getMessage().contains("getFirst"));
+	}
+
+	@Test
+	public void testIsEmptyViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiIsEmptyViolation.java");
+		assertEquals(11, violations.size());
+		for (var v : violations)
+			assertTrue(v.getMessage().contains("isEmpty"));
 	}
 
 	@Test

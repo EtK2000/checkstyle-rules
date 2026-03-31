@@ -45,7 +45,8 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 	// method names that qualify as inline block args; value = allowed receiver class names (empty = any receiver)
 	private static final Map<String, Set<String>> SPECIAL_INLINE_METHODS = Map.of(
 			"asList", Set.of("Arrays"),
-			"of", Set.of("List", "Map")
+			"copyOf", Set.of("List", "Map", "Set"),
+			"of", Set.of("List", "Map", "Set")
 	);
 
 	// methods whose return value is always a Context (used for getString tracking)
@@ -67,6 +68,9 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 	private static boolean containsBracedLambda(@Nonnull DetailAST ast) {
 		if (ast.getType() == TokenTypes.LAMBDA)
 			return ast.findFirstToken(TokenTypes.SLIST) != null;
+		// don't recurse into nested method call args — a lambda inside another call is not our concern
+		if (ast.getType() == TokenTypes.ELIST)
+			return false;
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (containsBracedLambda(child))
 				return true;
@@ -79,8 +83,9 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 		if (ast.getType() == TokenTypes.LITERAL_NEW && ast.getParent() != null
 				&& ast.getParent().getType() == TokenTypes.DOT)
 			return true;
-		// don't recurse into code blocks (lambda bodies, anonymous class bodies)
-		if (ast.getType() == TokenTypes.OBJBLOCK || ast.getType() == TokenTypes.SLIST)
+		// don't recurse into code blocks or nested method call args
+		if (ast.getType() == TokenTypes.ELIST || ast.getType() == TokenTypes.OBJBLOCK
+				|| ast.getType() == TokenTypes.SLIST)
 			return false;
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (containsChainedConstructor(child))
@@ -377,13 +382,17 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
-	private boolean containsInlineBlockArg(@Nonnull DetailAST ast) {
+	private boolean containsInlineBlockArg(@Nonnull DetailAST ast, boolean matchSpecialMethods) {
 		if (ast.getType() == TokenTypes.LAMBDA || ast.getType() == TokenTypes.LITERAL_NEW)
 			return true;
-		if (ast.getType() == TokenTypes.METHOD_CALL && isSpecialInlineMethodCall(ast))
+		if (matchSpecialMethods && ast.getType() == TokenTypes.METHOD_CALL && isSpecialInlineMethodCall(ast))
 			return true;
+		// don't recurse into nested method call args — a special method/lambda/constructor
+		// inside another call's args is not our concern
+		if (ast.getType() == TokenTypes.ELIST)
+			return false;
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (containsInlineBlockArg(child))
+			if (containsInlineBlockArg(child, matchSpecialMethods))
 				return true;
 		}
 		return false;
@@ -494,7 +503,9 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 				onlyArg = child;
 			}
 		}
-		return onlyArg != null && containsInlineBlockArg(onlyArg);
+		// don't match special methods inside args when this call is itself a special method
+		final var matchSpecial = ast.getType() != TokenTypes.METHOD_CALL || !isStaticSpecialInlineMethodCall(ast);
+		return onlyArg != null && containsInlineBlockArg(onlyArg, matchSpecial);
 	}
 
 	@CheckReturnValue
@@ -520,8 +531,10 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 					return false;
 			}
 		}
-		return firstArg != null && secondArg != null
-				&& isCompactFirstArg(firstArg) && containsInlineBlockArg(secondArg);
+		if (firstArg == null || secondArg == null || !isCompactFirstArg(firstArg))
+			return false;
+		final var matchSpecial = ast.getType() != TokenTypes.METHOD_CALL || !isStaticSpecialInlineMethodCall(ast);
+		return containsInlineBlockArg(secondArg, matchSpecial);
 	}
 
 	@Override
@@ -596,10 +609,10 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 						log(colon, MSG_TERNARY_COLON_LINE);
 
 					// multiline ternary: closing paren on its own line
-					if (ternaryArg != null && AstUtil.lastLine(ternaryArg) == closeLine)
+					if (AstUtil.lastLine(ternaryArg) == closeLine)
 						log(rparen, MSG_CLOSING);
 				}
-				else if (ternaryArg != null && AstUtil.lastLine(ternaryArg) != closeLine) {
+				else if (AstUtil.lastLine(ternaryArg) != closeLine) {
 					// single-line ternary: closing paren on the same line
 					log(rparen, MSG_TERNARY_NOT_ON_CLOSING);
 				}

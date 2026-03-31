@@ -57,12 +57,6 @@ class InputLiteralSuffixClean {
 		float f = x * 1.5f;
 	}
 
-	// literal is wrapped in unary minus
-	void negatedLiteral() {
-		int x = 5;
-		long y = (long) x * -100;
-	}
-
 	// not in arithmetic context (method arguments)
 	void notArithmeticArgs() {
 		int x = 5;

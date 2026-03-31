@@ -72,7 +72,8 @@ public class NoUnnecessaryThisCheck extends AbstractCheck {
 				     TokenTypes.INTERFACE_DEF, TokenTypes.RECORD_DEF -> {
 					return null;
 				}
-				case TokenTypes.COMPACT_CTOR_DEF, TokenTypes.CTOR_DEF, TokenTypes.METHOD_DEF -> {
+				case TokenTypes.COMPACT_CTOR_DEF, TokenTypes.CTOR_DEF,
+			     TokenTypes.INSTANCE_INIT, TokenTypes.METHOD_DEF -> {
 					return parent;
 				}
 				default -> {}

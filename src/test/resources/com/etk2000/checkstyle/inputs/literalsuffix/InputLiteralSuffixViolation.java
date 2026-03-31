@@ -133,6 +133,24 @@ class InputLiteralSuffixViolation {
 		long y = 1 << (long) x; // violation: use 1L
 	}
 
+	// negative literal on left
+	void negatedLiteralLeft() {
+		int x = 5;
+		long y = -100 + (long) x; // violation: use -100L
+	}
+
+	// negative literal on right
+	void negatedLiteralRight() {
+		int x = 5;
+		long y = (long) x * -100; // violation: use -100L
+	}
+
+	// positive unary on right
+	void positiveUnaryLiteralRight() {
+		int x = 5;
+		long y = (long) x * +100; // violation: use +100L
+	}
+
 	// ternary with double cast
 	void ternaryCastDouble(boolean flag) {
 		int x = 5;
@@ -167,5 +185,11 @@ class InputLiteralSuffixViolation {
 	void ternaryCastOnTrue(boolean flag) {
 		int x = 5;
 		long y = flag ? (long) x : 0; // violation: use 0L
+	}
+
+	// ternary: cast is true branch, negative literal is false branch
+	void ternaryCastWithNegativeLiteral(boolean flag) {
+		int x = 5;
+		long y = flag ? (long) x : -1; // violation: use -1L
 	}
 }

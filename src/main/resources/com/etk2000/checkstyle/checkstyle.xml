@@ -99,7 +99,18 @@
 		<module name="com.etk2000.checkstyle.InstanceofBeforeCastCheck" />
 
 		<!-- Custom: No empty if/else bodies -->
-		<module name="com.etk2000.checkstyle.EmptyBodyCheck" />
+		<module name="com.etk2000.checkstyle.EmptyBodyCheck">
+			<property name="tokens" value="LITERAL_IF" />
+		</module>
+
+		<!-- Custom: Warn on empty while/for/do-while bodies (spin-waits are a valid use case) -->
+		<module name="com.etk2000.checkstyle.EmptyBodyCheck">
+			<property name="severity" value="warning" />
+			<property name="tokens" value="LITERAL_DO,LITERAL_FOR,LITERAL_WHILE" />
+		</module>
+
+		<!-- Custom: Empty infinite loops are errors (for(;;), while(true), do;while(true)) -->
+		<module name="com.etk2000.checkstyle.InfiniteEmptyLoopCheck" />
 
 		<!-- Custom: Fields sorted by immutability, type, and name -->
 		<module name="com.etk2000.checkstyle.FieldSortingCheck" />

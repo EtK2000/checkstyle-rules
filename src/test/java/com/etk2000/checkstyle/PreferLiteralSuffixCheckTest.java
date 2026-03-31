@@ -16,7 +16,7 @@ public class PreferLiteralSuffixCheckTest {
 	@Test
 	public void testViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferLiteralSuffixCheck.class, DIR + "InputLiteralSuffixViolation.java");
-		assertEquals(28, violations.size());
+		assertEquals(32, violations.size());
 
 		// cast on left, literal on right — various operators and types
 		assertEquals(7, violations.get(0).getLine());
@@ -44,12 +44,24 @@ public class PreferLiteralSuffixCheckTest {
 		assertEquals(127, violations.get(20).getLine());
 		assertEquals(133, violations.get(21).getLine());
 
-		// ternary — long/double/float, both branches
+		// negative/positive unary literals (left, right, positive)
 		assertEquals(139, violations.get(22).getLine());
 		assertEquals(145, violations.get(23).getLine());
 		assertEquals(151, violations.get(24).getLine());
+		assertTrue(violations.get(22).getMessage().contains("-100"));
+		assertTrue(violations.get(23).getMessage().contains("-100"));
+		assertTrue(violations.get(24).getMessage().contains("+100"));
+
+		// ternary — long/double/float, both branches
 		assertEquals(157, violations.get(25).getLine());
 		assertEquals(163, violations.get(26).getLine());
 		assertEquals(169, violations.get(27).getLine());
+		assertEquals(175, violations.get(28).getLine());
+		assertEquals(181, violations.get(29).getLine());
+		assertEquals(187, violations.get(30).getLine());
+
+		// ternary with negative literal
+		assertEquals(193, violations.get(31).getLine());
+		assertTrue(violations.get(31).getMessage().contains("-1"));
 	}
 }

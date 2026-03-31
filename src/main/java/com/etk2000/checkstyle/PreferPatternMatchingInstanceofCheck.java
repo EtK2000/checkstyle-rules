@@ -16,36 +16,6 @@ public class PreferPatternMatchingInstanceofCheck extends AbstractCheck {
 	private static final String MSG_KEY = "prefer.pattern.instanceof";
 
 	@CheckReturnValue
-	private static boolean containsCastTo(@Nonnull DetailAST ast, @Nonnull String typeName, @Nonnull String exprText) {
-		if (ast.getType() == TokenTypes.TYPECAST) {
-			final var castType = ast.findFirstToken(TokenTypes.TYPE);
-			final var rparen = ast.findFirstToken(TokenTypes.RPAREN);
-			final var castExpr = rparen != null ? rparen.getNextSibling() : null;
-			if (castType != null && castExpr != null
-					&& typeName.equals(typeText(castType))
-					&& exprText.equals(exprText(castExpr)))
-				return true;
-		}
-		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (containsCastTo(child, typeName, exprText))
-				return true;
-		}
-		return false;
-	}
-
-	@CheckReturnValue
-	@Nonnull
-	private static String exprText(@Nonnull DetailAST ast) {
-		if (ast.getChildCount() == 0)
-			return ast.getText();
-
-		final var sb = new StringBuilder();
-		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
-			sb.append(exprText(child));
-		return sb.toString();
-	}
-
-	@CheckReturnValue
 	private static boolean hasCastInThenBranch(
 			@Nonnull DetailAST instanceofAst,
 			@Nonnull String typeName,
@@ -55,13 +25,13 @@ public class PreferPatternMatchingInstanceofCheck extends AbstractCheck {
 		while (parent != null) {
 			if (parent.getType() == TokenTypes.LITERAL_IF) {
 				final var slist = parent.findFirstToken(TokenTypes.SLIST);
-				return slist != null && containsCastTo(slist, typeName, exprStr);
+				return slist != null && AstUtil.containsCastTo(slist, typeName, exprStr);
 			}
 			// &&: right operand only executes when instanceof is true
 			if (parent.getType() == TokenTypes.LAND
 					&& isInFirstChild(parent, instanceofAst)) {
 				final var rightOperand = parent.getFirstChild().getNextSibling();
-				if (rightOperand != null && containsCastTo(rightOperand, typeName, exprStr))
+				if (rightOperand != null && AstUtil.containsCastTo(rightOperand, typeName, exprStr))
 					return true;
 				// continue walking up to check if-body or outer &&
 			}
@@ -71,7 +41,7 @@ public class PreferPatternMatchingInstanceofCheck extends AbstractCheck {
 				for (var child = parent.getFirstChild().getNextSibling();
 				     child != null && child.getType() != TokenTypes.COLON;
 				     child = child.getNextSibling()) {
-					if (containsCastTo(child, typeName, exprStr))
+					if (AstUtil.containsCastTo(child, typeName, exprStr))
 						return true;
 				}
 				return false;
@@ -87,19 +57,6 @@ public class PreferPatternMatchingInstanceofCheck extends AbstractCheck {
 		while (node != null && node.getParent() != parent)
 			node = node.getParent();
 		return node != null && node == parent.getFirstChild();
-	}
-
-	@CheckReturnValue
-	@Nonnull
-	private static String typeText(@Nonnull DetailAST type) {
-		final var ident = type.findFirstToken(TokenTypes.IDENT);
-		if (ident != null)
-			return ident.getText();
-
-		final var dot = type.findFirstToken(TokenTypes.DOT);
-		if (dot != null)
-			return exprText(dot);
-		return "";
 	}
 
 	@Nonnull
@@ -131,8 +88,8 @@ public class PreferPatternMatchingInstanceofCheck extends AbstractCheck {
 		if (expr == null || type == null)
 			return;
 
-		final var typeName = typeText(type);
-		final var exprStr = exprText(expr);
+		final var typeName = AstUtil.typeText(type);
+		final var exprStr = AstUtil.exprText(expr);
 		if (typeName.isEmpty())
 			return;
 

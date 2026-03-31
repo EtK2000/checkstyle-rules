@@ -99,6 +99,29 @@ public class RedundantCastCheck extends AbstractCheck {
 		};
 	}
 
+	/**
+	 * Checks if a widening cast is inside a compound assignment
+	 * ({@code +=}, {@code -=}, etc.) where it is always redundant.
+	 */
+	@CheckReturnValue
+	private static boolean isCompoundAssignment(@Nonnull DetailAST typecast) {
+		var parent = typecast.getParent();
+		while (parent != null && parent.getType() == TokenTypes.EXPR)
+			parent = parent.getParent();
+		if (parent == null)
+			return false;
+
+		return switch (parent.getType()) {
+			case TokenTypes.BAND_ASSIGN, TokenTypes.BOR_ASSIGN,
+			     TokenTypes.BSR_ASSIGN, TokenTypes.BXOR_ASSIGN,
+			     TokenTypes.DIV_ASSIGN, TokenTypes.MINUS_ASSIGN,
+			     TokenTypes.MOD_ASSIGN, TokenTypes.PLUS_ASSIGN,
+			     TokenTypes.SL_ASSIGN, TokenTypes.SR_ASSIGN,
+			     TokenTypes.STAR_ASSIGN -> true;
+			default -> false;
+		};
+	}
+
 	@CheckReturnValue
 	private static boolean isPrimitive(@Nonnull String type) {
 		return switch (type) {
@@ -311,9 +334,9 @@ public class RedundantCastCheck extends AbstractCheck {
 			return;
 		}
 
-		// widening primitive cast in a primitive assignment/return context
+		// widening primitive cast: redundant in assignment/return, compound assignment, or when sibling is already wider
 		if (isWideningPrimitive(exprType, castType)
-				&& (isWideningRedundantInContext(ast) || isSiblingAlreadyWiderOrEqual(ast, castType)))
+				&& (isCompoundAssignment(ast) || isWideningRedundantInContext(ast) || isSiblingAlreadyWiderOrEqual(ast, castType)))
 			log(ast, MSG_KEY, castType, exprType);
 	}
 }

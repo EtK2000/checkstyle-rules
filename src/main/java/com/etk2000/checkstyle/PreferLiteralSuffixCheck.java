@@ -121,9 +121,15 @@ public class PreferLiteralSuffixCheck extends AbstractCheck {
 		final var other = findOtherOperand(ast);
 
 		// only flag when the other operand is an integer literal (no suffix)
-		if (other == null || other.getType() != TokenTypes.NUM_INT)
+		// unwrap UNARY_MINUS/UNARY_PLUS to check the inner node
+		if (other == null)
+			return;
+		final var unwrapped = (other.getType() == TokenTypes.UNARY_MINUS || other.getType() == TokenTypes.UNARY_PLUS)
+				? other.getFirstChild() : other;
+		if (unwrapped == null || unwrapped.getType() != TokenTypes.NUM_INT)
 			return;
 
-		log(ast, MSG_KEY, suffix, other.getText());
+		final var literalText = other == unwrapped ? unwrapped.getText() : other.getText() + unwrapped.getText();
+		log(ast, MSG_KEY, suffix, literalText);
 	}
 }
