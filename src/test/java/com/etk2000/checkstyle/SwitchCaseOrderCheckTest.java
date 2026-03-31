@@ -11,7 +11,7 @@ public class SwitchCaseOrderCheckTest {
 	@Test
 	public void testCharLiteralViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(SwitchCaseOrderCheck.class, DIR + "InputSwitchOrderCharLiteralViolation.java");
-		assertEquals(2, violations.size());
+		assertEquals(5, violations.size());
 	}
 
 	@Test
@@ -30,7 +30,7 @@ public class SwitchCaseOrderCheckTest {
 	@Test
 	public void testInternalOrderViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(SwitchCaseOrderCheck.class, DIR + "InputSwitchOrderInternalViolation.java");
-		assertEquals(3, violations.size());
+		assertEquals(5, violations.size());
 	}
 
 	@Test
@@ -42,6 +42,6 @@ public class SwitchCaseOrderCheckTest {
 	@Test
 	public void testSwitchOrderViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(SwitchCaseOrderCheck.class, DIR + "InputSwitchOrderViolation.java");
-		assertEquals(3, violations.size());
+		assertEquals(5, violations.size());
 	}
 }

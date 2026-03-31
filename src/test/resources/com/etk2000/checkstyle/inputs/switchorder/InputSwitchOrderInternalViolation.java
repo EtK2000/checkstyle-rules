@@ -1,6 +1,8 @@
 package com.etk2000.checkstyle.inputs.switchorder;
 
 class InputSwitchOrderInternalViolation {
+	static final int ALPHA = 1;
+
 	// traditional fall-through labels out of order internally
 	int fallThroughWrong(int x) {
 		switch (x) {
@@ -23,6 +25,22 @@ class InputSwitchOrderInternalViolation {
 			case "alpha", "beta" -> "ab";
 			case "gamma", "delta" -> "gd"; // violation: "delta" must appear before "gamma"
 			default -> "?";
+		};
+	}
+
+	// comma-separated letter before digit char
+	int internalLetterBeforeDigit(char c) {
+		return switch (c) {
+			case 'a', '0' -> 1; // violation: '0' must appear before 'a'
+			default -> 0;
+		};
+	}
+
+	// comma-separated numeric before named constant
+	int internalNumericBeforeNamed(int x) {
+		return switch (x) {
+			case 100, ALPHA -> 10; // violation: ALPHA must appear before 100
+			default -> 0;
 		};
 	}
 

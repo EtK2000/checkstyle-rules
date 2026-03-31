@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.inputs.switchorder;
 class InputSwitchOrderClean {
 	static final int ALPHA = 1;
 	static final int BETA = 2;
+	static final char CHAR_CONST = 'x';
 
 	// alpha sorted
 	String alphaSorted(String s) {
@@ -10,6 +11,17 @@ class InputSwitchOrderClean {
 			case "alpha" -> "a";
 			case "beta" -> "b";
 			case "gamma" -> "g";
+			default -> "?";
+		};
+	}
+
+	// string digit content before letter content (mixed case)
+	String alphaWithDigits(String s) {
+		return switch (s) {
+			case "0123" -> "num";
+			case "999" -> "high";
+			case "ABC" -> "upper";
+			case "abc" -> "letters";
 			default -> "?";
 		};
 	}
@@ -24,12 +36,32 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// char literals sorted alphabetically
-	int charSorted(char c) {
+	// char digit literals before letter literals (including uppercase)
+	int charDigitBeforeLetter(char c) {
 		return switch (c) {
-			case 'a' -> 1;
+			case '0' -> 0;
+			case '9' -> 9;
+			case 'A' -> 1;
 			case 'b' -> 2;
 			case 'z' -> 26;
+			default -> 0;
+		};
+	}
+
+	// named constant before digit and letter char literals
+	int charNamedBeforeDigitBeforeLetter(char c) {
+		return switch (c) {
+			case CHAR_CONST -> 99;
+			case '0' -> 0;
+			case 'a' -> 1;
+			default -> -1;
+		};
+	}
+
+	// comma-separated with named constant before numeric
+	int commaNamedBeforeNumeric(int x) {
+		return switch (x) {
+			case ALPHA, 100 -> 10;
 			default -> 0;
 		};
 	}
@@ -39,6 +71,14 @@ class InputSwitchOrderClean {
 		return switch (x) {
 			case 1, 2 -> 10;
 			case 3, 4, 5 -> 20;
+			default -> 0;
+		};
+	}
+
+	// comma-separated digit before letter chars
+	int commaSortedDigitBeforeLetter(char c) {
+		return switch (c) {
+			case '0', 'a' -> 1;
 			default -> 0;
 		};
 	}

@@ -92,7 +92,8 @@
 - No braces on `case`/`default` blocks unless required (i.e. a variable is defined in the case's
   direct scope)
 - Switch cases sorted: alphabetically for names, numerically for literals. Named constants
-  sort before numeric literals. For fall-through labels (`case A: case B:`), sort by the first
+  sort before numeric literals. Numeric/digit content sorts before alphabetic content in
+  char/string literals. For fall-through labels (`case A: case B:`), sort by the first
   label. For comma-separated labels (`case A, B ->`), sort within the list AND sort cases by
   their first label. `default` must always be last
 - Prefer enhanced (arrow) switch syntax (`case X ->`) over traditional (`case X:`) when each

@@ -11,26 +11,39 @@ import javax.annotation.Nonnull;
 
 /**
  * Checkstyle check that enforces sorted case labels in switch statements.
- * Named constants sort alphabetically first, then numeric literals sort numerically.
- * Default must be last.
+ * Named constants sort alphabetically first, then numeric literals numerically,
+ * then alphabetic literals alphabetically. Default must be last.
  */
 public class SwitchCaseOrderCheck extends AbstractCheck {
+	private record Label(@Nonnull String text, boolean namedConstant) {}
+
 	private static final String MSG_INTERNAL_ORDER = "switch.case.internal.order";
 	private static final String MSG_ORDER = "switch.case.order";
 
 	@CheckReturnValue
-	private static int compareLabels(@Nonnull String a, @Nonnull String b) {
-		final var aNumeric = isNumericLabel(a);
-		final var bNumeric = isNumericLabel(b);
+	private static int compareLabels(@Nonnull Label a, @Nonnull Label b) {
+		// named constants sort before everything else
+		if (a.namedConstant != b.namedConstant)
+			return a.namedConstant ? -1 : 1;
 
-		// named constants sort before numeric literals
-		if (aNumeric != bNumeric)
-			return aNumeric ? 1 : -1;
+		// among non-named-constants: numeric content before alphabetic content
+		if (!a.namedConstant) {
+			final var aNumeric = isNumericLabel(a.text);
+			final var bNumeric = isNumericLabel(b.text);
+			if (aNumeric != bNumeric)
+				return aNumeric ? -1 : 1;
 
-		if (aNumeric)
-			return Double.compare(parseNumeric(a), parseNumeric(b));
+			if (aNumeric)
+				return Double.compare(parseNumeric(a.text), parseNumeric(b.text));
+		}
 
-		return a.compareToIgnoreCase(b);
+		return a.text.compareToIgnoreCase(b.text);
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static Label extractLabel(@Nonnull DetailAST expr) {
+		return new Label(extractLabelText(expr), isNamedConstant(expr));
 	}
 
 	@CheckReturnValue
@@ -67,27 +80,27 @@ public class SwitchCaseOrderCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	@Nonnull
-	private static String getFirstLabel(@Nonnull DetailAST caseGroupOrRule) {
+	private static Label getFirstLabel(@Nonnull DetailAST caseGroupOrRule) {
 		for (var child = caseGroupOrRule.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() == TokenTypes.LITERAL_CASE) {
 				final var firstExpr = findFirstCaseExpr(child);
 				if (firstExpr != null)
-					return extractLabelText(firstExpr);
+					return extractLabel(firstExpr);
 			}
 		}
-		return "";
+		return new Label("", false);
 	}
 
 	@CheckReturnValue
 	@Nonnull
-	private static ArrayList<String> getLabels(@Nonnull DetailAST caseGroupOrRule) {
-		final var labels = new ArrayList<String>();
+	private static ArrayList<Label> getLabels(@Nonnull DetailAST caseGroupOrRule) {
+		final var labels = new ArrayList<Label>();
 		for (var child = caseGroupOrRule.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() == TokenTypes.LITERAL_CASE) {
 				// enhanced switch: comma-separated labels are EXPR children of LITERAL_CASE
 				for (var expr = child.getFirstChild(); expr != null; expr = expr.getNextSibling()) {
 					if (expr.getType() == TokenTypes.EXPR)
-						labels.add(extractLabelText(expr));
+						labels.add(extractLabel(expr));
 				}
 			}
 		}
@@ -110,6 +123,15 @@ public class SwitchCaseOrderCheck extends AbstractCheck {
 		if (text.length() > 3 && text.charAt(0) == '-' && text.charAt(1) == '0')
 			return text.charAt(2) == 'x' || text.charAt(2) == 'X';
 		return false;
+	}
+
+	@CheckReturnValue
+	private static boolean isNamedConstant(@Nonnull DetailAST expr) {
+		return switch (expr.getType()) {
+			case TokenTypes.DOT, TokenTypes.IDENT -> true;
+			case TokenTypes.EXPR -> isNamedConstant(expr.getFirstChild());
+			default -> false;
+		};
 	}
 
 	@CheckReturnValue
@@ -176,7 +198,7 @@ public class SwitchCaseOrderCheck extends AbstractCheck {
 
 	@Override
 	public void visitToken(@Nonnull DetailAST ast) {
-		String prevLabel = null;
+		Label prevLabel = null;
 		var prevWasDefault = false;
 
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
@@ -188,25 +210,25 @@ public class SwitchCaseOrderCheck extends AbstractCheck {
 			// default not last: if there's a non-default case after default
 			if (prevWasDefault && !isDefault) {
 				final var currentLabel = getFirstLabel(child);
-				if (!currentLabel.isEmpty())
-					log(child, MSG_ORDER, "default", currentLabel);
+				if (!currentLabel.text.isEmpty())
+					log(child, MSG_ORDER, "default", currentLabel.text);
 			}
 
 			if (!isDefault) {
 				final var currentLabel = getFirstLabel(child);
 
 				// check ordering between cases
-				if (prevLabel != null && !currentLabel.isEmpty() && compareLabels(prevLabel, currentLabel) > 0)
-					log(child, MSG_ORDER, currentLabel, prevLabel);
+				if (prevLabel != null && !currentLabel.text.isEmpty() && compareLabels(prevLabel, currentLabel) > 0)
+					log(child, MSG_ORDER, currentLabel.text, prevLabel.text);
 
 				// check internal ordering of comma-separated labels
 				final var labels = getLabels(child);
 				for (var i = 1; i < labels.size(); ++i) {
 					if (compareLabels(labels.get(i - 1), labels.get(i)) > 0)
-						log(child, MSG_INTERNAL_ORDER, labels.get(i), labels.get(i - 1));
+						log(child, MSG_INTERNAL_ORDER, labels.get(i).text, labels.get(i - 1).text);
 				}
 
-				prevLabel = currentLabel.isEmpty() ? prevLabel : currentLabel;
+				prevLabel = currentLabel.text.isEmpty() ? prevLabel : currentLabel;
 			}
 
 			prevWasDefault = isDefault;
