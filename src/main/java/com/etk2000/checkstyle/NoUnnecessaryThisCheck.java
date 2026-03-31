@@ -49,15 +49,20 @@ public class NoUnnecessaryThisCheck extends AbstractCheck {
 
 	private static void collectVariableNames(@Nonnull DetailAST ast, @Nonnull Set<String> names) {
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.VARIABLE_DEF) {
+			if (child.getType() == TokenTypes.PARAMETER_DEF
+					|| child.getType() == TokenTypes.VARIABLE_DEF) {
 				final var ident = child.findFirstToken(TokenTypes.IDENT);
 				if (ident != null)
 					names.add(ident.getText());
 			}
-			// recurse into blocks but NOT into inner classes/lambdas
-			else if (child.getType() != TokenTypes.CLASS_DEF
-					&& child.getType() != TokenTypes.ENUM_DEF
-					&& child.getType() != TokenTypes.LAMBDA)
+			// single untyped lambda parameter is an IDENT directly under LAMBDA
+			else if (child.getType() == TokenTypes.IDENT
+					&& ast.getType() == TokenTypes.LAMBDA)
+				names.add(child.getText());
+			// recurse into all nodes except inner classes
+			// (lambdas share `this` with enclosing class, so their params DO shadow)
+			if (child.getType() != TokenTypes.CLASS_DEF
+					&& child.getType() != TokenTypes.ENUM_DEF)
 				collectVariableNames(child, names);
 		}
 	}

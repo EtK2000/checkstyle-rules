@@ -1,11 +1,9 @@
 package com.etk2000.checkstyle.inputs.unnecessarythis;
 
+import java.util.function.IntConsumer;
+
 class InputThisClean {
 	int field;
-
-	InputThisClean(int field) {
-		this.field = field;
-	}
 
 	{
 		this.field = 42;
@@ -15,6 +13,23 @@ class InputThisClean {
 	{
 		int field = 99;
 		System.out.println(this.field);
+	}
+
+	InputThisClean(int field) {
+		this.field = field;
+	}
+
+	// lambda: this.field needed because lambda-local variable shadows it
+	void lambdaLocalShadowing() {
+		Runnable r = () -> {
+			int field = 99;
+			System.out.println(this.field);
+		};
+	}
+
+	// lambda: this.field needed because lambda parameter shadows it
+	void lambdaParamShadowing() {
+		IntConsumer c = field -> System.out.println(this.field);
 	}
 
 	// lambda: this.field needed because outer method param shadows it

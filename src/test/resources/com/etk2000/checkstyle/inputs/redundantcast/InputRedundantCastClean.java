@@ -97,18 +97,17 @@ class InputRedundantCastClean {
 		long y = (long) x << 32;
 	}
 
-	// widening in standalone reassignment (not variable declaration)
-	void wideningInStandaloneAssign() {
-		int x = 5;
-		long y = 0;
-		y = (long) x;
-	}
-
-	// widening in ternary: may affect result type
+	// widening in ternary: may affect result type (var target)
 	void wideningInTernary(boolean flag) {
 		int x = 5;
 		int y = 10;
 		var z = flag ? (long) x : y;
+	}
+
+	// widening in ternary return from non-primitive method
+	Object wideningInTernaryNonPrimitiveReturn(boolean flag) {
+		int x = 5;
+		return flag ? (long) x : 0;
 	}
 
 	// widening in unary context: changes result type

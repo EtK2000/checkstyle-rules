@@ -33,22 +33,36 @@ public class RedundantCastCheck extends AbstractCheck {
 	@CheckReturnValue
 	@Nullable
 	private static String contextTargetType(@Nonnull DetailAST typecast) {
+		return contextTargetType(typecast, false);
+	}
+
+	/**
+	 * Returns the target type from context. When {@code walkTernary} is
+	 * true, also looks through ternary (QUESTION) and reassignment contexts.
+	 * The non-ternary variant is used for null casts (where the cast may
+	 * affect the ternary result type), while the ternary variant is used
+	 * for widening primitive casts.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String contextTargetType(@Nonnull DetailAST typecast, boolean walkTernary) {
 		var parent = typecast.getParent();
 		while (parent != null && parent.getType() == TokenTypes.EXPR)
 			parent = parent.getParent();
 		if (parent == null)
 			return null;
 
-		if (parent.getType() == TokenTypes.ASSIGN) {
-			final var grandparent = parent.getParent();
-			if (grandparent != null && grandparent.getType() == TokenTypes.VARIABLE_DEF)
-				return variableDefType(grandparent);
+		// walk through ternary (QUESTION) to find the outer context
+		if (walkTernary && parent.getType() == TokenTypes.QUESTION) {
+			var outer = parent.getParent();
+			while (outer != null && outer.getType() == TokenTypes.EXPR)
+				outer = outer.getParent();
+			if (outer != null)
+				return resolveAssignOrReturn(outer);
+			return null;
 		}
 
-		if (parent.getType() == TokenTypes.LITERAL_RETURN)
-			return methodReturnType(parent);
-
-		return null;
+		return resolveAssignOrReturn(parent);
 	}
 
 	@CheckReturnValue
@@ -123,6 +137,15 @@ public class RedundantCastCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
+	private static boolean isOrDescendant(@Nonnull DetailAST node, @Nonnull DetailAST ancestor) {
+		for (var p = node; p != null; p = p.getParent()) {
+			if (p == ancestor)
+				return true;
+		}
+		return false;
+	}
+
+	@CheckReturnValue
 	private static boolean isPrimitive(@Nonnull String type) {
 		return switch (type) {
 			case "boolean", "byte", "char", "double", "float",
@@ -165,6 +188,39 @@ public class RedundantCastCheck extends AbstractCheck {
 		};
 	}
 
+	/**
+	 * Checks if a widening cast is redundant because the other branch
+	 * of a ternary (QUESTION) already has the cast type or wider.
+	 */
+	@CheckReturnValue
+	private static boolean isTernarySiblingAlreadyWiderOrEqual(@Nonnull DetailAST typecast, @Nonnull String castType) {
+		var parent = typecast.getParent();
+		while (parent != null && parent.getType() == TokenTypes.EXPR)
+			parent = parent.getParent();
+		if (parent == null || parent.getType() != TokenTypes.QUESTION)
+			return false;
+
+		// QUESTION children: condition, true-branch, COLON, false-branch
+		final var condition = parent.getFirstChild();
+		if (condition == null)
+			return false;
+		final var trueBranch = condition.getNextSibling();
+		if (trueBranch == null)
+			return false;
+		// skip COLON separator to get to false branch
+		var falseBranch = trueBranch.getNextSibling();
+		if (falseBranch != null && falseBranch.getType() == TokenTypes.COLON)
+			falseBranch = falseBranch.getNextSibling();
+		if (falseBranch == null)
+			return false;
+
+		// determine which branch is the "other" one
+		final var other = isOrDescendant(typecast, trueBranch) ? falseBranch : trueBranch;
+		final var otherType = expressionType(other);
+		return castType.equals(otherType)
+				|| (otherType != null && isWideningPrimitive(castType, otherType));
+	}
+
 	@CheckReturnValue
 	private static boolean isWideningPrimitive(@Nonnull String fromType, @Nonnull String toType) {
 		return switch (fromType) {
@@ -199,7 +255,7 @@ public class RedundantCastCheck extends AbstractCheck {
 	 */
 	@CheckReturnValue
 	private static boolean isWideningRedundantInContext(@Nonnull DetailAST typecast) {
-		final var targetType = contextTargetType(typecast);
+		final var targetType = contextTargetType(typecast, true);
 		return targetType != null && isPrimitive(targetType);
 	}
 
@@ -232,6 +288,25 @@ public class RedundantCastCheck extends AbstractCheck {
 				return null;
 			parent = parent.getParent();
 		}
+		return null;
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static String resolveAssignOrReturn(@Nonnull DetailAST parent) {
+		if (parent.getType() == TokenTypes.ASSIGN) {
+			final var grandparent = parent.getParent();
+			if (grandparent != null && grandparent.getType() == TokenTypes.VARIABLE_DEF)
+				return variableDefType(grandparent);
+			// reassignment: ASSIGN -> EXPR (not VARIABLE_DEF)
+			if (grandparent != null && grandparent.getType() == TokenTypes.EXPR) {
+				final var target = parent.getFirstChild();
+				if (target != null && target.getType() == TokenTypes.IDENT)
+					return lookupVariableType(target);
+			}
+		}
+		if (parent.getType() == TokenTypes.LITERAL_RETURN)
+			return methodReturnType(parent);
 		return null;
 	}
 
@@ -334,9 +409,9 @@ public class RedundantCastCheck extends AbstractCheck {
 			return;
 		}
 
-		// widening primitive cast: redundant in assignment/return, compound assignment, or when sibling is already wider
+		// widening primitive cast: redundant in assignment/return, compound assignment, when sibling is already wider, or in ternary with wider sibling
 		if (isWideningPrimitive(exprType, castType)
-				&& (isCompoundAssignment(ast) || isWideningRedundantInContext(ast) || isSiblingAlreadyWiderOrEqual(ast, castType)))
+				&& (isCompoundAssignment(ast) || isWideningRedundantInContext(ast) || isSiblingAlreadyWiderOrEqual(ast, castType) || isTernarySiblingAlreadyWiderOrEqual(ast, castType)))
 			log(ast, MSG_KEY, castType, exprType);
 	}
 }

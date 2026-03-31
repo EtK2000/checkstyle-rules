@@ -34,6 +34,8 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 	private static final String MSG_GET_FIRST = "prefer.api.getFirst";
 	private static final String MSG_GET_LAST = "prefer.api.getLast";
 	private static final String MSG_IS_EMPTY = "prefer.api.isEmpty";
+	private static final String MSG_REMOVE_FIRST = "prefer.api.removeFirst";
+	private static final String MSG_REMOVE_LAST = "prefer.api.removeLast";
 	private static final String MSG_TO_LIST = "prefer.api.toList";
 
 	@CheckReturnValue
@@ -60,6 +62,13 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectGetCalls(child, results);
+	}
+
+	private static void collectRemoveCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+		if (ast.getType() == TokenTypes.METHOD_CALL && isRemoveCall(ast))
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectRemoveCalls(child, results);
 	}
 
 	private static void collectSizeEmptyComparisons(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
@@ -131,6 +140,18 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		return inner != null
 				&& inner.getType() == TokenTypes.NUM_INT
 				&& "0".equals(inner.getText());
+	}
+
+	@CheckReturnValue
+	private static boolean isRemoveCall(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return false;
+
+		var last = dot.getFirstChild();
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		return "remove".equals(last.getText());
 	}
 
 	@CheckReturnValue
@@ -340,8 +361,6 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 
 		final var getCalls = new ArrayList<DetailAST>();
 		collectGetCalls(ast, getCalls);
-		if (getCalls.isEmpty())
-			return;
 
 		// group by receiver, track whether each receiver has non-zero-index .get() calls
 		final var zeroGets = new ArrayList<DetailAST>();
@@ -375,10 +394,55 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 				log(call, MSG_GET_FIRST);
 		}
 
-		// flag .get(size() - 1) only if receiver has getLast()
+		// flag .get(size() - 1) only if receiver doesn't also use .get(N) with other indices and has getLast()
 		for (var call : lastGets) {
-			if (receiverHasMethod(call, "getLast"))
+			final var dot = call.findFirstToken(TokenTypes.DOT);
+			final var receiver = receiverText(dot);
+			if (!receiversWithOtherIndices.containsKey(receiver) && receiverHasMethod(call, "getLast"))
 				log(call, MSG_GET_LAST);
+		}
+
+		// same logic for .remove(0) -> .removeFirst(), .remove(size()-1) -> .removeLast()
+		final var removeCalls = new ArrayList<DetailAST>();
+		collectRemoveCalls(ast, removeCalls);
+		if (removeCalls.isEmpty())
+			return;
+
+		final var zeroRemoves = new ArrayList<DetailAST>();
+		final var lastRemoves = new ArrayList<DetailAST>();
+		final var removeReceiversWithOtherIndices = new HashMap<String, Boolean>();
+
+		for (var call : removeCalls) {
+			final var dot = call.findFirstToken(TokenTypes.DOT);
+			if (dot == null)
+				continue;
+
+			final var receiver = receiverText(dot);
+			final var elist = call.findFirstToken(TokenTypes.ELIST);
+			if (elist == null || elist.getChildCount() != 1)
+				continue;
+
+			final var arg = elist.getFirstChild();
+			if (isLiteralZero(arg))
+				zeroRemoves.add(call);
+			else if (isSizeMinusOne(arg, dot))
+				lastRemoves.add(call);
+			else
+				removeReceiversWithOtherIndices.put(receiver, Boolean.TRUE);
+		}
+
+		for (var call : zeroRemoves) {
+			final var dot = call.findFirstToken(TokenTypes.DOT);
+			final var receiver = receiverText(dot);
+			if (!removeReceiversWithOtherIndices.containsKey(receiver) && receiverHasMethod(call, "removeFirst"))
+				log(call, MSG_REMOVE_FIRST);
+		}
+
+		for (var call : lastRemoves) {
+			final var dot = call.findFirstToken(TokenTypes.DOT);
+			final var receiver = receiverText(dot);
+			if (!removeReceiversWithOtherIndices.containsKey(receiver) && receiverHasMethod(call, "removeLast"))
+				log(call, MSG_REMOVE_LAST);
 		}
 	}
 

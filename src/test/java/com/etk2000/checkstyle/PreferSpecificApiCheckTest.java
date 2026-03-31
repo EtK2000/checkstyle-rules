@@ -47,6 +47,14 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testMinSdkSuppressesRemoveCheck() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiRemoveViolation.java", "minSdk", "34"
+		);
+		assertTrue(violations.isEmpty());
+	}
+
+	@Test
 	public void testReflectionClean() throws Exception {
 		assertTrue(BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiReflectionClean.java").isEmpty());
 	}
@@ -75,5 +83,15 @@ public class PreferSpecificApiCheckTest {
 		// var-typed local: unresolvable, best-effort flags getLast
 		assertEquals(31, violations.get(4).getLine());
 		assertTrue(violations.get(4).getMessage().contains("getLast"));
+	}
+
+	@Test
+	public void testRemoveFirstAndRemoveLastViolations() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiRemoveViolation.java");
+		assertEquals(2, violations.size());
+		assertEquals(7, violations.getFirst().getLine());
+		assertTrue(violations.getFirst().getMessage().contains("removeFirst"));
+		assertEquals(11, violations.get(1).getLine());
+		assertTrue(violations.get(1).getMessage().contains("removeLast"));
 	}
 }

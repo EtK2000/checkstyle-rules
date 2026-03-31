@@ -29,6 +29,12 @@ class InputPreferVarClean {
 		Runnable r = () -> System.out.println("hello");
 		Supplier<String> s2 = () -> "world";
 		Function<String, Integer> f = String::length;
+		Runnable anon = new Runnable() {
+			@Override
+			public void run() {
+				System.out.println("anonymous");
+			}
+		};
 	}
 
 	void tryWithResources() throws Exception {

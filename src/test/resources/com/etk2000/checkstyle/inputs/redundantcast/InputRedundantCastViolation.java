@@ -133,6 +133,46 @@ class InputRedundantCastViolation {
 		return (long) x; // violation: widening int to long, return is double (primitive)
 	}
 
+	// widening in standalone reassignment
+	void wideningInStandaloneAssign() {
+		int x = 5;
+		long y = 0;
+		y = (long) x; // violation: widening, target is long
+	}
+
+	// widening in ternary false branch with long true branch
+	void wideningInTernaryFalseBranch(boolean flag) {
+		int x = 5;
+		long y = flag ? 0L : (long) x; // violation: 0L is already long
+	}
+
+	// widening in ternary return from primitive method
+	long wideningInTernaryReturn(boolean flag) {
+		int x = 5;
+		return flag ? (long) x : 0L; // violation: return type is long and sibling is long
+	}
+
+	// widening in ternary true branch with long false branch
+	void wideningInTernaryTrueBranch(boolean flag) {
+		int x = 5;
+		long y = flag ? (long) x : 0L; // violation: 0L is already long
+	}
+
+	// widening in ternary with long reassignment target
+	void wideningInTernaryWithLongReassignment(boolean flag) {
+		int x = 5;
+		int z = 10;
+		long y = 0;
+		y = flag ? (long) x : z; // violation: reassignment target is long
+	}
+
+	// widening in ternary with long assignment target
+	void wideningInTernaryWithLongTarget(boolean flag) {
+		int x = 5;
+		int z = 10;
+		long y = flag ? (long) x : z; // violation: assignment target is long
+	}
+
 	// widening int to double in assignment
 	void wideningIntToDouble() {
 		int x = 5;

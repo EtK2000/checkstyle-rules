@@ -37,9 +37,10 @@ public class SwitchCaseOrderCheck extends AbstractCheck {
 	@Nonnull
 	private static String extractLabelText(@Nonnull DetailAST expr) {
 		return switch (expr.getType()) {
-			case TokenTypes.CHAR_LITERAL, TokenTypes.IDENT, TokenTypes.NUM_DOUBLE,
-			     TokenTypes.NUM_FLOAT, TokenTypes.NUM_INT, TokenTypes.NUM_LONG,
-			     TokenTypes.STRING_LITERAL -> expr.getText();
+			case TokenTypes.CHAR_LITERAL, TokenTypes.STRING_LITERAL -> {
+				final var text = expr.getText();
+				yield text.length() >= 2 ? text.substring(1, text.length() - 1) : text;
+			}
 			case TokenTypes.DOT -> {
 				var last = expr.getFirstChild();
 				while (last.getNextSibling() != null)
@@ -47,6 +48,8 @@ public class SwitchCaseOrderCheck extends AbstractCheck {
 				yield last.getText();
 			}
 			case TokenTypes.EXPR -> extractLabelText(expr.getFirstChild());
+			case TokenTypes.IDENT, TokenTypes.NUM_DOUBLE,
+			     TokenTypes.NUM_FLOAT, TokenTypes.NUM_INT, TokenTypes.NUM_LONG -> expr.getText();
 			case TokenTypes.UNARY_MINUS -> "-" + extractLabelText(expr.getFirstChild());
 			case TokenTypes.UNARY_PLUS -> extractLabelText(expr.getFirstChild());
 			default -> expr.getText();
