@@ -1,10 +1,14 @@
 package com.etk2000.checkstyle;
 
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
+import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 class AstUtil {
 	@CheckReturnValue
@@ -25,6 +29,127 @@ class AstUtil {
 		return "";
 	}
 
+	/**
+	 * Extracts the method name from the last child of a METHOD_CALL's DOT.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String getMethodName(@Nonnull DetailAST dot) {
+		var last = dot.getFirstChild();
+		if (last == null)
+			return null;
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		return last.getType() == TokenTypes.IDENT ? last.getText() : null;
+	}
+
+	/**
+	 * Finds the type name of the receiver in a dotted method call.
+	 * For {@code obj.method()}, finds the declared type of {@code obj}
+	 * (field, parameter, or local variable).
+	 * For {@code Type.method()}, returns {@code Type} directly (static call).
+	 * For chained calls, returns {@code null};
+	 * use {@link #getReceiverTypeName(DetailAST, String, Set)} for chain resolution.
+	 */
+	@CheckReturnValue
+	@Nullable
+	static String getReceiverTypeName(@Nonnull DetailAST methodCall) {
+		final var firstChild = methodCall.getFirstChild();
+		if (firstChild == null || firstChild.getType() != TokenTypes.DOT)
+			return null;
+
+		final var receiver = firstChild.getFirstChild();
+		if (receiver == null || receiver.getType() != TokenTypes.IDENT)
+			return null;
+
+		final var receiverName = receiver.getText();
+
+		// check if receiver starts with uppercase (likely a class name for static calls)
+		if (Character.isUpperCase(receiverName.charAt(0)))
+			return receiverName;
+
+		// look up the variable declaration to find its type
+		return resolveVariableType(methodCall, receiverName);
+	}
+
+	/**
+	 * Like {@link #getReceiverTypeName(DetailAST)} but also resolves
+	 * chained method calls (e.g. {@code fragment.requireView().findViewById()})
+	 * by walking the chain and using reflection to resolve intermediate return types.
+	 */
+	@CheckReturnValue
+	@Nullable
+	static String getReceiverTypeName(
+			@Nonnull DetailAST methodCall,
+			@Nullable String packageName,
+			@Nonnull Set<String> imports
+	) {
+		final var simple = getReceiverTypeName(methodCall);
+		if (simple != null)
+			return simple;
+
+		// try resolving chained method calls: receiver is itself a METHOD_CALL
+		final var firstChild = methodCall.getFirstChild();
+		if (firstChild == null || firstChild.getType() != TokenTypes.DOT)
+			return null;
+
+		final var receiver = firstChild.getFirstChild();
+		if (receiver == null || receiver.getType() != TokenTypes.METHOD_CALL)
+			return null;
+
+		// recursively resolve the inner call's receiver type
+		final var innerReceiverType = getReceiverTypeName(receiver, packageName, imports);
+		if (innerReceiverType == null) {
+			// bare call in the same class (e.g. requireView().method())
+			// can't resolve without knowing the enclosing class's own type
+			return null;
+		}
+
+		final var innerFqcn = ReflectionUtil.resolveClassName(innerReceiverType, packageName, imports);
+		if (innerFqcn == null)
+			return null;
+
+		// get the inner method's name from the DOT of the inner METHOD_CALL
+		final var innerDot = receiver.getFirstChild();
+		if (innerDot == null || innerDot.getType() != TokenTypes.DOT)
+			return null;
+
+		final var innerMethodName = getMethodName(innerDot);
+		if (innerMethodName == null)
+			return null;
+
+		// resolve the return type of the inner method
+		return ReflectionUtil.getMethodReturnTypeName(innerFqcn, innerMethodName);
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static String getTypeName(@Nonnull DetailAST typeNode) {
+		// simple type: IDENT (exclude "var" since it's not a real type name)
+		final var ident = typeNode.findFirstToken(TokenTypes.IDENT);
+		if (ident != null)
+			return "var".equals(ident.getText()) ? null : ident.getText();
+
+		// primitive types
+		for (var child = typeNode.getFirstChild(); child != null; child = child.getNextSibling()) {
+			switch (child.getType()) {
+				case TokenTypes.LITERAL_BOOLEAN, TokenTypes.LITERAL_BYTE,
+				     TokenTypes.LITERAL_CHAR, TokenTypes.LITERAL_DOUBLE,
+				     TokenTypes.LITERAL_FLOAT, TokenTypes.LITERAL_INT,
+				     TokenTypes.LITERAL_LONG, TokenTypes.LITERAL_SHORT -> {
+					return null; // primitives can't have methods
+				}
+			}
+		}
+
+		// qualified type: DOT
+		final var dot = typeNode.findFirstToken(TokenTypes.DOT);
+		if (dot != null)
+			return FullIdent.createFullIdent(dot).getText();
+
+		return null;
+	}
+
 	@CheckReturnValue
 	static int lastLine(@Nonnull DetailAST ast) {
 		var last = ast.getLineNo();
@@ -34,5 +159,54 @@ class AstUtil {
 				last = childLast;
 		}
 		return last;
+	}
+
+	/**
+	 * Walks up the AST from the given node searching for a variable
+	 * declaration (local, parameter, or field) with the given name,
+	 * and returns its declared type name.
+	 */
+	@CheckReturnValue
+	@Nullable
+	static String resolveVariableType(@Nonnull DetailAST from, @Nonnull String varName) {
+		for (var scope = from.getParent(); scope != null; scope = scope.getParent()) {
+			if (scope.getType() == TokenTypes.SLIST || scope.getType() == TokenTypes.OBJBLOCK) {
+				for (var sibling = scope.getFirstChild(); sibling != null; sibling = sibling.getNextSibling()) {
+					final var typeName = variableTypeName(sibling, varName);
+					if (typeName != null)
+						return typeName;
+				}
+			}
+
+			// check method/constructor parameters
+			if (scope.getType() == TokenTypes.METHOD_DEF || scope.getType() == TokenTypes.CTOR_DEF) {
+				final var params = scope.findFirstToken(TokenTypes.PARAMETERS);
+				if (params != null) {
+					for (var param = params.getFirstChild(); param != null; param = param.getNextSibling()) {
+						final var typeName = variableTypeName(param, varName);
+						if (typeName != null)
+							return typeName;
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static String variableTypeName(@Nonnull DetailAST node, @Nonnull String varName) {
+		if (node.getType() != TokenTypes.VARIABLE_DEF && node.getType() != TokenTypes.PARAMETER_DEF)
+			return null;
+
+		final var ident = node.findFirstToken(TokenTypes.IDENT);
+		if (ident == null || !varName.equals(ident.getText()))
+			return null;
+
+		final var type = node.findFirstToken(TokenTypes.TYPE);
+		if (type == null)
+			return null;
+
+		return getTypeName(type);
 	}
 }

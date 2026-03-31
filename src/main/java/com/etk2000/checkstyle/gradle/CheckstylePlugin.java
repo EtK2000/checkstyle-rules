@@ -169,10 +169,19 @@ public class CheckstylePlugin implements Plugin<Project> {
 		ext.setConfigFile(configFile);
 		ext.setToolVersion(CHECKSTYLE_VERSION);
 
-		project.afterEvaluate(p -> ext.getConfigProperties().put("minSdk", resolveMinSdk(p)));
-
 		final var checkstyleConfig = project.getConfigurations().getByName("checkstyle");
 		addDependencies(project, checkstyleConfig);
+
+		project.afterEvaluate(p -> {
+			ext.getConfigProperties().put("minSdk", resolveMinSdk(p));
+
+			// add compile and test classpaths so reflection-based checks can resolve project types
+			for (final var name : new String[]{"compileClasspath", "testCompileClasspath"}) {
+				final var classpath = p.getConfigurations().findByName(name);
+				if (classpath != null)
+					checkstyleConfig.getDependencies().add(p.getDependencies().create(p.files(classpath)));
+			}
+		});
 
 		registerTasks(project, extractTask.getName());
 	}

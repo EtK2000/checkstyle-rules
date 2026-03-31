@@ -2,10 +2,13 @@ package com.etk2000.checkstyle;
 
 import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -20,6 +23,9 @@ import javax.annotation.Nonnull;
  * Suppresses {@code .get(0)} when the same receiver also calls
  * {@code .get(N)} with other indices in the same method scope
  * (sequential access pattern).
+ * <p>
+ * Uses reflection to verify the receiver type actually has
+ * {@code getFirst()}/{@code getLast()} before suggesting them.
  */
 public class PreferSpecificApiCheck extends AbstractCheck {
 	private static final int MIN_SDK_GET_FIRST_LAST = 35;
@@ -118,7 +124,16 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		return sb.toString();
 	}
 
+	private final Set<String> imports = new HashSet<>();
+
 	private int minSdk = Integer.MAX_VALUE;
+	private String packageName;
+
+	@Override
+	public void beginTree(@Nonnull DetailAST rootAST) {
+		imports.clear();
+		packageName = null;
+	}
 
 	@Nonnull
 	@Override
@@ -132,8 +147,10 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		return new int[]{
 				TokenTypes.COMPACT_CTOR_DEF,
 				TokenTypes.CTOR_DEF,
+				TokenTypes.IMPORT,
 				TokenTypes.INSTANCE_INIT,
 				TokenTypes.METHOD_DEF,
+				TokenTypes.PACKAGE_DEF,
 				TokenTypes.STATIC_INIT
 		};
 	}
@@ -142,6 +159,25 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 	@Override
 	public int[] getRequiredTokens() {
 		return getDefaultTokens();
+	}
+
+	/**
+	 * Checks whether the receiver of a .get() call has the specified
+	 * method available, using reflection to resolve the receiver type.
+	 * Returns {@code true} if the type can't be resolved (best-effort:
+	 * flag it and let the user decide).
+	 */
+	@CheckReturnValue
+	private boolean receiverHasMethod(@Nonnull DetailAST methodCall, @Nonnull String methodName) {
+		final var receiverTypeName = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
+		if (receiverTypeName == null)
+			return true; // can't resolve, assume it has the method
+
+		final var fqcn = ReflectionUtil.resolveClassName(receiverTypeName, packageName, imports);
+		if (fqcn == null)
+			return true; // can't resolve, assume it has the method
+
+		return ReflectionUtil.hasMethod(fqcn, methodName);
 	}
 
 	/**
@@ -155,8 +191,7 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		this.minSdk = minSdk;
 	}
 
-	@Override
-	public void visitToken(@Nonnull DetailAST ast) {
+	private void visitMethodScope(@Nonnull DetailAST ast) {
 		if (minSdk < MIN_SDK_GET_FIRST_LAST)
 			return;
 
@@ -193,12 +228,26 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		for (var call : zeroGets) {
 			final var dot = call.findFirstToken(TokenTypes.DOT);
 			final var receiver = receiverText(dot);
-			if (!receiversWithOtherIndices.containsKey(receiver))
+			if (!receiversWithOtherIndices.containsKey(receiver) && receiverHasMethod(call, "getFirst"))
 				log(call, MSG_GET_FIRST);
 		}
 
-		// always flag .get(size() - 1)
-		for (var call : lastGets)
-			log(call, MSG_GET_LAST);
+		// flag .get(size() - 1) only if receiver has getLast()
+		for (var call : lastGets) {
+			if (receiverHasMethod(call, "getLast"))
+				log(call, MSG_GET_LAST);
+		}
+	}
+
+	@Override
+	public void visitToken(@Nonnull DetailAST ast) {
+		switch (ast.getType()) {
+			case TokenTypes.IMPORT -> imports.add(FullIdent.createFullIdentBelow(ast).getText());
+			case TokenTypes.PACKAGE_DEF -> {
+				final var ident = ast.getLastChild().getPreviousSibling();
+				packageName = FullIdent.createFullIdent(ident).getText();
+			}
+			default -> visitMethodScope(ast);
+		}
 	}
 }
