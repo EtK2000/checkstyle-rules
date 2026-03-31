@@ -84,6 +84,34 @@ public class ReflectionUtilTest {
 	}
 
 	@Test
+	public void testIsFunctionalInterfaceFalseMultipleMethods() {
+		assertFalse(ReflectionUtil.isFunctionalInterface("java.util.List"));
+	}
+
+	@Test
+	public void testIsFunctionalInterfaceFalseNoAbstractMethods() {
+		assertFalse(ReflectionUtil.isFunctionalInterface("java.io.Serializable"));
+	}
+
+	@Test
+	public void testIsFunctionalInterfaceFalseNotInterface() {
+		assertFalse(ReflectionUtil.isFunctionalInterface("java.lang.String"));
+	}
+
+	@Test
+	public void testIsFunctionalInterfaceFalseUnknownClass() {
+		assertFalse(ReflectionUtil.isFunctionalInterface("com.nonexistent.FakeClass"));
+	}
+
+	@Test
+	public void testIsFunctionalInterfaceTrue() {
+		assertTrue(ReflectionUtil.isFunctionalInterface("java.lang.Runnable"));
+		assertTrue(ReflectionUtil.isFunctionalInterface("java.util.Comparator"));
+		assertTrue(ReflectionUtil.isFunctionalInterface("java.util.function.Function"));
+		assertTrue(ReflectionUtil.isFunctionalInterface("java.util.function.Supplier"));
+	}
+
+	@Test
 	public void testResolveClassNameAlreadyQualified() {
 		assertEquals(
 				"java.util.List",

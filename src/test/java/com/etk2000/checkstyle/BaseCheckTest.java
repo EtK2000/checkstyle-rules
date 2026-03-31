@@ -8,6 +8,7 @@ import com.puppycrawl.tools.checkstyle.api.AuditEvent;
 import com.puppycrawl.tools.checkstyle.api.AuditListener;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -72,6 +73,83 @@ class BaseCheckTest {
 		Objects.requireNonNull(url, "Test input file not found: " + inputPath);
 
 		checker.process(List.of(new File(url.toURI())));
+		checker.destroy();
+		return violations;
+	}
+
+	@Nonnull
+	static List<AuditEvent> runRegexCheck(
+			@Nonnull String moduleName,
+			@Nonnull String format,
+			@Nonnull String inputPath
+	) throws Exception {
+		final var url = BaseCheckTest.class.getResource("/com/etk2000/checkstyle/inputs/" + inputPath);
+		Objects.requireNonNull(url, "Test input file not found: " + inputPath);
+		return runRegexCheckOnFile(moduleName, format, new File(url.toURI()));
+	}
+
+	@Nonnull
+	static List<AuditEvent> runRegexCheckInline(
+			@Nonnull String moduleName,
+			@Nonnull String format,
+			@Nonnull String content
+	) throws Exception {
+		final var tempFile = File.createTempFile("checkstyle-regex-test", ".java");
+		try {
+			Files.writeString(tempFile.toPath(), content);
+			return runRegexCheckOnFile(moduleName, format, tempFile);
+		}
+		finally {
+			tempFile.delete();
+		}
+	}
+
+	@Nonnull
+	private static List<AuditEvent> runRegexCheckOnFile(
+			@Nonnull String moduleName,
+			@Nonnull String format,
+			@Nonnull File file
+	) throws Exception {
+		final var moduleConfig = new DefaultConfiguration(moduleName);
+		moduleConfig.addProperty("format", format);
+		moduleConfig.addProperty("message", "test violation");
+
+		final var checkerConfig = new DefaultConfiguration("Checker");
+		checkerConfig.addChild(moduleConfig);
+
+		final var checker = new Checker();
+		checker.setModuleClassLoader(Checker.class.getClassLoader());
+		checker.configure(checkerConfig);
+
+		final var violations = new ArrayList<AuditEvent>();
+		checker.addListener(new AuditListener() {
+			@Override
+			public void addError(@Nonnull AuditEvent event) {
+				violations.add(event);
+			}
+
+			@Override
+			public void addException(@Nonnull AuditEvent event, @Nonnull Throwable throwable) {
+			}
+
+			@Override
+			public void auditFinished(@Nonnull AuditEvent event) {
+			}
+
+			@Override
+			public void auditStarted(@Nonnull AuditEvent event) {
+			}
+
+			@Override
+			public void fileFinished(@Nonnull AuditEvent event) {
+			}
+
+			@Override
+			public void fileStarted(@Nonnull AuditEvent event) {
+			}
+		});
+
+		checker.process(List.of(file));
 		checker.destroy();
 		return violations;
 	}
