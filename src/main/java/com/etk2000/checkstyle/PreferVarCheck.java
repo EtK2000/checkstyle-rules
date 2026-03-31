@@ -158,16 +158,6 @@ public class PreferVarCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
-	private static boolean isInitializerAnonymousClass(@Nonnull DetailAST assign) {
-		var value = assign.getFirstChild();
-		if (value != null && value.getType() == TokenTypes.EXPR)
-			value = value.getFirstChild();
-		return value != null
-				&& value.getType() == TokenTypes.LITERAL_NEW
-				&& value.findFirstToken(TokenTypes.OBJBLOCK) != null;
-	}
-
-	@CheckReturnValue
 	private static boolean isInitializerArrayInit(@Nonnull DetailAST assign) {
 		final var value = assign.getFirstChild();
 		return value != null && value.getType() == TokenTypes.ARRAY_INIT;
@@ -199,6 +189,40 @@ public class PreferVarCheck extends AbstractCheck {
 		if (value != null && value.getType() == TokenTypes.EXPR)
 			value = value.getFirstChild();
 		return value != null && value.getType() == TokenTypes.LITERAL_NULL;
+	}
+
+	/**
+	 * Checks whether the initializer is an anonymous class with exactly
+	 * one method and no extra members (fields, inner types, etc.).
+	 * These are candidates for lambda conversion and are skipped by
+	 * the var check (handled by {@link PreferLambdaCheck} instead).
+	 */
+	@CheckReturnValue
+	private static boolean isInitializerSimpleAnonymousClass(@Nonnull DetailAST assign) {
+		var value = assign.getFirstChild();
+		if (value != null && value.getType() == TokenTypes.EXPR)
+			value = value.getFirstChild();
+		if (value == null || value.getType() != TokenTypes.LITERAL_NEW)
+			return false;
+
+		final var objBlock = value.findFirstToken(TokenTypes.OBJBLOCK);
+		if (objBlock == null)
+			return false;
+
+		var methodCount = 0;
+		for (var child = objBlock.getFirstChild(); child != null; child = child.getNextSibling()) {
+			switch (child.getType()) {
+				case TokenTypes.LCURLY, TokenTypes.RCURLY -> {}
+				case TokenTypes.METHOD_DEF -> {
+					if (++methodCount > 1)
+						return false;
+				}
+				default -> {
+					return false;
+				}
+			}
+		}
+		return methodCount == 1;
 	}
 
 	@CheckReturnValue
@@ -332,8 +356,8 @@ public class PreferVarCheck extends AbstractCheck {
 				if (isInitializerLambdaOrMethodRef(assign))
 					return;
 
-				// skip anonymous classes (var would infer the anonymous type, not the declared type)
-				if (isInitializerAnonymousClass(assign))
+				// skip simple anonymous classes (PreferLambdaCheck handles these)
+				if (isInitializerSimpleAnonymousClass(assign))
 					return;
 
 				final var methodCall = getInitializerMethodCall(assign);

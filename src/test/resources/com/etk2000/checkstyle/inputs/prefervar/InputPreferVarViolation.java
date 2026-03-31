@@ -20,6 +20,14 @@ class InputPreferVarViolation {
 		var names = new String[]{"a", "b"}; // violation: use implicit array init
 		final String[] numbers = new String[]{"1"}; // violation: use implicit array init
 		final int[][] matrix = new int[][]{{1}, {2}}; // violation: use implicit array init
+		Runnable complexAnon = new Runnable() { // violation: local must use var
+			int count = 0;
+
+			@Override
+			public void run() {
+				System.out.println(count);
+			}
+		};
 	}
 
 	void tryWithResources() throws Exception {

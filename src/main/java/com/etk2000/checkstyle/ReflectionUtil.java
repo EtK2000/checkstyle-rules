@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
@@ -105,6 +106,34 @@ class ReflectionUtil {
 				return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Checks whether the given class is a functional interface
+	 * (an interface with exactly one abstract method, excluding
+	 * methods inherited from {@link Object}).
+	 */
+	@CheckReturnValue
+	static boolean isFunctionalInterface(@Nonnull String fqcn) {
+		final var clazz = loadClass(fqcn);
+		if (clazz == null || !clazz.isInterface())
+			return false;
+
+		var abstractCount = 0;
+		for (final var method : clazz.getMethods()) {
+			if (!Modifier.isAbstract(method.getModifiers()))
+				continue;
+			// Object methods don't count for functional interface definition
+			try {
+				Object.class.getMethod(method.getName(), method.getParameterTypes());
+				continue;
+			}
+			catch (NoSuchMethodException ignored) {
+			}
+			if (++abstractCount > 1)
+				return false;
+		}
+		return abstractCount == 1;
 	}
 
 	@CheckReturnValue

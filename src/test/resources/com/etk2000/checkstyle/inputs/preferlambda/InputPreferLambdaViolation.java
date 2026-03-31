@@ -1,0 +1,26 @@
+package com.etk2000.checkstyle.inputs.preferlambda;
+
+import java.util.function.Supplier;
+
+class InputPreferLambdaViolation {
+	void lambdaCandidates() {
+		Runnable r = new Runnable() { // violation: prefer lambda
+			@Override
+			public void run() {
+				System.out.println("hello");
+			}
+		};
+		Supplier<String> s = new Supplier<>() { // violation: prefer lambda
+			@Override
+			public String get() {
+				return "world";
+			}
+		};
+		Thread t = new Thread(new Runnable() { // violation: prefer lambda (method argument)
+			@Override
+			public void run() {
+				System.out.println("argument");
+			}
+		});
+	}
+}

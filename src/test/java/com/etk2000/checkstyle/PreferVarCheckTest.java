@@ -75,7 +75,7 @@ public class PreferVarCheckTest {
 	@Test
 	public void testExplicitTypeViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarViolation.java");
-		assertEquals(9, violations.size());
+		assertEquals(10, violations.size());
 		assertEquals(9, violations.getFirst().getLine());
 		assertEquals(12, violations.get(1).getLine());
 		assertEquals(17, violations.get(2).getLine());
@@ -84,7 +84,8 @@ public class PreferVarCheckTest {
 		assertEquals(20, violations.get(5).getLine());
 		assertEquals(21, violations.get(6).getLine());
 		assertEquals(22, violations.get(7).getLine());
-		assertEquals(26, violations.get(8).getLine());
+		assertEquals(23, violations.get(8).getLine());
+		assertEquals(34, violations.get(9).getLine());
 	}
 
 	@Test

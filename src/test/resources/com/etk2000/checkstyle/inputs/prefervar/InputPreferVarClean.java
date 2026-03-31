@@ -35,6 +35,14 @@ class InputPreferVarClean {
 				System.out.println("anonymous");
 			}
 		};
+		var complexAnon = new Runnable() {
+			int count = 0;
+
+			@Override
+			public void run() {
+				System.out.println(count);
+			}
+		};
 	}
 
 	void tryWithResources() throws Exception {

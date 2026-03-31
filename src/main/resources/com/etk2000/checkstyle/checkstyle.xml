@@ -151,6 +151,9 @@
 			<property name="severity" value="warning" />
 		</module>
 
+		<!-- Custom: Prefer lambda expression over anonymous functional interface -->
+		<module name="com.etk2000.checkstyle.PreferLambdaCheck" />
+
 		<!-- Custom: No blank line between consecutive single-line switch cases -->
 		<module name="com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck" />
 
