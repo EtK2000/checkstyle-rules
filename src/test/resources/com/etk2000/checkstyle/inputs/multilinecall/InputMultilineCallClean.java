@@ -9,6 +9,13 @@ import java.util.Map;
 import java.util.Set;
 
 class InputMultilineCallClean {
+	Object arg, arg1, arg2, x;
+	InputMultilineCallClean obj;
+
+	Object a(Object a) {
+		return a;
+	}
+
 	void allArgsOnSameLine() {
 		method(
 				1, 2, 3
@@ -21,11 +28,27 @@ class InputMultilineCallClean {
 		});
 	}
 
+	Object b(Object a) {
+		return a;
+	}
+
 	void cleanMultilineDefinition(
 			int a,
 			int b,
 			int c
 	) {
+	}
+
+	void constructorWithMethodCallArg() {
+		method(new ArrayList<>(other(
+				arg
+		)));
+	}
+
+	void constructorWithMethodCallArgStandard() {
+		method(new ArrayList<>(
+				other(x)
+		));
 	}
 
 	void correctMultiline() {
@@ -180,6 +203,10 @@ class InputMultilineCallClean {
 		);
 	}
 
+	Object other(Object... args) {
+		return args[0];
+	}
+
 	void postDelayedWithBracedLambda() {
 		handler.postDelayed(() -> {
 			System.out.println("delayed");
@@ -219,6 +246,20 @@ class InputMultilineCallClean {
 			System.out.println(x);
 		});
 	}
+
+	void resourceIdAndMethodCallArg() {
+		method(R.string.ok, other(
+				arg
+		));
+	}
+
+	void resourceIdAndMethodCallArgStandard() {
+		method(
+				R.string.ok,
+				other(x)
+		);
+	}
+
 
 	void resourceIdAndSingleLineTernary() {
 		method(R.string.ok, true ? "a" : "b");
@@ -306,6 +347,31 @@ class InputMultilineCallClean {
 		));
 	}
 
+	void singleMethodCallArgDotted() {
+		method(obj.other(
+				arg
+		));
+	}
+
+	void singleMethodCallArgInline() {
+		method(other(
+				arg1,
+				arg2
+		));
+	}
+
+	void singleMethodCallArgNested() {
+		method(a(b(
+				arg
+		)));
+	}
+
+	void singleMethodCallArgStandard() {
+		method(
+				other(x)
+		);
+	}
+
 	void singleSetCopyOf(Set<Integer> s) {
 		method(Set.copyOf(
 				s
@@ -361,6 +427,19 @@ class InputMultilineCallClean {
 		method(this, List.of(
 				1, 2, 3
 		));
+	}
+
+	void thisAndMethodCallArg() {
+		method(this, other(
+				arg
+		));
+	}
+
+	void thisAndMethodCallArgStandard() {
+		method(
+				this,
+				other(x)
+		);
 	}
 
 	void thisAndSingleLineTernary() {

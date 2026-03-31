@@ -30,6 +30,11 @@ import javax.annotation.Nullable;
  * constructor starts on the opening paren line and the closing paren goes on its own line (same
  * rule as braceless lambdas that extend past the opening line).
  * <p>
+ * Exception ("method call arg"): calls with exactly one argument that is a plain method call —
+ * the inner call stays on the opening paren line and closing parens are stacked on the same line.
+ * This also applies when there are exactly two arguments and the first is {@code this} or an
+ * Android resource identifier.
+ * <p>
  * Both ternary and inline block exceptions also apply when there are exactly two arguments and
  * the first is {@code this} or an Android resource identifier ({@code R.xxx.yyy} or
  * {@code android.R.xxx.yyy}).
@@ -198,6 +203,12 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
+	private static boolean isDirectMethodCall(@Nonnull DetailAST ast) {
+		final var node = ast.getType() == TokenTypes.EXPR ? ast.getFirstChild() : ast;
+		return node != null && node.getType() == TokenTypes.METHOD_CALL;
+	}
+
+	@CheckReturnValue
 	private static boolean isLiteralThis(@Nonnull DetailAST ast) {
 		if (ast.getType() == TokenTypes.LITERAL_THIS)
 			return true;
@@ -244,6 +255,23 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 			}
 		}
 		return firstArg != null && secondArg != null && containsBracedLambda(firstArg);
+	}
+
+	@CheckReturnValue
+	private static boolean isSingleMethodCallArg(@Nonnull DetailAST ast) {
+		final var elist = ast.findFirstToken(TokenTypes.ELIST);
+		if (elist == null)
+			return false;
+
+		DetailAST onlyArg = null;
+		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() != TokenTypes.COMMA) {
+				if (onlyArg != null)
+					return false;
+				onlyArg = child;
+			}
+		}
+		return onlyArg != null && isDirectMethodCall(onlyArg);
 	}
 
 	@CheckReturnValue
@@ -296,6 +324,27 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 		if (ast.getType() == TokenTypes.EXPR)
 			return ast.getFirstChild() != null && ast.getFirstChild().getType() == TokenTypes.QUESTION;
 		return false;
+	}
+
+	@CheckReturnValue
+	private static boolean isThisAndMethodCallArgs(@Nonnull DetailAST ast) {
+		final var elist = ast.findFirstToken(TokenTypes.ELIST);
+		if (elist == null)
+			return false;
+
+		DetailAST firstArg = null, secondArg = null;
+		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() != TokenTypes.COMMA) {
+				if (firstArg == null)
+					firstArg = child;
+				else if (secondArg == null)
+					secondArg = child;
+				else
+					return false;
+			}
+		}
+		return firstArg != null && secondArg != null
+				&& isCompactFirstArg(firstArg) && isDirectMethodCall(secondArg);
 	}
 
 	@CheckReturnValue
@@ -636,6 +685,18 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 					log(rparen, MSG_LAMBDA_NOT_ON_CLOSING);
 			}
 			return;
+		}
+
+		// method call arg: if stacked on opening line, closing parens must be stacked too
+		if (isSingleMethodCallArg(ast) || isThisAndMethodCallArgs(ast)) {
+			// for this+methodCall, check the METHOD CALL's position (not this's)
+			final var effectiveArg = isThisAndMethodCallArgs(ast) ? findLastArg(ast) : firstArg;
+			if (effectiveArg != null && firstLine(effectiveArg) == openLine) {
+				if (AstUtil.lastLine(effectiveArg) != closeLine)
+					log(rparen, MSG_LAMBDA_NOT_ON_CLOSING);
+				return;
+			}
+			// calls not stacked: fall through to standard rules
 		}
 
 		if (firstArg.getLineNo() == openLine)

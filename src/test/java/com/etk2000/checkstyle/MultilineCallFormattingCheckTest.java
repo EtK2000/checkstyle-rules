@@ -101,6 +101,52 @@ public class MultilineCallFormattingCheckTest {
 	}
 
 	@Test
+	public void testMethodCallArgViolations() throws Exception {
+		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallMethodCallViolation.java");
+		assertEquals(14, violations.size());
+		// constructor stacked, closing not stacked
+		assertEquals(12, violations.get(0).getLine());
+		assertTrue(violations.get(0).getMessage().contains("closing paren"));
+		// constructor unstacked, closing stacked
+		assertEquals(19, violations.get(1).getLine());
+		assertTrue(violations.get(1).getMessage().contains("closing"));
+		// resource ID + stacked, closing not stacked
+		assertEquals(36, violations.get(2).getLine());
+		assertTrue(violations.get(2).getMessage().contains("closing paren"));
+		// resource ID + standard form, closing stacked
+		assertEquals(44, violations.get(3).getLine());
+		assertTrue(violations.get(3).getMessage().contains("closing"));
+		// resource ID + on opening, closing not stacked: opening only
+		assertEquals(48, violations.get(4).getLine());
+		assertTrue(violations.get(4).getMessage().contains("opening"));
+		// resource ID + on opening, closing stacked: opening + closing
+		assertEquals(56, violations.get(5).getLine());
+		assertTrue(violations.get(5).getMessage().contains("opening"));
+		assertEquals(59, violations.get(6).getLine());
+		assertTrue(violations.get(6).getMessage().contains("closing"));
+		// stacked, closing not stacked
+		assertEquals(66, violations.get(7).getLine());
+		assertTrue(violations.get(7).getMessage().contains("closing paren"));
+		// this + stacked, closing not stacked
+		assertEquals(73, violations.get(8).getLine());
+		assertTrue(violations.get(8).getMessage().contains("closing paren"));
+		// this + standard form, closing stacked
+		assertEquals(81, violations.get(9).getLine());
+		assertTrue(violations.get(9).getMessage().contains("closing"));
+		// this + on opening, closing not stacked: opening only
+		assertEquals(85, violations.get(10).getLine());
+		assertTrue(violations.get(10).getMessage().contains("opening"));
+		// this + on opening, closing stacked: opening + closing
+		assertEquals(93, violations.get(11).getLine());
+		assertTrue(violations.get(11).getMessage().contains("opening"));
+		assertEquals(96, violations.get(12).getLine());
+		assertTrue(violations.get(12).getMessage().contains("closing"));
+		// unstacked, closing stacked
+		assertEquals(103, violations.get(13).getLine());
+		assertTrue(violations.get(13).getMessage().contains("closing"));
+	}
+
+	@Test
 	public void testOpeningParenViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallOpeningViolation.java");
 		assertEquals(2, violations.size());
