@@ -2,11 +2,11 @@ package com.etk2000.checkstyle.inputs.astutil;
 
 import javax.annotation.Nonnull;
 
-@javax.annotation.CheckReturnValue
+@javax.annotation.CheckReturnValue // intentional FQN: tested by AstUtilTest.testTypeTextQualified
 class InputAstUtil {
 	@Nonnull
 	int field;
-	java.util.List qualifiedField;
+	java.util.List qualifiedField; // intentional FQN: tested by AstUtilTest.testTypeTextQualified
 
 	void castAndResolve(Object obj) {
 		String s = (String) obj;

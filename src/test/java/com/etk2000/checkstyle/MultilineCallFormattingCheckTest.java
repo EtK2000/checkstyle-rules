@@ -54,12 +54,12 @@ public class MultilineCallFormattingCheckTest {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallConstructorViolation.java");
 		assertEquals(3, violations.size());
 		// first case: closing paren not on closing paren line
-		assertEquals(8, violations.get(0).getLine());
+		assertEquals(11, violations.get(0).getLine());
 		assertEquals("Inline block argument: closing brace/paren must be on the closing paren line.", violations.get(0).getMessage());
 		// second case: constructor not on opening AND closing paren not on closing
-		assertEquals(12, violations.get(1).getLine());
+		assertEquals(16, violations.get(1).getLine());
 		assertEquals("Inline block argument: must be on the opening paren line.", violations.get(1).getMessage());
-		assertEquals(16, violations.get(2).getLine());
+		assertEquals(20, violations.get(2).getLine());
 		assertEquals("Inline block argument: closing brace/paren must be on the closing paren line.", violations.get(2).getMessage());
 	}
 
@@ -92,15 +92,15 @@ public class MultilineCallFormattingCheckTest {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallLambdaViolation.java");
 		assertEquals(4, violations.size());
 		// first case: braceless lambda closing paren on body line
-		assertEquals(6, violations.get(0).getLine());
+		assertEquals(8, violations.get(0).getLine());
 		assertEquals("In multiline calls/signatures, no arguments on the closing paren line.", violations.get(0).getMessage());
 		// second case: closing brace not on closing paren line
-		assertEquals(13, violations.get(1).getLine());
+		assertEquals(15, violations.get(1).getLine());
 		assertEquals("Inline block argument: closing brace/paren must be on the closing paren line.", violations.get(1).getMessage());
 		// third case: lambda not on opening AND closing brace not on closing
-		assertEquals(17, violations.get(2).getLine());
+		assertEquals(19, violations.get(2).getLine());
 		assertEquals("Inline block argument: must be on the opening paren line.", violations.get(2).getMessage());
-		assertEquals(21, violations.get(3).getLine());
+		assertEquals(23, violations.get(3).getLine());
 		assertEquals("Inline block argument: closing brace/paren must be on the closing paren line.", violations.get(3).getMessage());
 	}
 
@@ -182,20 +182,20 @@ public class MultilineCallFormattingCheckTest {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallResourceIdViolation.java");
 		assertEquals(6, violations.size());
 		// first case: android.R.xxx+lambda not on opening AND closing brace not on closing
-		assertEquals(5, violations.get(0).getLine());
+		assertEquals(7, violations.get(0).getLine());
 		assertEquals("Inline block argument: must be on the opening paren line.", violations.get(0).getMessage());
-		assertEquals(9, violations.get(1).getLine());
+		assertEquals(11, violations.get(1).getLine());
 		assertEquals("Inline block argument: closing brace/paren must be on the closing paren line.", violations.get(1).getMessage());
 		// second case: braceless lambda closing paren on body line
-		assertEquals(17, violations.get(2).getLine());
+		assertEquals(19, violations.get(2).getLine());
 		assertEquals("In multiline calls/signatures, no arguments on the closing paren line.", violations.get(2).getMessage());
 		// third case: closing brace not on closing paren line
-		assertEquals(24, violations.get(3).getLine());
+		assertEquals(26, violations.get(3).getLine());
 		assertEquals("Inline block argument: closing brace/paren must be on the closing paren line.", violations.get(3).getMessage());
 		// fourth case: R.xxx+lambda not on opening AND closing brace not on closing
-		assertEquals(28, violations.get(4).getLine());
+		assertEquals(30, violations.get(4).getLine());
 		assertEquals("Inline block argument: must be on the opening paren line.", violations.get(4).getMessage());
-		assertEquals(32, violations.get(5).getLine());
+		assertEquals(34, violations.get(5).getLine());
 		assertEquals("Inline block argument: closing brace/paren must be on the closing paren line.", violations.get(5).getMessage());
 	}
 
@@ -273,15 +273,15 @@ public class MultilineCallFormattingCheckTest {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallThisViolation.java");
 		assertEquals(4, violations.size());
 		// first case: braceless lambda closing paren on body line
-		assertEquals(9, violations.get(0).getLine());
+		assertEquals(11, violations.get(0).getLine());
 		assertEquals("In multiline calls/signatures, no arguments on the closing paren line.", violations.get(0).getMessage());
 		// second case: closing brace not on closing paren line
-		assertEquals(16, violations.get(1).getLine());
+		assertEquals(18, violations.get(1).getLine());
 		assertEquals("Inline block argument: closing brace/paren must be on the closing paren line.", violations.get(1).getMessage());
 		// third case: this+lambda not on opening AND closing brace not on closing
-		assertEquals(20, violations.get(2).getLine());
+		assertEquals(22, violations.get(2).getLine());
 		assertEquals("Inline block argument: must be on the opening paren line.", violations.get(2).getMessage());
-		assertEquals(24, violations.get(3).getLine());
+		assertEquals(26, violations.get(3).getLine());
 		assertEquals("Inline block argument: closing brace/paren must be on the closing paren line.", violations.get(3).getMessage());
 	}
 

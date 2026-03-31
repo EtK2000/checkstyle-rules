@@ -2,9 +2,9 @@
 	"-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
 	"https://checkstyle.org/dtds/configuration_1_3.dtd">
 
-<!-- Lightweight config for test resource files (src/test/resources).
-     Only enforces structural/ordering rules that all test inputs should follow,
-     not the rules that violation test inputs intentionally break. -->
+<!-- Config for test resource files (src/test/resources).
+     Enforces most rules from the main config. Each check is suppressed in its own
+     test directory (where violation inputs intentionally break it). -->
 <module name="Checker">
 	<property name="charset" value="UTF-8" />
 	<property name="severity" value="error" />
@@ -13,9 +13,99 @@
 		<property name="file" value="${config_loc}/suppressions-test-resources.xml" />
 	</module>
 
+	<!-- TABs for indentation -->
+	<module name="RegexpSingleline">
+		<property name="id" value="NoSpaceIndent" />
+		<property name="format" value="^ (?!\*)(?!@)" />
+		<property name="message" value="Use TABs for indentation, not spaces." />
+	</module>
+
+	<!-- No blank line after class/interface/enum/record opening brace -->
+	<module name="RegexpMultiline">
+		<property name="id" value="NoBlankLineAfterClassBrace" />
+		<property name="format" value="(class|interface|enum|record)\s+\w[^{]*\{\s*\n\s*\n" />
+		<property name="message" value="No blank line at start of a class/interface/enum/record." />
+	</module>
+
+	<!-- No blank line before closing brace -->
+	<module name="RegexpMultiline">
+		<property name="id" value="NoBlankLineBeforeClosingBrace" />
+		<property name="format" value="\n[^\S\n]*\n[^\S\n]*\}" />
+		<property name="message" value="No blank line before closing brace." />
+	</module>
+
+	<!-- No double blank lines -->
+	<module name="RegexpMultiline">
+		<property name="id" value="NoDoubleBlankLines" />
+		<property name="format" value="\n\s*\n\s*\n" />
+		<property name="message" value="No double blank lines." />
+	</module>
+
+	<!-- Blank line after break; before next case/default -->
+	<module name="RegexpMultiline">
+		<property name="id" value="BlankLineAfterBreak" />
+		<property name="format" value="break\s*;\n[^\S\n]*(case |default[\s:])" />
+		<property name="message"
+			value="Add a blank line after break; before the next case/default." />
+	</module>
+
+	<!-- Method parameters never final -->
+	<module name="RegexpSingleline">
+		<property name="id" value="NoFinalParameters" />
+		<property name="format" value="^(?!.*\s:\s)(?!.*&quot;.*(\(final|,\s*final)).*(\(final |,\s*final )\S" />
+		<property name="message" value="Method parameters must not be final." />
+	</module>
+
+	<!-- No trailing whitespace -->
+	<module name="RegexpSingleline">
+		<property name="id" value="NoTrailingWhitespace" />
+		<property name="format" value="[ \t]+$" />
+		<property name="message" value="No trailing whitespace." />
+	</module>
+
+	<!-- No trailing newline at end of file -->
+	<module name="RegexpMultiline">
+		<property name="id" value="NoTrailingNewline" />
+		<property name="format" value="\n\z" />
+		<property name="message" value="File must not end with a trailing newline." />
+	</module>
+
+	<!-- Enforce consistent line endings (LF) -->
+	<module name="LineEnding" />
+
 	<module name="TreeWalker">
+		<!-- Custom checks -->
 		<module name="com.etk2000.checkstyle.AnnotationAlphabeticalOrderCheck" />
+		<module name="com.etk2000.checkstyle.EmptyBodyCheck">
+			<property name="tokens" value="LITERAL_IF" />
+		</module>
+		<module name="com.etk2000.checkstyle.EmptyBodyCheck">
+			<property name="severity" value="warning" />
+			<property name="tokens" value="LITERAL_DO,LITERAL_FOR,LITERAL_WHILE" />
+		</module>
+		<module name="com.etk2000.checkstyle.EmptySwitchCheck" />
+		<module name="com.etk2000.checkstyle.InfiniteEmptyLoopCheck" />
 		<module name="com.etk2000.checkstyle.MethodAlphabeticalOrderCheck" />
+		<module name="com.etk2000.checkstyle.NoArrayTrailingCommaCheck" />
+		<module name="com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck" />
+		<module name="com.etk2000.checkstyle.NoCaseBracesCheck" />
+		<module name="com.etk2000.checkstyle.NoUnnecessaryThisCheck" />
 		<module name="com.etk2000.checkstyle.OverloadMethodOrderCheck" />
+		<module name="com.etk2000.checkstyle.PreferImportCheck" />
+		<module name="com.etk2000.checkstyle.PreferPrefixIncrementCheck" />
+		<module name="com.etk2000.checkstyle.RedundantCastCheck" />
+		<module name="com.etk2000.checkstyle.RedundantNumericSuffixCheck" />
+		<module name="com.etk2000.checkstyle.SwitchCaseOrderCheck" />
+
+		<!-- Built-in checks -->
+		<module name="MissingOverride" />
+		<module name="ModifierOrder" />
+		<module name="NoEnumTrailingComma" />
+		<module name="OneStatementPerLine" />
+		<module name="RedundantImport" />
+		<module name="RedundantModifier" />
+		<module name="SimplifyBooleanExpression" />
+		<module name="UnusedImports" />
+		<module name="UpperEll" />
 	</module>
 </module>

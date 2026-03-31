@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.inputs.controlflow;
 
+import java.util.List;
+
 class InputControlFlowClean {
 	void bracedMultiLineBody(int x) {
 		if (x > 0) {
@@ -43,7 +45,7 @@ class InputControlFlowClean {
 			System.out.println(i + 1);
 		}
 
-		final var list = java.util.List.of("a", "b");
+		final var list = List.of("a", "b");
 		for (var item : list) {
 			System.out.println(item);
 			System.out.println(item.length());
@@ -80,7 +82,7 @@ class InputControlFlowClean {
 		for (int i = 0; i < x; ++i)
 			System.out.println(i);
 
-		final var list = java.util.List.of("a", "b");
+		final var list = List.of("a", "b");
 		for (var item : list)
 			System.out.println(item);
 

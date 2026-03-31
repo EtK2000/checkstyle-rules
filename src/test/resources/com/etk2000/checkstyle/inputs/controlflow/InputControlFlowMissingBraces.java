@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.inputs.controlflow;
 
+import java.util.List;
+
 class InputControlFlowMissingBraces {
 	void elseMethod(int x) {
 		if (x > 0)
@@ -22,7 +24,7 @@ class InputControlFlowMissingBraces {
 			if (i > 0)
 				System.out.println(i);
 
-		final var list = java.util.List.of("a");
+		final var list = List.of("a");
 		for (var item : list) // violation: missing braces on multi-line body
 			if (item != null)
 				System.out.println(item);

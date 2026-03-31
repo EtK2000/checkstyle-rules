@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.inputs.controlflow;
 
+import java.util.List;
+
 class InputControlFlowUnnecessaryBraces {
 	void method(int x) {
 		if (x > 0) { // violation: unnecessary braces
@@ -14,7 +16,7 @@ class InputControlFlowUnnecessaryBraces {
 			System.out.println(i);
 		}
 
-		final var list = java.util.List.of("a", "b");
+		final var list = List.of("a", "b");
 		for (var item : list) { // violation: unnecessary braces
 			System.out.println(item);
 		}

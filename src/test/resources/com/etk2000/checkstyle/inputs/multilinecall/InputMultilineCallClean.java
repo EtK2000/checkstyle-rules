@@ -7,6 +7,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 class InputMultilineCallClean {
 	Object arg, arg1, arg2, x;
@@ -152,16 +154,16 @@ class InputMultilineCallClean {
 	void method() {
 	}
 
+	void method(BiConsumer<Integer, Integer> c) {
+	}
+
+	void method(Consumer<Integer> c) {
+	}
+
 	void method(Object a) {
 	}
 
 	void method(Runnable r) {
-	}
-
-	void method(java.util.function.BiConsumer<Integer, Integer> c) {
-	}
-
-	void method(java.util.function.Consumer<Integer> c) {
 	}
 
 	void method(Object a, Object b) {
@@ -260,7 +262,6 @@ class InputMultilineCallClean {
 		);
 	}
 
-
 	void resourceIdAndSingleLineTernary() {
 		method(R.string.ok, true ? "a" : "b");
 	}
@@ -292,7 +293,8 @@ class InputMultilineCallClean {
 	}
 
 	void singleConstructorOnCallLine() {
-		method(new java.util.ArrayList<>(
+		// intentional FQN: simple name triggers special-method detection, changing formatting rules
+		method(new ArrayList<>(
 				java.util.Arrays.asList(1, 2, 3)
 		));
 	}
@@ -412,7 +414,8 @@ class InputMultilineCallClean {
 	}
 
 	void thisAndConstructor() {
-		method(this, new java.util.ArrayList<>(
+		// intentional FQN: simple name triggers special-method detection, changing formatting rules
+		method(this, new ArrayList<>(
 				java.util.Arrays.asList(1, 2, 3)
 		));
 	}

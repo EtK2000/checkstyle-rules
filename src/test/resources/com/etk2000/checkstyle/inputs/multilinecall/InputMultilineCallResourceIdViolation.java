@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.inputs.multilinecall;
 
+import java.util.function.Consumer;
+
 class InputMultilineCallResourceIdViolation {
 	void androidResourceIdLambdaNotOnOpening() {
 		method( // violation: lambda not on opening paren line
@@ -9,7 +11,7 @@ class InputMultilineCallResourceIdViolation {
 		); // violation: closing brace not on closing paren line
 	}
 
-	void method(Object a, java.util.function.Consumer<Integer> c) {
+	void method(Object a, Consumer<Integer> c) {
 	}
 
 	void resourceIdBracelessLambdaOnBodyLine() {

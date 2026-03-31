@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.inputs.redundantsuffix;
 
+import java.util.function.DoubleSupplier;
+
 class InputRedundantSuffixViolation {
 	// field declarations
 	long fieldLong = 0L; // violation: redundant L suffix
@@ -38,7 +40,7 @@ class InputRedundantSuffixViolation {
 
 	// d suffix on decimal is always redundant, even in:
 	double arithmeticDouble = 1.0 + 0.0d; // violation: redundant d suffix
-	java.util.function.DoubleSupplier lambdaDecimalD = () -> 0.0d; // violation: redundant d suffix
+	DoubleSupplier lambdaDecimalD = () -> 0.0d; // violation: redundant d suffix
 
 	// cast expression
 	void castExpression() {

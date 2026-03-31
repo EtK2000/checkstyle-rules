@@ -1,7 +1,9 @@
 package com.etk2000.checkstyle.inputs.multilinecall;
 
+import java.util.function.Consumer;
+
 class InputMultilineCallThisViolation {
-	void method(Object a, java.util.function.Consumer<Integer> c) {
+	void method(Object a, Consumer<Integer> c) {
 	}
 
 	void thisBracelessLambdaOnBodyLine() {

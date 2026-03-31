@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.inputs.controlflow;
 
+import java.util.List;
+
 class InputControlFlowOneLiner {
 	void elseOneLiner(int x) {
 		if (x > 0)
@@ -11,7 +13,7 @@ class InputControlFlowOneLiner {
 		if (x > 0) System.out.println("positive"); // violation: body on same line
 		while (x > 0) --x; // violation: body on same line
 		for (int i = 0; i < x; ++i) System.out.println(i); // violation: body on same line
-		final var list = java.util.List.of("a");
+		final var list = List.of("a");
 		for (var item : list) System.out.println(item); // violation: body on same line
 		do --x; while (x > 0); // violation: body on same line
 	}

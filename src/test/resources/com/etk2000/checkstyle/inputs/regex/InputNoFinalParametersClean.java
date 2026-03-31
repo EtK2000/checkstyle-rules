@@ -1,7 +1,9 @@
+import java.util.List;
+
 class InputNoFinalParametersClean {
 	void finalize(int x) {}
 
-	void forEachWithFinal(java.util.List<String> list) {
+	void forEachWithFinal(List<String> list) {
 		for (final var item : list)
 			System.out.println(item);
 	}

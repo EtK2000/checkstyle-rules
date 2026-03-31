@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.inputs.redundantcast;
 
+import java.util.function.LongSupplier;
+
 class InputRedundantCastClean {
 	// downcast: needed at runtime (cast type matches variable type but expression is Object)
 	void downcast(Object obj) {
@@ -76,7 +78,7 @@ class InputRedundantCastClean {
 	// widening in expression lambda (can't verify functional interface return type)
 	void wideningInLambdaReturn() {
 		int x = 5;
-		java.util.function.LongSupplier sup = () -> (long) x;
+		LongSupplier sup = () -> (long) x;
 	}
 
 	// widening in method arguments: may affect overload resolution

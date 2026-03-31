@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.inputs.multilinecall;
 
+import java.util.function.Consumer;
+
 class InputMultilineCallLambdaViolation {
 	void bracelessLambdaClosingOnBodyLine() {
 		method(v ->
@@ -21,6 +23,6 @@ class InputMultilineCallLambdaViolation {
 		); // violation: closing brace not on closing paren line
 	}
 
-	void method(java.util.function.Consumer<Integer> c) {
+	void method(Consumer<Integer> c) {
 	}
 }
