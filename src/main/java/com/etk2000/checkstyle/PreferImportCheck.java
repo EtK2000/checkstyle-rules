@@ -11,7 +11,7 @@ import javax.annotation.Nonnull;
  * Checkstyle check that flags fully qualified type names, preferring
  * an import statement instead. Covers annotations, type references
  * (fields, parameters, return types, locals, generics, casts),
- * extends/implements clauses, and throws clauses.
+ * extends/implements clauses, throws clauses, and {@code new} expressions.
  */
 public class PreferImportCheck extends AbstractCheck {
 	private static final String MSG_KEY = "prefer.import";
@@ -74,6 +74,7 @@ public class PreferImportCheck extends AbstractCheck {
 				TokenTypes.ANNOTATION,
 				TokenTypes.EXTENDS_CLAUSE,
 				TokenTypes.IMPLEMENTS_CLAUSE,
+				TokenTypes.LITERAL_NEW,
 				TokenTypes.LITERAL_THROWS,
 				TokenTypes.TYPE
 		};
@@ -101,6 +102,12 @@ public class PreferImportCheck extends AbstractCheck {
 					if (child.getType() == TokenTypes.DOT)
 						log(child, MSG_KEY, qualifiedName(child));
 				}
+			}
+			case TokenTypes.LITERAL_NEW -> {
+				// new expression: first child is DOT when FQN (e.g. new java.util.ArrayList<>())
+				final var firstChild = ast.getFirstChild();
+				if (firstChild != null && firstChild.getType() == TokenTypes.DOT)
+					log(ast, MSG_KEY, qualifiedName(firstChild));
 			}
 			case TokenTypes.TYPE -> checkType(ast);
 		}

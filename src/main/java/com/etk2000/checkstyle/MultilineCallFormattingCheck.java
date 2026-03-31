@@ -303,7 +303,7 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 			return entry != null && entry.isEmpty();
 		}
 
-		// dotted call: Arrays.asList(...), List.of(...)
+		// dotted call: Arrays.asList(...), List.of(...), java.util.Arrays.asList(...)
 		if (firstChild.getType() == TokenTypes.DOT) {
 			final var receiver = firstChild.getFirstChild();
 			final var methodName = receiver == null ? null : receiver.getNextSibling();
@@ -311,8 +311,20 @@ public class MultilineCallFormattingCheck extends AbstractCheck {
 				return false;
 
 			final var entry = SPECIAL_INLINE_METHODS.get(methodName.getText());
-			if (entry != null && receiver.getType() == TokenTypes.IDENT && entry.contains(receiver.getText()))
-				return true;
+			if (entry != null) {
+				// simple name: Arrays.asList(...)
+				if (receiver.getType() == TokenTypes.IDENT)
+					return entry.contains(receiver.getText());
+
+				// FQN: java.util.Arrays.asList(...) — extract last segment
+				if (receiver.getType() == TokenTypes.DOT) {
+					var last = receiver.getFirstChild();
+					while (last.getNextSibling() != null)
+						last = last.getNextSibling();
+					if (last.getType() == TokenTypes.IDENT)
+						return entry.contains(last.getText());
+				}
+			}
 		}
 		return false;
 	}

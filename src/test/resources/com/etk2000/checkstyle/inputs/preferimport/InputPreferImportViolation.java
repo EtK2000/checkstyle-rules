@@ -20,4 +20,8 @@ class InputPreferImportViolation
 	java.util.List<java.util.Map<String, Integer>> nestedGenerics() { // violation: qualified return type and generic arg
 		return null;
 	}
+
+	void newExpression() {
+		var list = new java.util.ArrayList<String>(); // violation: qualified new
+	}
 }

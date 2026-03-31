@@ -24,7 +24,7 @@ public class PreferImportCheckTest {
 	@Test
 	public void testQualifiedNameViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferImportCheck.class, DIR + "InputPreferImportViolation.java");
-		assertEquals(12, violations.size());
+		assertEquals(13, violations.size());
 
 		assertEquals(3, violations.get(0).getLine());
 		assertEquals("Use an import instead of fully qualified name 'java.lang.SuppressWarnings'.", violations.get(0).getMessage());
@@ -61,5 +61,8 @@ public class PreferImportCheckTest {
 
 		assertEquals(20, violations.get(11).getLine());
 		assertEquals("Use an import instead of fully qualified name 'java.util.Map'.", violations.get(11).getMessage());
+
+		assertEquals(25, violations.get(12).getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.util.ArrayList'.", violations.get(12).getMessage());
 	}
 }

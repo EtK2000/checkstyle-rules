@@ -54,7 +54,7 @@ public class MultilineCallFormattingCheckTest {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallConstructorViolation.java");
 		assertEquals(3, violations.size());
 		// first case: closing paren not on closing paren line
-		assertEquals(11, violations.get(0).getLine());
+		assertEquals(12, violations.get(0).getLine());
 		assertEquals("Inline block argument: closing brace/paren must be on the closing paren line.", violations.get(0).getMessage());
 		// second case: constructor not on opening AND closing paren not on closing
 		assertEquals(16, violations.get(1).getLine());
@@ -216,15 +216,20 @@ public class MultilineCallFormattingCheckTest {
 	@Test
 	public void testSpecialMethodViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(MultilineCallFormattingCheck.class, DIR + "InputMultilineCallSpecialMethodViolation.java");
-		assertEquals(3, violations.size());
+		assertEquals(5, violations.size());
 		// first case: closing paren not on closing paren line
 		assertEquals(10, violations.get(0).getLine());
 		assertEquals("Inline block argument: closing brace/paren must be on the closing paren line.", violations.get(0).getMessage());
-		// second case: List.of not on opening AND closing paren not on closing
+		// second case: FQN java.util.List.of not on opening AND closing paren not on closing
 		assertEquals(14, violations.get(1).getLine());
 		assertEquals("Inline block argument: must be on the opening paren line.", violations.get(1).getMessage());
 		assertEquals(18, violations.get(2).getLine());
 		assertEquals("Inline block argument: closing brace/paren must be on the closing paren line.", violations.get(2).getMessage());
+		// third case: List.of not on opening AND closing paren not on closing
+		assertEquals(22, violations.get(3).getLine());
+		assertEquals("Inline block argument: must be on the opening paren line.", violations.get(3).getMessage());
+		assertEquals(26, violations.get(4).getLine());
+		assertEquals("Inline block argument: closing brace/paren must be on the closing paren line.", violations.get(4).getMessage());
 	}
 
 	@Test

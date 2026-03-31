@@ -10,6 +10,14 @@ class InputMultilineCallSpecialMethodViolation {
 		); // violation: closing paren not on closing paren line
 	}
 
+	void listOfFqnNotOnOpening() {
+		method( // violation: java.util.List.of not on opening paren line
+				java.util.List.of(
+						1, 2, 3
+				)
+		); // violation: closing paren not on closing paren line
+	}
+
 	void listOfNotOnOpening() {
 		method( // violation: List.of not on opening paren line
 				List.of(

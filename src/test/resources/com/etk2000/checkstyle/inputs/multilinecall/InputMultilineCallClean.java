@@ -4,6 +4,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -286,6 +287,12 @@ class InputMultilineCallClean {
 		));
 	}
 
+	void singleArraysAsListFqn() {
+		method(java.util.Arrays.asList(
+				1, 2, 3
+		));
+	}
+
 	void singleBracelessLambdaMultiline() {
 		method(v ->
 				System.out.println(v)
@@ -293,9 +300,14 @@ class InputMultilineCallClean {
 	}
 
 	void singleConstructorOnCallLine() {
-		// intentional FQN: simple name triggers special-method detection, changing formatting rules
+		method(new ArrayList<>(Arrays.asList(
+				1, 2, 3
+		)));
+	}
+
+	void singleConstructorWithRegularArg() {
 		method(new ArrayList<>(
-				java.util.Arrays.asList(1, 2, 3)
+				Collections.nCopies(3, 1)
 		));
 	}
 
@@ -414,9 +426,14 @@ class InputMultilineCallClean {
 	}
 
 	void thisAndConstructor() {
-		// intentional FQN: simple name triggers special-method detection, changing formatting rules
+		method(this, new ArrayList<>(Arrays.asList(
+				1, 2, 3
+		)));
+	}
+
+	void thisAndConstructorWithRegularArg() {
 		method(this, new ArrayList<>(
-				java.util.Arrays.asList(1, 2, 3)
+				Collections.nCopies(3, 1)
 		));
 	}
 
