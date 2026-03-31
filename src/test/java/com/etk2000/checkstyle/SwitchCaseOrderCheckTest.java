@@ -12,6 +12,11 @@ public class SwitchCaseOrderCheckTest {
 	public void testCharLiteralViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(SwitchCaseOrderCheck.class, DIR + "InputSwitchOrderCharLiteralViolation.java");
 		assertEquals(5, violations.size());
+		assertEquals("Case 'CHAR_CONST' must appear before '0'.", violations.get(0).getMessage());
+		assertEquals("Case 'A' must appear before 'b'.", violations.get(1).getMessage());
+		assertEquals("Case 'a' must appear before 'z'.", violations.get(2).getMessage());
+		assertEquals("Case '0' must appear before 'a'.", violations.get(3).getMessage());
+		assertEquals("Case '0' must appear before 'A'.", violations.get(4).getMessage());
 	}
 
 	@Test
@@ -23,25 +28,40 @@ public class SwitchCaseOrderCheckTest {
 	public void testDefaultNotLast() throws Exception {
 		final var violations = BaseCheckTest.runCheck(SwitchCaseOrderCheck.class, DIR + "InputSwitchOrderDefaultNotLast.java");
 		assertEquals(2, violations.size());
-		for (var violation : violations)
-			assertTrue(violation.getMessage().contains("default"));
+		assertEquals("Case 'default' must appear before '1'.", violations.get(0).getMessage());
+		assertEquals("Case 'default' must appear before '1'.", violations.get(1).getMessage());
 	}
 
 	@Test
 	public void testInternalOrderViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(SwitchCaseOrderCheck.class, DIR + "InputSwitchOrderInternalViolation.java");
 		assertEquals(5, violations.size());
+		assertEquals("Comma-separated label '2' must appear before '3'.", violations.get(0).getMessage());
+		assertEquals("Comma-separated label 'delta' must appear before 'gamma'.", violations.get(1).getMessage());
+		assertEquals("Comma-separated label '0' must appear before 'a'.", violations.get(2).getMessage());
+		assertEquals("Comma-separated label 'ALPHA' must appear before '100'.", violations.get(3).getMessage());
+		assertEquals("Comma-separated label '1' must appear before '3'.", violations.get(4).getMessage());
 	}
 
 	@Test
 	public void testNumericEdgeCaseViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(SwitchCaseOrderCheck.class, DIR + "InputSwitchOrderNumericEdgeCases.java");
 		assertEquals(5, violations.size());
+		assertEquals("Case '0b0001' must appear before '0b1010'.", violations.get(0).getMessage());
+		assertEquals("Case 'a' must appear before 'z'.", violations.get(1).getMessage());
+		assertEquals("Case '0x0A' must appear before '0xFF'.", violations.get(2).getMessage());
+		assertEquals("Case '10L' must appear before '100L'.", violations.get(3).getMessage());
+		assertEquals("Case '010' must appear before '017'.", violations.get(4).getMessage());
 	}
 
 	@Test
 	public void testSwitchOrderViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(SwitchCaseOrderCheck.class, DIR + "InputSwitchOrderViolation.java");
 		assertEquals(5, violations.size());
+		assertEquals("Case 'alpha' must appear before 'beta'.", violations.get(0).getMessage());
+		assertEquals("Case 'default' must appear before '1'.", violations.get(1).getMessage());
+		assertEquals("Case '0123' must appear before 'abc'.", violations.get(2).getMessage());
+		assertEquals("Case 'ALPHA' must appear before '100'.", violations.get(3).getMessage());
+		assertEquals("Case '2' must appear before '10'.", violations.get(4).getMessage());
 	}
 }

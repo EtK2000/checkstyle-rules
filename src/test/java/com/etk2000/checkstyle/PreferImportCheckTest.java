@@ -18,23 +18,48 @@ public class PreferImportCheckTest {
 		final var violations = BaseCheckTest.runCheck(PreferImportCheck.class, DIR + "InputPreferImportGenericViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(6, violations.getFirst().getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.util.Map'.", violations.getFirst().getMessage());
 	}
 
 	@Test
 	public void testQualifiedNameViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferImportCheck.class, DIR + "InputPreferImportViolation.java");
 		assertEquals(12, violations.size());
-		assertEquals(3, violations.get(0).getLine());  // annotation
-		assertEquals(5, violations.get(1).getLine());  // extends
-		assertEquals(6, violations.get(2).getLine());  // implements
-		assertEquals(7, violations.get(3).getLine());  // field type
-		assertEquals(10, violations.get(4).getLine()); // instanceof
-		assertEquals(11, violations.get(5).getLine()); // cast
-		assertEquals(14, violations.get(6).getLine()); // return type
-		assertEquals(14, violations.get(7).getLine()); // param type
-		assertEquals(15, violations.get(8).getLine()); // throws
-		assertEquals(16, violations.get(9).getLine()); // local type
-		assertEquals(20, violations.get(10).getLine()); // nested generic return type
-		assertEquals(20, violations.get(11).getLine()); // nested generic type arg
+
+		assertEquals(3, violations.get(0).getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.lang.SuppressWarnings'.", violations.get(0).getMessage());
+
+		assertEquals(5, violations.get(1).getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.util.ArrayList'.", violations.get(1).getMessage());
+
+		assertEquals(6, violations.get(2).getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.io.Serializable'.", violations.get(2).getMessage());
+
+		assertEquals(7, violations.get(3).getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.util.Map'.", violations.get(3).getMessage());
+
+		assertEquals(10, violations.get(4).getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.util.List'.", violations.get(4).getMessage());
+
+		assertEquals(11, violations.get(5).getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.util.List'.", violations.get(5).getMessage());
+
+		assertEquals(14, violations.get(6).getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.util.List'.", violations.get(6).getMessage());
+
+		assertEquals(14, violations.get(7).getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.util.Set'.", violations.get(7).getMessage());
+
+		assertEquals(15, violations.get(8).getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.io.IOException'.", violations.get(8).getMessage());
+
+		assertEquals(16, violations.get(9).getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.util.List'.", violations.get(9).getMessage());
+
+		assertEquals(20, violations.get(10).getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.util.List'.", violations.get(10).getMessage());
+
+		assertEquals(20, violations.get(11).getLine());
+		assertEquals("Use an import instead of fully qualified name 'java.util.Map'.", violations.get(11).getMessage());
 	}
 }

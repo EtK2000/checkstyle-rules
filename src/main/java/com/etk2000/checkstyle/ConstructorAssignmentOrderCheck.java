@@ -5,6 +5,7 @@ import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -17,8 +18,24 @@ import javax.annotation.Nullable;
  * Within each chunk, assignments must be alphabetical by field name.
  */
 public class ConstructorAssignmentOrderCheck extends AbstractCheck {
+	private static final String MSG_DEPENDENCY = "constructor.assign.dependency";
 	private static final String MSG_MULTI_BEFORE_SIMPLE = "constructor.assign.multi.before.simple";
 	private static final String MSG_ORDER = "constructor.assign.order";
+
+	private static void collectFieldReferences(@Nonnull DetailAST ast, @Nonnull HashSet<String> result) {
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
+			// look for this.field references
+			if (child.getType() == TokenTypes.DOT) {
+				final var thisToken = child.getFirstChild();
+				if (thisToken != null && thisToken.getType() == TokenTypes.LITERAL_THIS) {
+					final var fieldIdent = thisToken.getNextSibling();
+					if (fieldIdent != null && fieldIdent.getType() == TokenTypes.IDENT)
+						result.add(fieldIdent.getText());
+				}
+			}
+			collectFieldReferences(child, result);
+		}
+	}
 
 	@CheckReturnValue
 	@Nullable
@@ -77,12 +94,50 @@ public class ConstructorAssignmentOrderCheck extends AbstractCheck {
 	}
 
 	private void checkChunkOrder(@Nonnull ArrayList<DetailAST> assignments) {
-		String prevName = null;
+		if (assignments.size() < 2)
+			return;
+
+		// collect assigned field names and their RHS dependencies
+		final var assignedFields = new HashSet<String>();
 		for (var assignment : assignments) {
 			final var name = extractFieldName(assignment);
-			if (prevName != null && name != null && name.compareToIgnoreCase(prevName) < 0)
-				log(assignment, MSG_ORDER, name, prevName);
-			prevName = name;
+			if (name != null)
+				assignedFields.add(name);
+		}
+
+		for (var i = 1; i < assignments.size(); ++i) {
+			final var prev = assignments.get(i - 1);
+			final var curr = assignments.get(i);
+			final var prevName = extractFieldName(prev);
+			final var currName = extractFieldName(curr);
+			if (prevName == null || currName == null)
+				continue;
+
+			// collect this.field references on the RHS of each assignment
+			final var currRefs = new HashSet<String>();
+			final var assign = curr.getFirstChild();
+			if (assign != null && assign.getChildCount() > 1)
+				collectFieldReferences(assign.getLastChild(), currRefs);
+			currRefs.retainAll(assignedFields);
+
+			final var prevRefs = new HashSet<String>();
+			final var prevAssign = prev.getFirstChild();
+			if (prevAssign != null && prevAssign.getChildCount() > 1)
+				collectFieldReferences(prevAssign.getLastChild(), prevRefs);
+			prevRefs.retainAll(assignedFields);
+
+			// curr depends on prev: ordering is justified
+			if (currRefs.contains(prevName))
+				continue;
+
+			// prev depends on curr: curr should be assigned first
+			if (prevRefs.contains(currName)) {
+				log(prev, MSG_DEPENDENCY, prevName, currName);
+				continue;
+			}
+
+			if (currName.compareToIgnoreCase(prevName) < 0)
+				log(curr, MSG_ORDER, currName, prevName);
 		}
 	}
 

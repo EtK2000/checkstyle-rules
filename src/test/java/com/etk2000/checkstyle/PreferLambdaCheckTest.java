@@ -17,13 +17,15 @@ public class PreferLambdaCheckTest {
 	public void testViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferLambdaCheck.class, DIR + "InputPreferLambdaViolation.java");
 		assertEquals(3, violations.size());
+
 		assertEquals(7, violations.getFirst().getLine());
-		assertTrue(violations.getFirst().getMessage().contains("Runnable"));
+		assertEquals("Use a lambda expression instead of anonymous 'Runnable'.", violations.getFirst().getMessage());
+
 		assertEquals(13, violations.get(1).getLine());
-		assertTrue(violations.get(1).getMessage().contains("Supplier"));
+		assertEquals("Use a lambda expression instead of anonymous 'Supplier'.", violations.get(1).getMessage());
 
 		// anonymous class as method argument
 		assertEquals(19, violations.get(2).getLine());
-		assertTrue(violations.get(2).getMessage().contains("Runnable"));
+		assertEquals("Use a lambda expression instead of anonymous 'Runnable'.", violations.get(2).getMessage());
 	}
 }

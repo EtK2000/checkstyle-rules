@@ -18,6 +18,7 @@ public class NoUnnecessaryThisCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoUnnecessaryThisCheck.class, DIR + "InputThisInstanceInitViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(7, violations.getFirst().getLine());
+		assertEquals("Unnecessary 'this.field', only use when shadowing or in field assignment.", violations.getFirst().getMessage());
 	}
 
 	@Test
@@ -25,6 +26,7 @@ public class NoUnnecessaryThisCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoUnnecessaryThisCheck.class, DIR + "InputThisLambdaViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(7, violations.getFirst().getLine());
+		assertEquals("Unnecessary 'this.field', only use when shadowing or in field assignment.", violations.getFirst().getMessage());
 	}
 
 	@Test
@@ -32,6 +34,7 @@ public class NoUnnecessaryThisCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoUnnecessaryThisCheck.class, DIR + "InputThisMethodCall.java");
 		assertEquals(1, violations.size());
 		assertEquals(7, violations.getFirst().getLine());
+		assertEquals("Unnecessary 'this.doSomething', only use when shadowing or in field assignment.", violations.getFirst().getMessage());
 	}
 
 	@Test
@@ -39,5 +42,6 @@ public class NoUnnecessaryThisCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoUnnecessaryThisCheck.class, DIR + "InputThisViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(7, violations.getFirst().getLine());
+		assertEquals("Unnecessary 'this.field', only use when shadowing or in field assignment.", violations.getFirst().getMessage());
 	}
 }

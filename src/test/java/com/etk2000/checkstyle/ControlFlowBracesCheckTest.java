@@ -24,7 +24,7 @@ public class ControlFlowBracesCheckTest {
 		assertEquals(26, violations.get(4).getLine());
 		assertEquals(30, violations.get(5).getLine());
 		for (var v : violations)
-			assertTrue(v.getMessage().contains("add braces"));
+			assertEquals("Braceless control flow has multi-line body, add braces.", v.getMessage());
 	}
 
 	@Test
@@ -32,7 +32,9 @@ public class ControlFlowBracesCheckTest {
 		final var violations = BaseCheckTest.runCheck(ControlFlowBracesCheck.class, DIR + "InputControlFlowNested.java");
 		assertEquals(2, violations.size());
 		assertEquals(6, violations.get(0).getLine());
+		assertEquals("Braceless control flow has multi-line body, add braces.", violations.get(0).getMessage());
 		assertEquals(13, violations.get(1).getLine());
+		assertEquals("Braceless control flow has multi-line body, add braces.", violations.get(1).getMessage());
 	}
 
 	@Test
@@ -46,7 +48,7 @@ public class ControlFlowBracesCheckTest {
 		assertEquals(15, violations.get(4).getLine());
 		assertEquals(16, violations.get(5).getLine());
 		for (var v : violations)
-			assertTrue(v.getMessage().contains("on its own line"));
+			assertEquals("Control flow body must be on its own line, not a one-liner.", v.getMessage());
 	}
 
 	@Test
@@ -61,6 +63,6 @@ public class ControlFlowBracesCheckTest {
 		assertEquals(26, violations.get(5).getLine());
 		assertEquals(29, violations.get(6).getLine());
 		for (var v : violations)
-			assertTrue(v.getMessage().contains("unnecessary braces"));
+			assertEquals("Single-line control flow body has unnecessary braces.", v.getMessage());
 	}
 }

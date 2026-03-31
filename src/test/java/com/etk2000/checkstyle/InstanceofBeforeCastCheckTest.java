@@ -17,8 +17,14 @@ public class InstanceofBeforeCastCheckTest {
 	public void testViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(InstanceofBeforeCastCheck.class, DIR + "InputInstanceofBeforeCastViolation.java");
 		assertEquals(3, violations.size());
+
 		assertEquals(6, violations.get(0).getLine());
+		assertEquals("Move 'instanceof String' before the cast to 'String'.", violations.get(0).getMessage());
+
 		assertEquals(12, violations.get(1).getLine());
+		assertEquals("Move 'instanceof String' before the cast to 'String'.", violations.get(1).getMessage());
+
 		assertEquals(18, violations.get(2).getLine());
+		assertEquals("Move 'instanceof String' before the cast to 'String'.", violations.get(2).getMessage());
 	}
 }

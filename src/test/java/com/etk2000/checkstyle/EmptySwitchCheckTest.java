@@ -17,5 +17,7 @@ public class EmptySwitchCheckTest {
 	public void testEmptySwitchViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(EmptySwitchCheck.class, DIR + "InputEmptySwitchViolation.java");
 		assertEquals(2, violations.size());
+		assertEquals("Empty switch statement, remove it (preserve any side effects in the expression).", violations.get(0).getMessage());
+		assertEquals("Empty switch statement, remove it (preserve any side effects in the expression).", violations.get(1).getMessage());
 	}
 }

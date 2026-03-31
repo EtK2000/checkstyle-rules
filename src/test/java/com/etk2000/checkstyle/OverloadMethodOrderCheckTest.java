@@ -17,6 +17,13 @@ public class OverloadMethodOrderCheckTest {
 	public void testTypeOrderViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(OverloadMethodOrderCheck.class, DIR + "InputOverloadTypeViolation.java");
 		assertEquals(7, violations.size());
+		assertEquals("Overload 'arr(int)' must appear before 'arr(int[])'.", violations.get(0).getMessage());
+		assertEquals("Overload 'dim(int[])' must appear before 'dim(int[][])'.", violations.get(1).getMessage());
+		assertEquals("Overload 'mix(int[])' must appear before 'mix(String)'.", violations.get(2).getMessage());
+		assertEquals("Overload 'method(int)' must appear before 'method(String)'.", violations.get(3).getMessage());
+		assertEquals("Overload 'obj(List)' must appear before 'obj(String)'.", violations.get(4).getMessage());
+		assertEquals("Overload 'prim(char)' must appear before 'prim(int)'.", violations.get(5).getMessage());
+		assertEquals("Overload 'vararg(int)' must appear before 'vararg(int...)'.", violations.get(6).getMessage());
 	}
 
 	@Test
@@ -24,6 +31,6 @@ public class OverloadMethodOrderCheckTest {
 		final var violations = BaseCheckTest.runCheck(OverloadMethodOrderCheck.class, DIR + "InputOverloadViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(6, violations.getFirst().getLine());
-		assertTrue(violations.getFirst().getMessage().contains("method"));
+		assertEquals("Overload 'method' with 1 parameters must appear before overload with 2 parameters.", violations.getFirst().getMessage());
 	}
 }

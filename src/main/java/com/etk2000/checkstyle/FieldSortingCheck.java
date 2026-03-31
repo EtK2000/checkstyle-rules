@@ -5,6 +5,8 @@ import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
@@ -27,6 +29,7 @@ public class FieldSortingCheck extends AbstractCheck {
 			"boolean", "byte", "char", "double", "float", "int", "long", "short"
 	);
 	private static final String MSG_CHUNK = "field.sort.chunk";
+	private static final String MSG_DEPENDENCY = "field.sort.dependency";
 	private static final String MSG_NAME = "field.sort.name";
 	private static final String MSG_TYPE = "field.sort.type";
 
@@ -88,6 +91,14 @@ public class FieldSortingCheck extends AbstractCheck {
 		return varDef.findFirstToken(TokenTypes.ASSIGN) != null ? 0 : 1;
 	}
 
+	private static void collectIdents(@Nonnull DetailAST ast, @Nonnull HashSet<String> result) {
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.IDENT)
+				result.add(child.getText());
+			collectIdents(child, result);
+		}
+	}
+
 	@CheckReturnValue
 	private static int compareTypes(@Nonnull String a, @Nonnull String b) {
 		final var aBase = baseType(a);
@@ -105,6 +116,29 @@ public class FieldSortingCheck extends AbstractCheck {
 
 		// alphabetical by base type name
 		return aBase.compareToIgnoreCase(bBase);
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static HashMap<String, HashSet<String>> fieldDependencies(@Nonnull ArrayList<DetailAST> fields) {
+		final var fieldNames = new HashSet<String>();
+		for (var field : fields)
+			fieldNames.add(fieldName(field));
+
+		final var deps = new HashMap<String, HashSet<String>>();
+		for (var field : fields) {
+			final var assign = field.findFirstToken(TokenTypes.ASSIGN);
+			if (assign == null)
+				continue;
+
+			final var refs = new HashSet<String>();
+			collectIdents(assign, refs);
+			refs.retainAll(fieldNames);
+			refs.remove(fieldName(field));
+			if (!refs.isEmpty())
+				deps.put(fieldName(field), refs);
+		}
+		return deps;
 	}
 
 	@CheckReturnValue
@@ -142,6 +176,8 @@ public class FieldSortingCheck extends AbstractCheck {
 		if (fields.size() < 2)
 			return;
 
+		final var deps = fieldDependencies(fields);
+
 		for (var i = 1; i < fields.size(); ++i) {
 			final var prev = fields.get(i - 1);
 			final var curr = fields.get(i);
@@ -155,7 +191,23 @@ public class FieldSortingCheck extends AbstractCheck {
 			if (currChunk > prevChunk)
 				continue;
 
-			// same chunk: compare types
+			// same chunk: check dependencies
+			final var currName = fieldName(curr);
+			final var prevName = fieldName(prev);
+			final var currDeps = deps.get(currName);
+			final var prevDeps = deps.get(prevName);
+
+			// curr depends on prev: ordering is justified
+			if (currDeps != null && currDeps.contains(prevName))
+				continue;
+
+			// prev depends on curr: curr should be declared first
+			if (prevDeps != null && prevDeps.contains(currName)) {
+				log(prev, MSG_DEPENDENCY, prevName, currName);
+				continue;
+			}
+
+			// compare types
 			final var prevType = typeName(prev);
 			final var currType = typeName(curr);
 			final var typeCmp = compareTypes(currType, prevType);
@@ -168,8 +220,6 @@ public class FieldSortingCheck extends AbstractCheck {
 				continue;
 
 			// same type: compare field names
-			final var prevName = fieldName(prev);
-			final var currName = fieldName(curr);
 			if (currName.compareToIgnoreCase(prevName) < 0)
 				log(curr, MSG_NAME, currName, prevName);
 		}

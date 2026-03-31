@@ -17,17 +17,19 @@ public class PreferSpecificApiCheckTest {
 	public void testCollectToListViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiToListViolation.java");
 		assertEquals(1, violations.size());
-		assertTrue(violations.getFirst().getMessage().contains("toList"));
+		assertEquals("Use '.toList()' instead of '.collect(Collectors.toList())'.", violations.getFirst().getMessage());
 	}
 
 	@Test
 	public void testGetFirstAndGetLastViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiViolation.java");
 		assertEquals(2, violations.size());
+
 		assertEquals(7, violations.getFirst().getLine());
-		assertTrue(violations.getFirst().getMessage().contains("getLast"));
+		assertEquals("Use '.getLast()' instead of '.get(size() - 1)'.", violations.getFirst().getMessage());
+
 		assertEquals(11, violations.get(1).getLine());
-		assertTrue(violations.get(1).getMessage().contains("getFirst"));
+		assertEquals("Use '.getFirst()' instead of '.get(0)'.", violations.get(1).getMessage());
 	}
 
 	@Test
@@ -35,7 +37,7 @@ public class PreferSpecificApiCheckTest {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiIsEmptyViolation.java");
 		assertEquals(11, violations.size());
 		for (var v : violations)
-			assertTrue(v.getMessage().contains("isEmpty"));
+			assertEquals("Use '.isEmpty()' instead of '.size() == 0' (or '!.isEmpty()' for '!= 0').", v.getMessage());
 	}
 
 	@Test
@@ -66,32 +68,34 @@ public class PreferSpecificApiCheckTest {
 
 		// bare chained call: receiver unresolvable, best-effort flags it
 		assertEquals(9, violations.getFirst().getLine());
-		assertTrue(violations.getFirst().getMessage().contains("getFirst"));
+		assertEquals("Use '.getFirst()' instead of '.get(0)'.", violations.getFirst().getMessage());
 
 		// chained call resolved via reflection: Collections.unmodifiableList returns List
 		assertEquals(13, violations.get(1).getLine());
-		assertTrue(violations.get(1).getMessage().contains("getFirst"));
+		assertEquals("Use '.getFirst()' instead of '.get(0)'.", violations.get(1).getMessage());
 
 		// list local: List has getFirst
 		assertEquals(22, violations.get(2).getLine());
-		assertTrue(violations.get(2).getMessage().contains("getFirst"));
+		assertEquals("Use '.getFirst()' instead of '.get(0)'.", violations.get(2).getMessage());
 
 		// list param: List has getFirst
 		assertEquals(26, violations.get(3).getLine());
-		assertTrue(violations.get(3).getMessage().contains("getFirst"));
+		assertEquals("Use '.getFirst()' instead of '.get(0)'.", violations.get(3).getMessage());
 
 		// var-typed local: unresolvable, best-effort flags getLast
 		assertEquals(31, violations.get(4).getLine());
-		assertTrue(violations.get(4).getMessage().contains("getLast"));
+		assertEquals("Use '.getLast()' instead of '.get(size() - 1)'.", violations.get(4).getMessage());
 	}
 
 	@Test
 	public void testRemoveFirstAndRemoveLastViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiRemoveViolation.java");
 		assertEquals(2, violations.size());
+
 		assertEquals(7, violations.getFirst().getLine());
-		assertTrue(violations.getFirst().getMessage().contains("removeFirst"));
+		assertEquals("Use '.removeFirst()' instead of '.remove(0)'.", violations.getFirst().getMessage());
+
 		assertEquals(11, violations.get(1).getLine());
-		assertTrue(violations.get(1).getMessage().contains("removeLast"));
+		assertEquals("Use '.removeLast()' instead of '.remove(size() - 1)'.", violations.get(1).getMessage());
 	}
 }

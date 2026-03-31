@@ -20,48 +20,103 @@ public class PreferLiteralSuffixCheckTest {
 
 		// cast on left, literal on right — various operators and types
 		assertEquals(7, violations.get(0).getLine());
+		assertEquals("Use 'd' suffix on '100' instead of a cast.", violations.get(0).getMessage());
+
 		assertEquals(13, violations.get(1).getLine());
+		assertEquals("Use 'f' suffix on '100' instead of a cast.", violations.get(1).getMessage());
+
 		assertEquals(19, violations.get(2).getLine());
+		assertEquals("Use 'L' suffix on '100' instead of a cast.", violations.get(2).getMessage());
+
 		assertEquals(25, violations.get(3).getLine());
+		assertEquals("Use 'L' suffix on '255' instead of a cast.", violations.get(3).getMessage());
+
 		assertEquals(31, violations.get(4).getLine());
+		assertEquals("Use 'L' suffix on '255' instead of a cast.", violations.get(4).getMessage());
+
 		assertEquals(37, violations.get(5).getLine());
+		assertEquals("Use 'L' suffix on '255' instead of a cast.", violations.get(5).getMessage());
+
 		assertEquals(43, violations.get(6).getLine());
+		assertEquals("Use 'L' suffix on '10' instead of a cast.", violations.get(6).getMessage());
+
 		assertEquals(49, violations.get(7).getLine());
+		assertEquals("Use 'L' suffix on '100' instead of a cast.", violations.get(7).getMessage());
+
 		assertEquals(55, violations.get(8).getLine());
+		assertEquals("Use 'L' suffix on '100' instead of a cast.", violations.get(8).getMessage());
+
 		assertEquals(61, violations.get(9).getLine());
+		assertEquals("Use 'L' suffix on '7' instead of a cast.", violations.get(9).getMessage());
+
 		assertEquals(67, violations.get(10).getLine());
+		assertEquals("Use 'L' suffix on '100' instead of a cast.", violations.get(10).getMessage());
+
 		assertEquals(73, violations.get(11).getLine());
+		assertEquals("Use 'L' suffix on '32' instead of a cast.", violations.get(11).getMessage());
+
 		assertEquals(79, violations.get(12).getLine());
+		assertEquals("Use 'L' suffix on '1' instead of a cast.", violations.get(12).getMessage());
+
 		assertEquals(85, violations.get(13).getLine());
+		assertEquals("Use 'L' suffix on '50' instead of a cast.", violations.get(13).getMessage());
+
 		assertEquals(91, violations.get(14).getLine());
+		assertEquals("Use 'L' suffix on '1' instead of a cast.", violations.get(14).getMessage());
+
 		assertEquals(97, violations.get(15).getLine());
+		assertEquals("Use 'L' suffix on '0xFF' instead of a cast.", violations.get(15).getMessage());
 
 		// literal on left, cast on right — arithmetic, bitwise, comparison, shift, double, float
 		assertEquals(103, violations.get(16).getLine());
+		assertEquals("Use 'L' suffix on '100' instead of a cast.", violations.get(16).getMessage());
+
 		assertEquals(109, violations.get(17).getLine());
+		assertEquals("Use 'L' suffix on '255' instead of a cast.", violations.get(17).getMessage());
+
 		assertEquals(115, violations.get(18).getLine());
+		assertEquals("Use 'L' suffix on '100' instead of a cast.", violations.get(18).getMessage());
+
 		assertEquals(121, violations.get(19).getLine());
+		assertEquals("Use 'd' suffix on '100' instead of a cast.", violations.get(19).getMessage());
+
 		assertEquals(127, violations.get(20).getLine());
+		assertEquals("Use 'f' suffix on '100' instead of a cast.", violations.get(20).getMessage());
+
 		assertEquals(133, violations.get(21).getLine());
+		assertEquals("Use 'L' suffix on '1' instead of a cast.", violations.get(21).getMessage());
 
 		// negative/positive unary literals (left, right, positive)
 		assertEquals(139, violations.get(22).getLine());
+		assertEquals("Use 'L' suffix on '-100' instead of a cast.", violations.get(22).getMessage());
+
 		assertEquals(145, violations.get(23).getLine());
+		assertEquals("Use 'L' suffix on '-100' instead of a cast.", violations.get(23).getMessage());
+
 		assertEquals(151, violations.get(24).getLine());
-		assertTrue(violations.get(22).getMessage().contains("-100"));
-		assertTrue(violations.get(23).getMessage().contains("-100"));
-		assertTrue(violations.get(24).getMessage().contains("+100"));
+		assertEquals("Use 'L' suffix on '+100' instead of a cast.", violations.get(24).getMessage());
 
 		// ternary — long/double/float, both branches
 		assertEquals(157, violations.get(25).getLine());
+		assertEquals("Use 'd' suffix on '0' instead of a cast.", violations.get(25).getMessage());
+
 		assertEquals(163, violations.get(26).getLine());
+		assertEquals("Use 'f' suffix on '0' instead of a cast.", violations.get(26).getMessage());
+
 		assertEquals(169, violations.get(27).getLine());
+		assertEquals("Use 'L' suffix on '0' instead of a cast.", violations.get(27).getMessage());
+
 		assertEquals(175, violations.get(28).getLine());
+		assertEquals("Use 'd' suffix on '0' instead of a cast.", violations.get(28).getMessage());
+
 		assertEquals(181, violations.get(29).getLine());
+		assertEquals("Use 'f' suffix on '0' instead of a cast.", violations.get(29).getMessage());
+
 		assertEquals(187, violations.get(30).getLine());
+		assertEquals("Use 'L' suffix on '0' instead of a cast.", violations.get(30).getMessage());
 
 		// ternary with negative literal
 		assertEquals(193, violations.get(31).getLine());
-		assertTrue(violations.get(31).getMessage().contains("-1"));
+		assertEquals("Use 'L' suffix on '-1' instead of a cast.", violations.get(31).getMessage());
 	}
 }

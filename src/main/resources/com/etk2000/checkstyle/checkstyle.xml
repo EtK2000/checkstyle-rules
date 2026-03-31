@@ -55,13 +55,14 @@
 	</module>
 
 	<!-- Method parameters never final (exclude enhanced for-each which contains " : ").
-		 Regex: `^(?!.*\s:\s)` negative lookahead excludes lines with ` : ` (for-each loops like
-		 `for (final var x : list)`). `(\(final |,\s*final )` matches `final` after an opening
-		 paren or comma (i.e. a parameter position). `\S` ensures `final` is followed by a type
-		 name, not just the word "final" in a comment or string. -->
+		 Regex: first negative lookahead excludes lines with ` : ` (for-each loops like
+		 `for (final var x : list)`). Second negative lookahead excludes lines where
+		 `(final` or `, final` appears inside a string literal (a `"` precedes the match).
+		 `(\(final |,\s*final )` matches `final` after an opening paren or comma (i.e. a
+		 parameter position). `\S` ensures `final` is followed by a type name. -->
 	<module name="RegexpSingleline">
 		<property name="id" value="NoFinalParameters" />
-		<property name="format" value="^(?!.*\s:\s).*(\(final |,\s*final )\S" />
+		<property name="format" value="^(?!.*\s:\s)(?!.*&quot;.*(\(final|,\s*final)).*(\(final |,\s*final )\S" />
 		<property name="message" value="Method parameters must not be final." />
 	</module>
 

@@ -56,6 +56,10 @@
    Visibility (public/private) does NOT affect ordering.
 3. Multiple fields of the same type on a single line if not setting a value, sorted alphabetically
    by field name
+4. Exception: when a field's value depends on another field, keep the dependency order instead of
+   alphabetical. This applies to all fields (static finals, instance fields, locals, etc.).
+   Example: `NOW` before `FUTURE = NOW + ...` before `PAST = NOW - ...` — `FUTURE` and `PAST`
+   depend on `NOW`, so `NOW` must come first despite alphabetical order
 
 ## Method Sorting
 

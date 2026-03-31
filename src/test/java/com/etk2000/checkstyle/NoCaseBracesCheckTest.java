@@ -18,9 +18,9 @@ public class NoCaseBracesCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoCaseBracesCheck.class, DIR + "InputCaseBracesMissingViolation.java");
 		assertEquals(2, violations.size());
 		assertEquals(7, violations.get(0).getLine());
+		assertEquals("Case block defines a variable, add braces to limit scope.", violations.get(0).getMessage());
 		assertEquals(12, violations.get(1).getLine());
-		for (var v : violations)
-			assertTrue(v.getMessage().contains("variable"));
+		assertEquals("Case block defines a variable, add braces to limit scope.", violations.get(1).getMessage());
 	}
 
 	@Test
@@ -28,5 +28,6 @@ public class NoCaseBracesCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoCaseBracesCheck.class, DIR + "InputCaseBracesViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(6, violations.getFirst().getLine());
+		assertEquals("Unnecessary braces in case block, only use braces when a variable is defined in the case's scope.", violations.getFirst().getMessage());
 	}
 }

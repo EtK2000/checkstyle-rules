@@ -28,4 +28,12 @@ class InputConstructorAssignClean {
 		this.alpha = 1;
 		this.beta = 2;
 	}
+
+	// dependency: beta depends on alpha, so beta after alpha is fine
+	// even though gamma depends on alpha too, gamma > beta alphabetically
+	InputConstructorAssignClean(int alpha) {
+		this.alpha = alpha;
+		this.beta = this.alpha + 1;
+		this.gamma = this.alpha + 2;
+	}
 }

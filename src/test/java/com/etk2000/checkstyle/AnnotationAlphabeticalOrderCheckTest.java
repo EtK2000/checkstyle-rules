@@ -18,6 +18,7 @@ public class AnnotationAlphabeticalOrderCheckTest {
 		final var violations = BaseCheckTest.runCheck(AnnotationAlphabeticalOrderCheck.class, DIR + "InputAnnotationQualifiedViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(9, violations.getFirst().getLine());
+		assertEquals("Annotation 'AnyThread' must appear before 'Nonnull' (alphabetical order).", violations.getFirst().getMessage());
 	}
 
 	@Test
@@ -25,6 +26,7 @@ public class AnnotationAlphabeticalOrderCheckTest {
 		final var violations = BaseCheckTest.runCheck(AnnotationAlphabeticalOrderCheck.class, DIR + "InputAnnotationQualifiedNameViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(5, violations.getFirst().getLine());
+		assertEquals("Annotation 'CheckResult' must appear before 'Nonnull' (alphabetical order).", violations.getFirst().getMessage());
 	}
 
 	@Test
@@ -37,6 +39,7 @@ public class AnnotationAlphabeticalOrderCheckTest {
 		final var violations = BaseCheckTest.runCheck(AnnotationAlphabeticalOrderCheck.class, DIR + "InputAnnotationViolation.java");
 		assertEquals(2, violations.size());
 		assertEquals(9, violations.getFirst().getLine());
-		assertTrue(violations.getFirst().getMessage().contains("CheckResult"));
+		assertEquals("Annotation 'CheckResult' must appear before 'NonNull' (alphabetical order).", violations.get(0).getMessage());
+		assertEquals("Annotation 'AnyThread' must appear before 'CheckResult' (alphabetical order).", violations.get(1).getMessage());
 	}
 }

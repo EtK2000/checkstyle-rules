@@ -17,8 +17,10 @@ public class NoBlankLineBetweenSingleCasesCheckTest {
 	public void testBlankLineAfterBracedCaseViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(NoBlankLineBetweenSingleCasesCheck.class, DIR + "InputBracedCaseBlankLineViolation.java");
 		assertEquals(2, violations.size());
-		assertEquals(11, violations.getFirst().getLine());
+		assertEquals(11, violations.get(0).getLine());
+		assertEquals("No blank line after braced case, the closing brace provides separation.", violations.get(0).getMessage());
 		assertEquals(16, violations.get(1).getLine());
+		assertEquals("No blank line after braced case, the closing brace provides separation.", violations.get(1).getMessage());
 	}
 
 	@Test
@@ -26,6 +28,7 @@ public class NoBlankLineBetweenSingleCasesCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoBlankLineBetweenSingleCasesCheck.class, DIR + "InputSingleCaseViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(9, violations.getFirst().getLine());
+		assertEquals("No blank line between single-line switch cases.", violations.getFirst().getMessage());
 	}
 
 	@Test
@@ -33,6 +36,7 @@ public class NoBlankLineBetweenSingleCasesCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoBlankLineBetweenSingleCasesCheck.class, DIR + "InputSingleCaseThrowViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(9, violations.getFirst().getLine());
+		assertEquals("No blank line between single-line switch cases.", violations.getFirst().getMessage());
 	}
 
 	@Test
@@ -40,6 +44,7 @@ public class NoBlankLineBetweenSingleCasesCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoBlankLineBetweenSingleCasesCheck.class, DIR + "InputSingleCaseYieldViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(9, violations.getFirst().getLine());
+		assertEquals("No blank line between single-line switch cases.", violations.getFirst().getMessage());
 	}
 
 	@Test
