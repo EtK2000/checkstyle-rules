@@ -2,6 +2,8 @@ package com.etk2000.checkstyle.inputs.prefervar;
 
 import java.io.ByteArrayInputStream;
 import java.util.List;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 class InputPreferVarClean {
 	String field = "not flagged";
@@ -20,6 +22,13 @@ class InputPreferVarClean {
 		var list = List.of(1, 2, 3);
 		String nullStr = null;
 		int uninitialized;
+		final int[] numbers = {1, 2, 3};
+		final int[][] matrix = {{1, 2}, {3, 4}};
+		final String[] names = {"a", "b"};
+		var sized = new String[5];
+		Runnable r = () -> System.out.println("hello");
+		Supplier<String> s2 = () -> "world";
+		Function<String, Integer> f = String::length;
 	}
 
 	void tryWithResources() throws Exception {

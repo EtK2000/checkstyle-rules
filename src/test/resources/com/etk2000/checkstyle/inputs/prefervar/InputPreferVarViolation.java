@@ -17,6 +17,9 @@ class InputPreferVarViolation {
 		int x = 42; // violation: local must use var
 		final String s = "hello"; // violation: local must use var
 		List<Integer> list = List.of(1, 2, 3); // violation: local must use var
+		var names = new String[]{"a", "b"}; // violation: use implicit array init
+		final String[] numbers = new String[]{"1"}; // violation: use implicit array init
+		final int[][] matrix = new int[][]{{1}, {2}}; // violation: use implicit array init
 	}
 
 	void tryWithResources() throws Exception {

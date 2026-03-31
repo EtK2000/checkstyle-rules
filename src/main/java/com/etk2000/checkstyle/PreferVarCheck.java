@@ -22,6 +22,7 @@ public class PreferVarCheck extends AbstractCheck {
 	private static final String MSG_LOCAL = "prefer.var.local";
 	private static final String MSG_TRY = "prefer.var.try.resource";
 	private static final String MSG_TYPE_ARGS = "prefer.var.type.args";
+	private static final String MSG_VAR_EXPLICIT_ARRAY = "prefer.var.explicit.array";
 	private static final String MSG_VAR_GENERIC = "prefer.var.generic.return";
 
 	/**
@@ -157,6 +158,31 @@ public class PreferVarCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
+	private static boolean isInitializerArrayInit(@Nonnull DetailAST assign) {
+		final var value = assign.getFirstChild();
+		return value != null && value.getType() == TokenTypes.ARRAY_INIT;
+	}
+
+	@CheckReturnValue
+	private static boolean isInitializerExplicitArrayInit(@Nonnull DetailAST assign) {
+		var value = assign.getFirstChild();
+		if (value != null && value.getType() == TokenTypes.EXPR)
+			value = value.getFirstChild();
+		return value != null
+				&& value.getType() == TokenTypes.LITERAL_NEW
+				&& value.findFirstToken(TokenTypes.ARRAY_INIT) != null;
+	}
+
+	@CheckReturnValue
+	private static boolean isInitializerLambdaOrMethodRef(@Nonnull DetailAST assign) {
+		var value = assign.getFirstChild();
+		if (value != null && value.getType() == TokenTypes.EXPR)
+			value = value.getFirstChild();
+		return value != null
+				&& (value.getType() == TokenTypes.LAMBDA || value.getType() == TokenTypes.METHOD_REF);
+	}
+
+	@CheckReturnValue
 	private static boolean isInitializerNull(@Nonnull DetailAST assign) {
 		var value = assign.getFirstChild();
 		// unwrap EXPR wrapper
@@ -280,6 +306,20 @@ public class PreferVarCheck extends AbstractCheck {
 
 				// skip null initializers (type can't be inferred)
 				if (isInitializerNull(assign))
+					return;
+
+				// skip implicit array initializers ({...} without new), var can't be used
+				if (isInitializerArrayInit(assign))
+					return;
+
+				// prefer implicit array init over explicit new Type[]{...}
+				if (isInitializerExplicitArrayInit(assign)) {
+					log(ast, MSG_VAR_EXPLICIT_ARRAY);
+					return;
+				}
+
+				// skip lambdas and method references (var can't infer a target type)
+				if (isInitializerLambdaOrMethodRef(assign))
 					return;
 
 				final var methodCall = getInitializerMethodCall(assign);
