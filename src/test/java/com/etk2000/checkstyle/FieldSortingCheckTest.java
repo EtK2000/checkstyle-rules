@@ -9,6 +9,18 @@ public class FieldSortingCheckTest {
 	private static final String DIR = "fieldsorting/";
 
 	@Test
+	public void testAnonClassViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingAnonClassViolation.java");
+		assertEquals(2, violations.size());
+		// anon class field after regular field in same chunk
+		assertEquals(8, violations.get(0).getLine());
+		assertEquals("Field 'action' with anonymous class initializer must appear before 'data'.", violations.get(0).getMessage());
+		// lambda referencing another field is still a dependency (not skipped like anon class bodies)
+		assertEquals(24, violations.get(1).getLine());
+		assertEquals("Field 'action' references 'name' which should be declared before it.", violations.get(1).getMessage());
+	}
+
+	@Test
 	public void testArrayAndMultidimensionalViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingArrayViolation.java");
 		assertEquals(4, violations.size());

@@ -28,6 +28,7 @@ public class FieldSortingCheck extends AbstractCheck {
 	private static final Set<String> PRIMITIVES = Set.of(
 			"boolean", "byte", "char", "double", "float", "int", "long", "short"
 	);
+	private static final String MSG_ANON_CLASS = "field.sort.anon.class";
 	private static final String MSG_CHUNK = "field.sort.chunk";
 	private static final String MSG_DEPENDENCY = "field.sort.dependency";
 	private static final String MSG_NAME = "field.sort.name";
@@ -93,6 +94,9 @@ public class FieldSortingCheck extends AbstractCheck {
 
 	private static void collectIdents(@Nonnull DetailAST ast, @Nonnull HashSet<String> result) {
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
+			// skip anonymous class bodies: references inside methods are deferred, not init-time
+			if (child.getType() == TokenTypes.OBJBLOCK && ast.getType() == TokenTypes.LITERAL_NEW)
+				continue;
 			if (child.getType() == TokenTypes.IDENT)
 				result.add(child.getText());
 			collectIdents(child, result);
@@ -116,6 +120,17 @@ public class FieldSortingCheck extends AbstractCheck {
 
 		// alphabetical by base type name
 		return aBase.compareToIgnoreCase(bBase);
+	}
+
+	@CheckReturnValue
+	private static boolean containsAnonymousClass(@Nonnull DetailAST ast) {
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.LITERAL_NEW && child.findFirstToken(TokenTypes.OBJBLOCK) != null)
+				return true;
+			if (containsAnonymousClass(child))
+				return true;
+		}
+		return false;
 	}
 
 	@CheckReturnValue
@@ -146,6 +161,12 @@ public class FieldSortingCheck extends AbstractCheck {
 	private static String fieldName(@Nonnull DetailAST varDef) {
 		final var ident = varDef.findFirstToken(TokenTypes.IDENT);
 		return ident != null ? ident.getText() : "";
+	}
+
+	@CheckReturnValue
+	private static boolean hasAnonymousClassInit(@Nonnull DetailAST varDef) {
+		final var assign = varDef.findFirstToken(TokenTypes.ASSIGN);
+		return assign != null && containsAnonymousClass(assign);
 	}
 
 	@CheckReturnValue
@@ -204,6 +225,15 @@ public class FieldSortingCheck extends AbstractCheck {
 			// prev depends on curr: curr should be declared first
 			if (prevDeps != null && prevDeps.contains(currName)) {
 				log(prev, MSG_DEPENDENCY, prevName, currName);
+				continue;
+			}
+
+			// anonymous class initializers sort before non-anonymous
+			final var prevAnon = hasAnonymousClassInit(prev);
+			final var currAnon = hasAnonymousClassInit(curr);
+			if (prevAnon != currAnon) {
+				if (currAnon)
+					log(curr, MSG_ANON_CLASS, fieldName(curr), fieldName(prev));
 				continue;
 			}
 
