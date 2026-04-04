@@ -36,6 +36,11 @@ class InputSpecificApiClean {
 		System.out.println(list.get(2));
 	}
 
+	void lengthComparisonNotEmpty(StringBuilder sb) {
+		if (sb.length() > 1)
+			System.out.println("more than one char");
+	}
+
 	void mapRemoveZero(Map<Integer, String> map) {
 		map.remove(0);
 	}

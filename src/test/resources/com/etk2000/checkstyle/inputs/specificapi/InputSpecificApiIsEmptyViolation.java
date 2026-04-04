@@ -3,6 +3,16 @@ package com.etk2000.checkstyle.inputs.specificapi;
 import java.util.List;
 
 class InputSpecificApiIsEmptyViolation {
+	void lengthEqualsZero(StringBuilder sb) {
+		if (sb.length() == 0) // violation: use isEmpty()
+			System.out.println("empty");
+	}
+
+	void lengthGreaterThanZero(StringBuilder sb) {
+		if (sb.length() > 0) // violation: use !isEmpty()
+			System.out.println("not empty");
+	}
+
 	void oneGreaterThanSize(List<String> list) {
 		if (1 > list.size()) // violation: use isEmpty()
 			System.out.println("empty");

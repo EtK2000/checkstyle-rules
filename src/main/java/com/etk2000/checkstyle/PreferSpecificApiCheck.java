@@ -19,7 +19,7 @@ import javax.annotation.Nonnull;
  * <ul>
  *     <li>{@code .get(0)} -> use {@code .getFirst()}</li>
  *     <li>{@code .get(size() - 1)} -> use {@code .getLast()}</li>
- *     <li>{@code .size() == 0} / {@code .size() != 0} -> use {@code .isEmpty()} / {@code !.isEmpty()}</li>
+ *     <li>{@code .size() == 0} / {@code .size() != 0} / {@code .length() == 0} / {@code .length() != 0} -> use {@code .isEmpty()} / {@code !.isEmpty()}</li>
  *     <li>{@code .collect(Collectors.toList())} -> use {@code .toList()}</li>
  * </ul>
  * Suppresses {@code .get(0)} when the same receiver also calls
@@ -167,7 +167,7 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		var last = dot.getFirstChild();
 		while (last.getNextSibling() != null)
 			last = last.getNextSibling();
-		if (!"size".equals(last.getText()))
+		if (!"length".equals(last.getText()) && !"size".equals(last.getText()))
 			return false;
 
 		// must have no arguments
@@ -177,8 +177,9 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 
 	/**
 	 * Detects comparisons equivalent to isEmpty/!isEmpty:
-	 * {@code size()==0}, {@code size()!=0}, {@code size()>0},
-	 * {@code size()>=1}, {@code size()<1}, {@code size()<=0},
+	 * {@code size()==0}/{@code length()==0}, {@code size()!=0}/{@code length()!=0},
+	 * {@code size()>0}/{@code length()>0}, {@code size()>=1}/{@code length()>=1},
+	 * {@code size()<1}/{@code length()<1}, {@code size()<=0}/{@code length()<=0},
 	 * and their reversed-operand forms.
 	 */
 	@CheckReturnValue
@@ -451,8 +452,14 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		collectSizeEmptyComparisons(ast, comparisons);
 		for (var comparison : comparisons) {
 			final var sizeCall = sizeCallFromComparison(comparison);
-			if (sizeCall != null && receiverHasMethod(sizeCall, "isEmpty"))
-				log(comparison, MSG_IS_EMPTY);
+			if (sizeCall == null || !receiverHasMethod(sizeCall, "isEmpty"))
+				continue;
+
+			final var dot = sizeCall.findFirstToken(TokenTypes.DOT);
+			var methodName = dot.getFirstChild();
+			while (methodName.getNextSibling() != null)
+				methodName = methodName.getNextSibling();
+			log(comparison, MSG_IS_EMPTY, methodName.getText());
 		}
 	}
 

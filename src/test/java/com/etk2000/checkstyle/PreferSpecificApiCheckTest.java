@@ -35,9 +35,11 @@ public class PreferSpecificApiCheckTest {
 	@Test
 	public void testIsEmptyViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiIsEmptyViolation.java");
-		assertEquals(11, violations.size());
-		for (var v : violations)
-			assertEquals("Use '.isEmpty()' instead of '.size() == 0' (or '!.isEmpty()' for '!= 0').", v.getMessage());
+		assertEquals(13, violations.size());
+		for (var i = 0; i < violations.size(); ++i) {
+			final var method = i < 2 ? "length" : "size";
+			assertEquals("Use '.isEmpty()' instead of '." + method + "() == 0' (or '!.isEmpty()' for '!= 0').", violations.get(i).getMessage());
+		}
 	}
 
 	@Test
