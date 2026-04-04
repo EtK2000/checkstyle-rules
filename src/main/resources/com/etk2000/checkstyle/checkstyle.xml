@@ -136,6 +136,11 @@
 		<!-- Prefer enhanced (arrow) switch syntax when possible -->
 		<module name="UseEnhancedSwitch" />
 
+		<!-- Custom: Prefer StandardCharsets constants over charset name strings -->
+		<module name="com.etk2000.checkstyle.PreferStandardCharsetsCheck">
+			<property name="minSdk" value="${minSdk}" />
+		</module>
+
 		<!-- Custom: Prefer specific API methods over generic ones -->
 		<module name="com.etk2000.checkstyle.PreferSpecificApiCheck">
 			<property name="minSdk" value="${minSdk}" />

@@ -11,6 +11,63 @@ import org.junit.Test;
 
 public class ReflectionUtilTest {
 	@Test
+	public void testFindCharsetStringArgIndexConstructors() {
+		// String(byte[], String charsetName) -> String(byte[], Charset)
+		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.lang.String", "new", 2));
+		// String(byte[], int, int, String) -> String(byte[], int, int, Charset)
+		assertEquals(3, ReflectionUtil.findCharsetStringArgIndex("java.lang.String", "new", 4));
+		// InputStreamReader(InputStream, String) -> InputStreamReader(InputStream, Charset)
+		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.io.InputStreamReader", "new", 2));
+		// OutputStreamWriter(OutputStream, String) -> OutputStreamWriter(OutputStream, Charset)
+		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.io.OutputStreamWriter", "new", 2));
+		// PrintStream(File, String) -> PrintStream(File, Charset)
+		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.io.PrintStream", "new", 2));
+		// PrintStream(OutputStream, boolean, String) -> PrintStream(OutputStream, boolean, Charset)
+		assertEquals(2, ReflectionUtil.findCharsetStringArgIndex("java.io.PrintStream", "new", 3));
+		// PrintWriter(File, String) -> PrintWriter(File, Charset)
+		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.io.PrintWriter", "new", 2));
+		// Scanner(InputStream, String) -> Scanner(InputStream, Charset)
+		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.util.Scanner", "new", 2));
+	}
+
+	@Test
+	public void testFindCharsetStringArgIndexMethods() {
+		// String.getBytes(String) -> String.getBytes(Charset)
+		assertEquals(0, ReflectionUtil.findCharsetStringArgIndex("java.lang.String", "getBytes", 1));
+		// URLEncoder.encode(String, String) -> URLEncoder.encode(String, Charset)
+		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.net.URLEncoder", "encode", 2));
+		// URLDecoder.decode(String, String) -> URLDecoder.decode(String, Charset)
+		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.net.URLDecoder", "decode", 2));
+		// ByteArrayOutputStream.toString(String) -> ByteArrayOutputStream.toString(Charset)
+		assertEquals(0, ReflectionUtil.findCharsetStringArgIndex("java.io.ByteArrayOutputStream", "toString", 1));
+	}
+
+	@Test
+	public void testFindCharsetStringArgIndexNoCharsetOverload() {
+		// Charset.forName(String) has no Charset.forName(Charset) overload
+		assertEquals(-1, ReflectionUtil.findCharsetStringArgIndex("java.nio.charset.Charset", "forName", 1));
+		// String.valueOf(Object) has no Charset variant
+		assertEquals(-1, ReflectionUtil.findCharsetStringArgIndex("java.lang.String", "valueOf", 1));
+	}
+
+	@Test
+	public void testFindCharsetStringArgIndexNoConstructorWithThatCount() {
+		// PrintWriter has no 3-arg String constructor (only Charset)
+		assertEquals(-1, ReflectionUtil.findCharsetStringArgIndex("java.io.PrintWriter", "new", 3));
+	}
+
+	@Test
+	public void testFindCharsetStringArgIndexUnknownClass() {
+		assertEquals(-1, ReflectionUtil.findCharsetStringArgIndex("com.nonexistent.FakeClass", "method", 1));
+	}
+
+	@Test
+	public void testFindCharsetStringArgIndexWrongArgCount() {
+		assertEquals(-1, ReflectionUtil.findCharsetStringArgIndex("java.lang.String", "getBytes", 3));
+		assertEquals(-1, ReflectionUtil.findCharsetStringArgIndex("java.lang.String", "new", 5));
+	}
+
+	@Test
 	public void testGetMethodReturnTypeName() {
 		assertEquals("java.util.List", ReflectionUtil.getMethodReturnTypeName("java.util.Collections", "unmodifiableList"));
 		assertEquals("java.util.Map", ReflectionUtil.getMethodReturnTypeName("java.util.Collections", "unmodifiableMap"));

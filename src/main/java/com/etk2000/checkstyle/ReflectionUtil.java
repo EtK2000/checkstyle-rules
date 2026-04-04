@@ -1,11 +1,13 @@
 package com.etk2000.checkstyle;
 
+import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -49,6 +51,39 @@ class ReflectionUtil {
 	}
 
 	/**
+	 * Finds a {@code String} parameter index in a method (or constructor)
+	 * with {@code argCount} parameters where a sibling overload exists
+	 * that replaces that {@code String} with {@code Charset}.
+	 *
+	 * @return the 0-based index of the charset {@code String} parameter,
+	 *         or -1 if no such overload pair exists
+	 */
+	@CheckReturnValue
+	static int findCharsetStringArgIndex(@Nonnull String fqcn, @Nonnull String methodName, int argCount) {
+		final var clazz = loadClass(fqcn);
+		if (clazz == null)
+			return -1;
+
+		final var methods = "new".equals(methodName)
+				? clazz.getConstructors()
+				: clazz.getMethods();
+
+		for (var method : methods) {
+			if (!"new".equals(methodName) && !method.getName().equals(methodName))
+				continue;
+			final var params = method.getParameterTypes();
+			if (params.length != argCount)
+				continue;
+
+			for (var i = 0; i < params.length; ++i) {
+				if (params[i] == String.class && hasCharsetOverload(methods, method, i))
+					return i;
+			}
+		}
+		return -1;
+	}
+
+	/**
 	 * Returns the return type name of the first public method with the
 	 * specified name on the given class, or {@code null} if not found.
 	 */
@@ -64,6 +99,45 @@ class ReflectionUtil {
 				return method.getReturnType().getName();
 		}
 		return null;
+	}
+
+	/**
+	 * Checks whether there is a sibling overload of the given method that
+	 * replaces the parameter at {@code stringIndex} with {@code Charset},
+	 * keeping all other parameters the same.
+	 */
+	@CheckReturnValue
+	private static boolean hasCharsetOverload(@Nonnull Executable[] methods, @Nonnull Executable method, int stringIndex) {
+		final var params = method.getParameterTypes();
+		for (var candidate : methods) {
+			if (candidate == method)
+				continue;
+			if (!candidate.getClass().equals(method.getClass()))
+				continue;
+			if (candidate instanceof Method m && !m.getName().equals(((Method) method).getName()))
+				continue;
+
+			final var candidateParams = candidate.getParameterTypes();
+			if (candidateParams.length != params.length)
+				continue;
+
+			var match = true;
+			for (var i = 0; i < params.length; ++i) {
+				if (i == stringIndex) {
+					if (candidateParams[i] != Charset.class) {
+						match = false;
+						break;
+					}
+				}
+				else if (candidateParams[i] != params[i]) {
+					match = false;
+					break;
+				}
+			}
+			if (match)
+				return true;
+		}
+		return false;
 	}
 
 	/**
@@ -145,7 +219,7 @@ class ReflectionUtil {
 					try {
 						return Class.forName(name, false, ReflectionUtil.class.getClassLoader());
 					}
-					catch (ClassNotFoundException e) {
+					catch (ClassNotFoundException | NoClassDefFoundError e) {
 						return null;
 					}
 				}
