@@ -12,11 +12,18 @@ import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Checkstyle check that flags generic API calls where a more specific
  * method is available. Currently detects:
  * <ul>
+ *     <li>{@code assertEquals(true/false, x)} -> use {@code assertTrue(x)} / {@code assertFalse(x)}</li>
+ *     <li>{@code assertEquals(null, x)} -> use {@code assertNull(x)}</li>
+ *     <li>{@code assertNotEquals(true/false, x)} -> use {@code assertFalse(x)} / {@code assertTrue(x)}</li>
+ *     <li>{@code assertNotEquals(null, x)} -> use {@code assertNotNull(x)}</li>
+ *     <li>{@code assertSame(null, x)} -> use {@code assertNull(x)}</li>
+ *     <li>{@code assertNotSame(null, x)} -> use {@code assertNotNull(x)}</li>
  *     <li>{@code .get(0)} -> use {@code .getFirst()}</li>
  *     <li>{@code .get(size() - 1)} -> use {@code .getLast()}</li>
  *     <li>{@code .size() == 0} / {@code .size() != 0} / {@code .length() == 0} / {@code .length() != 0} -> use {@code .isEmpty()} / {@code !.isEmpty()}</li>
@@ -31,12 +38,87 @@ import javax.annotation.Nonnull;
  */
 public class PreferSpecificApiCheck extends AbstractCheck {
 	private static final int MIN_SDK_GET_FIRST_LAST = 35;
+	private static final String MSG_ASSERT = "prefer.api.assert";
 	private static final String MSG_GET_FIRST = "prefer.api.getFirst";
 	private static final String MSG_GET_LAST = "prefer.api.getLast";
 	private static final String MSG_IS_EMPTY = "prefer.api.isEmpty";
 	private static final String MSG_REMOVE_FIRST = "prefer.api.removeFirst";
 	private static final String MSG_REMOVE_LAST = "prefer.api.removeLast";
 	private static final String MSG_TO_LIST = "prefer.api.toList";
+
+	/**
+	 * Returns a two-element array {@code [replacement, literal]} for a call like
+	 * {@code assertEquals(true, x)} or {@code assertNotEquals(null, x)},
+	 * or {@code null} if the call is not a simplifiable assertion.
+	 * Handles both static-import ({@code assertEquals}) and qualified
+	 * ({@code Assert.assertEquals}) forms, as well as
+	 * {@code assertSame}/{@code assertNotSame} with {@code null}.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String[] assertionSimplification(@Nonnull DetailAST methodCall) {
+		final var methodName = getMethodName(methodCall);
+		if (methodName == null)
+			return null;
+
+		final var isEquals = "assertEquals".equals(methodName) || "assertSame".equals(methodName);
+		final var isNotEquals = "assertNotEquals".equals(methodName) || "assertNotSame".equals(methodName);
+		if (!isEquals && !isNotEquals)
+			return null;
+
+		final var isSame = "assertSame".equals(methodName) || "assertNotSame".equals(methodName);
+
+		// find the two-argument form (expected, actual), skip if more than 3 args
+		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
+		if (elist == null)
+			return null;
+
+		// count arguments (children separated by COMMAs)
+		var argCount = 0;
+		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() != TokenTypes.COMMA)
+				++argCount;
+		}
+
+		// for 3-arg form (message, expected, actual), check the second arg
+		// for 2-arg form (expected, actual), check the first arg
+		final DetailAST expectedExpr;
+		if (argCount == 2)
+			expectedExpr = elist.getFirstChild();
+		else if (argCount == 3)
+			expectedExpr = elist.getFirstChild().getNextSibling().getNextSibling();
+		else
+			return null;
+
+		final var expected = expectedExpr.getType() == TokenTypes.EXPR
+				? expectedExpr.getFirstChild()
+				: expectedExpr;
+		if (expected == null)
+			return null;
+
+		// also check the last argument (actual) for null/true/false in reversed form
+		final var lastArg = elist.getLastChild();
+		final var actual = lastArg.getType() == TokenTypes.EXPR
+				? lastArg.getFirstChild()
+				: lastArg;
+
+		if (expected.getType() == TokenTypes.LITERAL_NULL || actual.getType() == TokenTypes.LITERAL_NULL)
+			return new String[]{isEquals ? "assertNull" : "assertNotNull", "null"};
+
+		// assertSame/assertNotSame only applies to null, not true/false
+		if (isSame)
+			return null;
+
+		if (expected.getType() == TokenTypes.LITERAL_TRUE)
+			return new String[]{isEquals ? "assertTrue" : "assertFalse", "true"};
+		if (expected.getType() == TokenTypes.LITERAL_FALSE)
+			return new String[]{isEquals ? "assertFalse" : "assertTrue", "false"};
+		if (actual.getType() == TokenTypes.LITERAL_TRUE)
+			return new String[]{isEquals ? "assertTrue" : "assertFalse", "true"};
+		if (actual.getType() == TokenTypes.LITERAL_FALSE)
+			return new String[]{isEquals ? "assertFalse" : "assertTrue", "false"};
+		return null;
+	}
 
 	@CheckReturnValue
 	@Nonnull
@@ -48,6 +130,13 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			sb.append(childText(child));
 		return sb.toString();
+	}
+
+	private static void collectAssertionCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+		if (ast.getType() == TokenTypes.METHOD_CALL && assertionSimplification(ast) != null)
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectAssertionCalls(child, results);
 	}
 
 	private static void collectCollectToListCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
@@ -76,6 +165,27 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectSizeEmptyComparisons(child, results);
+	}
+
+	/**
+	 * Returns the method name from a METHOD_CALL node, handling both
+	 * simple calls ({@code foo()}) and qualified calls ({@code Bar.foo()}).
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String getMethodName(@Nonnull DetailAST methodCall) {
+		// qualified: DOT with method name as last child
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot != null) {
+			var last = dot.getFirstChild();
+			while (last.getNextSibling() != null)
+				last = last.getNextSibling();
+			return last.getText();
+		}
+
+		// unqualified: IDENT child
+		final var ident = methodCall.findFirstToken(TokenTypes.IDENT);
+		return ident != null ? ident.getText() : null;
 	}
 
 	@CheckReturnValue
@@ -346,6 +456,15 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		this.minSdk = minSdk;
 	}
 
+	private void visitAssertions(@Nonnull DetailAST ast) {
+		final var calls = new ArrayList<DetailAST>();
+		collectAssertionCalls(ast, calls);
+		for (var call : calls) {
+			final var result = assertionSimplification(call);
+			log(call, MSG_ASSERT, result[0], getMethodName(call), result[1]);
+		}
+	}
+
 	private void visitCollectToList(@Nonnull DetailAST ast) {
 		final var calls = new ArrayList<DetailAST>();
 		collectCollectToListCalls(ast, calls);
@@ -354,8 +473,9 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 	}
 
 	private void visitMethodScope(@Nonnull DetailAST ast) {
-		visitSizeEqualsZero(ast);
+		visitAssertions(ast);
 		visitCollectToList(ast);
+		visitSizeEqualsZero(ast);
 
 		if (minSdk < MIN_SDK_GET_FIRST_LAST)
 			return;

@@ -1,11 +1,60 @@
 package com.etk2000.checkstyle.inputs.specificapi;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 class InputSpecificApiClean {
+	void assertEqualsWithTwoNonLiterals() {
+		assertEquals("a", "b");
+	}
+
+	void assertFalseAlready() {
+		assertFalse(1 == 2);
+	}
+
+	void assertNotEqualsWithTwoNonLiterals() {
+		assertNotEquals("a", "b");
+	}
+
+	void assertNotNullAlready() {
+		assertNotNull(new Object());
+	}
+
+	void assertNotSameNonNull() {
+		assertNotSame("a", "b");
+	}
+
+	void assertNotSameWithTrue() {
+		assertNotSame(true, Boolean.TRUE);
+	}
+
+	void assertNullAlready() {
+		assertNull(null);
+	}
+
+	void assertSameNonNull() {
+		assertSame("a", "a");
+	}
+
+	void assertSameWithFalse() {
+		assertSame(false, Boolean.FALSE);
+	}
+
+	void assertTrueAlready() {
+		assertTrue(1 == 1);
+	}
+
 	void collectToSet(List<String> list) {
 		Set<String> result = list.stream()
 				.filter(s -> !s.isEmpty())

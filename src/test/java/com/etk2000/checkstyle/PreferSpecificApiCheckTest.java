@@ -9,6 +9,94 @@ public class PreferSpecificApiCheckTest {
 	private static final String DIR = "specificapi/";
 
 	@Test
+	public void testAssertViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiAssertViolation.java");
+		assertEquals(33, violations.size());
+
+		var i = 0;
+
+		// assertEquals 2-arg
+		assertEquals(10, violations.get(i).getLine());
+		assertEquals("Use 'assertFalse' instead of 'assertEquals' with a 'false' literal.", violations.get(i++).getMessage());
+		assertEquals(14, violations.get(i).getLine());
+		assertEquals("Use 'assertFalse' instead of 'assertEquals' with a 'false' literal.", violations.get(i++).getMessage());
+		assertEquals(18, violations.get(i).getLine());
+		assertEquals("Use 'assertNull' instead of 'assertEquals' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(22, violations.get(i).getLine());
+		assertEquals("Use 'assertNull' instead of 'assertEquals' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(26, violations.get(i).getLine());
+		assertEquals("Use 'assertTrue' instead of 'assertEquals' with a 'true' literal.", violations.get(i++).getMessage());
+		assertEquals(30, violations.get(i).getLine());
+		assertEquals("Use 'assertTrue' instead of 'assertEquals' with a 'true' literal.", violations.get(i++).getMessage());
+
+		// assertEquals 3-arg
+		assertEquals(34, violations.get(i).getLine());
+		assertEquals("Use 'assertFalse' instead of 'assertEquals' with a 'false' literal.", violations.get(i++).getMessage());
+		assertEquals(38, violations.get(i).getLine());
+		assertEquals("Use 'assertFalse' instead of 'assertEquals' with a 'false' literal.", violations.get(i++).getMessage());
+		assertEquals(42, violations.get(i).getLine());
+		assertEquals("Use 'assertNull' instead of 'assertEquals' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(46, violations.get(i).getLine());
+		assertEquals("Use 'assertNull' instead of 'assertEquals' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(50, violations.get(i).getLine());
+		assertEquals("Use 'assertTrue' instead of 'assertEquals' with a 'true' literal.", violations.get(i++).getMessage());
+		assertEquals(54, violations.get(i).getLine());
+		assertEquals("Use 'assertTrue' instead of 'assertEquals' with a 'true' literal.", violations.get(i++).getMessage());
+
+		// assertNotEquals 2-arg
+		assertEquals(58, violations.get(i).getLine());
+		assertEquals("Use 'assertTrue' instead of 'assertNotEquals' with a 'false' literal.", violations.get(i++).getMessage());
+		assertEquals(62, violations.get(i).getLine());
+		assertEquals("Use 'assertTrue' instead of 'assertNotEquals' with a 'false' literal.", violations.get(i++).getMessage());
+		assertEquals(66, violations.get(i).getLine());
+		assertEquals("Use 'assertNotNull' instead of 'assertNotEquals' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(70, violations.get(i).getLine());
+		assertEquals("Use 'assertNotNull' instead of 'assertNotEquals' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(74, violations.get(i).getLine());
+		assertEquals("Use 'assertFalse' instead of 'assertNotEquals' with a 'true' literal.", violations.get(i++).getMessage());
+		assertEquals(78, violations.get(i).getLine());
+		assertEquals("Use 'assertFalse' instead of 'assertNotEquals' with a 'true' literal.", violations.get(i++).getMessage());
+
+		// assertNotEquals 3-arg
+		assertEquals(82, violations.get(i).getLine());
+		assertEquals("Use 'assertTrue' instead of 'assertNotEquals' with a 'false' literal.", violations.get(i++).getMessage());
+		assertEquals(86, violations.get(i).getLine());
+		assertEquals("Use 'assertTrue' instead of 'assertNotEquals' with a 'false' literal.", violations.get(i++).getMessage());
+		assertEquals(90, violations.get(i).getLine());
+		assertEquals("Use 'assertNotNull' instead of 'assertNotEquals' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(94, violations.get(i).getLine());
+		assertEquals("Use 'assertNotNull' instead of 'assertNotEquals' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(98, violations.get(i).getLine());
+		assertEquals("Use 'assertFalse' instead of 'assertNotEquals' with a 'true' literal.", violations.get(i++).getMessage());
+		assertEquals(102, violations.get(i).getLine());
+		assertEquals("Use 'assertFalse' instead of 'assertNotEquals' with a 'true' literal.", violations.get(i++).getMessage());
+
+		// assertNotSame 2-arg + 3-arg
+		assertEquals(106, violations.get(i).getLine());
+		assertEquals("Use 'assertNotNull' instead of 'assertNotSame' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(110, violations.get(i).getLine());
+		assertEquals("Use 'assertNotNull' instead of 'assertNotSame' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(114, violations.get(i).getLine());
+		assertEquals("Use 'assertNotNull' instead of 'assertNotSame' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(118, violations.get(i).getLine());
+		assertEquals("Use 'assertNotNull' instead of 'assertNotSame' with a 'null' literal.", violations.get(i++).getMessage());
+
+		// assertSame 2-arg + 3-arg
+		assertEquals(122, violations.get(i).getLine());
+		assertEquals("Use 'assertNull' instead of 'assertSame' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(126, violations.get(i).getLine());
+		assertEquals("Use 'assertNull' instead of 'assertSame' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(130, violations.get(i).getLine());
+		assertEquals("Use 'assertNull' instead of 'assertSame' with a 'null' literal.", violations.get(i++).getMessage());
+		assertEquals(134, violations.get(i).getLine());
+		assertEquals("Use 'assertNull' instead of 'assertSame' with a 'null' literal.", violations.get(i++).getMessage());
+
+		// qualified
+		assertEquals(138, violations.get(i).getLine());
+		assertEquals("Use 'assertTrue' instead of 'assertEquals' with a 'true' literal.", violations.get(i++).getMessage());
+	}
+
+	@Test
 	public void testCleanApiUsage() throws Exception {
 		assertTrue(BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiClean.java").isEmpty());
 	}
