@@ -6,13 +6,19 @@ class InputPrefixViolation {
 		if (flag)
 			++i;
 		else
-			i++;
+			i++; // violation: Use prefix increment (++x) instead of postfix (x++).
 	}
 
 	void bracelessIf(boolean flag) {
 		int i = 0;
 		if (flag)
-			i++;
+			i++; // violation: Use prefix increment (++x) instead of postfix (x++).
+	}
+
+	void bracelessWhile(boolean flag) {
+		int i = 0;
+		while (flag)
+			i--; // violation: Use prefix decrement (--x) instead of postfix (x--).
 	}
 
 	void forLoopUpdate() {

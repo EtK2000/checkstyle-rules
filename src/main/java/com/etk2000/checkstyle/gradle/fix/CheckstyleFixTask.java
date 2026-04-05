@@ -4,6 +4,7 @@ import com.etk2000.checkstyle.NoArrayTrailingCommaCheck;
 import com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck;
 import com.etk2000.checkstyle.NoUnnecessaryThisCheck;
 import com.etk2000.checkstyle.PreferPrefixIncrementCheck;
+import com.etk2000.checkstyle.PreferSpecificApiCheck;
 import com.etk2000.checkstyle.RedundantNumericSuffixCheck;
 import com.puppycrawl.tools.checkstyle.Checker;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
@@ -67,6 +68,7 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 				Map.entry(NoEnumTrailingCommaCheck.class.getName(), commaFixer),
 				Map.entry(NoUnnecessaryThisCheck.class.getName(), new NoUnnecessaryThisFixer()),
 				Map.entry(PreferPrefixIncrementCheck.class.getName(), new PreferPrefixIncrementFixer()),
+				Map.entry(PreferSpecificApiCheck.class.getName(), new PreferSpecificApiFixer()),
 				Map.entry(RedundantImportCheck.class.getName(), deleteLineFixer),
 				Map.entry(RedundantModifierCheck.class.getName(), new RedundantModifierFixer()),
 				Map.entry(RedundantNumericSuffixCheck.class.getName(), new RedundantNumericSuffixFixer()),
@@ -108,8 +110,8 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 			final var result = fixer.fix(lines, lineIndex, charColumn);
 			if (result == null)
 				continue;
-			for (var i = result.endLine(); i >= result.startLine(); --i)
-				lines.remove(i);
+			if (result.endLine() >= result.startLine())
+				lines.subList(result.startLine(), result.endLine() + 1).clear();
 			lines.addAll(result.startLine(), result.replacement());
 			++fixed;
 		}

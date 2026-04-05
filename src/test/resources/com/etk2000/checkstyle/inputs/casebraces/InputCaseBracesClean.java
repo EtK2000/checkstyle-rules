@@ -12,6 +12,21 @@ class InputCaseBracesClean {
 				System.out.println(y);
 				break;
 			}
+			default:
+				System.out.println("default");
+				break;
+		}
+
+		// default with braces and variable definition
+		switch (x) {
+			case 1:
+				break;
+
+			default: {
+				int z = 2;
+				System.out.println(z);
+				break;
+			}
 		}
 	}
 }

@@ -32,6 +32,11 @@ class InputOverloadClean {
 
 	void multi(String a, int b) {}
 
+	// two params, first same, second differs (tests position 2+ comparison)
+	void secondParam(int a, char b) {}
+
+	void secondParam(int a, int b) {}
+
 	// same param count, alphabetical within reference types
 	void ref(List a) {}
 

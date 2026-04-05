@@ -102,10 +102,55 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testCollectionsCopyOfViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiCopyOfViolation.java");
+		assertEquals(3, violations.size());
+
+		var i = 0;
+		assertEquals(10, violations.get(i).getLine());
+		assertEquals("Use 'List.copyOf(...)' instead of 'Collections.unmodifiableList(...)'.", violations.get(i++).getMessage());
+		assertEquals(14, violations.get(i).getLine());
+		assertEquals("Use 'Map.copyOf(...)' instead of 'Collections.unmodifiableMap(...)'.", violations.get(i++).getMessage());
+		assertEquals(18, violations.get(i).getLine());
+		assertEquals("Use 'Set.copyOf(...)' instead of 'Collections.unmodifiableSet(...)'.", violations.get(i++).getMessage());
+	}
+
+	@Test
+	public void testCollectionsFactoryViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiCollectionsEmptyViolation.java");
+		assertEquals(6, violations.size());
+
+		var i = 0;
+		assertEquals(10, violations.get(i).getLine());
+		assertEquals("Use 'List.of()' instead of 'Collections.emptyList()'.", violations.get(i++).getMessage());
+		assertEquals(14, violations.get(i).getLine());
+		assertEquals("Use 'Map.of()' instead of 'Collections.emptyMap()'.", violations.get(i++).getMessage());
+		assertEquals(18, violations.get(i).getLine());
+		assertEquals("Use 'Set.of()' instead of 'Collections.emptySet()'.", violations.get(i++).getMessage());
+		assertEquals(22, violations.get(i).getLine());
+		assertEquals("Use 'Set.of(...)' instead of 'Collections.singleton(...)'.", violations.get(i++).getMessage());
+		assertEquals(26, violations.get(i).getLine());
+		assertEquals("Use 'List.of(...)' instead of 'Collections.singletonList(...)'.", violations.get(i++).getMessage());
+		assertEquals(30, violations.get(i).getLine());
+		assertEquals("Use 'Map.of(...)' instead of 'Collections.singletonMap(...)'.", violations.get(i++).getMessage());
+	}
+
+	@Test
 	public void testCollectToListViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiToListViolation.java");
+		assertEquals(2, violations.size());
+
+		assertEquals(10, violations.get(0).getLine());
+		assertEquals("Use '.toList()' instead of '.collect(Collectors.toList())'.", violations.get(0).getMessage());
+		assertEquals(16, violations.get(1).getLine());
+		assertEquals("Use '.toList()' instead of '.collect(Collectors.toUnmodifiableList())'.", violations.get(1).getMessage());
+	}
+
+	@Test
+	public void testEqualsEmptyViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiEqualsEmptyViolation.java");
 		assertEquals(1, violations.size());
-		assertEquals("Use '.toList()' instead of '.collect(Collectors.toList())'.", violations.getFirst().getMessage());
+		assertEquals("Use '.isEmpty()' instead of '.equals(\"\")'.", violations.getFirst().getMessage());
 	}
 
 	@Test
@@ -118,6 +163,39 @@ public class PreferSpecificApiCheckTest {
 
 		assertEquals(11, violations.get(1).getLine());
 		assertEquals("Use '.getFirst()' instead of '.get(0)'.", violations.get(1).getMessage());
+	}
+
+	@Test
+	public void testIndexOfContainsViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiIndexOfViolation.java");
+		assertEquals(12, violations.size());
+
+		var i = 0;
+		// methods are alphabetical in the input file
+		assertEquals(5, violations.get(i).getLine());
+		assertEquals("Use '!.contains(...)' instead of '.indexOf(...) == -1'.", violations.get(i++).getMessage());
+		assertEquals(10, violations.get(i).getLine());
+		assertEquals("Use '.contains(...)' instead of '.indexOf(...) >= 0'.", violations.get(i++).getMessage());
+		assertEquals(15, violations.get(i).getLine());
+		assertEquals("Use '.contains(...)' instead of '.indexOf(...) > -1'.", violations.get(i++).getMessage());
+		assertEquals(20, violations.get(i).getLine());
+		assertEquals("Use '!.contains(...)' instead of '.indexOf(...) <= -1'.", violations.get(i++).getMessage());
+		assertEquals(25, violations.get(i).getLine());
+		assertEquals("Use '!.contains(...)' instead of '.indexOf(...) < 0'.", violations.get(i++).getMessage());
+		assertEquals(30, violations.get(i).getLine());
+		assertEquals("Use '.contains(...)' instead of '.indexOf(...) != -1'.", violations.get(i++).getMessage());
+		assertEquals(35, violations.get(i).getLine());
+		assertEquals("Use '!.contains(...)' instead of '-1 == .indexOf(...)'.", violations.get(i++).getMessage());
+		assertEquals(40, violations.get(i).getLine());
+		assertEquals("Use '!.contains(...)' instead of '-1 >= .indexOf(...)'.", violations.get(i++).getMessage());
+		assertEquals(45, violations.get(i).getLine());
+		assertEquals("Use '.contains(...)' instead of '-1 < .indexOf(...)'.", violations.get(i++).getMessage());
+		assertEquals(50, violations.get(i).getLine());
+		assertEquals("Use '.contains(...)' instead of '-1 != .indexOf(...)'.", violations.get(i++).getMessage());
+		assertEquals(55, violations.get(i).getLine());
+		assertEquals("Use '!.contains(...)' instead of '0 > .indexOf(...)'.", violations.get(i++).getMessage());
+		assertEquals(60, violations.get(i).getLine());
+		assertEquals("Use '.contains(...)' instead of '0 <= .indexOf(...)'.", violations.get(i++).getMessage());
 	}
 
 	@Test
@@ -142,6 +220,30 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testMinSdkAllowsCollectionsCopyOf() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiCopyOfViolation.java", "minSdk", "31"
+		);
+		assertEquals(3, violations.size());
+	}
+
+	@Test
+	public void testMinSdkAllowsCollectionsFactory() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiCollectionsEmptyViolation.java", "minSdk", "30"
+		);
+		assertEquals(6, violations.size());
+	}
+
+	@Test
+	public void testMinSdkAllowsStreamForEach() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiStreamForEachViolation.java", "minSdk", "24"
+		);
+		assertEquals(1, violations.size());
+	}
+
+	@Test
 	public void testMinSdkSuppressesCheck() throws Exception {
 		final var violations = BaseCheckTest.runCheck(
 				PreferSpecificApiCheck.class, DIR + "InputSpecificApiViolation.java", "minSdk", "34"
@@ -150,9 +252,33 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testMinSdkSuppressesCollectionsCopyOf() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiCopyOfViolation.java", "minSdk", "30"
+		);
+		assertTrue(violations.isEmpty());
+	}
+
+	@Test
+	public void testMinSdkSuppressesCollectionsFactory() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiCollectionsEmptyViolation.java", "minSdk", "29"
+		);
+		assertTrue(violations.isEmpty());
+	}
+
+	@Test
 	public void testMinSdkSuppressesRemoveCheck() throws Exception {
 		final var violations = BaseCheckTest.runCheck(
 				PreferSpecificApiCheck.class, DIR + "InputSpecificApiRemoveViolation.java", "minSdk", "34"
+		);
+		assertTrue(violations.isEmpty());
+	}
+
+	@Test
+	public void testMinSdkSuppressesStreamForEach() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiStreamForEachViolation.java", "minSdk", "23"
 		);
 		assertTrue(violations.isEmpty());
 	}
@@ -198,5 +324,12 @@ public class PreferSpecificApiCheckTest {
 
 		assertEquals(11, violations.get(1).getLine());
 		assertEquals("Use '.removeLast()' instead of '.remove(size() - 1)'.", violations.get(1).getMessage());
+	}
+
+	@Test
+	public void testStreamForEachViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiStreamForEachViolation.java");
+		assertEquals(1, violations.size());
+		assertEquals("Use '.forEach(...)' instead of '.stream().forEach(...)'.", violations.getFirst().getMessage());
 	}
 }

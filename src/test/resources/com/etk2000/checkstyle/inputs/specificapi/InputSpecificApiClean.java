@@ -9,6 +9,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,21 +56,57 @@ class InputSpecificApiClean {
 		assertTrue(1 == 1);
 	}
 
+	void collectionsCopyOfAlreadyClean(List<String> list) {
+		List<String> result = List.copyOf(list);
+	}
+
+	void collectionsEmptyListAlreadyClean() {
+		List<String> list = List.of();
+	}
+
+	void collectionsSynchronizedList(List<String> list) {
+		List<String> result = Collections.synchronizedList(list);
+	}
+
 	void collectToSet(List<String> list) {
 		Set<String> result = list.stream()
 				.filter(s -> !s.isEmpty())
 				.collect(Collectors.toSet());
 	}
 
-	void collectToUnmodifiableList(List<String> list) {
-		List<String> result = list.stream()
+	void collectToUnmodifiableSet(List<String> list) {
+		Set<String> result = list.stream()
 				.filter(s -> !s.isEmpty())
-				.collect(Collectors.toUnmodifiableList());
+				.collect(Collectors.toUnmodifiableSet());
 	}
 
 	void collectWithCustomCollector(List<String> list) {
 		String result = list.stream()
 				.collect(Collectors.joining(", "));
+	}
+
+	void containsAlready(String s) {
+		if (s.contains("foo"))
+			System.out.println("found");
+	}
+
+	void equalsNonEmpty(String s) {
+		if (s.equals("hello"))
+			System.out.println("hello");
+	}
+
+	void equalsNonLiteral(String s, String other) {
+		if (s.equals(other))
+			System.out.println("equal");
+	}
+
+	void equalsNullSafe(String s) {
+		if ("".equals(s))
+			System.out.println("empty");
+	}
+
+	void forEachAlready(List<String> list) {
+		list.forEach(System.out::println);
 	}
 
 	void getFirst(List<String> list) {
@@ -85,6 +122,46 @@ class InputSpecificApiClean {
 		System.out.println(list.get(2));
 	}
 
+	void indexOfCharVariant(String s) {
+		if (s.indexOf('c') != -1)
+			System.out.println("found char");
+	}
+
+	void indexOfEqualsZero(String s) {
+		if (s.indexOf("foo") == 0)
+			System.out.println("starts with");
+	}
+
+	void indexOfGreaterThanZero(String s) {
+		if (s.indexOf("foo") > 0)
+			System.out.println("found after first char");
+	}
+
+	void indexOfLessEqualZero(String s) {
+		if (s.indexOf("foo") <= 0)
+			System.out.println("at start or not found");
+	}
+
+	void indexOfNonLiteralArg(String s, String target) {
+		if (s.indexOf(target) != -1)
+			System.out.println("found variable");
+	}
+
+	void indexOfNotEqualZero(String s) {
+		if (s.indexOf("foo") != 0)
+			System.out.println("not at start");
+	}
+
+	void indexOfTwoArgs(String s) {
+		if (s.indexOf("foo", 5) != -1)
+			System.out.println("found after index 5");
+	}
+
+	void isEmptyAlready(String s) {
+		if (s.isEmpty())
+			System.out.println("empty");
+	}
+
 	void lengthComparisonNotEmpty(StringBuilder sb) {
 		if (sb.length() > 1)
 			System.out.println("more than one char");
@@ -92,6 +169,10 @@ class InputSpecificApiClean {
 
 	void mapRemoveZero(Map<Integer, String> map) {
 		map.remove(0);
+	}
+
+	void parallelStreamForEach(List<String> list) {
+		list.parallelStream().forEach(System.out::println);
 	}
 
 	void removeFirst(List<String> list) {
@@ -131,6 +212,10 @@ class InputSpecificApiClean {
 	void sizeEqualsTwo(List<String> list) {
 		if (list.size() == 2)
 			System.out.println("pair");
+	}
+
+	void streamFilterForEach(List<String> list) {
+		list.stream().filter(s -> !s.isEmpty()).forEach(System.out::println);
 	}
 
 	void toListDirect(List<String> list) {

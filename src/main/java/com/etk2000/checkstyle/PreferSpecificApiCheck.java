@@ -24,10 +24,24 @@ import javax.annotation.Nullable;
  *     <li>{@code assertNotEquals(null, x)} -> use {@code assertNotNull(x)}</li>
  *     <li>{@code assertSame(null, x)} -> use {@code assertNull(x)}</li>
  *     <li>{@code assertNotSame(null, x)} -> use {@code assertNotNull(x)}</li>
+ *     <li>{@code Collections.emptyList()} -> use {@code List.of()} (API 30+)</li>
+ *     <li>{@code Collections.emptyMap()} -> use {@code Map.of()} (API 30+)</li>
+ *     <li>{@code Collections.emptySet()} -> use {@code Set.of()} (API 30+)</li>
+ *     <li>{@code Collections.singleton(x)} -> use {@code Set.of(x)} (API 30+)</li>
+ *     <li>{@code Collections.singletonList(x)} -> use {@code List.of(x)} (API 30+)</li>
+ *     <li>{@code Collections.singletonMap(k, v)} -> use {@code Map.of(k, v)} (API 30+)</li>
+ *     <li>{@code Collections.unmodifiableList(x)} -> use {@code List.copyOf(x)} (API 31+)</li>
+ *     <li>{@code Collections.unmodifiableMap(x)} -> use {@code Map.copyOf(x)} (API 31+)</li>
+ *     <li>{@code Collections.unmodifiableSet(x)} -> use {@code Set.copyOf(x)} (API 31+)</li>
+ *     <li>{@code .collect(Collectors.toList())} -> use {@code .toList()}</li>
+ *     <li>{@code .collect(Collectors.toUnmodifiableList())} -> use {@code .toList()}</li>
+ *     <li>{@code .equals("")} -> use {@code .isEmpty()}</li>
  *     <li>{@code .get(0)} -> use {@code .getFirst()}</li>
  *     <li>{@code .get(size() - 1)} -> use {@code .getLast()}</li>
+ *     <li>{@code .indexOf(str) != -1} / {@code >= 0} -> use {@code .contains(str)}</li>
+ *     <li>{@code .indexOf(str) == -1} / {@code < 0} -> use {@code !.contains(str)}</li>
  *     <li>{@code .size() == 0} / {@code .size() != 0} / {@code .length() == 0} / {@code .length() != 0} -> use {@code .isEmpty()} / {@code !.isEmpty()}</li>
- *     <li>{@code .collect(Collectors.toList())} -> use {@code .toList()}</li>
+ *     <li>{@code .stream().forEach(...)} -> use {@code .forEach(...)} (API 24+)</li>
  * </ul>
  * Suppresses {@code .get(0)} when the same receiver also calls
  * {@code .get(N)} with other indices in the same method scope
@@ -37,6 +51,9 @@ import javax.annotation.Nullable;
  * the suggested method before flagging.
  */
 public class PreferSpecificApiCheck extends AbstractCheck {
+	private static final int MIN_SDK_COLLECTION_FACTORY = 30;
+	private static final int MIN_SDK_COPY_OF = 31;
+	private static final int MIN_SDK_FOR_EACH = 24;
 	private static final int MIN_SDK_GET_FIRST_LAST = 35;
 	private static final String MSG_ASSERT = "prefer.api.assert";
 	private static final String MSG_METHOD = "prefer.api.method";
@@ -134,6 +151,20 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			collectAssertionCalls(child, results);
 	}
 
+	private static void collectCollectionsCopyOfCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+		if (ast.getType() == TokenTypes.METHOD_CALL && collectionsCopyOfReplacement(ast) != null)
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectCollectionsCopyOfCalls(child, results);
+	}
+
+	private static void collectCollectionsFactoryCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+		if (ast.getType() == TokenTypes.METHOD_CALL && collectionsFactoryReplacement(ast) != null)
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectCollectionsFactoryCalls(child, results);
+	}
+
 	private static void collectCollectToListCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isCollectToListCall(ast))
 			results.add(ast);
@@ -141,11 +172,96 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			collectCollectToListCalls(child, results);
 	}
 
+	private static void collectEqualsEmptyStringCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+		if (ast.getType() == TokenTypes.METHOD_CALL && isEqualsEmptyString(ast))
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectEqualsEmptyStringCalls(child, results);
+	}
+
 	private static void collectGetCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isGetCall(ast))
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectGetCalls(child, results);
+	}
+
+	private static void collectIndexOfContainsComparisons(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+		if (indexOfContainsReplacement(ast) != null)
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectIndexOfContainsComparisons(child, results);
+	}
+
+	/**
+	 * Returns the replacement for a {@code Collections.unmodifiableXxx(x)} call,
+	 * e.g. {@code "List.copyOf"} for {@code Collections.unmodifiableList(x)},
+	 * or {@code null} if the call is not a match.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String collectionsCopyOfReplacement(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return null;
+
+		final var receiver = dot.getFirstChild();
+		final var method = receiver != null ? receiver.getNextSibling() : null;
+		if (receiver == null || method == null)
+			return null;
+
+		if (receiver.getType() != TokenTypes.IDENT || !"Collections".equals(receiver.getText()))
+			return null;
+		if (method.getType() != TokenTypes.IDENT)
+			return null;
+
+		// must have exactly one argument
+		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
+		if (elist == null || elist.getChildCount() != 1)
+			return null;
+
+		return switch (method.getText()) {
+			case "unmodifiableList" -> "List.copyOf";
+			case "unmodifiableMap" -> "Map.copyOf";
+			case "unmodifiableSet" -> "Set.copyOf";
+			default -> null;
+		};
+	}
+
+	/**
+	 * Returns the replacement prefix for a {@code Collections} factory call,
+	 * e.g. {@code "List.of"} for {@code Collections.emptyList()} or
+	 * {@code Collections.singletonList(x)}, or {@code null} if not a match.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String collectionsFactoryReplacement(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return null;
+
+		final var receiver = dot.getFirstChild();
+		final var method = receiver != null ? receiver.getNextSibling() : null;
+		if (receiver == null || method == null)
+			return null;
+
+		if (receiver.getType() != TokenTypes.IDENT || !"Collections".equals(receiver.getText()))
+			return null;
+		if (method.getType() != TokenTypes.IDENT)
+			return null;
+
+		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
+		final var hasArgs = elist != null && elist.getChildCount() > 0;
+
+		return switch (method.getText()) {
+			case "emptyList" -> hasArgs ? null : "List.of";
+			case "emptyMap" -> hasArgs ? null : "Map.of";
+			case "emptySet" -> hasArgs ? null : "Set.of";
+			case "singleton" -> hasArgs ? "Set.of" : null;
+			case "singletonList" -> hasArgs ? "List.of" : null;
+			case "singletonMap" -> hasArgs ? "Map.of" : null;
+			default -> null;
+		};
 	}
 
 	private static void collectRemoveCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
@@ -160,6 +276,13 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectSizeEmptyComparisons(child, results);
+	}
+
+	private static void collectStreamForEachCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+		if (ast.getType() == TokenTypes.METHOD_CALL && isStreamForEachCall(ast))
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectStreamForEachCalls(child, results);
 	}
 
 	/**
@@ -181,6 +304,70 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		// unqualified: IDENT child
 		final var ident = methodCall.findFirstToken(TokenTypes.IDENT);
 		return ident != null ? ident.getText() : null;
+	}
+
+	/**
+	 * Returns the METHOD_CALL node for the .indexOf() call inside a comparison,
+	 * checking both operand positions.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static DetailAST indexOfCallFromComparison(@Nonnull DetailAST comparison) {
+		final var left = comparison.getFirstChild();
+		final var right = left != null ? left.getNextSibling() : null;
+		if (left != null && isIndexOfStringCall(left))
+			return left.getType() == TokenTypes.EXPR ? left.getFirstChild() : left;
+		return right != null && right.getType() == TokenTypes.EXPR ? right.getFirstChild() : right;
+	}
+
+	/**
+	 * Detects comparisons equivalent to contains/!contains using indexOf
+	 * and returns {@code ".contains(...)"} or {@code "!.contains(...)"}
+	 * accordingly, or {@code null} if the AST is not an indexOf comparison.
+	 * Handles: {@code != -1}, {@code >= 0}, {@code == -1}, {@code < 0},
+	 * and their reversed-operand forms.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String indexOfContainsReplacement(@Nonnull DetailAST ast) {
+		final var left = ast.getFirstChild();
+		final var right = left != null ? left.getNextSibling() : null;
+		if (left == null || right == null)
+			return null;
+
+		// determine which side has indexOf and which has the literal
+		final boolean indexOfOnLeft;
+		if (isIndexOfStringCall(left) && (isLiteralNegativeOne(right) || isLiteralZero(right)))
+			indexOfOnLeft = true;
+		else if (isIndexOfStringCall(right) && (isLiteralNegativeOne(left) || isLiteralZero(left)))
+			indexOfOnLeft = false;
+		else
+			return null;
+
+		final var literal = indexOfOnLeft ? right : left;
+		final var isNegOne = isLiteralNegativeOne(literal);
+
+		// normalize operator so indexOf is conceptually on the left
+		final var normalizedOp = indexOfOnLeft
+				? ast.getType()
+				: switch (ast.getType()) {
+					case TokenTypes.GE -> TokenTypes.LE;
+					case TokenTypes.GT -> TokenTypes.LT;
+					case TokenTypes.LE -> TokenTypes.GE;
+					case TokenTypes.LT -> TokenTypes.GT;
+					default -> ast.getType();
+				};
+
+		// with indexOf on the left: != -1 and >= 0 mean "contains", == -1 and < 0 mean "not contains"
+		return switch (normalizedOp) {
+			case TokenTypes.EQUAL -> isNegOne ? "!.contains(...)" : null;
+			case TokenTypes.GE -> !isNegOne ? ".contains(...)" : null;
+			case TokenTypes.GT -> isNegOne ? ".contains(...)" : null;
+			case TokenTypes.LE -> isNegOne ? "!.contains(...)" : null;
+			case TokenTypes.LT -> !isNegOne ? "!.contains(...)" : null;
+			case TokenTypes.NOT_EQUAL -> isNegOne ? ".contains(...)" : null;
+			default -> null;
+		};
 	}
 
 	@CheckReturnValue
@@ -214,7 +401,8 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		final var method = receiver != null ? receiver.getNextSibling() : null;
 		return receiver != null && method != null
 				&& receiver.getType() == TokenTypes.IDENT && "Collectors".equals(receiver.getText())
-				&& method.getType() == TokenTypes.IDENT && "toList".equals(method.getText());
+				&& method.getType() == TokenTypes.IDENT
+				&& ("toList".equals(method.getText()) || "toUnmodifiableList".equals(method.getText()));
 	}
 
 	/**
@@ -288,6 +476,41 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		};
 	}
 
+	/**
+	 * Checks whether the METHOD_CALL is {@code receiver.equals("")}
+	 * where the argument is an empty string literal. Does NOT match
+	 * the {@code "".equals(receiver)} form (null-safe idiom).
+	 */
+	@CheckReturnValue
+	private static boolean isEqualsEmptyString(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return false;
+
+		// method name must be "equals"
+		var last = dot.getFirstChild();
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		if (!"equals".equals(last.getText()))
+			return false;
+
+		// receiver must NOT be a string literal (skip "".equals(s) form)
+		final var receiver = dot.getFirstChild();
+		if (receiver != null && receiver.getType() == TokenTypes.STRING_LITERAL)
+			return false;
+
+		// single argument must be empty string ""
+		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
+		if (elist == null || elist.getChildCount() != 1)
+			return false;
+
+		final var arg = elist.getFirstChild();
+		final var inner = arg.getType() == TokenTypes.EXPR ? arg.getFirstChild() : arg;
+		return inner != null
+				&& inner.getType() == TokenTypes.STRING_LITERAL
+				&& "\"\"".equals(inner.getText());
+	}
+
 	@CheckReturnValue
 	private static boolean isGetCall(@Nonnull DetailAST methodCall) {
 		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
@@ -299,6 +522,45 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		while (last.getNextSibling() != null)
 			last = last.getNextSibling();
 		return "get".equals(last.getText());
+	}
+
+	/**
+	 * Checks whether the AST is a {@code .indexOf(str)} call with a
+	 * single String argument (not char). Handles EXPR wrapper.
+	 */
+	@CheckReturnValue
+	private static boolean isIndexOfStringCall(@Nonnull DetailAST ast) {
+		final var inner = ast.getType() == TokenTypes.EXPR ? ast.getFirstChild() : ast;
+		if (inner == null || inner.getType() != TokenTypes.METHOD_CALL)
+			return false;
+
+		final var dot = inner.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return false;
+
+		var last = dot.getFirstChild();
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		if (!"indexOf".equals(last.getText()))
+			return false;
+
+		// exactly one argument, must be a String literal
+		final var elist = inner.findFirstToken(TokenTypes.ELIST);
+		if (elist == null || elist.getChildCount() != 1)
+			return false;
+
+		final var arg = elist.getFirstChild();
+		final var argInner = arg.getType() == TokenTypes.EXPR ? arg.getFirstChild() : arg;
+		return argInner != null && argInner.getType() == TokenTypes.STRING_LITERAL;
+	}
+
+	@CheckReturnValue
+	private static boolean isLiteralNegativeOne(@Nonnull DetailAST expr) {
+		final var inner = expr.getType() == TokenTypes.EXPR ? expr.getFirstChild() : expr;
+		if (inner == null || inner.getType() != TokenTypes.UNARY_MINUS)
+			return false;
+		final var num = inner.getFirstChild();
+		return num != null && num.getType() == TokenTypes.NUM_INT && "1".equals(num.getText());
 	}
 
 	@CheckReturnValue
@@ -385,6 +647,44 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		final var getReceiver = receiverText(dot);
 		final var sizeReceiver = receiverText(sizeDot);
 		return !getReceiver.isEmpty() && getReceiver.equals(sizeReceiver);
+	}
+
+	/**
+	 * Checks whether the METHOD_CALL is {@code .stream().forEach(...)},
+	 * i.e. a forEach terminal directly chained on a stream() call
+	 * with no intermediate operations.
+	 */
+	@CheckReturnValue
+	private static boolean isStreamForEachCall(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return false;
+
+		// method name must be forEach
+		var last = dot.getFirstChild();
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		if (!"forEach".equals(last.getText()))
+			return false;
+
+		// receiver must be a .stream() call
+		final var receiver = dot.getFirstChild();
+		if (receiver == null || receiver.getType() != TokenTypes.METHOD_CALL)
+			return false;
+
+		final var streamDot = receiver.findFirstToken(TokenTypes.DOT);
+		if (streamDot == null)
+			return false;
+
+		var streamMethodName = streamDot.getFirstChild();
+		while (streamMethodName.getNextSibling() != null)
+			streamMethodName = streamMethodName.getNextSibling();
+		if (!"stream".equals(streamMethodName.getText()))
+			return false;
+
+		// stream() must have no arguments
+		final var streamElist = receiver.findFirstToken(TokenTypes.ELIST);
+		return streamElist == null || streamElist.getChildCount() == 0;
 	}
 
 	@CheckReturnValue
@@ -492,17 +792,99 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		}
 	}
 
+	private void visitCollectionsCopyOf(@Nonnull DetailAST ast) {
+		final var calls = new ArrayList<DetailAST>();
+		collectCollectionsCopyOfCalls(ast, calls);
+		for (var call : calls) {
+			final var prefix = collectionsCopyOfReplacement(call);
+			final var dot = call.findFirstToken(TokenTypes.DOT);
+			final var method = dot.getFirstChild().getNextSibling();
+			log(call, MSG_METHOD, prefix + "(...)", "Collections." + method.getText() + "(...)");
+		}
+	}
+
+	private void visitCollectionsFactory(@Nonnull DetailAST ast) {
+		final var calls = new ArrayList<DetailAST>();
+		collectCollectionsFactoryCalls(ast, calls);
+		for (var call : calls) {
+			final var prefix = collectionsFactoryReplacement(call);
+			final var dot = call.findFirstToken(TokenTypes.DOT);
+			final var method = dot.getFirstChild().getNextSibling();
+			final var elist = call.findFirstToken(TokenTypes.ELIST);
+			final var hasArgs = elist != null && elist.getChildCount() > 0;
+			final var argText = hasArgs ? "(...)" : "()";
+			log(call, MSG_METHOD, prefix + argText, "Collections." + method.getText() + argText);
+		}
+	}
+
 	private void visitCollectToList(@Nonnull DetailAST ast) {
 		final var calls = new ArrayList<DetailAST>();
 		collectCollectToListCalls(ast, calls);
-		for (var call : calls)
-			log(call, MSG_METHOD, ".toList()", ".collect(Collectors.toList())");
+		for (var call : calls) {
+			final var elist = call.findFirstToken(TokenTypes.ELIST);
+			final var argExpr = elist.getFirstChild();
+			final var innerCall = argExpr.getType() == TokenTypes.EXPR ? argExpr.getFirstChild() : argExpr;
+			final var innerDot = innerCall.findFirstToken(TokenTypes.DOT);
+			final var collectorMethod = innerDot.getFirstChild().getNextSibling();
+			log(call, MSG_METHOD, ".toList()", ".collect(Collectors." + collectorMethod.getText() + "())");
+		}
+	}
+
+	private void visitEqualsEmptyString(@Nonnull DetailAST ast) {
+		final var calls = new ArrayList<DetailAST>();
+		collectEqualsEmptyStringCalls(ast, calls);
+		for (var call : calls) {
+			if (receiverHasMethod(call, "isEmpty"))
+				log(call, MSG_METHOD, ".isEmpty()", ".equals(\"\")");
+		}
+	}
+
+	private void visitIndexOfContains(@Nonnull DetailAST ast) {
+		final var comparisons = new ArrayList<DetailAST>();
+		collectIndexOfContainsComparisons(ast, comparisons);
+		for (var comparison : comparisons) {
+			final var indexOfCall = indexOfCallFromComparison(comparison);
+			if (!receiverHasMethod(indexOfCall, "contains"))
+				continue;
+
+			final var replacement = indexOfContainsReplacement(comparison);
+			final var left = comparison.getFirstChild();
+			final var right = left.getNextSibling();
+			final var op = switch (comparison.getType()) {
+				case TokenTypes.EQUAL -> "==";
+				case TokenTypes.GE -> ">=";
+				case TokenTypes.GT -> ">";
+				case TokenTypes.LE -> "<=";
+				case TokenTypes.LT -> "<";
+				case TokenTypes.NOT_EQUAL -> "!=";
+				default -> "?";
+			};
+			final var indexOfText = ".indexOf(...)";
+			final var indexOfOnLeft = isIndexOfStringCall(left);
+			final var literalSide = indexOfOnLeft ? right : left;
+			final var literalText = isLiteralNegativeOne(literalSide) ? "-1" : childText(literalSide);
+			final var actual = indexOfOnLeft
+					? indexOfText + " " + op + " " + literalText
+					: literalText + " " + op + " " + indexOfText;
+			log(comparison, MSG_METHOD, replacement, actual);
+		}
 	}
 
 	private void visitMethodScope(@Nonnull DetailAST ast) {
 		visitAssertions(ast);
 		visitCollectToList(ast);
+		visitEqualsEmptyString(ast);
+		visitIndexOfContains(ast);
 		visitSizeEqualsZero(ast);
+
+		if (minSdk >= MIN_SDK_FOR_EACH)
+			visitStreamForEach(ast);
+
+		if (minSdk >= MIN_SDK_COLLECTION_FACTORY)
+			visitCollectionsFactory(ast);
+
+		if (minSdk >= MIN_SDK_COPY_OF)
+			visitCollectionsCopyOf(ast);
 
 		if (minSdk < MIN_SDK_GET_FIRST_LAST)
 			return;
@@ -626,6 +1008,13 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 					: childText(left) + " " + op + " " + sizeText;
 			log(comparison, MSG_METHOD, "." + replacement, actual);
 		}
+	}
+
+	private void visitStreamForEach(@Nonnull DetailAST ast) {
+		final var calls = new ArrayList<DetailAST>();
+		collectStreamForEachCalls(ast, calls);
+		for (var call : calls)
+			log(call, MSG_METHOD, ".forEach(...)", ".stream().forEach(...)");
 	}
 
 	@Override

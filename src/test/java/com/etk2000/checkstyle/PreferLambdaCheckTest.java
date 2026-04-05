@@ -16,10 +16,10 @@ public class PreferLambdaCheckTest {
 	@Test
 	public void testViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferLambdaCheck.class, DIR + "InputPreferLambdaViolation.java");
-		assertEquals(3, violations.size());
+		assertEquals(4, violations.size());
 
-		assertEquals(7, violations.getFirst().getLine());
-		assertEquals("Use a lambda expression instead of anonymous 'Runnable'.", violations.getFirst().getMessage());
+		assertEquals(7, violations.get(0).getLine());
+		assertEquals("Use a lambda expression instead of anonymous 'Runnable'.", violations.get(0).getMessage());
 
 		assertEquals(13, violations.get(1).getLine());
 		assertEquals("Use a lambda expression instead of anonymous 'Supplier'.", violations.get(1).getMessage());
@@ -27,5 +27,9 @@ public class PreferLambdaCheckTest {
 		// anonymous class as method argument
 		assertEquals(19, violations.get(2).getLine());
 		assertEquals("Use a lambda expression instead of anonymous 'Runnable'.", violations.get(2).getMessage());
+
+		// qualified this (Outer.this) doesn't prevent lambda conversion
+		assertEquals(29, violations.get(3).getLine());
+		assertEquals("Use a lambda expression instead of anonymous 'Runnable'.", violations.get(3).getMessage());
 	}
 }

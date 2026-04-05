@@ -7,6 +7,10 @@ class InputCaseBracesViolation {
 				System.out.println("one");
 				break;
 			}
+			default: { // violation: unnecessary braces, no variable defined
+				System.out.println("default");
+				break;
+			}
 		}
 	}
 }

@@ -7,7 +7,7 @@ class InputSpecificApiReflectionClean {
 	Map<Integer, String> mapField = Map.of();
 
 	void chainedCallResolvesToMap(Map<Integer, String> map) {
-		System.out.println(Collections.unmodifiableMap(map).get(0));
+		System.out.println(Collections.synchronizedMap(map).get(0));
 	}
 
 	void mapFieldGetZero() {
@@ -16,5 +16,10 @@ class InputSpecificApiReflectionClean {
 
 	void mapParamGetZero(Map<Integer, String> map) {
 		System.out.println(map.get(0));
+	}
+
+	void objectEqualsEmpty(Object obj) {
+		if (obj.equals(""))
+			System.out.println("empty");
 	}
 }

@@ -9,4 +9,10 @@ class InputSpecificApiToListViolation {
 				.filter(s -> !s.isEmpty())
 				.collect(Collectors.toList()); // violation: use .toList()
 	}
+
+	void collectToUnmodifiableList(List<String> list) {
+		List<String> result = list.stream()
+				.filter(s -> !s.isEmpty())
+				.collect(Collectors.toUnmodifiableList()); // violation: use .toList()
+	}
 }

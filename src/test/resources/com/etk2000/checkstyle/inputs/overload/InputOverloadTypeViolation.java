@@ -31,6 +31,11 @@ class InputOverloadTypeViolation {
 
 	void prim(char a) {} // violation: char must appear before int
 
+	// two params, first same, second wrong order (tests position 2+ comparison)
+	void secondParam(int a, int b) {}
+
+	void secondParam(int a, char b) {} // violation: char must appear before int at position 2
+
 	// varargs before non-varargs — wrong
 	void vararg(int... a) {}
 

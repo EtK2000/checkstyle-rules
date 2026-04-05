@@ -10,7 +10,7 @@ class InputSpecificApiReflectionViolation {
 	}
 
 	void chainedCallResolvedGetZero(List<String> list) {
-		System.out.println(Collections.unmodifiableList(list).get(0)); // violation: chain resolves to List, has getFirst
+		System.out.println(Collections.synchronizedList(list).get(0)); // violation: chain resolves to List, has getFirst
 	}
 
 	List<String> getList() {

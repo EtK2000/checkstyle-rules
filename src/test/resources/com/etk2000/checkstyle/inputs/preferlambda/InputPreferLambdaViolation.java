@@ -23,4 +23,14 @@ class InputPreferLambdaViolation {
 			}
 		});
 	}
+
+	// qualified this (Outer.this) is accessible from a lambda, so this is still a candidate
+	void qualifiedThis() {
+		Runnable r = new Runnable() { // violation: prefer lambda
+			@Override
+			public void run() {
+				System.out.println(InputPreferLambdaViolation.this.toString());
+			}
+		};
+	}
 }

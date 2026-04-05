@@ -1,9 +1,9 @@
 package com.etk2000.checkstyle.inputs.instanceofbeforecast;
 
 class InputInstanceofBeforeCastClean {
-	// correct order with pattern matching
+	// correct order: instanceof before cast (without pattern matching)
 	void correctOrder(Object obj) {
-		if (obj instanceof String s && s.isEmpty())
+		if (obj instanceof String && ((String) obj).isEmpty())
 			System.out.println("empty");
 	}
 
@@ -11,6 +11,12 @@ class InputInstanceofBeforeCastClean {
 	void correctOrderChained(Object obj) {
 		if (obj instanceof String s && s.length() > 0 && s.startsWith("a"))
 			System.out.println("starts with a");
+	}
+
+	// correct order with pattern matching
+	void correctOrderPatternMatching(Object obj) {
+		if (obj instanceof String s && s.isEmpty())
+			System.out.println("empty");
 	}
 
 	// no instanceof at all, just a cast

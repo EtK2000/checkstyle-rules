@@ -225,6 +225,39 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferSpecificApiCollectionsFactory() throws Exception {
+		final var file = tempDir.newFile("CollFactory.java");
+		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn Collections.singletonList(\"a\");\n\t}\n}");
+
+		assertEquals(
+				"import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn List.of(\"a\");\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferSpecificApiEqualsEmpty() throws Exception {
+		final var file = tempDir.newFile("EqEmpty.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid run(String s) {\n\t\tif (s.equals(\"\"))\n\t\t\treturn;\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tvoid run(String s) {\n\t\tif (s.isEmpty())\n\t\t\treturn;\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferSpecificApiStreamForEach() throws Exception {
+		final var file = tempDir.newFile("StreamFE.java");
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.stream().forEach(System.out::println);\n\t}\n}");
+
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.forEach(System.out::println);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
 	public void testRedundantImport() throws Exception {
 		final var file = tempDir.newFile("Imp.java");
 		Files.writeString(file.toPath(), "import java.lang.String;\n\nclass T {\n\tString s;\n}");

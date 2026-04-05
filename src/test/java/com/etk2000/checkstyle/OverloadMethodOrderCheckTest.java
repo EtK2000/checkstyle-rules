@@ -16,14 +16,15 @@ public class OverloadMethodOrderCheckTest {
 	@Test
 	public void testTypeOrderViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(OverloadMethodOrderCheck.class, DIR + "InputOverloadTypeViolation.java");
-		assertEquals(7, violations.size());
+		assertEquals(8, violations.size());
 		assertEquals("Overload 'arr(int)' must appear before 'arr(int[])'.", violations.get(0).getMessage());
 		assertEquals("Overload 'dim(int[])' must appear before 'dim(int[][])'.", violations.get(1).getMessage());
 		assertEquals("Overload 'mix(int[])' must appear before 'mix(String)'.", violations.get(2).getMessage());
 		assertEquals("Overload 'method(int)' must appear before 'method(String)'.", violations.get(3).getMessage());
 		assertEquals("Overload 'obj(List)' must appear before 'obj(String)'.", violations.get(4).getMessage());
 		assertEquals("Overload 'prim(char)' must appear before 'prim(int)'.", violations.get(5).getMessage());
-		assertEquals("Overload 'vararg(int)' must appear before 'vararg(int...)'.", violations.get(6).getMessage());
+		assertEquals("Overload 'secondParam(int, char)' must appear before 'secondParam(int, int)'.", violations.get(6).getMessage());
+		assertEquals("Overload 'vararg(int)' must appear before 'vararg(int...)'.", violations.get(7).getMessage());
 	}
 
 	@Test

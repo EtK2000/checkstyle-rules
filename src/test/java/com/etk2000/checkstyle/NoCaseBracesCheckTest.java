@@ -26,8 +26,12 @@ public class NoCaseBracesCheckTest {
 	@Test
 	public void testUnnecessaryBraces() throws Exception {
 		final var violations = BaseCheckTest.runCheck(NoCaseBracesCheck.class, DIR + "InputCaseBracesViolation.java");
-		assertEquals(1, violations.size());
-		assertEquals(6, violations.getFirst().getLine());
-		assertEquals("Unnecessary braces in case block, only use braces when a variable is defined in the case's scope.", violations.getFirst().getMessage());
+		final var msg = "Unnecessary braces in case block, only use braces when a variable is defined in the case's scope.";
+		assertEquals(2, violations.size());
+		assertEquals(6, violations.get(0).getLine());
+		assertEquals(msg, violations.get(0).getMessage());
+		// default: with unnecessary braces
+		assertEquals(10, violations.get(1).getLine());
+		assertEquals(msg, violations.get(1).getMessage());
 	}
 }
