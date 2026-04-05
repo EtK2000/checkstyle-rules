@@ -7,8 +7,12 @@
   final fields initialized inline (at definition) — those don't need `@NonNull`. Final fields set in
   constructors DO need it
 - Always add `@CheckResult` on methods that return a value without side effects
+- Always add `@Override` on overriding methods, including explicitly declared record accessors
 - Annotations are always sorted alphabetically, whether stacked (on methods/classes, each on its own
   line) or inline (on parameters, e.g. `@NonNull @NonUiContext Context ctx`)
+- Modifiers in JLS order: `public`/`protected`/`private`, `abstract`, `static`, `final`,
+  `transient`, `volatile`, `synchronized`, `native`, `strictfp`
+- No redundant modifiers (e.g. `public` on interface methods, `static` on interface fields)
 
 ## Class Structure (top to bottom, separated by blank lines)
 
@@ -39,6 +43,12 @@
 - Least accessible visibility (private > package-private > protected > public)
 - Specific API methods over generic ones when available (e.g. `.getFirst()` over `.get(0)`), as long
   as there are no compatibility issues (e.g. Android SDK min version)
+- `StandardCharsets` constants over charset name strings (e.g. `StandardCharsets.UTF_8` over
+  `"UTF-8"`). Requires Android API 19+
+- Lambda expressions over anonymous classes for functional interfaces
+- Literal suffix over widening cast (e.g. `100L` over `(long) 100`)
+- Imports over fully qualified names
+- `.equals()` over `==` for String comparisons
 - Reuse existing code or extract utilities over duplication
 
 ## Fields Sorting (within static or instance group)
@@ -105,11 +115,23 @@
   (no body) are fine, they become comma-separated in enhanced syntax
 - `else`/`catch`/`finally` on their own line, not cuddled with the closing brace (i.e. `}\nelse`,
   not `} else`)
+- LF line endings
+- One statement per line
 - No unused imports
+- No unused local variables
 - No trailing whitespace
 - Blank lines must be completely empty
 - No trailing newline at end of file
 - No redundant casts
+- No redundant `super()` calls (implicit when no-arg)
+- No explicit initialization to default values (`int x = 0` -> `int x`,
+  `Object o = null` -> `Object o`)
+- No reassignment of pattern variables from `instanceof`
+- No redundant null checks with `instanceof` (`x != null && x instanceof Foo` ->
+  `x instanceof Foo`)
+- Simplify boolean expressions (`b == true` -> `b`, `b == false` -> `!b`, `!false` -> `true`)
+- No emoji or special Unicode symbols in code
+- Uppercase hex digits (`0xFF` not `0xff`), lowercase `0x`/`0b` prefixes, uppercase `L` suffix
 - Only use `this.XXX` when required (e.g. shadowing) or when assigning an instance field
 - Method parameters are never `final`; local variables are `final` wherever possible (except
   for-each
