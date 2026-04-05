@@ -24,9 +24,13 @@ public class CheckstylePluginTest {
 		project.getConfigurations().create("compileOnly");
 		new CheckstylePlugin().apply(project);
 
-		assertNotNull(project.getTasks().findByName("extractCheckstyleConfig"));
+		assertNotNull(project.getTasks().findByName("checkstyleFix"));
+		assertNotNull(project.getTasks().findByName("checkstyleFixAll"));
+		assertNotNull(project.getTasks().findByName("checkstyleFixHint"));
+		assertNotNull(project.getTasks().findByName("checkstyleFixTest"));
 		assertNotNull(project.getTasks().findByName("checkstyleMain"));
 		assertNotNull(project.getTasks().findByName("checkstyleTest"));
+		assertNotNull(project.getTasks().findByName("extractCheckstyleConfig"));
 
 		final var ext = project.getExtensions().getByType(CheckstyleExtension.class);
 		assertNotNull(ext.getToolVersion());

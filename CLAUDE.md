@@ -196,6 +196,15 @@
 
 - Always think about weird input or edge cases
 - Tests should cover all such cases
+- Branch coverage: every conditional/guard must have a dedicated test that exercises it. After
+  writing code, trace each branch and verify it has a test
+- Boundary pairing: for every value a function accepts, write a corresponding rejection test with a
+  "nearby" invalid value. This catches over-matching where the code is too permissive
+- Axis coverage: when code handles multiple independent dimensions, test each axis individually.
+  Cross-axis tests are only needed when axes interact in the code
+- Integration tests: every entry in a dispatch map/registry must have an end-to-end test.
+  Assert the exact full output, not just spot-check fragments with contains/assertFalse. This
+  catches unintended modifications to lines the test wasn't specifically looking at
 - Only add messages to assertions when they provide non-obvious context (e.g. guard assertions).
   Don't add messages when the test name already describes the expected behavior
 - After ANY code change (including test resources, comments, reordering), run `./gradlew check` to

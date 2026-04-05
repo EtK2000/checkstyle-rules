@@ -1,0 +1,11 @@
+package com.etk2000.checkstyle.gradle.fix;
+
+import java.util.List;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+interface CheckstyleFixer {
+	@Nullable
+	FixResult fix(@Nonnull List<String> lines, int lineIndex, int column);
+}

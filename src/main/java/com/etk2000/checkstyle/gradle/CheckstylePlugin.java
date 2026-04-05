@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.gradle;
 
+import com.etk2000.checkstyle.gradle.fix.CheckstyleFixTask;
+
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -17,6 +19,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.util.Properties;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
@@ -48,6 +51,7 @@ public class CheckstylePlugin implements Plugin<Project> {
 	private static final Pattern MANIFEST_MIN_SDK = Pattern.compile(
 			"android:minSdkVersion\\s*=\\s*\"(\\d+)\""
 	);
+	private static final Pattern XML_ERROR_SOURCE = Pattern.compile("source=\"([^\"]+)\"");
 	private static final String CHECKSTYLE_VERSION;
 
 	static {
@@ -79,6 +83,31 @@ public class CheckstylePlugin implements Plugin<Project> {
 			checkstyleConfig.getDependencies().add(project.getDependencies().create(project.files(new File(pluginJar))));
 	}
 
+	/**
+	 * Counts total and fixable violations in a Checkstyle XML report file.
+	 * Returns {total, fixable}.
+	 */
+	@Nonnull
+	private static int[] countViolations(@Nonnull File xmlReport, @Nonnull Set<String> fixableNames) {
+		if (!xmlReport.exists())
+			return new int[]{0, 0};
+		try {
+			final var content = Files.readString(xmlReport.toPath());
+			final var matcher = XML_ERROR_SOURCE.matcher(content);
+			var total = 0;
+			var fixable = 0;
+			while (matcher.find()) {
+				++total;
+				if (fixableNames.contains(matcher.group(1)))
+					++fixable;
+			}
+			return new int[]{total, fixable};
+		}
+		catch (IOException e) {
+			return new int[]{0, 0};
+		}
+	}
+
 	@VisibleForTesting
 	static String readMinSdkFromManifest(@Nonnull Project project) {
 		final var manifest = new File(project.getProjectDir(), "src/main/AndroidManifest.xml");
@@ -98,22 +127,82 @@ public class CheckstylePlugin implements Plugin<Project> {
 
 	private static void registerTasks(@Nonnull Project project, @Nonnull String extractTaskName) {
 		project.getTasks().register(
+				"checkstyleFix",
+				CheckstyleFixTask.class,
+				task -> {
+					task.setDescription("Auto-fix simple checkstyle violations in main sources.");
+					task.setGroup("verification");
+					task.getSource().set(project.file("src/main/java"));
+				}
+		);
+
+		final var testDir = project.file("src/test/java");
+		project.getTasks().register(
+				"checkstyleFixAll",
+				DefaultTask.class,
+				task -> {
+					task.dependsOn("checkstyleFix", "checkstyleFixTest");
+					task.setDescription("Auto-fix simple checkstyle violations in all sources.");
+					task.setGroup("verification");
+				}
+		);
+
+		project.getTasks().register(
+				"checkstyleFixTest",
+				CheckstyleFixTask.class,
+				task -> {
+					task.setDescription("Auto-fix simple checkstyle violations in test sources.");
+					task.setGroup("verification");
+					task.onlyIf(t -> testDir.exists());
+					task.getSource().set(testDir);
+				}
+		);
+
+		// hint task: after checkstyle runs, show how many violations are auto-fixable
+		final var reportsDir = new File(project.getLayout().getBuildDirectory().getAsFile().get(), "reports/checkstyle");
+		project.getTasks().register(
+				"checkstyleFixHint",
+				DefaultTask.class,
+				task -> {
+					task.mustRunAfter("checkstyleMain", "checkstyleTest");
+					task.getOutputs().upToDateWhen(t -> false);
+					task.doLast(t -> {
+						final var fixableNames = CheckstyleFixTask.fixableSourceNames();
+						final var mainCounts = countViolations(new File(reportsDir, "main.xml"), fixableNames);
+						final var testCounts = countViolations(new File(reportsDir, "test.xml"), fixableNames);
+						final var fixable = mainCounts[1] + testCounts[1];
+						final var total = mainCounts[0] + testCounts[0];
+						if (fixable <= 0)
+							return;
+						final var taskName = fixable == mainCounts[1]
+								? "checkstyleFix"
+								: fixable == testCounts[1] ? "checkstyleFixTest" : "checkstyleFixAll";
+						if (fixable == total)
+							t.getLogger().lifecycle("Run ./gradlew {} to auto-fix all {} violations.", taskName, fixable);
+						else
+							t.getLogger().lifecycle("Run ./gradlew {} to auto-fix {} of {} violations.", taskName, fixable, total);
+					});
+				}
+		);
+
+		project.getTasks().register(
 				"checkstyleMain",
 				Checkstyle.class,
 				task -> {
 					task.dependsOn(extractTaskName);
+					task.finalizedBy("checkstyleFixHint");
 					task.include("**/*.java");
 					task.setClasspath(project.files());
 					task.setSource(project.fileTree("src/main/java"));
 				}
 		);
 
-		final var testDir = project.file("src/test/java");
 		project.getTasks().register(
 				"checkstyleTest",
 				Checkstyle.class,
 				task -> {
 					task.dependsOn(extractTaskName);
+					task.finalizedBy("checkstyleFixHint");
 					task.include("**/*.java");
 					task.onlyIf(t -> testDir.exists());
 					task.setClasspath(project.files());
