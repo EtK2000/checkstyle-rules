@@ -17,12 +17,20 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 class InputSpecificApiClean {
+	void assertEqualsWithThreeNonLiterals() {
+		assertEquals("a", "b", "msg");
+	}
+
 	void assertEqualsWithTwoNonLiterals() {
 		assertEquals("a", "b");
 	}
 
 	void assertFalseAlready() {
 		assertFalse(1 == 2);
+	}
+
+	void assertNotEqualsWithThreeNonLiterals() {
+		assertNotEquals("a", "b", "msg");
 	}
 
 	void assertNotEqualsWithTwoNonLiterals() {
@@ -35,6 +43,10 @@ class InputSpecificApiClean {
 
 	void assertNotSameNonNull() {
 		assertNotSame("a", "b");
+	}
+
+	void assertNotSameWithTrailingMessageTrue() {
+		assertNotSame(true, Boolean.TRUE, "msg");
 	}
 
 	void assertNotSameWithTrue() {
@@ -51,6 +63,10 @@ class InputSpecificApiClean {
 
 	void assertSameWithFalse() {
 		assertSame(false, Boolean.FALSE);
+	}
+
+	void assertSameWithTrailingMessageFalse() {
+		assertSame(false, Boolean.FALSE, "msg");
 	}
 
 	void assertTrueAlready() {

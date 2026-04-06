@@ -37,6 +37,11 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 			if (result != null)
 				return result;
 		}
+		for (final var rule : ASSERT_RULES) {
+			final var result = fixAssertionLiteralMiddle(line, rule[0], rule[1], rule[2]);
+			if (result != null)
+				return result;
+		}
 		return null;
 	}
 
@@ -82,6 +87,33 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 		return line.substring(0, methodStart) + replacement + "("
 				+ line.substring(methodStart + methodName.length() + 1, suffixIdx)
 				+ ")" + line.substring(suffixIdx + suffix.length());
+	}
+
+	/**
+	 * Handles 3-arg forms where the literal is in the middle position:
+	 * {@code assertEquals("msg", null, x)} -> {@code assertNull("msg", x)} (JUnit 4),
+	 * {@code assertEquals(x, null, "msg")} -> {@code assertNull(x, "msg")} (JUnit 5).
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixAssertionLiteralMiddle(
+			@Nonnull String line,
+			@Nonnull String methodName,
+			@Nonnull String literal,
+			@Nonnull String replacement
+	) {
+		final var methodStart = line.indexOf(methodName + "(");
+		if (methodStart < 0)
+			return null;
+
+		final var pattern = ", " + literal + ", ";
+		final var patternIdx = line.indexOf(pattern, methodStart);
+		if (patternIdx < 0)
+			return null;
+
+		return line.substring(0, methodStart) + replacement + "("
+				+ line.substring(methodStart + methodName.length() + 1, patternIdx)
+				+ ", " + line.substring(patternIdx + pattern.length());
 	}
 
 	/**

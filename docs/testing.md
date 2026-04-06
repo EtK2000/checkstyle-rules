@@ -111,6 +111,12 @@ the full pipeline (Checkstyle detection, column conversion, fixer application, o
 Assert the exact full output string, not fragments via `contains()`. This catches unintended
 modifications to lines the test wasn't looking at.
 
+When a fixer handles mutually exclusive conventions (e.g. JUnit 4 message-first vs JUnit 5
+message-last), each convention needs its own integration test combining multiple patterns in a single
+file. This verifies that fixers for one convention don't silently mangle lines belonging to the other.
+A single-pattern test per convention is not enough because interference only surfaces when multiple
+fixer code paths run against the same file.
+
 ### Test resource consolidation
 
 Never create a violation file with only one violation. Group related violations into shared files by

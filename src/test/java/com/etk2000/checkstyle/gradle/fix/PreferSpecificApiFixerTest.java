@@ -21,11 +21,35 @@ public class PreferSpecificApiFixerTest {
 	}
 
 	@Test
+	public void testAssertEqualsFalseLiteralFirstWithTrailingMessage() {
+		final var lines = new ArrayList<>(List.of("\t\tassertEquals(false, result, \"msg\");"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tassertFalse(result, \"msg\");", result.replacement().getFirst());
+	}
+
+	@Test
 	public void testAssertEqualsNullLiteralLast() {
 		final var lines = new ArrayList<>(List.of("\t\tassertEquals(getValue(), null);"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertNull(getValue());", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testAssertEqualsNullLiteralMiddleJunit4() {
+		final var lines = new ArrayList<>(List.of("\t\tassertEquals(\"msg\", null, obj);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tassertNull(\"msg\", obj);", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testAssertEqualsNullLiteralMiddleJunit5() {
+		final var lines = new ArrayList<>(List.of("\t\tassertEquals(obj, null, \"msg\");"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tassertNull(obj, \"msg\");", result.replacement().getFirst());
 	}
 
 	@Test
@@ -42,6 +66,14 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertTrue(value);", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testAssertEqualsTrueLiteralMiddle() {
+		final var lines = new ArrayList<>(List.of("\t\tassertEquals(\"msg\", true, value);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tassertTrue(\"msg\", value);", result.replacement().getFirst());
 	}
 
 	@Test

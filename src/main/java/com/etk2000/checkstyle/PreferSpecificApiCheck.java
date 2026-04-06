@@ -121,20 +121,28 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 				? lastArg.getFirstChild()
 				: lastArg;
 
-		if (expected.getType() == TokenTypes.LITERAL_NULL || actual.getType() == TokenTypes.LITERAL_NULL)
+		// for 3-arg form, also check the first arg (JUnit 5 message-last: expected, actual, message)
+		final DetailAST firstArg;
+		if (argCount == 3) {
+			final var raw = elist.getFirstChild();
+			firstArg = raw.getType() == TokenTypes.EXPR ? raw.getFirstChild() : raw;
+		}
+		else
+			firstArg = null;
+
+		if (expected.getType() == TokenTypes.LITERAL_NULL || actual.getType() == TokenTypes.LITERAL_NULL
+				|| (firstArg != null && firstArg.getType() == TokenTypes.LITERAL_NULL))
 			return new String[]{isEquals ? "assertNull" : "assertNotNull", "null"};
 
 		// assertSame/assertNotSame only applies to null, not true/false
 		if (isSame)
 			return null;
 
-		if (expected.getType() == TokenTypes.LITERAL_TRUE)
+		if (expected.getType() == TokenTypes.LITERAL_TRUE || actual.getType() == TokenTypes.LITERAL_TRUE
+				|| (firstArg != null && firstArg.getType() == TokenTypes.LITERAL_TRUE))
 			return new String[]{isEquals ? "assertTrue" : "assertFalse", "true"};
-		if (expected.getType() == TokenTypes.LITERAL_FALSE)
-			return new String[]{isEquals ? "assertFalse" : "assertTrue", "false"};
-		if (actual.getType() == TokenTypes.LITERAL_TRUE)
-			return new String[]{isEquals ? "assertTrue" : "assertFalse", "true"};
-		if (actual.getType() == TokenTypes.LITERAL_FALSE)
+		if (expected.getType() == TokenTypes.LITERAL_FALSE || actual.getType() == TokenTypes.LITERAL_FALSE
+				|| (firstArg != null && firstArg.getType() == TokenTypes.LITERAL_FALSE))
 			return new String[]{isEquals ? "assertFalse" : "assertTrue", "false"};
 		return null;
 	}

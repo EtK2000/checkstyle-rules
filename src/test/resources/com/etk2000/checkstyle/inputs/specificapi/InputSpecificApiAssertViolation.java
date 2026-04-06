@@ -54,6 +54,18 @@ class InputSpecificApiAssertViolation {
 		assertEquals("msg", 1 == 1, true); // violation: use assertTrue
 	}
 
+	void assertEqualsWithTrailingMessageFalse() {
+		assertEquals(false, 1 == 2, "msg"); // violation: use assertFalse
+	}
+
+	void assertEqualsWithTrailingMessageNull() {
+		assertEquals(null, new Object(), "msg"); // violation: use assertNull
+	}
+
+	void assertEqualsWithTrailingMessageTrue() {
+		assertEquals(true, 1 == 1, "msg"); // violation: use assertTrue
+	}
+
 	void assertNotEqualsFalse() {
 		assertNotEquals(false, 1 == 1); // violation: use assertTrue
 	}
@@ -102,6 +114,18 @@ class InputSpecificApiAssertViolation {
 		assertNotEquals("msg", 1 == 2, true); // violation: use assertFalse
 	}
 
+	void assertNotEqualsWithTrailingMessageFalse() {
+		assertNotEquals(false, 1 == 1, "msg"); // violation: use assertTrue
+	}
+
+	void assertNotEqualsWithTrailingMessageNull() {
+		assertNotEquals(null, new Object(), "msg"); // violation: use assertNotNull
+	}
+
+	void assertNotEqualsWithTrailingMessageTrue() {
+		assertNotEquals(true, 1 == 2, "msg"); // violation: use assertFalse
+	}
+
 	void assertNotSameNull() {
 		assertNotSame(null, new Object()); // violation: use assertNotNull
 	}
@@ -118,6 +142,10 @@ class InputSpecificApiAssertViolation {
 		assertNotSame("msg", new Object(), null); // violation: use assertNotNull
 	}
 
+	void assertNotSameWithTrailingMessage() {
+		assertNotSame(null, new Object(), "msg"); // violation: use assertNotNull
+	}
+
 	void assertSameNull() {
 		assertSame(null, new Object()); // violation: use assertNull
 	}
@@ -132,6 +160,10 @@ class InputSpecificApiAssertViolation {
 
 	void assertSameWithMessageReversed() {
 		assertSame("msg", new Object(), null); // violation: use assertNull
+	}
+
+	void assertSameWithTrailingMessage() {
+		assertSame(null, new Object(), "msg"); // violation: use assertNull
 	}
 
 	void qualifiedAssertEquals() {

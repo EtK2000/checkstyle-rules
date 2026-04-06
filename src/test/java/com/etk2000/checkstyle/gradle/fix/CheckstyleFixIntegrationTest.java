@@ -225,6 +225,28 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferSpecificApiAssertJunit4() throws Exception {
+		final var file = tempDir.newFile("AssertJ4.java");
+		Files.writeString(file.toPath(), "import static org.junit.Assert.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nclass T {\n\tvoid run() {\n\t\tassertEquals(true, 1 == 1);\n\t\tassertEquals(new Object(), null);\n\t\tassertEquals(\"msg\", null, new Object());\n\t\tassertNotEquals(\"msg\", false, 1 == 1);\n\t}\n}");
+
+		assertEquals(
+				"import static org.junit.Assert.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nclass T {\n\tvoid run() {\n\t\tassertTrue(1 == 1);\n\t\tassertNull(new Object());\n\t\tassertNull(\"msg\", new Object());\n\t\tassertTrue(\"msg\", 1 == 1);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferSpecificApiAssertJunit5() throws Exception {
+		final var file = tempDir.newFile("AssertJ5.java");
+		Files.writeString(file.toPath(), "import static org.junit.Assert.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nclass T {\n\tvoid run() {\n\t\tassertEquals(true, 1 == 1);\n\t\tassertEquals(new Object(), null);\n\t\tassertEquals(null, new Object(), \"msg\");\n\t\tassertNotEquals(false, 1 == 1, \"msg\");\n\t}\n}");
+
+		assertEquals(
+				"import static org.junit.Assert.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nclass T {\n\tvoid run() {\n\t\tassertTrue(1 == 1);\n\t\tassertNull(new Object());\n\t\tassertNull(new Object(), \"msg\");\n\t\tassertTrue(1 == 1, \"msg\");\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
 	public void testPreferSpecificApiCollectionsFactory() throws Exception {
 		final var file = tempDir.newFile("CollFactory.java");
 		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn Collections.singletonList(\"a\");\n\t}\n}");
