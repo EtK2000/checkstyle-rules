@@ -74,7 +74,68 @@ The `DoubleBlankLineFixer` accounts for this by scanning forward from `lineIndex
 
 ## Coverage checklist
 
-When writing or reviewing tests, verify each of these:
+Use this as a **driving process while writing code**, not a post-hoc audit. Do not write a check,
+then write a fixer, then write tests. Instead: write one branch of the check, write its tests, then
+the next branch and its tests, then the fixer and its tests.
+
+### Before writing any code
+
+1. List every AST context / token type the check will handle
+2. For each context, decide: clean example, violation example, boundary example (should NOT fire)
+3. For checks with multiple violation types (e.g. placement + ordering + blank lines), repeat step 2
+   per violation type
+4. If the check has a related check that partitions contexts, list the cross-check file pairs
+5. Write this matrix down (on paper, in a comment, in the plan). Every cell must be filled before
+   declaring done
+
+### While writing code
+
+6. After writing each `if`/`switch`/`return` branch, immediately write the test for both paths
+7. After writing a fixer `fix()` method, immediately write unit tests for every return path (both
+   `null` returns and each `FixResult` shape)
+8. After registering the fixer in `FIXERS`, immediately write the integration test(s) - one per fix
+   type, asserting exact full output
+
+### After all code is written
+
+9. Re-read this entire checklist top to bottom
+10. Verify the matrix from step 2 - trace every cell to a specific test method name
+11. Verify every branch in the source has a test exercising both true and false
+12. Verify every violation test asserts exact count, line numbers, and messages
+13. Run `./gradlew check`
+
+### Context coverage (for checks that handle multiple AST contexts)
+
+When a check registers for multiple token types or handles multiple parent contexts (e.g. CLASS_DEF,
+METHOD_DEF, VARIABLE_DEF), every context must appear in all three test categories:
+
+1. **Clean file**: a correctly formatted example that produces zero violations
+2. **Violation file**: an incorrectly formatted example that produces the expected violation
+3. **Fixer test**: at least one integration test per fix type (not per context, since fixers are
+   text-based and context-agnostic)
+
+If a check has multiple violation types (e.g. same-line placement, blank lines, alphabetical order),
+each violation type needs its own set of clean + violation examples. Use separate violation files per
+violation type to keep them manageable.
+
+**Boundary contexts**: the clean file must also include examples of contexts the check should NOT
+fire on. For example, if a check handles VARIABLE_DEF but skips for-each variables, the clean file
+needs an annotated for-each variable to prove it is not flagged.
+
+### Cross-check testing (for related checks that partition contexts)
+
+When two or more checks divide responsibility over the same token types (e.g. one handles stacked
+annotations on declarations, another handles inline annotations on parameters), run every test
+resource file from each check against ALL related checks. Every file must produce zero violations
+from the other check. This catches context-detection bugs where one check fires in the other's
+territory.
+
+```java
+// AnnotationOwnLineCheck must not fire on any SameLine test files
+assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR + "Clean.java").isEmpty());
+assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR + "Violation.java").isEmpty());
+// ... and vice versa for every file
+```
 
 ### Branch coverage
 

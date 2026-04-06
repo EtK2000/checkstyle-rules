@@ -4,7 +4,8 @@
 
 <suppressions>
 	<!-- Suppress each check in the directory whose test inputs intentionally violate it -->
-	<suppress checks="AnnotationAlphabeticalOrderCheck" files="inputs[\\/]annotation[\\/]" />
+	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]annotationownline[\\/]" />
+	<suppress checks="AnnotationSameLineCheck" files="inputs[\\/]annotationsameline[\\/]" />
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]emptybody[\\/]" />
 	<suppress checks="EmptySwitchCheck" files="inputs[\\/]emptyswitch[\\/]" />
 	<suppress checks="InfiniteEmptyLoopCheck" files="inputs[\\/]emptybody[\\/]" />
@@ -37,7 +38,6 @@
 	<suppress checks="NoBlankLineBetweenSingleCasesCheck" files="inputs[\\/]switchorder[\\/]" />
 	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="OneStatementPerLine" files="inputs[\\/]controlflow[\\/]" />
-	<suppress checks="PreferImportCheck" files="inputs[\\/]annotation[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]astutil[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]multilinecall[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]switchorder[\\/]" />

@@ -75,7 +75,8 @@
 
 	<module name="TreeWalker">
 		<!-- Custom checks -->
-		<module name="com.etk2000.checkstyle.AnnotationAlphabeticalOrderCheck" />
+		<module name="com.etk2000.checkstyle.AnnotationOwnLineCheck" />
+		<module name="com.etk2000.checkstyle.AnnotationSameLineCheck" />
 		<module name="com.etk2000.checkstyle.EmptyBodyCheck">
 			<property name="tokens" value="LITERAL_IF" />
 		</module>

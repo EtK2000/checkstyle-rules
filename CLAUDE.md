@@ -196,25 +196,27 @@
 
 - Always think about weird input or edge cases
 - Tests should cover all such cases
-- Check `docs/` for project-specific guides and conventions. Follow them as a driving process while
-  writing code, not as a post-hoc audit
-- Branch coverage: every conditional/guard must have a dedicated test that exercises it. After
-  writing code, trace each branch and verify it has a test
-- Boundary pairing: for every value a function accepts, write a corresponding rejection test with a
-  "nearby" invalid value. This catches over-matching where the code is too permissive
+- Check `docs/` for project-specific testing guides. If a `docs/testing.md` exists, read it before
+  writing any code and follow it as a driving process, not a post-hoc audit
+- Before writing code: list every input category, plan clean/violation/boundary tests for each, and
+  write the coverage matrix. Every cell must be filled before declaring done
+- While writing code: test each branch immediately after writing it, not after finishing all code
+- After writing code: trace every matrix cell to a test method, verify every branch has both-path
+  tests, verify assertions are exact (counts, positions, messages), then run the full test suite
+- Branch coverage: every conditional/guard must have a dedicated test that exercises it
+- Boundary pairing: for every accepted value, write a rejection test with a "nearby" invalid value
 - Axis coverage: when code handles multiple independent dimensions, test each axis individually.
   Cross-axis tests are only needed when axes interact in the code
-- Integration tests: every entry in a dispatch map/registry must have an end-to-end test.
-  Assert the exact full output, not just spot-check fragments with contains/assertFalse. This
-  catches unintended modifications to lines the test wasn't specifically looking at
+- Cross-check tests: when related components partition the same input space, test every input file
+  against all related components, asserting zero false positives
+- Integration tests: every entry in a dispatch map/registry must have an end-to-end test asserting
+  exact full output, not just spot-checks with contains/assertFalse
 - Only add messages to assertions when they provide non-obvious context (e.g. guard assertions).
   Don't add messages when the test name already describes the expected behavior
 - Never remove test cases without asking. When logic changes cause a test to change behavior (e.g.
   clean becomes violation), move it to the correct file rather than deleting it
-- After ANY code change (including test resources, comments, reordering), run `./gradlew check` to
-  verify nothing is broken. This runs all tests, checkstyle on main code, test code, AND test
-  resources. Do NOT use a subset of tasks like `checkstyleMain checkstyleTest test` -- that misses
-  `checkstyleTestResources` and `validatePlugins`
+- After ANY code change (including test resources, comments, reordering), run the full test/check
+  suite. See `docs/testing.md` for the correct command
 
 # Writing Style
 

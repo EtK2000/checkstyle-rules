@@ -4,6 +4,8 @@ import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
@@ -27,6 +29,17 @@ class AstUtil {
 			return last.getText();
 		}
 		return "";
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	static List<DetailAST> collectAnnotations(@Nonnull DetailAST modifiersOrAnnotations) {
+		final var annotations = new ArrayList<DetailAST>();
+		for (var child = modifiersOrAnnotations.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.ANNOTATION)
+				annotations.add(child);
+		}
+		return annotations;
 	}
 
 	@CheckReturnValue

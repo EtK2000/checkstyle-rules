@@ -84,8 +84,11 @@
 	<module name="LineEnding" />
 
 	<module name="TreeWalker">
-		<!-- Custom: Annotations must be sorted alphabetically -->
-		<module name="com.etk2000.checkstyle.AnnotationAlphabeticalOrderCheck" />
+		<!-- Custom: Stacked annotation formatting (own line, no blank lines, alphabetical) -->
+		<module name="com.etk2000.checkstyle.AnnotationOwnLineCheck" />
+
+		<!-- Custom: Inline annotation formatting (same line, alphabetical) -->
+		<module name="com.etk2000.checkstyle.AnnotationSameLineCheck" />
 
 		<!-- Custom: Class structure must follow defined section order -->
 		<module name="com.etk2000.checkstyle.ClassStructureOrderCheck" />
@@ -268,9 +271,5 @@
 			<property name="validateEnhancedForLoopVariable" value="false" />
 		</module>
 
-		<!-- Annotations on class/method/constructor each on own line -->
-		<module name="AnnotationLocation">
-			<property name="allowSamelineSingleParameterlessAnnotation" value="false" />
-		</module>
 	</module>
 </module>

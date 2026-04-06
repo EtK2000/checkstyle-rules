@@ -103,6 +103,61 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testAnnotationOwnLineBlank() throws Exception {
+		final var file = tempDir.newFile("AnnBlank.java");
+		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@Deprecated\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testAnnotationOwnLineReorder() throws Exception {
+		final var file = tempDir.newFile("AnnReorder.java");
+		Files.writeString(file.toPath(), "class T {\n\t@Override\n\t@Deprecated\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@Deprecated\n\t@Override\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testAnnotationOwnLineSplit() throws Exception {
+		final var file = tempDir.newFile("AnnOwn.java");
+		Files.writeString(file.toPath(), "class T {\n\t@Override @Deprecated void method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@Deprecated\n\t@Override\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testAnnotationSameLineInlineReorder() throws Exception {
+		final var file = tempDir.newFile("AnnReord.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid method(@Override @Deprecated String param) {}\n}");
+
+		assertEquals(
+				"class T {\n\tvoid method(@Deprecated @Override String param) {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testAnnotationSameLineJoin() throws Exception {
+		final var file = tempDir.newFile("AnnSame.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid method(\n\t\t\t@Deprecated\n\t\t\tString param\n\t) {}\n}");
+
+		assertEquals(
+				"class T {\n\tvoid method(\n\t\t\t@Deprecated String param\n\t) {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
 	public void testApplyFixesSkipsUnknownViolations() throws Exception {
 		final var file = tempDir.newFile("Unknown.java");
 		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1, 2,};\n}");
