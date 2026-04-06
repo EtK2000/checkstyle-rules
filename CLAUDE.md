@@ -196,6 +196,8 @@
 
 - Always think about weird input or edge cases
 - Tests should cover all such cases
+- Check `docs/` for project-specific guides and conventions. Follow them as a driving process while
+  writing code, not as a post-hoc audit
 - Branch coverage: every conditional/guard must have a dedicated test that exercises it. After
   writing code, trace each branch and verify it has a test
 - Boundary pairing: for every value a function accepts, write a corresponding rejection test with a
