@@ -104,14 +104,16 @@ public class PreferSpecificApiCheckTest {
 	@Test
 	public void testCollectionsCopyOfViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiCopyOfViolation.java");
-		assertEquals(3, violations.size());
+		assertEquals(4, violations.size());
 
 		var i = 0;
-		assertEquals(10, violations.get(i).getLine());
+		assertEquals(11, violations.get(i).getLine());
+		assertEquals("Use 'List.of(...)' instead of 'Collections.unmodifiableList(...)'.", violations.get(i++).getMessage());
+		assertEquals(15, violations.get(i).getLine());
 		assertEquals("Use 'List.copyOf(...)' instead of 'Collections.unmodifiableList(...)'.", violations.get(i++).getMessage());
-		assertEquals(14, violations.get(i).getLine());
+		assertEquals(19, violations.get(i).getLine());
 		assertEquals("Use 'Map.copyOf(...)' instead of 'Collections.unmodifiableMap(...)'.", violations.get(i++).getMessage());
-		assertEquals(18, violations.get(i).getLine());
+		assertEquals(23, violations.get(i).getLine());
 		assertEquals("Use 'Set.copyOf(...)' instead of 'Collections.unmodifiableSet(...)'.", violations.get(i++).getMessage());
 	}
 
@@ -136,6 +138,17 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testCollectionsSortViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiCollectionsSortViolation.java");
+		assertEquals(2, violations.size());
+
+		assertEquals(9, violations.get(0).getLine());
+		assertEquals("Use '.sort(...)' instead of 'Collections.sort(...)'.", violations.get(0).getMessage());
+		assertEquals(13, violations.get(1).getLine());
+		assertEquals("Use '.sort(...)' instead of 'Collections.sort(...)'.", violations.get(1).getMessage());
+	}
+
+	@Test
 	public void testCollectToListViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiToListViolation.java");
 		assertEquals(2, violations.size());
@@ -144,13 +157,6 @@ public class PreferSpecificApiCheckTest {
 		assertEquals("Use '.toList()' instead of '.collect(Collectors.toList())'.", violations.get(0).getMessage());
 		assertEquals(16, violations.get(1).getLine());
 		assertEquals("Use '.toList()' instead of '.collect(Collectors.toUnmodifiableList())'.", violations.get(1).getMessage());
-	}
-
-	@Test
-	public void testEqualsEmptyViolation() throws Exception {
-		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiEqualsEmptyViolation.java");
-		assertEquals(1, violations.size());
-		assertEquals("Use '.isEmpty()' instead of '.equals(\"\")'.", violations.getFirst().getMessage());
 	}
 
 	@Test
@@ -171,7 +177,6 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(12, violations.size());
 
 		var i = 0;
-		// methods are alphabetical in the input file
 		assertEquals(5, violations.get(i).getLine());
 		assertEquals("Use '!.contains(...)' instead of '.indexOf(...) == -1'.", violations.get(i++).getMessage());
 		assertEquals(10, violations.get(i).getLine());
@@ -220,11 +225,22 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testMapChainViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiMapChainViolation.java");
+		assertEquals(2, violations.size());
+
+		assertEquals(7, violations.get(0).getLine());
+		assertEquals("Use '.containsKey(...)' instead of '.keySet().contains(...)'.", violations.get(0).getMessage());
+		assertEquals(12, violations.get(1).getLine());
+		assertEquals("Use '.containsValue(...)' instead of '.values().contains(...)'.", violations.get(1).getMessage());
+	}
+
+	@Test
 	public void testMinSdkAllowsCollectionsCopyOf() throws Exception {
 		final var violations = BaseCheckTest.runCheck(
 				PreferSpecificApiCheck.class, DIR + "InputSpecificApiCopyOfViolation.java", "minSdk", "31"
 		);
-		assertEquals(3, violations.size());
+		assertEquals(4, violations.size());
 	}
 
 	@Test
@@ -236,11 +252,19 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testMinSdkAllowsCollectionsSort() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiCollectionsSortViolation.java", "minSdk", "24"
+		);
+		assertEquals(2, violations.size());
+	}
+
+	@Test
 	public void testMinSdkAllowsStreamForEach() throws Exception {
 		final var violations = BaseCheckTest.runCheck(
-				PreferSpecificApiCheck.class, DIR + "InputSpecificApiStreamForEachViolation.java", "minSdk", "24"
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiStreamViolation.java", "minSdk", "24"
 		);
-		assertEquals(1, violations.size());
+		assertEquals(3, violations.size());
 	}
 
 	@Test
@@ -268,6 +292,14 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testMinSdkSuppressesCollectionsSort() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiCollectionsSortViolation.java", "minSdk", "23"
+		);
+		assertTrue(violations.isEmpty());
+	}
+
+	@Test
 	public void testMinSdkSuppressesRemoveCheck() throws Exception {
 		final var violations = BaseCheckTest.runCheck(
 				PreferSpecificApiCheck.class, DIR + "InputSpecificApiRemoveViolation.java", "minSdk", "34"
@@ -278,9 +310,10 @@ public class PreferSpecificApiCheckTest {
 	@Test
 	public void testMinSdkSuppressesStreamForEach() throws Exception {
 		final var violations = BaseCheckTest.runCheck(
-				PreferSpecificApiCheck.class, DIR + "InputSpecificApiStreamForEachViolation.java", "minSdk", "23"
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiStreamViolation.java", "minSdk", "23"
 		);
-		assertTrue(violations.isEmpty());
+		// stream().count() and stream().findFirst().isPresent() have no minSdk gate, only forEach does
+		assertEquals(2, violations.size());
 	}
 
 	@Test
@@ -297,7 +330,7 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(9, violations.getFirst().getLine());
 		assertEquals("Use '.getFirst()' instead of '.get(0)'.", violations.getFirst().getMessage());
 
-		// chained call resolved via reflection: Collections.unmodifiableList returns List
+		// chained call resolved via reflection: Collections.synchronizedList returns List
 		assertEquals(13, violations.get(1).getLine());
 		assertEquals("Use '.getFirst()' instead of '.get(0)'.", violations.get(1).getMessage());
 
@@ -327,9 +360,26 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
-	public void testStreamForEachViolation() throws Exception {
-		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiStreamForEachViolation.java");
-		assertEquals(1, violations.size());
-		assertEquals("Use '.forEach(...)' instead of '.stream().forEach(...)'.", violations.getFirst().getMessage());
+	public void testStreamViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiStreamViolation.java");
+		assertEquals(3, violations.size());
+
+		assertEquals(7, violations.get(0).getLine());
+		assertEquals("Use '.size()' instead of '.stream().count()'.", violations.get(0).getMessage());
+		assertEquals(11, violations.get(1).getLine());
+		assertEquals("Use '!.isEmpty()' instead of '.stream().findFirst().isPresent()'.", violations.get(1).getMessage());
+		assertEquals(16, violations.get(2).getLine());
+		assertEquals("Use '.forEach(...)' instead of '.stream().forEach(...)'.", violations.get(2).getMessage());
+	}
+
+	@Test
+	public void testStringMethodViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiStringMethodViolation.java");
+		assertEquals(2, violations.size());
+
+		assertEquals(5, violations.get(0).getLine());
+		assertEquals("Use '.isEmpty()' instead of '.equals(\"\")'.", violations.get(0).getMessage());
+		assertEquals(10, violations.get(1).getLine());
+		assertEquals("Use '.replace(...)' instead of '.replaceAll(...)'.", violations.get(1).getMessage());
 	}
 }

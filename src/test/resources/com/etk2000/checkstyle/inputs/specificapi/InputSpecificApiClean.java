@@ -10,6 +10,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -90,6 +91,21 @@ class InputSpecificApiClean {
 			System.out.println("found");
 	}
 
+	void containsKeyAlready(Map<String, String> map) {
+		if (map.containsKey("key"))
+			System.out.println("found");
+	}
+
+	void containsValueAlready(Map<String, String> map) {
+		if (map.containsValue("value"))
+			System.out.println("found");
+	}
+
+	void entrySetContains(Map<String, String> map) {
+		if (map.entrySet().contains(Map.entry("k", "v")))
+			System.out.println("found");
+	}
+
 	void equalsNonEmpty(String s) {
 		if (s.equals("hello"))
 			System.out.println("hello");
@@ -162,13 +178,25 @@ class InputSpecificApiClean {
 			System.out.println("empty");
 	}
 
+	void keySetSize(Map<String, String> map) {
+		System.out.println(map.keySet().size());
+	}
+
 	void lengthComparisonNotEmpty(StringBuilder sb) {
 		if (sb.length() > 1)
 			System.out.println("more than one char");
 	}
 
+	void listSortAlready(List<String> list) {
+		list.sort(Comparator.naturalOrder());
+	}
+
 	void mapRemoveZero(Map<Integer, String> map) {
 		map.remove(0);
+	}
+
+	void parallelStreamCount(List<String> list) {
+		long count = list.parallelStream().count();
 	}
 
 	void parallelStreamForEach(List<String> list) {
@@ -181,6 +209,18 @@ class InputSpecificApiClean {
 
 	void removeLast(List<String> list) {
 		list.removeLast();
+	}
+
+	void replaceAllWithRegex(String s) {
+		String result = s.replaceAll("foo.*bar", "baz");
+	}
+
+	void replaceAllWithVariable(String s, String pattern) {
+		String result = s.replaceAll(pattern, "baz");
+	}
+
+	void replaceAlready(String s) {
+		String result = s.replace("foo", "bar");
 	}
 
 	void sequentialAccess(List<String> list) {
@@ -212,6 +252,15 @@ class InputSpecificApiClean {
 	void sizeEqualsTwo(List<String> list) {
 		if (list.size() == 2)
 			System.out.println("pair");
+	}
+
+	void streamFilterCount(List<String> list) {
+		long count = list.stream().filter(s -> !s.isEmpty()).count();
+	}
+
+	void streamFilterFindFirstIsPresent(List<String> list) {
+		if (list.stream().filter(s -> !s.isEmpty()).findFirst().isPresent())
+			System.out.println("found");
 	}
 
 	void streamFilterForEach(List<String> list) {

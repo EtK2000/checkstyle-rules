@@ -111,6 +111,18 @@ the full pipeline (Checkstyle detection, column conversion, fixer application, o
 Assert the exact full output string, not fragments via `contains()`. This catches unintended
 modifications to lines the test wasn't looking at.
 
+### Test resource consolidation
+
+Never create a violation file with only one violation. Group related violations into shared files by
+rule category (e.g. all stream simplifications in one file, all Collections factory replacements in
+one file). This keeps the test suite manageable and makes it obvious when a rule fires on the wrong
+input.
+
+When violations in the same file have different minSdk gates, the minSdk boundary tests must account
+for the ungated violations still firing. For example, a file with both `stream().count()` (no gate)
+and `stream().forEach()` (API 24+) should expect 2 violations at minSdk 23 (only forEach suppressed)
+and 3 at minSdk 24 (all fire).
+
 ### Clean file coverage
 
 For check tests: the clean file is just as important as the violation file. It must cover every

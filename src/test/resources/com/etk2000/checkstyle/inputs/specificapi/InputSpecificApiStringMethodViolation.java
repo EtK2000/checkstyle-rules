@@ -1,8 +1,12 @@
 package com.etk2000.checkstyle.inputs.specificapi;
 
-class InputSpecificApiEqualsEmptyViolation {
+class InputSpecificApiStringMethodViolation {
 	void equalsEmpty(String s) {
 		if (s.equals("")) // violation: use .isEmpty()
 			System.out.println("empty");
+	}
+
+	void replaceAllLiteral(String s) {
+		String result = s.replaceAll("foo", "bar"); // violation: use .replace(...)
 	}
 }

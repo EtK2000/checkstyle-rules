@@ -133,6 +133,14 @@ public class PreferSpecificApiFixerTest {
 	}
 
 	@Test
+	public void testCollectionsUnmodifiableListAsList() {
+		final var lines = new ArrayList<>(List.of("\t\tList<String> list = Collections.unmodifiableList(Arrays.asList(\"a\", \"b\"));"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tList<String> list = List.copyOf(Arrays.asList(\"a\", \"b\"));", result.replacement().getFirst());
+	}
+
+	@Test
 	public void testCollectionsUnmodifiableMap() {
 		final var lines = new ArrayList<>(List.of("\t\tMap<String, String> result = Collections.unmodifiableMap(map);"));
 		final var result = fixer.fix(lines, 0, 0);
@@ -173,9 +181,33 @@ public class PreferSpecificApiFixerTest {
 	}
 
 	@Test
+	public void testKeySetContains() {
+		final var lines = new ArrayList<>(List.of("\t\tif (map.keySet().contains(\"key\"))"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (map.containsKey(\"key\"))", result.replacement().getFirst());
+	}
+
+	@Test
 	public void testNoMatch() {
 		final var lines = new ArrayList<>(List.of("\t\tSystem.out.println(\"hello\");"));
 		assertNull(fixer.fix(lines, 0, 0));
+	}
+
+	@Test
+	public void testReplaceAll() {
+		final var lines = new ArrayList<>(List.of("\t\tString result = s.replaceAll(\"foo\", \"bar\");"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tString result = s.replace(\"foo\", \"bar\");", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testStreamCount() {
+		final var lines = new ArrayList<>(List.of("\t\tlong count = list.stream().count();"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tlong count = list.size();", result.replacement().getFirst());
 	}
 
 	@Test
@@ -184,5 +216,13 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tlist.forEach(System.out::println);", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testValuesContains() {
+		final var lines = new ArrayList<>(List.of("\t\tif (map.values().contains(\"value\"))"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (map.containsValue(\"value\"))", result.replacement().getFirst());
 	}
 }

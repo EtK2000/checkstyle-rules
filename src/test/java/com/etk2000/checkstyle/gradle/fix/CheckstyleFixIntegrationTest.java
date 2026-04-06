@@ -247,6 +247,39 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferSpecificApiMapChain() throws Exception {
+		final var file = tempDir.newFile("MapChain.java");
+		Files.writeString(file.toPath(), "import java.util.Map;\nclass T {\n\tvoid run(Map<String, String> map) {\n\t\tif (map.keySet().contains(\"k\"))\n\t\t\treturn;\n\t}\n}");
+
+		assertEquals(
+				"import java.util.Map;\nclass T {\n\tvoid run(Map<String, String> map) {\n\t\tif (map.containsKey(\"k\"))\n\t\t\treturn;\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferSpecificApiReplaceAll() throws Exception {
+		final var file = tempDir.newFile("ReplAll.java");
+		Files.writeString(file.toPath(), "class T {\n\tString run(String s) {\n\t\treturn s.replaceAll(\"foo\", \"bar\");\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tString run(String s) {\n\t\treturn s.replace(\"foo\", \"bar\");\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferSpecificApiStreamCount() throws Exception {
+		final var file = tempDir.newFile("StreamCnt.java");
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tlong run(List<String> list) {\n\t\treturn list.stream().count();\n\t}\n}");
+
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tlong run(List<String> list) {\n\t\treturn list.size();\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
 	public void testPreferSpecificApiStreamForEach() throws Exception {
 		final var file = tempDir.newFile("StreamFE.java");
 		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.stream().forEach(System.out::println);\n\t}\n}");

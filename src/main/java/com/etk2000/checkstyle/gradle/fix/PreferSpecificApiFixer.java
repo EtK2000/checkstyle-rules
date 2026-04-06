@@ -141,6 +141,51 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	}
 
 	/**
+	 * {@code .keySet().contains(k)} -> {@code .containsKey(k)},
+	 * {@code .values().contains(v)} -> {@code .containsValue(v)}.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixMapChain(@Nonnull String line) {
+		final String[][] replacements = {
+				{".keySet().contains(", ".containsKey("},
+				{".values().contains(", ".containsValue("}
+		};
+		for (final var r : replacements) {
+			final var idx = line.indexOf(r[0]);
+			if (idx >= 0)
+				return line.substring(0, idx) + r[1] + line.substring(idx + r[0].length());
+		}
+		return null;
+	}
+
+	/**
+	 * {@code .replaceAll("literal", x)} -> {@code .replace("literal", x)}.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixReplaceAll(@Nonnull String line) {
+		final var pattern = ".replaceAll(";
+		final var idx = line.indexOf(pattern);
+		if (idx < 0)
+			return null;
+		return line.substring(0, idx) + ".replace(" + line.substring(idx + pattern.length());
+	}
+
+	/**
+	 * {@code .stream().count()} -> {@code .size()}.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixStreamCount(@Nonnull String line) {
+		final var pattern = ".stream().count()";
+		final var idx = line.indexOf(pattern);
+		if (idx < 0)
+			return null;
+		return line.substring(0, idx) + ".size()" + line.substring(idx + pattern.length());
+	}
+
+	/**
 	 * {@code .stream().forEach(} -> {@code .forEach(}.
 	 */
 	@CheckReturnValue
@@ -166,6 +211,12 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 			result = fixCollectToList(line);
 		if (result == null)
 			result = fixEqualsEmpty(line);
+		if (result == null)
+			result = fixMapChain(line);
+		if (result == null)
+			result = fixReplaceAll(line);
+		if (result == null)
+			result = fixStreamCount(line);
 		if (result == null)
 			result = fixStreamForEach(line);
 
