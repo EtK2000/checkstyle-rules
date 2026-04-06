@@ -44,7 +44,7 @@ class InputRedundantSuffixViolation {
 
 	// cast expression
 	void castExpression() {
-		long x = (long) 0L; // violation: redundant L suffix
+		final long x = (long) 0L; // violation: redundant L suffix
 	}
 
 	// compound assignment
@@ -55,10 +55,10 @@ class InputRedundantSuffixViolation {
 
 	// local variable declarations
 	void localVariables() {
-		long a = 0L; // violation: redundant L suffix
-		long b = 1_000L; // violation: redundant L suffix
-		float c = 0f; // violation: redundant f suffix
-		double d = 0.0d; // violation: redundant d suffix
+		final long a = 0L; // violation: redundant L suffix
+		final long b = 1_000L; // violation: redundant L suffix
+		final float c = 0f; // violation: redundant f suffix
+		final double d = 0.0d; // violation: redundant d suffix
 	}
 
 	void methodArgDecimalD() {
@@ -67,7 +67,7 @@ class InputRedundantSuffixViolation {
 
 	// new array expression
 	void newArrayExpression() {
-		long[] arr = new long[]{0L}; // violation: redundant L suffix
+		final long[] arr = new long[]{0L}; // violation: redundant L suffix
 	}
 
 	// reassignment
@@ -93,10 +93,10 @@ class InputRedundantSuffixViolation {
 
 	// ternary in typed variable
 	void ternary(boolean flag) {
-		long x = flag ? 0L : 1L; // violation x2: redundant L suffix
+		final long x = flag ? 0L : 1L; // violation x2: redundant L suffix
 	}
 
 	void varDecimalD() {
-		var x = 0.0d; // violation: redundant d suffix (0.0 is already double)
+		final var x = 0.0d; // violation: redundant d suffix (0.0 is already double)
 	}
 }

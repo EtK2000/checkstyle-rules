@@ -53,7 +53,7 @@ class InputAnnotationSameLineViolation {
 
 	// violation: lambda parameter annotation on separate line
 	void lambda() {
-		Consumer<String> c = (
+		final Consumer<String> c = (
 				@A // violation: Annotation 'A' must be on the same line as the declaration.
 				String s
 		) -> {};

@@ -10,10 +10,10 @@ class InputPreferVarGenericReturnClean {
 	}
 
 	void autoDetectedGenericExplicitType() {
-		String s = cast("hello");
+		final String s = cast("hello");
 	}
 
 	void inferableFromParamType() {
-		var s = findByType(String.class);
+		final var s = findByType(String.class);
 	}
 }

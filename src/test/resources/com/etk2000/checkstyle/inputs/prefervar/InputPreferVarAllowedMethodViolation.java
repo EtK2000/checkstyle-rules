@@ -6,18 +6,18 @@ class InputPreferVarAllowedMethodViolation {
 	}
 
 	void allowedMethodTypeArgsExplicitType() {
-		String s = InputPreferVarAllowedMethodViolation.<String>genericMethod(1); // violation: prefer explicit type over type args
+		final String s = InputPreferVarAllowedMethodViolation.<String>genericMethod(1); // violation: prefer explicit type over type args
 	}
 
 	void allowedMethodTypeArgsVar() {
-		var s = InputPreferVarAllowedMethodViolation.<String>genericMethod(1); // violation: prefer explicit type over type args
+		final var s = InputPreferVarAllowedMethodViolation.<String>genericMethod(1); // violation: prefer explicit type over type args
 	}
 
 	void allowedMethodVar() {
-		var s = genericMethod(1); // violation: var with generic return type
+		final var s = genericMethod(1); // violation: var with generic return type
 	}
 
 	void nonAllowedMethodCalls() {
-		String s = String.valueOf(42); // violation: local must use var
+		final String s = String.valueOf(42); // violation: local must use var
 	}
 }

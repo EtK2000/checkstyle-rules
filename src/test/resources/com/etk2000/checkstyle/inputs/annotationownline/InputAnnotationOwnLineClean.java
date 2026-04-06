@@ -68,7 +68,7 @@ class InputAnnotationOwnLineClean {
 
 	// lambda parameter annotation is NOT checked (inline context, boundary)
 	void lambda() {
-		Consumer<String> c = (@A String s) -> {};
+		final Consumer<String> c = (@A String s) -> {};
 	}
 
 	// stacked on local variable

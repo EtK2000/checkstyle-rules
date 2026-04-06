@@ -5,10 +5,10 @@ import java.util.List;
 
 class InputPreferVarChainClean {
 	void chainClassLevelTypeParam(List<String> list) {
-		var first = Collections.unmodifiableList(list).getFirst();
+		final var first = Collections.unmodifiableList(list).getFirst();
 	}
 
 	void chainNonGeneric(List<String> list) {
-		var size = Collections.unmodifiableList(list).size();
+		final var size = Collections.unmodifiableList(list).size();
 	}
 }

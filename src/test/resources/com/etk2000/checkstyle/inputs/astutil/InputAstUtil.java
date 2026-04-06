@@ -9,7 +9,7 @@ class InputAstUtil {
 	java.util.List qualifiedField; // intentional FQN: tested by AstUtilTest.testTypeTextQualified
 
 	void castAndResolve(Object obj) {
-		String s = (String) obj;
+		final String s = (String) obj;
 		System.out.println(s);
 	}
 
@@ -26,6 +26,6 @@ class InputAstUtil {
 	) {}
 
 	void varLocal() {
-		var x = "hello";
+		final var x = "hello";
 	}
 }

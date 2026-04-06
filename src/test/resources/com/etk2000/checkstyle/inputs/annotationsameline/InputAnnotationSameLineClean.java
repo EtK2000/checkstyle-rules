@@ -37,7 +37,7 @@ class InputAnnotationSameLineClean {
 
 	// clean: lambda parameter with inline annotation
 	void lambda() {
-		Consumer<String> c = (@A String s) -> {};
+		final Consumer<String> c = (@A String s) -> {};
 	}
 
 	// clean: parameter annotations inline with declaration

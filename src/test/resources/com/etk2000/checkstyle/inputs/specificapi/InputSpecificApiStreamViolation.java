@@ -4,7 +4,7 @@ import java.util.List;
 
 class InputSpecificApiStreamViolation {
 	void streamCount(List<String> list) {
-		long count = list.stream().count(); // violation: use .size()
+		final var count = list.stream().count(); // violation: use .size()
 	}
 
 	void streamFindFirstIsPresent(List<String> list) {

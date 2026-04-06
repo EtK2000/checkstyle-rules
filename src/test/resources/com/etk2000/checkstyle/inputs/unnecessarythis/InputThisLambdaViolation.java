@@ -4,6 +4,6 @@ class InputThisLambdaViolation {
 	int field;
 
 	void lambdaWithoutShadowing() {
-		Runnable r = () -> System.out.println(this.field); // violation: no shadowing
+		final Runnable r = () -> System.out.println(this.field); // violation: no shadowing
 	}
 }

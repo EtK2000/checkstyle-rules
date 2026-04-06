@@ -30,7 +30,7 @@ class InputPatternInstanceofViolation {
 
 	void castToLocal(Object obj) {
 		if (obj instanceof String) { // violation: cast to local
-			String s = (String) obj;
+			final var s = (String) obj;
 			System.out.println(s);
 		}
 	}

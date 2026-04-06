@@ -5,7 +5,7 @@ import java.util.function.Supplier;
 
 class InputPreferLambdaClean {
 	void abstractClass() {
-		var obj = new AbstractClass() {
+		final var obj = new AbstractClass() {
 			@Override
 			public void doWork() {
 				System.out.println("work");
@@ -14,7 +14,7 @@ class InputPreferLambdaClean {
 	}
 
 	void complexAnonymous() {
-		var r = new Runnable() {
+		final var r = new Runnable() {
 			int count = 0;
 
 			@Override
@@ -25,12 +25,12 @@ class InputPreferLambdaClean {
 	}
 
 	void lambdas() {
-		Runnable r = () -> System.out.println("hello");
-		Supplier<String> s = () -> "world";
+		final Runnable r = () -> System.out.println("hello");
+		final Supplier<String> s = () -> "world";
 	}
 
 	void methodReferenceToThis() {
-		Runnable r = new Runnable() {
+		final Runnable r = new Runnable() {
 			@Override
 			public void run() {
 				func(this);
@@ -39,7 +39,7 @@ class InputPreferLambdaClean {
 	}
 
 	void methodUsingSuper() {
-		Runnable r = new Runnable() {
+		final Runnable r = new Runnable() {
 			@Override
 			public void run() {
 				super.toString();
@@ -48,7 +48,7 @@ class InputPreferLambdaClean {
 	}
 
 	void nonFunctionalInterface() {
-		var it = new Iterator<String>() {
+		final var it = new Iterator<String>() {
 			@Override
 			public boolean hasNext() {
 				return false;

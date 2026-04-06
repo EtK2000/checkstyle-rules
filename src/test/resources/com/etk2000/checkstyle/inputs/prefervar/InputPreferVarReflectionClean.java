@@ -8,29 +8,29 @@ class InputPreferVarReflectionClean {
 	List<String> field = List.of();
 
 	void explicitTypeOnGeneric() {
-		List<String> list = Collections.emptyList();
-		Optional<Integer> opt = Optional.empty();
+		final List<String> list = Collections.emptyList();
+		final Optional<Integer> opt = Optional.empty();
 	}
 
 	void inferableFromArgs() {
-		var list = List.of("a", "b");
-		var min = Collections.min(list);
+		final var list = List.of("a", "b");
+		final var min = Collections.min(list);
 	}
 
 	void instanceCallClassLevelTypeParam(List<String> items) {
-		var first = items.getFirst();
+		final var first = items.getFirst();
 	}
 
 	void instanceCallViaField() {
-		var first = field.getFirst();
+		final var first = field.getFirst();
 	}
 
 	void instanceCallViaLocal() {
 		final var list = List.of("a");
-		var first = list.getFirst();
+		final var first = list.getFirst();
 	}
 
 	void instanceCallViaParam(List<String> items) {
-		var size = items.size();
+		final var size = items.size();
 	}
 }

@@ -17,25 +17,25 @@ class InputPreferVarClean {
 	}
 
 	void localVariables() {
-		var x = 42;
+		final var x = 42;
 		final var s = "hello";
-		var list = List.of(1, 2, 3);
-		String nullStr = null;
-		int uninitialized;
+		final var list = List.of(1, 2, 3);
+		final String nullStr = null;
+		final int uninitialized;
 		final int[] numbers = {1, 2, 3};
 		final int[][] matrix = {{1, 2}, {3, 4}};
 		final String[] names = {"a", "b"};
-		var sized = new String[5];
-		Runnable r = () -> System.out.println("hello");
-		Supplier<String> s2 = () -> "world";
-		Function<String, Integer> f = String::length;
-		Runnable anon = new Runnable() {
+		final var sized = new String[5];
+		final Runnable r = () -> System.out.println("hello");
+		final Supplier<String> s2 = () -> "world";
+		final Function<String, Integer> f = String::length;
+		final Runnable anon = new Runnable() {
 			@Override
 			public void run() {
 				System.out.println("anonymous");
 			}
 		};
-		var complexAnon = new Runnable() {
+		final var complexAnon = new Runnable() {
 			int count = 0;
 
 			@Override

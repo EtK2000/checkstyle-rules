@@ -7,6 +7,6 @@ class InputSpecificApiStringMethodViolation {
 	}
 
 	void replaceAllLiteral(String s) {
-		String result = s.replaceAll("foo", "bar"); // violation: use .replace(...)
+		final var result = s.replaceAll("foo", "bar"); // violation: use .replace(...)
 	}
 }

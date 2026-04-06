@@ -2,7 +2,7 @@ package com.etk2000.checkstyle.inputs.prefix;
 
 class InputPrefixViolation {
 	void bracelessElse(boolean flag) {
-		int i = 0;
+		var i = 0;
 		if (flag)
 			++i;
 		else
@@ -10,13 +10,13 @@ class InputPrefixViolation {
 	}
 
 	void bracelessIf(boolean flag) {
-		int i = 0;
+		var i = 0;
 		if (flag)
 			i++; // violation: Use prefix increment (++x) instead of postfix (x++).
 	}
 
 	void bracelessWhile(boolean flag) {
-		int i = 0;
+		var i = 0;
 		while (flag)
 			i--; // violation: Use prefix decrement (--x) instead of postfix (x--).
 	}
@@ -28,7 +28,7 @@ class InputPrefixViolation {
 	}
 
 	void standaloneStatement() {
-		int i = 0;
+		var i = 0;
 		i++;
 		i--;
 	}

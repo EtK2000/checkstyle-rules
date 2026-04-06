@@ -61,6 +61,7 @@ tasks.register('checkstyleTestResources', Checkstyle) {
 	classpath = files()
 	configFile = file('config/checkstyle/checkstyle-test-resources.xml')
 	configDirectory = file('config/checkstyle')
+	configProperties = ['minSdk': String.valueOf(Integer.MAX_VALUE)]
 }
 
 tasks.named('check') {

@@ -8,7 +8,7 @@ class InputCaseBracesClean {
 				break;
 
 			case 2: {
-				int y = 1;
+				final var y = 1;
 				System.out.println(y);
 				break;
 			}
@@ -23,7 +23,7 @@ class InputCaseBracesClean {
 				break;
 
 			default: {
-				int z = 2;
+				final var z = 2;
 				System.out.println(z);
 				break;
 			}

@@ -8,7 +8,7 @@ class InputPreferVarAllowedMethodClean {
 	}
 
 	void allowedMethodExplicitType() {
-		String s = genericMethod(1);
-		List<Integer> list = genericMethod(2);
+		final String s = genericMethod(1);
+		final List<Integer> list = genericMethod(2);
 	}
 }

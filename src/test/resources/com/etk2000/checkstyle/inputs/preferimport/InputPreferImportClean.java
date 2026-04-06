@@ -21,7 +21,7 @@ class InputPreferImportClean
 
 	List<String> method(Set<Integer> param)
 			throws IOException {
-		List<String> local = List.of("a");
+		final var local = List.of("a");
 		return local;
 	}
 }

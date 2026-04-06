@@ -13,7 +13,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 class InputSpecificApiClean {
@@ -74,31 +73,31 @@ class InputSpecificApiClean {
 	}
 
 	void collectionsCopyOfAlreadyClean(List<String> list) {
-		List<String> result = List.copyOf(list);
+		final var result = List.copyOf(list);
 	}
 
 	void collectionsEmptyListAlreadyClean() {
-		List<String> list = List.of();
+		final var list = List.of();
 	}
 
 	void collectionsSynchronizedList(List<String> list) {
-		List<String> result = Collections.synchronizedList(list);
+		final var result = Collections.synchronizedList(list);
 	}
 
 	void collectToSet(List<String> list) {
-		Set<String> result = list.stream()
+		final var result = list.stream()
 				.filter(s -> !s.isEmpty())
 				.collect(Collectors.toSet());
 	}
 
 	void collectToUnmodifiableSet(List<String> list) {
-		Set<String> result = list.stream()
+		final var result = list.stream()
 				.filter(s -> !s.isEmpty())
 				.collect(Collectors.toUnmodifiableSet());
 	}
 
 	void collectWithCustomCollector(List<String> list) {
-		String result = list.stream()
+		final var result = list.stream()
 				.collect(Collectors.joining(", "));
 	}
 
@@ -212,7 +211,7 @@ class InputSpecificApiClean {
 	}
 
 	void parallelStreamCount(List<String> list) {
-		long count = list.parallelStream().count();
+		final var count = list.parallelStream().count();
 	}
 
 	void parallelStreamForEach(List<String> list) {
@@ -228,15 +227,15 @@ class InputSpecificApiClean {
 	}
 
 	void replaceAllWithRegex(String s) {
-		String result = s.replaceAll("foo.*bar", "baz");
+		final var result = s.replaceAll("foo.*bar", "baz");
 	}
 
 	void replaceAllWithVariable(String s, String pattern) {
-		String result = s.replaceAll(pattern, "baz");
+		final var result = s.replaceAll(pattern, "baz");
 	}
 
 	void replaceAlready(String s) {
-		String result = s.replace("foo", "bar");
+		final var result = s.replace("foo", "bar");
 	}
 
 	void sequentialAccess(List<String> list) {
@@ -271,7 +270,7 @@ class InputSpecificApiClean {
 	}
 
 	void streamFilterCount(List<String> list) {
-		long count = list.stream().filter(s -> !s.isEmpty()).count();
+		final var count = list.stream().filter(s -> !s.isEmpty()).count();
 	}
 
 	void streamFilterFindFirstIsPresent(List<String> list) {
@@ -284,7 +283,7 @@ class InputSpecificApiClean {
 	}
 
 	void toListDirect(List<String> list) {
-		List<String> result = list.stream()
+		final var result = list.stream()
 				.filter(s -> !s.isEmpty())
 				.toList();
 	}

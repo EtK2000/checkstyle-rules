@@ -84,14 +84,14 @@ class InputRedundantSuffixClean {
 
 	// ternary in var: suffix determines inferred type
 	void ternaryInVar(boolean flag) {
-		var x = flag ? 0L : 1;
+		final var x = flag ? 0L : 1;
 	}
 
 	// var declarations: suffix determines the inferred type
 	void varDeclarations() {
-		var a = 0L;
-		var b = 0f;
-		var c = 0d;
-		var d = 1.5f;
+		final var a = 0L;
+		final var b = 0f;
+		final var c = 0d;
+		final var d = 1.5f;
 	}
 }

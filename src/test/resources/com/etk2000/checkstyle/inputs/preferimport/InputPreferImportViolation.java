@@ -13,7 +13,7 @@ class InputPreferImportViolation
 
 	java.util.List<String> method(java.util.Set<Integer> param) // violation: qualified return type and param type
 			throws java.io.IOException { // violation: qualified throws
-		java.util.List<String> local = null; // violation: qualified local type
+		final java.util.List<String> local = null; // violation: qualified local type
 		return local;
 	}
 
@@ -22,6 +22,6 @@ class InputPreferImportViolation
 	}
 
 	void newExpression() {
-		var list = new java.util.ArrayList<String>(); // violation: qualified new
+		final var list = new java.util.ArrayList<String>(); // violation: qualified new
 	}
 }

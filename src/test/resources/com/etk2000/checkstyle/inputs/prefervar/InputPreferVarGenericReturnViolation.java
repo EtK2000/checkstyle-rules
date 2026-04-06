@@ -10,10 +10,10 @@ class InputPreferVarGenericReturnViolation {
 	}
 
 	void autoDetectedGenericVar() {
-		var s = cast("hello"); // violation: var with generic return type
+		final var s = cast("hello"); // violation: var with generic return type
 	}
 
 	void nonGenericMethod() {
-		String s = nonGeneric(); // violation: local must use var
+		final String s = nonGeneric(); // violation: local must use var
 	}
 }

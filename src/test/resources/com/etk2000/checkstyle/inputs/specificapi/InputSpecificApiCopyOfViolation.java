@@ -8,18 +8,18 @@ import java.util.Set;
 
 class InputSpecificApiCopyOfViolation {
 	void unmodifiableAsList() {
-		List<String> list = Collections.unmodifiableList(Arrays.asList("a", "b")); // violation: use List.of(...)
+		final var list = Collections.unmodifiableList(Arrays.asList("a", "b")); // violation: use List.of(...)
 	}
 
 	void unmodifiableList(List<String> list) {
-		List<String> result = Collections.unmodifiableList(list); // violation: use List.copyOf(...)
+		final var result = Collections.unmodifiableList(list); // violation: use List.copyOf(...)
 	}
 
 	void unmodifiableMap(Map<String, String> map) {
-		Map<String, String> result = Collections.unmodifiableMap(map); // violation: use Map.copyOf(...)
+		final var result = Collections.unmodifiableMap(map); // violation: use Map.copyOf(...)
 	}
 
 	void unmodifiableSet(Set<String> set) {
-		Set<String> result = Collections.unmodifiableSet(set); // violation: use Set.copyOf(...)
+		final var result = Collections.unmodifiableSet(set); // violation: use Set.copyOf(...)
 	}
 }

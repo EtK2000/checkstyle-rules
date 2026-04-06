@@ -7,26 +7,26 @@ import java.util.Set;
 
 class InputSpecificApiCollectionsEmptyViolation {
 	void emptyList() {
-		List<String> list = Collections.emptyList(); // violation: use List.of()
+		final List<String> list = Collections.emptyList(); // violation: use List.of()
 	}
 
 	void emptyMap() {
-		Map<String, String> map = Collections.emptyMap(); // violation: use Map.of()
+		final Map<String, String> map = Collections.emptyMap(); // violation: use Map.of()
 	}
 
 	void emptySet() {
-		Set<String> set = Collections.emptySet(); // violation: use Set.of()
+		final Set<String> set = Collections.emptySet(); // violation: use Set.of()
 	}
 
 	void singleton() {
-		Set<String> set = Collections.singleton("a"); // violation: use Set.of(...)
+		final var set = Collections.singleton("a"); // violation: use Set.of(...)
 	}
 
 	void singletonList() {
-		List<String> list = Collections.singletonList("a"); // violation: use List.of(...)
+		final var list = Collections.singletonList("a"); // violation: use List.of(...)
 	}
 
 	void singletonMap() {
-		Map<String, String> map = Collections.singletonMap("k", "v"); // violation: use Map.of(...)
+		final var map = Collections.singletonMap("k", "v"); // violation: use Map.of(...)
 	}
 }

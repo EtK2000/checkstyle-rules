@@ -28,7 +28,7 @@ class ConstructorLocalAssignment { // violation: class should be a record
 	final int value;
 
 	ConstructorLocalAssignment(int value) {
-		int temp = value;
+		final var temp = value;
 		this.value = temp;
 	}
 }
