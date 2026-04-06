@@ -83,6 +83,14 @@ pattern matching, returning null (skipping) for patterns that require structural
 | `Collections.unmodifiableMap(x)`                   | `Map.copyOf(x)`  | Yes                           |
 | `Collections.unmodifiableList(Arrays.asList(...))` | `List.of(...)`   | Partial (gives `List.copyOf`) |
 
+## Checks without fixers
+
+Checks intentionally left without auto-fix support because the transformation is too complex.
+
+| Check             | Reason                                                                                                         |
+|-------------------|----------------------------------------------------------------------------------------------------------------|
+| PreferRecordCheck | Multi-line structural transformation: must rewrite class header, remove fields/constructor, adjust annotations |
+
 ## Future fix opportunities
 
 Patterns not currently auto-fixable, with what would be needed to support them.

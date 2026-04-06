@@ -209,6 +209,8 @@
   catches unintended modifications to lines the test wasn't specifically looking at
 - Only add messages to assertions when they provide non-obvious context (e.g. guard assertions).
   Don't add messages when the test name already describes the expected behavior
+- Never remove test cases without asking. When logic changes cause a test to change behavior (e.g.
+  clean becomes violation), move it to the correct file rather than deleting it
 - After ANY code change (including test resources, comments, reordering), run `./gradlew check` to
   verify nothing is broken. This runs all tests, checkstyle on main code, test code, AND test
   resources. Do NOT use a subset of tasks like `checkstyleMain checkstyleTest test` -- that misses

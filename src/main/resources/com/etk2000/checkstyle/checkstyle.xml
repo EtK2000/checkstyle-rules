@@ -149,6 +149,9 @@
 		<!-- Custom: Prefer pattern matching instanceof over cast-after-check -->
 		<module name="com.etk2000.checkstyle.PreferPatternMatchingInstanceofCheck" />
 
+		<!-- Custom: Prefer record classes over classes with all final fields -->
+		<module name="com.etk2000.checkstyle.PreferRecordCheck" />
+
 		<!-- Custom: Prefer literal suffix over widening cast in arithmetic -->
 		<module name="com.etk2000.checkstyle.PreferLiteralSuffixCheck" />
 
