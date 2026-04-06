@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
 
 jobs:
@@ -17,3 +18,4 @@ jobs:
         with:
           source-repo: EtK2000/CLAUDE.md
           source-path: CLAUDE-java.md
+          token: ${{ github.token }}
