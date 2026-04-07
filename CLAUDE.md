@@ -215,6 +215,11 @@
   Don't add messages when the test name already describes the expected behavior
 - Never remove test cases without asking. When logic changes cause a test to change behavior (e.g.
   clean becomes violation), move it to the correct file rather than deleting it
+- Never remove or rewrite code the user asked for just because it causes a test/check failure. Fix
+  the underlying issue instead. If a new test case exposes a bug in another check, fix that check
+- Never suppress warnings/errors or add any type of suppressions without asking the user
+  first. If an issue is found on any file, investigate whether the check has a bug (missing
+  context handling) before reaching for a suppression
 - After ANY code change (including test resources, comments, reordering), run the full test/check
   suite. See `docs/testing.md` for the correct command
 

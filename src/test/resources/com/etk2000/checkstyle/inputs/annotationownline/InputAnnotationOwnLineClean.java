@@ -66,6 +66,12 @@ class InputAnnotationOwnLineClean {
 			System.out.println(item);
 	}
 
+	// for-init variable is NOT checked by OwnLineCheck (inline context, inside parentheses)
+	void forInit() {
+		for (@A var i = 0; i < 10; ++i)
+			System.out.println(i);
+	}
+
 	// lambda parameter annotation is NOT checked (inline context, boundary)
 	void lambda() {
 		final Consumer<String> c = (@A String s) -> {};

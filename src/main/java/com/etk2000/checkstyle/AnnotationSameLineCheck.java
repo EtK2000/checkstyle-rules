@@ -53,7 +53,9 @@ public class AnnotationSameLineCheck extends AbstractCheck {
 			case TokenTypes.PARAMETER_DEF -> true;
 			case TokenTypes.VARIABLE_DEF -> {
 				final var grandparent = parent.getParent();
-				yield grandparent != null && grandparent.getType() == TokenTypes.FOR_EACH_CLAUSE;
+				yield grandparent != null
+						&& (grandparent.getType() == TokenTypes.FOR_EACH_CLAUSE
+						|| grandparent.getType() == TokenTypes.FOR_INIT);
 			}
 			default -> false;
 		};

@@ -51,6 +51,15 @@ class InputAnnotationSameLineViolation {
 			System.out.println(item);
 	}
 
+	// violation: for-init annotation on separate line
+	void forInit() {
+		for (
+				@A // violation: Annotation 'A' must be on the same line as the declaration.
+				var i = 0; i < 10; ++i
+		)
+			System.out.println(i);
+	}
+
 	// violation: lambda parameter annotation on separate line
 	void lambda() {
 		final Consumer<String> c = (

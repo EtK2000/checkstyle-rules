@@ -35,6 +35,18 @@ class InputAnnotationSameLineClean {
 			System.out.println(item);
 	}
 
+	// clean: for-init with inline annotation
+	void forInit() {
+		for (@A var i = 0; i < 10; ++i)
+			System.out.println(i);
+	}
+
+	// clean: for-init with multiple inline annotations
+	void forInitMulti() {
+		for (@A @B var i = 0; i < 10; ++i)
+			System.out.println(i);
+	}
+
 	// clean: lambda parameter with inline annotation
 	void lambda() {
 		final Consumer<String> c = (@A String s) -> {};

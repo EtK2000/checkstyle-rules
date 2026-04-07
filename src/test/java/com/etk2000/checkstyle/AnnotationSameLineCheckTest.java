@@ -49,7 +49,7 @@ public class AnnotationSameLineCheckTest {
 	@Test
 	public void testOrderViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(AnnotationSameLineCheck.class, DIR + "InputAnnotationSameLineOrderViolation.java");
-		assertEquals(7, violations.size());
+		assertEquals(8, violations.size());
 
 		// record component: @B @A
 		assertEquals(12, violations.get(0).getLine());
@@ -67,32 +67,37 @@ public class AnnotationSameLineCheckTest {
 		assertEquals(29, violations.get(3).getLine());
 		assertEquals(MSG_ORDER, violations.get(3).getMessage());
 
-		// lambda param: @B @A
+		// for-init: @B @A
 		assertEquals(35, violations.get(4).getLine());
 		assertEquals(MSG_ORDER, violations.get(4).getMessage());
 
-		// method param: @B @A
-		assertEquals(39, violations.get(5).getLine());
+		// lambda param: @B @A
+		assertEquals(41, violations.get(5).getLine());
 		assertEquals(MSG_ORDER, violations.get(5).getMessage());
 
+		// method param: @B @A
+		assertEquals(45, violations.get(6).getLine());
+		assertEquals(MSG_ORDER, violations.get(6).getMessage());
+
 		// multi-param: @C @A
-		assertEquals(43, violations.get(6).getLine());
-		assertEquals("Annotation 'A' must appear before 'C' (alphabetical order).", violations.get(6).getMessage());
+		assertEquals(49, violations.get(7).getLine());
+		assertEquals("Annotation 'A' must appear before 'C' (alphabetical order).", violations.get(7).getMessage());
 	}
 
 	@Test
 	public void testPlacementViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(AnnotationSameLineCheck.class, DIR + "InputAnnotationSameLineViolation.java");
-		assertEquals(8, violations.size());
+		assertEquals(9, violations.size());
 
-		assertEquals(12, violations.get(0).getLine());
-		assertEquals(18, violations.get(1).getLine());
-		assertEquals(28, violations.get(2).getLine());
-		assertEquals(38, violations.get(3).getLine());
-		assertEquals(47, violations.get(4).getLine());
-		assertEquals(57, violations.get(5).getLine());
-		assertEquals(64, violations.get(6).getLine());
-		assertEquals(70, violations.get(7).getLine());
+		assertEquals(12, violations.get(0).getLine());  // record component
+		assertEquals(18, violations.get(1).getLine());  // constructor param
+		assertEquals(28, violations.get(2).getLine());  // catch param
+		assertEquals(38, violations.get(3).getLine());  // for-each
+		assertEquals(47, violations.get(4).getLine());  // for-each multi
+		assertEquals(57, violations.get(5).getLine());  // for-init
+		assertEquals(66, violations.get(6).getLine());  // lambda param
+		assertEquals(73, violations.get(7).getLine());  // method param
+		assertEquals(79, violations.get(8).getLine());  // multi annotation
 
 		for (final var violation : violations)
 			assertEquals(MSG_PLACEMENT, violation.getMessage());

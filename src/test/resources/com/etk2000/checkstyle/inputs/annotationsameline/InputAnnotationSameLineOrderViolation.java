@@ -30,6 +30,12 @@ class InputAnnotationSameLineOrderViolation {
 			System.out.println(item);
 	}
 
+	// violation: inline annotations out of order (for-init)
+	void forInit() {
+		for (@B @A var i = 0; i < 10; ++i) // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+			System.out.println(i);
+	}
+
 	// violation: lambda parameter annotations out of order
 	void lambda() {
 		final Consumer<String> c = (@B @A String s) -> {}; // violation: Annotation 'A' must appear before 'B' (alphabetical order).
