@@ -237,6 +237,19 @@ Checkstyle's AST doesn't always match intuition. `do-while` bodies are the first
 When a test unexpectedly produces zero violations, check the AST structure with Checkstyle's
 `-t` flag or by adding debug prints in the check's `visitToken()`.
 
+**Annotation values use different token types depending on form.** A single value like
+`@SuppressWarnings("unused")` wraps the value in `EXPR`, but an array value like
+`@SuppressWarnings({"unused", "all"})` uses `ANNOTATION_ARRAY_INIT` instead (no `EXPR` wrapper).
+Named params (`@Anno(key = value)`) use `ANNOTATION_MEMBER_VALUE_PAIR`, where the value child is
+`EXPR` for single values or `ANNOTATION_ARRAY_INIT` for arrays. Any code that inspects annotation
+values must handle all three token types. When writing tests for annotation handling, always include
+cases with single values, array values, and named params (both single and array).
+
+**Array type declarations normalize in the AST.** Both Java-style (`int[] x`) and C-style
+(`int x[]`) produce `ARRAY_DECLARATOR` siblings under `TYPE`. Compound declarations like
+`int[] x[]` produce two `ARRAY_DECLARATOR` siblings, identical to `int[][] x`. When comparing
+types, always test Java-style, C-style, and compound arrays to verify they match correctly.
+
 ## Common mistakes
 
 ### Hardcoded value sets instead of parsing

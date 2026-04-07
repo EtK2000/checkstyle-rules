@@ -11,6 +11,8 @@
 	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]controlflow[\\/]" />
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]emptybody[\\/]" />
 	<suppress checks="EmptySwitchCheck" files="inputs[\\/]emptyswitch[\\/]" />
+	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
+	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="InfiniteEmptyLoopCheck" files="inputs[\\/]emptybody[\\/]" />
 	<suppress checks="InstanceofBeforeCastCheck" files="inputs[\\/]instanceofbeforecast[\\/]" />
@@ -45,6 +47,9 @@
 	<suppress id="NoTrailingNewline" files="inputs[\\/]regex[\\/]" />
 	<suppress id="NoTrailingWhitespace" files="inputs[\\/]regex[\\/]" />
 
+	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]preferrecord[\\/]" />
+	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]regex[\\/]" />
+
 	<!-- Cross-check suppressions: test inputs for one check that naturally use constructs violating another -->
 	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]annotationsameline[\\/]" />
 	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]redundantsuffix[\\/]" />
@@ -77,6 +82,7 @@
 	<suppress checks="PreferImportCheck" files="inputs[\\/]multilinecall[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]switchorder[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="PreferRecordCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]multilinecall[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="PreferLiteralSuffixCheck" files="inputs[\\/]redundantcast[\\/]" />

@@ -88,6 +88,7 @@
 			<property name="tokens" value="LITERAL_DO,LITERAL_FOR,LITERAL_WHILE" />
 		</module>
 		<module name="com.etk2000.checkstyle.EmptySwitchCheck" />
+		<module name="com.etk2000.checkstyle.FieldConsolidationCheck" />
 		<module name="com.etk2000.checkstyle.FieldSortingCheck" />
 		<module name="com.etk2000.checkstyle.InfiniteEmptyLoopCheck" />
 		<module name="com.etk2000.checkstyle.InstanceofBeforeCastCheck" />
