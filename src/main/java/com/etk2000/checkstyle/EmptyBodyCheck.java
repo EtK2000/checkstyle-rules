@@ -7,8 +7,9 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 import javax.annotation.Nonnull;
 
 /**
- * Checkstyle check that flags empty if/else-if/else bodies (error) and
- * empty while/for/do-while bodies (warning, since spin-waits are a valid use case).
+ * Checkstyle check that flags empty if/else-if/else bodies (error),
+ * empty while/for/do-while bodies (warning, since spin-waits are a valid use case),
+ * and empty static/instance initializer blocks (error, no valid use case).
  * When removing, preserve any side effects in the condition.
  *
  * @see InfiniteEmptyLoopCheck for infinite empty loops at error severity
@@ -18,6 +19,8 @@ public class EmptyBodyCheck extends AbstractCheck {
 	private static final String MSG_ELSE = "empty.else";
 	private static final String MSG_FOR = "empty.for";
 	private static final String MSG_IF = "empty.if";
+	private static final String MSG_INSTANCE_INIT = "empty.instance.init";
+	private static final String MSG_STATIC_INIT = "empty.static.init";
 	private static final String MSG_WHILE = "empty.while";
 
 	@Nonnull
@@ -30,10 +33,12 @@ public class EmptyBodyCheck extends AbstractCheck {
 	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{
+				TokenTypes.INSTANCE_INIT,
 				TokenTypes.LITERAL_DO,
 				TokenTypes.LITERAL_FOR,
 				TokenTypes.LITERAL_IF,
-				TokenTypes.LITERAL_WHILE
+				TokenTypes.LITERAL_WHILE,
+				TokenTypes.STATIC_INIT
 		};
 	}
 
@@ -75,6 +80,12 @@ public class EmptyBodyCheck extends AbstractCheck {
 			log(elseAst, MSG_ELSE);
 	}
 
+	private void visitInitializer(@Nonnull DetailAST ast, @Nonnull String msgKey) {
+		final var slist = ast.findFirstToken(TokenTypes.SLIST);
+		if (slist != null && AstUtil.isEmptyBody(slist))
+			log(ast, msgKey);
+	}
+
 	private void visitLoop(@Nonnull DetailAST ast, @Nonnull String msgKey) {
 		final var rparen = ast.findFirstToken(TokenTypes.RPAREN);
 		if (rparen == null)
@@ -87,10 +98,12 @@ public class EmptyBodyCheck extends AbstractCheck {
 	@Override
 	public void visitToken(@Nonnull DetailAST ast) {
 		switch (ast.getType()) {
+			case TokenTypes.INSTANCE_INIT -> visitInitializer(ast, MSG_INSTANCE_INIT);
 			case TokenTypes.LITERAL_DO -> visitDo(ast);
 			case TokenTypes.LITERAL_FOR -> visitLoop(ast, MSG_FOR);
 			case TokenTypes.LITERAL_IF -> visitIf(ast);
 			case TokenTypes.LITERAL_WHILE -> visitLoop(ast, MSG_WHILE);
+			case TokenTypes.STATIC_INIT -> visitInitializer(ast, MSG_STATIC_INIT);
 		}
 	}
 }

@@ -1,9 +1,13 @@
 package com.etk2000.checkstyle.inputs.emptybody;
 
 class InputEmptyBodyClean {
-	static {}
+	static {
+		System.out.println("init");
+	}
 
-	{}
+	{
+		System.out.println("init");
+	}
 
 	void bracedDoWhile(int x) {
 		do {

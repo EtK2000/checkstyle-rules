@@ -44,6 +44,28 @@ public class EmptyBodyCheckTest {
 	}
 
 	@Test
+	public void testEmptyInitializerViolations() throws Exception {
+		final var violations = BaseCheckTest.runCheck(EmptyBodyCheck.class, DIR + "InputEmptyInitializerViolation.java");
+		assertEquals(4, violations.size());
+
+		assertEquals(4, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
+		assertEquals("Empty static initializer block, remove it.", violations.get(0).getMessage());
+
+		assertEquals(6, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
+		assertEquals("Empty static initializer block, remove it.", violations.get(1).getMessage());
+
+		assertEquals(9, violations.get(2).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(2).getSeverityLevel());
+		assertEquals("Empty instance initializer block, remove it.", violations.get(2).getMessage());
+
+		assertEquals(11, violations.get(3).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(3).getSeverityLevel());
+		assertEquals("Empty instance initializer block, remove it.", violations.get(3).getMessage());
+	}
+
+	@Test
 	public void testEmptyLoopViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(EmptyBodyCheck.class, DIR + "InputEmptyLoopViolation.java");
 		assertEquals(7, violations.size());

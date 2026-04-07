@@ -9,6 +9,8 @@
 	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]classstructure[\\/]" />
 	<suppress checks="ConstructorAssignmentOrderCheck" files="inputs[\\/]constructorassign[\\/]" />
 	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]controlflow[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]classstructure[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]constructorassign[\\/]" />
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]emptybody[\\/]" />
 	<suppress checks="EmptySwitchCheck" files="inputs[\\/]emptyswitch[\\/]" />
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
@@ -60,6 +62,9 @@
 	<suppress checks="CovariantEquals" files="inputs[\\/]preferrecord[\\/]" />
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]astutil[\\/]" />
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]controlflow[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]preferrecord[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]specificapi[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]unnecessarythis[\\/]" />
 	<suppress checks="EmptyLineSeparator" files="inputs[\\/]annotationownline[\\/]" />
 	<suppress checks="EmptyLineSeparator" files="inputs[\\/]redundantcast[\\/]" />
 	<suppress checks="EmptyLineSeparator" files="inputs[\\/]redundantsuffix[\\/]" />

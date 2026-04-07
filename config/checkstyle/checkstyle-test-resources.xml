@@ -88,6 +88,9 @@
 			<property name="severity" value="warning" />
 			<property name="tokens" value="LITERAL_DO,LITERAL_FOR,LITERAL_WHILE" />
 		</module>
+		<module name="com.etk2000.checkstyle.EmptyBodyCheck">
+			<property name="tokens" value="INSTANCE_INIT,STATIC_INIT" />
+		</module>
 		<module name="com.etk2000.checkstyle.EmptySwitchCheck" />
 		<module name="com.etk2000.checkstyle.FieldConsolidationCheck" />
 		<module name="com.etk2000.checkstyle.FieldSortingCheck" />
