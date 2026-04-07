@@ -220,7 +220,7 @@ public class CheckstyleFixIntegrationTest {
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tint x = 5;\n\t\tvar y = \"hello\";\n\t}\n}");
 
 		assertEquals(
-				"class T {\n\tvoid f() {\n\t\tfinal int x = 5;\n\t\tfinal var y = \"hello\";\n\t}\n}",
+				"class T {\n\tvoid f() {\n\t\tfinal var x = 5;\n\t\tfinal var y = \"hello\";\n\t}\n}",
 				runFixAndGetResult(file)
 		);
 	}
@@ -274,7 +274,7 @@ public class CheckstyleFixIntegrationTest {
 		Files.writeString(file.toPath(), "class T {\n\tvoid run() {\n\t\tint i = 0;\n\t\ti++;\n\t}\n}");
 
 		assertEquals(
-				"class T {\n\tvoid run() {\n\t\tint i = 0;\n\t\t++i;\n\t}\n}",
+				"class T {\n\tvoid run() {\n\t\tvar i = 0;\n\t\t++i;\n\t}\n}",
 				runFixAndGetResult(file)
 		);
 	}
@@ -363,6 +363,118 @@ public class CheckstyleFixIntegrationTest {
 
 		assertEquals(
 				"import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.forEach(System.out::println);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferVarExplicitArrayInit() throws Exception {
+		final var file = tempDir.newFile("VarArr.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tfinal var a = new String[]{\"a\"};\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tvoid f() {\n\t\tfinal String[] a = {\"a\"};\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferVarFinalLocalInteraction() throws Exception {
+		final var file = tempDir.newFile("VarFinal.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tint x = 5;\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tvoid f() {\n\t\tfinal var x = 5;\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferVarForEach() throws Exception {
+		final var file = tempDir.newFile("VarFE.java");
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f() {\n\t\tfor (String item : List.of(\"a\"))\n\t\t\tSystem.out.println(item);\n\t}\n}");
+
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid f() {\n\t\tfor (var item : List.of(\"a\"))\n\t\t\tSystem.out.println(item);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferVarForInit() throws Exception {
+		final var file = tempDir.newFile("VarFor.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tfor (int i = 0; i < 10; ++i)\n\t\t\tSystem.out.println(i);\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tvoid f() {\n\t\tfor (var i = 0; i < 10; ++i)\n\t\t\tSystem.out.println(i);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferVarGenericType() throws Exception {
+		final var file = tempDir.newFile("VarGen.java");
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f() {\n\t\tfinal List<String> l = List.of();\n\t}\n}");
+
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid f() {\n\t\tfinal var l = List.of();\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferVarLocalString() throws Exception {
+		final var file = tempDir.newFile("VarStr.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tfinal String s = \"hi\";\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tvoid f() {\n\t\tfinal var s = \"hi\";\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferVarLocalWithFinal() throws Exception {
+		final var file = tempDir.newFile("VarInt.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tfinal int x = 5;\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tvoid f() {\n\t\tfinal var x = 5;\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferVarTabIndented() throws Exception {
+		final var file = tempDir.newFile("VarTab.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\t\tfinal int x = 5;\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tvoid f() {\n\t\t\tfinal var x = 5;\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferVarTryWithResources() throws Exception {
+		final var file = tempDir.newFile("VarTry.java");
+		Files.writeString(file.toPath(), "import java.io.ByteArrayInputStream;\nclass T {\n\tvoid f() throws Exception {\n\t\ttry (ByteArrayInputStream in = new ByteArrayInputStream(new byte[0])) {\n\t\t\tin.read();\n\t\t}\n\t}\n}");
+
+		assertEquals(
+				"import java.io.ByteArrayInputStream;\nclass T {\n\tvoid f() throws Exception {\n\t\ttry (var in = new ByteArrayInputStream(new byte[0])) {\n\t\t\tin.read();\n\t\t}\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferVarWarningNotFixed() throws Exception {
+		// float f = a + b with int params: var would infer int, so it's a WARNING
+		final var file = tempDir.newFile("VarWarn.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int a, int b) {\n\t\tfinal float x = a + b;\n\t}\n}");
+
+		// WARNING should not be fixed — line stays unchanged
+		assertEquals(
+				"class T {\n\tvoid f(int a, int b) {\n\t\tfinal float x = a + b;\n\t}\n}",
 				runFixAndGetResult(file)
 		);
 	}

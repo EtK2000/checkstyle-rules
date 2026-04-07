@@ -7,12 +7,14 @@ import com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck;
 import com.etk2000.checkstyle.NoUnnecessaryThisCheck;
 import com.etk2000.checkstyle.PreferPrefixIncrementCheck;
 import com.etk2000.checkstyle.PreferSpecificApiCheck;
+import com.etk2000.checkstyle.PreferVarCheck;
 import com.etk2000.checkstyle.RedundantNumericSuffixCheck;
 import com.puppycrawl.tools.checkstyle.Checker;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.TreeWalker;
 import com.puppycrawl.tools.checkstyle.api.AuditEvent;
 import com.puppycrawl.tools.checkstyle.api.AuditListener;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import com.puppycrawl.tools.checkstyle.checks.UpperEllCheck;
 import com.puppycrawl.tools.checkstyle.checks.coding.AvoidNoArgumentSuperConstructorCallCheck;
 import com.puppycrawl.tools.checkstyle.checks.coding.ExplicitInitializationCheck;
@@ -73,6 +75,7 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 				Map.entry(NoUnnecessaryThisCheck.class.getName(), new NoUnnecessaryThisFixer()),
 				Map.entry(PreferPrefixIncrementCheck.class.getName(), new PreferPrefixIncrementFixer()),
 				Map.entry(PreferSpecificApiCheck.class.getName(), new PreferSpecificApiFixer()),
+			Map.entry(PreferVarCheck.class.getName(), new PreferVarFixer()),
 				Map.entry(RedundantImportCheck.class.getName(), deleteLineFixer),
 				Map.entry(RedundantModifierCheck.class.getName(), new RedundantModifierFixer()),
 				Map.entry(RedundantNumericSuffixCheck.class.getName(), new RedundantNumericSuffixFixer()),
@@ -108,6 +111,8 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 		for (final var event : violations) {
 			final var fixer = resolveFixer(event, fixers, moduleIdFixers);
 			if (fixer == null)
+				continue;
+			if (event.getSeverityLevel() != SeverityLevel.ERROR)
 				continue;
 			final var lineIndex = event.getLine() - 1;
 			final var charColumn = tabColumnToCharIndex(lines.get(lineIndex), event.getColumn() - 1);

@@ -41,25 +41,26 @@ Run ./gradlew checkstyleFixAll to auto-fix 5 of 8 violations.
 
 Fixable checks:
 
-| Check                               | Fix applied                                                                   |
-|-------------------------------------|-------------------------------------------------------------------------------|
-| AnnotationOwnLineCheck              | Splits, sorts, and removes blank lines between stacked annotations            |
-| AnnotationSameLineCheck             | Joins stacked annotations onto the declaration line, sorts inline annotations |
-| AvoidNoArgumentSuperConstructorCall | Removes the redundant `super()` line                                          |
-| ExplicitInitialization              | Removes `= 0`/`= null`/`= false` etc.                                         |
-| FinalLocalVariable                  | Adds `final` keyword to non-final locals                                      |
-| NoArrayTrailingCommaCheck           | Removes the trailing comma                                                    |
-| NoBlankLineBetweenSingleCasesCheck  | Removes blank lines between single-line cases                                 |
-| NoDoubleBlankLines (regex)          | Collapses double blank lines to single                                        |
-| NoEnumTrailingComma                 | Removes the trailing comma                                                    |
-| NoTrailingWhitespace (regex)        | Strips trailing spaces/tabs                                                   |
-| NoUnnecessaryThisCheck              | Removes the unnecessary `this.`                                               |
-| PreferPrefixIncrementCheck          | Converts `i++`/`i--` to `++i`/`--i`                                           |
-| RedundantImport                     | Deletes the redundant import line                                             |
-| RedundantModifier                   | Removes the redundant modifier keyword                                        |
-| RedundantNumericSuffixCheck         | Removes the redundant L/f/d suffix                                            |
-| UnusedImports                       | Deletes the unused import line                                                |
-| UpperEll                            | Replaces lowercase `l` with uppercase `L`                                     |
+| Check                               | Fix applied                                                                         |
+|-------------------------------------|-------------------------------------------------------------------------------------|
+| AnnotationOwnLineCheck              | Splits, sorts, and removes blank lines between stacked annotations                  |
+| AnnotationSameLineCheck             | Joins stacked annotations onto the declaration line, sorts inline annotations       |
+| AvoidNoArgumentSuperConstructorCall | Removes the redundant `super()` line                                                |
+| ExplicitInitialization              | Removes `= 0`/`= null`/`= false` etc.                                               |
+| FinalLocalVariable                  | Adds `final` keyword to non-final locals                                            |
+| NoArrayTrailingCommaCheck           | Removes the trailing comma                                                          |
+| NoBlankLineBetweenSingleCasesCheck  | Removes blank lines between single-line cases                                       |
+| NoDoubleBlankLines (regex)          | Collapses double blank lines to single                                              |
+| NoEnumTrailingComma                 | Removes the trailing comma                                                          |
+| NoTrailingWhitespace (regex)        | Strips trailing spaces/tabs                                                         |
+| NoUnnecessaryThisCheck              | Removes the unnecessary `this.`                                                     |
+| PreferPrefixIncrementCheck          | Converts `i++`/`i--` to `++i`/`--i`                                                 |
+| PreferVarCheck                      | Replaces explicit type with `var`; converts `new Type[]{...}` to `Type[] x = {...}` |
+| RedundantImport                     | Deletes the redundant import line                                                   |
+| RedundantModifier                   | Removes the redundant modifier keyword                                              |
+| RedundantNumericSuffixCheck         | Removes the redundant L/f/d suffix                                                  |
+| UnusedImports                       | Deletes the unused import line                                                      |
+| UpperEll                            | Replaces lowercase `l` with uppercase `L`                                           |
 
 User suppressions are not honored by the fix tasks. Review changes before committing.
 
