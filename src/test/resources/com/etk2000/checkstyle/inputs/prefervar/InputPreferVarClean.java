@@ -16,6 +16,49 @@ class InputPreferVarClean {
 			System.out.println(item);
 	}
 
+	void knownParseMethodWithVar() {
+		// parse methods with var — already using var, not flagged
+		final var bp = Boolean.parseBoolean("true");
+		final var byp = Byte.parseByte("5");
+		final var dp = Double.parseDouble("5.0");
+		final var fp = Float.parseFloat("5.0");
+		final var ip = Integer.parseInt("5");
+		final var lp = Long.parseLong("5");
+		final var sp = Short.parseShort("5");
+	}
+
+	void literalTypeMismatchUnfixable() {
+		// byte/short have no literal suffix — var would change type to int
+		final byte b = 5;
+		final byte bBin = 0b101;
+		final byte bHex = 0xF;
+		final byte bNeg = -5;
+		final byte bOct = 07;
+		final byte bPlus = +5;
+		final byte bSep = 1_2;
+		final short s = 5;
+		final short sBin = 0b101;
+		final short sHex = 0xFF;
+		final short sNeg = -5;
+		final short sOct = 077;
+		final short sPlus = +5;
+		final short sSep = 1_000;
+		// char from int literal — var would change type to int
+		final char ci = 65;
+		final char ciHex = 0x41;
+		// int from char literal — var would change type to char
+		final int ic = 'a';
+		final int icEscape = '\n';
+		final int icNeg = -'a';
+		final int icUnicode = '\u0041';
+		// long/float/double from char literal — var would change type to char
+		final double dc = 'a';
+		final float fc = 'a';
+		final long lc = 'a';
+		// float from long literal — var would change type to long
+		final float fl = 5L;
+	}
+
 	void localVariables() {
 		final var x = 42;
 		final var s = "hello";

@@ -18,6 +18,12 @@ import javax.annotation.Nullable;
  * (where the type is inferrable from the initializer).
  */
 public class PreferVarCheck extends AbstractCheck {
+	enum PrimitiveVarAction {
+		ERROR,
+		SKIP,
+		WARN
+	}
+
 	private static final String MSG_FOREACH = "prefer.var.foreach";
 	private static final String MSG_LOCAL = "prefer.var.local";
 	private static final String MSG_TRY = "prefer.var.try.resource";
@@ -73,6 +79,25 @@ public class PreferVarCheck extends AbstractCheck {
 				return last.getText();
 		}
 		return null;
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static String getPrimitiveTypeName(@Nonnull DetailAST type) {
+		final var child = type.getFirstChild();
+		if (child == null)
+			return null;
+		return switch (child.getType()) {
+			case TokenTypes.LITERAL_BOOLEAN -> "boolean";
+			case TokenTypes.LITERAL_BYTE -> "byte";
+			case TokenTypes.LITERAL_CHAR -> "char";
+			case TokenTypes.LITERAL_DOUBLE -> "double";
+			case TokenTypes.LITERAL_FLOAT -> "float";
+			case TokenTypes.LITERAL_INT -> "int";
+			case TokenTypes.LITERAL_LONG -> "long";
+			case TokenTypes.LITERAL_SHORT -> "short";
+			default -> null;
+		};
 	}
 
 	@CheckReturnValue
@@ -158,6 +183,44 @@ public class PreferVarCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
+	@Nullable
+	private static String inferredLiteralType(@Nullable DetailAST value) {
+		if (value == null)
+			return null;
+		return switch (value.getType()) {
+			case TokenTypes.CHAR_LITERAL -> "char";
+			case TokenTypes.LITERAL_FALSE, TokenTypes.LITERAL_TRUE -> "boolean";
+			case TokenTypes.NUM_DOUBLE -> "double";
+			case TokenTypes.NUM_FLOAT -> "float";
+			case TokenTypes.NUM_INT -> "int";
+			case TokenTypes.NUM_LONG -> "long";
+			default -> null;
+		};
+	}
+
+	/**
+	 * Returns the cast target type name if the initializer is a cast
+	 * expression, or {@code null} otherwise.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String initializerCastType(@Nonnull DetailAST assign) {
+		var value = assign.getFirstChild();
+		if (value != null && value.getType() == TokenTypes.EXPR)
+			value = value.getFirstChild();
+		if (value == null || value.getType() != TokenTypes.TYPECAST)
+			return null;
+		final var type = value.findFirstToken(TokenTypes.TYPE);
+		if (type == null)
+			return null;
+		final var prim = getPrimitiveTypeName(type);
+		if (prim != null)
+			return prim;
+		final var ident = type.findFirstToken(TokenTypes.IDENT);
+		return ident != null ? ident.getText() : null;
+	}
+
+	@CheckReturnValue
 	private static boolean isInitializerArrayInit(@Nonnull DetailAST assign) {
 		final var value = assign.getFirstChild();
 		return value != null && value.getType() == TokenTypes.ARRAY_INIT;
@@ -230,6 +293,107 @@ public class PreferVarCheck extends AbstractCheck {
 		final var parent = varDef.getParent();
 		// local variables live in SLIST (block), not OBJBLOCK (class body)
 		return parent != null && parent.getType() == TokenTypes.SLIST;
+	}
+
+	/**
+	 * Returns the primitive type returned by a known parse method
+	 * (e.g. {@code Integer.parseInt} returns {@code "int"}), or
+	 * {@code null} if the method call is not a recognized parse method.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String knownParseReturnType(@Nonnull DetailAST assign) {
+		final var call = getInitializerMethodCall(assign);
+		if (call == null)
+			return null;
+		final var dot = call.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return null;
+		final var receiver = dot.getFirstChild();
+		final var method = dot.getLastChild();
+		if (receiver == null || receiver.getType() != TokenTypes.IDENT
+				|| method == null || method.getType() != TokenTypes.IDENT)
+			return null;
+		return switch (receiver.getText() + "." + method.getText()) {
+			case "Boolean.parseBoolean" -> "boolean";
+			case "Byte.parseByte" -> "byte";
+			case "Double.parseDouble" -> "double";
+			case "Float.parseFloat" -> "float";
+			case "Integer.parseInt" -> "int";
+			case "Long.parseLong" -> "long";
+			case "Short.parseShort" -> "short";
+			default -> null;
+		};
+	}
+
+	/**
+	 * Checks how a primitive-typed local variable interacts with
+	 * {@code var} inference. Returns:
+	 * <ul>
+	 *   <li>{@code SKIP} — unfixable mismatch (byte, short, int from char)</li>
+	 *   <li>{@code WARN} — primitive with non-literal expression (can't verify type)</li>
+	 *   <li>{@code ERROR} — safe to flag (literal matches or is fixable with suffix)</li>
+	 * </ul>
+	 * For non-primitive types, always returns {@code ERROR}.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static PrimitiveVarAction primitiveVarAction(@Nonnull DetailAST varDef, @Nonnull DetailAST assign) {
+		final var type = varDef.findFirstToken(TokenTypes.TYPE);
+		if (type == null)
+			return PrimitiveVarAction.ERROR;
+
+		final var declaredType = getPrimitiveTypeName(type);
+		if (declaredType == null)
+			return PrimitiveVarAction.ERROR;
+
+		// cast to declared type: var infers the cast type, safe
+		final var castType = initializerCastType(assign);
+		if (declaredType.equals(castType))
+			return PrimitiveVarAction.ERROR;
+
+		final var value = unwrapInitializerValue(assign);
+		final var inferredType = inferredLiteralType(value);
+
+		// non-literal expression on a primitive: can't verify inferred type
+		// unless it's a known parse method whose return type matches
+		if (inferredType == null) {
+			final var parseType = knownParseReturnType(assign);
+			if (declaredType.equals(parseType))
+				return PrimitiveVarAction.ERROR;
+			return PrimitiveVarAction.WARN;
+		}
+
+		// literal type matches declared type: safe
+		if (inferredType.equals(declaredType))
+			return PrimitiveVarAction.ERROR;
+
+		// declared type differs from inferred literal type — only flag if fixable via suffix
+		final var fixable = ("int".equals(inferredType) && switch (declaredType) {
+			case "double", "float", "long" -> true; // add ./F/L
+			default -> false;
+		}) || switch (declaredType) {
+			case "double" -> "float".equals(inferredType) || "long".equals(inferredType); // remove f / change L to .
+			case "float" -> "double".equals(inferredType); // add f
+			default -> false;
+		};
+		return fixable ? PrimitiveVarAction.ERROR : PrimitiveVarAction.SKIP;
+	}
+
+	/**
+	 * Unwraps the initializer value from an ASSIGN node, stripping the EXPR
+	 * wrapper and any unary +/- prefix.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static DetailAST unwrapInitializerValue(@Nonnull DetailAST assign) {
+		var value = assign.getFirstChild();
+		if (value != null && value.getType() == TokenTypes.EXPR)
+			value = value.getFirstChild();
+		while (value != null
+				&& (value.getType() == TokenTypes.UNARY_MINUS || value.getType() == TokenTypes.UNARY_PLUS))
+			value = value.getFirstChild();
+		return value;
 	}
 
 	private final Set<String> imports = new HashSet<>();
@@ -360,6 +524,11 @@ public class PreferVarCheck extends AbstractCheck {
 				if (isInitializerSimpleAnonymousClass(assign))
 					return;
 
+				// check primitive type safety before flagging
+				final var primAction = primitiveVarAction(ast, assign);
+				if (primAction == PrimitiveVarAction.SKIP)
+					return;
+
 				final var methodCall = getInitializerMethodCall(assign);
 				final var methodName = methodCall == null ? null : getMethodName(methodCall);
 				final var isGeneric = (methodName != null && allowedMethods.contains(methodName))
@@ -377,8 +546,13 @@ public class PreferVarCheck extends AbstractCheck {
 					if (isGeneric)
 						logWarning(ast, MSG_VAR_GENERIC, methodName);
 				}
-				else if (!isGeneric)
-					log(ast, MSG_LOCAL);
+				else if (!isGeneric) {
+					// primitive with non-literal expression: warn (can't verify inferred type)
+					if (primAction == PrimitiveVarAction.WARN)
+						logWarning(ast, MSG_LOCAL);
+					else
+						log(ast, MSG_LOCAL);
+				}
 			}
 		}
 	}

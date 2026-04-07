@@ -74,6 +74,119 @@ public class PreferVarCheckTest {
 	}
 
 	@Test
+	public void testExplicitTypeLiteralMismatchViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarLiteralMismatchViolation.java");
+		assertEquals(65, violations.size());
+
+		final var msg = "Local variable must use 'var' instead of an explicit type.";
+		var i = 0;
+
+		// same-type primitive literals (boolean, char, double, float, int, long)
+		for (final var line : new int[]{6, 7, 8, 9, 10, 11}) {
+			assertEquals(line, violations.get(i).getLine());
+			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+		}
+
+		// cast to matching type
+		for (final var line : new int[]{16, 17, 18}) {
+			assertEquals(line, violations.get(i).getLine());
+			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+		}
+
+		// double from float literal
+		for (final var line : new int[]{22, 23, 24, 25}) {
+			assertEquals(line, violations.get(i).getLine());
+			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+		}
+
+		// double from int literal
+		for (final var line : new int[]{29, 30, 31, 32, 33, 34}) {
+			assertEquals(line, violations.get(i).getLine());
+			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+		}
+
+		// double from long literal
+		for (final var line : new int[]{38, 39, 40}) {
+			assertEquals(line, violations.get(i).getLine());
+			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+		}
+
+		// float from double literal
+		for (final var line : new int[]{44, 45, 46, 47}) {
+			assertEquals(line, violations.get(i).getLine());
+			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+		}
+
+		// float from int literal
+		for (final var line : new int[]{51, 52, 53, 54, 55, 56}) {
+			assertEquals(line, violations.get(i).getLine());
+			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+		}
+
+		// long from int literal
+		for (final var line : new int[]{60, 61, 62, 63, 64, 65}) {
+			assertEquals(line, violations.get(i).getLine());
+			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+		}
+
+		// Boolean.parseBoolean — matching (error)
+		assertEquals(69, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+
+		// Byte.parseByte — matching (error), then widening to double/float/int/long/short (warning)
+		assertEquals(74, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+		for (final var line : new int[]{76, 77, 78, 79, 80}) {
+			assertEquals(line, violations.get(i).getLine());
+			assertEquals(SeverityLevel.WARNING, violations.get(i++).getSeverityLevel());
+		}
+
+		// Double.parseDouble — matching (error)
+		assertEquals(84, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+
+		// Float.parseFloat — matching (error), widening to double (warning)
+		assertEquals(89, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+		assertEquals(91, violations.get(i).getLine());
+		assertEquals(SeverityLevel.WARNING, violations.get(i++).getSeverityLevel());
+
+		// Integer.parseInt — matching (error), widening to double/float/long (warning)
+		assertEquals(96, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+		for (final var line : new int[]{98, 99, 100}) {
+			assertEquals(line, violations.get(i).getLine());
+			assertEquals(SeverityLevel.WARNING, violations.get(i++).getSeverityLevel());
+		}
+
+		// Long.parseLong — matching (error), widening to double/float (warning)
+		assertEquals(105, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+		for (final var line : new int[]{107, 108}) {
+			assertEquals(line, violations.get(i).getLine());
+			assertEquals(SeverityLevel.WARNING, violations.get(i++).getSeverityLevel());
+		}
+
+		// Short.parseShort — matching (error), widening to double/float/int/long (warning)
+		assertEquals(113, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
+		for (final var line : new int[]{115, 116, 117, 118}) {
+			assertEquals(line, violations.get(i).getLine());
+			assertEquals(SeverityLevel.WARNING, violations.get(i++).getSeverityLevel());
+		}
+
+		// primitive with non-literal expression (warning): binary op, cast mismatch, shift, ternary
+		for (final var line : new int[]{123, 124, 125, 126, 127}) {
+			assertEquals(line, violations.get(i).getLine());
+			assertEquals(SeverityLevel.WARNING, violations.get(i++).getSeverityLevel());
+		}
+
+		// verify all violations have the same message
+		for (var v : violations)
+			assertEquals(msg, v.getMessage());
+	}
+
+	@Test
 	public void testExplicitTypeViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarViolation.java");
 		assertEquals(10, violations.size());

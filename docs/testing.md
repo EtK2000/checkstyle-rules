@@ -155,6 +155,37 @@ Examples from this project:
 - `OverloadMethodOrderCheck` clean file shows `secondParam(int a, char b)` before
   `secondParam(int a, int b)` → violation file shows the reverse
 
+### Expression form coverage
+
+When a check inspects initializers, arguments, or right-hand-side expressions, test every
+syntactic form that can appear in that position. Common forms:
+
+- Literal (numeric with all notations: decimal, hex, octal, binary, underscore-separated; also
+  char, boolean, string, null)
+- Method call (`Integer.parseInt(...)`, `list.size()`)
+- Constructor call (`new Foo(...)`)
+- Cast expression (`(Type) expr`), including cast-to-same-type vs cast-to-different-type
+- Binary/unary expression (`a + b`, `-x`, `a << b`)
+- Ternary (`flag ? a : b`)
+- Field/array access (`obj.field`, `arr[i]`)
+
+If the check behaves differently based on the expression form (e.g. literal vs non-literal), each
+form needs a test in the appropriate category (clean, violation, or warning).
+
+### Severity coverage
+
+When a check emits different severity levels on different code paths (e.g. error for safe cases,
+warning for uncertain cases), test each severity explicitly with `assertEquals(SeverityLevel.X,
+violation.getSeverityLevel())`. A test that only checks violation count and message will miss a
+path that fires at the wrong severity.
+
+### Guard regression
+
+When adding a guard or filter that exempts some inputs from a check, add explicit tests proving
+that non-exempted inputs still fire. For example, if a new guard skips `byte x = 5;` (unfixable),
+add a test for `int x = 5;` (same structure, should still fire) to prove the guard doesn't
+over-suppress. Cover every type/variant that should pass through the guard unchanged.
+
 ### Axis coverage
 
 When code handles multiple independent dimensions (prefixes, suffixes, formats, label types),
