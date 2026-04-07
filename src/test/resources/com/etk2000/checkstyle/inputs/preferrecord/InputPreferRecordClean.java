@@ -93,6 +93,16 @@ class InlineInitializedFields {
 }
 
 /** Instance initializer present. */
+class EmptyInstanceInit {
+	final int value;
+
+	{}
+
+	EmptyInstanceInit(int value) {
+		this.value = value;
+	}
+}
+
 class InstanceInit {
 	final Map<String, String> map;
 

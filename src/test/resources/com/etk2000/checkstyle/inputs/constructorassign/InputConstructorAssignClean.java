@@ -1,6 +1,8 @@
 package com.etk2000.checkstyle.inputs.constructorassign;
 
 class InputConstructorAssignClean {
+	static {}
+
 	int alpha, beta, gamma;
 	Object delta;
 
@@ -28,6 +30,8 @@ class InputConstructorAssignClean {
 		this.alpha = 1;
 		this.beta = 2;
 	}
+
+	{}
 
 	// dependency: beta depends on alpha, so beta after alpha is fine
 	// even though gamma depends on alpha too, gamma > beta alphabetically

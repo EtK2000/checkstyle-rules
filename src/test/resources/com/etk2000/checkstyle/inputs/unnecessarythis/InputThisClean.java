@@ -11,6 +11,8 @@ record InputThisCleanRecord(int field) {
 class InputThisClean {
 	int field;
 
+	{}
+
 	{
 		this.field = 42;
 	}

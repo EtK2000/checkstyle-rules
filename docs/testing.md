@@ -72,6 +72,14 @@ line is the last content line before the blank line group, not the blank lines t
 
 The `DoubleBlankLineFixer` accounts for this by scanning forward from `lineIndex + 1`.
 
+## Coverage philosophy
+
+**If it's not tested, it's not supported.** Never assume code works correctly without a test proving
+it. "The code doesn't reference that token type so it can't fire" is not a valid argument. The only
+proof is a test that runs the check against that input and asserts the expected result. If a check
+interacts with a concept (init blocks, enums, records, lambdas, anonymous classes, etc.), there must
+be a test for it, even if you believe the code path is unreachable. Beliefs are not tests.
+
 ## Coverage checklist
 
 Use this as a **driving process while writing code**, not a post-hoc audit. Do not write a check,
