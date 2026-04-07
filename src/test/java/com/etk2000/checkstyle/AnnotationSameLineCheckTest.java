@@ -53,36 +53,28 @@ public class AnnotationSameLineCheckTest {
 		final var violations = BaseCheckTest.runCheck(AnnotationSameLineCheck.class, DIR + "InputAnnotationSameLineOrderViolation.java");
 		assertEquals(8, violations.size());
 
-		// record component: @B @A
-		assertEquals(12, violations.get(0).getLine());
+		assertEquals(11, violations.get(0).getLine());
 		assertEquals(MSG_ORDER, violations.get(0).getMessage());
 
-		// constructor param: @B @A
-		assertEquals(15, violations.get(1).getLine());
+		assertEquals(13, violations.get(1).getLine());
 		assertEquals(MSG_ORDER, violations.get(1).getMessage());
 
-		// catch param: @B @A
-		assertEquals(22, violations.get(2).getLine());
+		assertEquals(19, violations.get(2).getLine());
 		assertEquals(MSG_ORDER, violations.get(2).getMessage());
 
-		// for-each: @B @A
-		assertEquals(29, violations.get(3).getLine());
+		assertEquals(25, violations.get(3).getLine());
 		assertEquals(MSG_ORDER, violations.get(3).getMessage());
 
-		// for-init: @B @A
-		assertEquals(35, violations.get(4).getLine());
+		assertEquals(30, violations.get(4).getLine());
 		assertEquals(MSG_ORDER, violations.get(4).getMessage());
 
-		// lambda param: @B @A
-		assertEquals(41, violations.get(5).getLine());
+		assertEquals(35, violations.get(5).getLine());
 		assertEquals(MSG_ORDER, violations.get(5).getMessage());
 
-		// method param: @B @A
-		assertEquals(45, violations.get(6).getLine());
+		assertEquals(38, violations.get(6).getLine());
 		assertEquals(MSG_ORDER, violations.get(6).getMessage());
 
-		// multi-param: @C @A
-		assertEquals(49, violations.get(7).getLine());
+		assertEquals(41, violations.get(7).getLine());
 		assertEquals("Annotation 'A' must appear before 'C' (alphabetical order).", violations.get(7).getMessage());
 	}
 
@@ -91,21 +83,21 @@ public class AnnotationSameLineCheckTest {
 		final var violations = BaseCheckTest.runCheck(AnnotationSameLineCheck.class, DIR + "InputAnnotationSameLineViolation.java");
 		assertEquals(10, violations.size());
 
-		assertEquals(12, violations.get(0).getLine());  // record component
-		assertEquals(18, violations.get(1).getLine());  // constructor param
-		assertEquals(28, violations.get(2).getLine());  // catch param
-		assertEquals(38, violations.get(3).getLine());  // for-each
-		assertEquals(47, violations.get(4).getLine());  // for-each multi
-		assertEquals(57, violations.get(5).getLine());  // for-init
-		assertEquals(66, violations.get(6).getLine());  // lambda param
-		assertEquals(73, violations.get(7).getLine());  // method param
-		assertEquals(79, violations.get(8).getLine());  // multi annotation
+		assertEquals(11, violations.get(0).getLine());
+		assertEquals(16, violations.get(1).getLine());
+		assertEquals(25, violations.get(2).getLine());
+		assertEquals(34, violations.get(3).getLine());
+		assertEquals(42, violations.get(4).getLine());
+		assertEquals(51, violations.get(5).getLine());
+		assertEquals(59, violations.get(6).getLine());
+		assertEquals(65, violations.get(7).getLine());
+		assertEquals(70, violations.get(8).getLine());
 
 		for (var i = 0; i < 9; ++i)
 			assertEquals(MSG_PLACEMENT, violations.get(i).getMessage());
 
 		// placement wrong AND order wrong: only placement reported (early return)
-		assertEquals(86, violations.get(9).getLine());
+		assertEquals(76, violations.get(9).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(9).getSeverityLevel());
 		assertEquals("Annotation 'B' must be on the same line as the declaration.", violations.get(9).getMessage());
 	}

@@ -24,7 +24,6 @@ public class PreferLambdaCheckTest {
 		assertEquals(13, violations.get(1).getLine());
 		assertEquals("Use a lambda expression instead of anonymous 'Supplier'.", violations.get(1).getMessage());
 
-		// anonymous class as method argument
 		assertEquals(19, violations.get(2).getLine());
 		assertEquals("Use a lambda expression instead of anonymous 'Runnable'.", violations.get(2).getMessage());
 

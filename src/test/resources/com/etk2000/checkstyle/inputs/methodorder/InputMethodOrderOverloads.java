@@ -11,7 +11,6 @@ class InputMethodOrderOverloads {
 	void process(int x, int y) {
 	}
 
-	// next method alphabetically after overloads
 	void validate() {
 	}
 }

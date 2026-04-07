@@ -7,19 +7,16 @@ import java.util.function.Consumer;
 @interface B {}
 
 class InputAnnotationSameLineViolation {
-	// violation: record component annotation on separate line
 	record Data(
 			@A // violation: Annotation 'A' must be on the same line as the declaration.
 			String name
 	) {}
 
-	// violation: constructor parameter annotation on separate line
 	InputAnnotationSameLineViolation(
 			@A // violation: Annotation 'A' must be on the same line as the declaration.
 			String param
 	) {}
 
-	// violation: catch parameter annotation on separate line
 	void catchParam() {
 		try {
 			Thread.sleep(1);
@@ -32,7 +29,6 @@ class InputAnnotationSameLineViolation {
 		}
 	}
 
-	// violation: for-each annotation on separate line
 	void forEach(List<String> list) {
 		for (
 				@A // violation: Annotation 'A' must be on the same line as the declaration.
@@ -41,7 +37,6 @@ class InputAnnotationSameLineViolation {
 			System.out.println(item);
 	}
 
-	// violation: for-each with multiple stacked annotations (only first reported)
 	void forEachMulti(List<String> list) {
 		for (
 				@A // violation: Annotation 'A' must be on the same line as the declaration.
@@ -51,7 +46,6 @@ class InputAnnotationSameLineViolation {
 			System.out.println(item);
 	}
 
-	// violation: for-init annotation on separate line
 	void forInit() {
 		for (
 				@A // violation: Annotation 'A' must be on the same line as the declaration.
@@ -60,7 +54,6 @@ class InputAnnotationSameLineViolation {
 			System.out.println(i);
 	}
 
-	// violation: lambda parameter annotation on separate line
 	void lambda() {
 		final Consumer<String> c = (
 				@A // violation: Annotation 'A' must be on the same line as the declaration.
@@ -68,20 +61,17 @@ class InputAnnotationSameLineViolation {
 		) -> {};
 	}
 
-	// violation: method parameter annotation on separate line
 	void method(
 			@A // violation: Annotation 'A' must be on the same line as the declaration.
 			String param
 	) {}
 
-	// violation: multiple parameter annotations on separate lines
 	void multiAnnotation(
 			@A // violation: Annotation 'A' must be on the same line as the declaration.
 			@B
 			String param
 	) {}
 
-	// violation: placement wrong AND order wrong (only placement reported due to early return)
 	void placementAndOrder(
 			@B // violation: Annotation 'B' must be on the same line as the declaration.
 			@A

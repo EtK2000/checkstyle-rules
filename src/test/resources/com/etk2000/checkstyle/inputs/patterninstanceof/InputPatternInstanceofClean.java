@@ -22,7 +22,6 @@ class InputPatternInstanceofClean {
 			System.out.println((String) other);
 	}
 
-	// ternary: no cast in true-branch
 	boolean ternaryNoCast(Object obj) {
 		return obj instanceof String ? true : false;
 	}

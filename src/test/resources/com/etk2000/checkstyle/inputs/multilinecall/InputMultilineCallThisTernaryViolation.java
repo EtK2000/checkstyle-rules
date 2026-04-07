@@ -5,7 +5,7 @@ class InputMultilineCallThisTernaryViolation {
 	}
 
 	void resourceIdTernaryNotOnOpening() {
-		method( // violation: ternary not on opening paren line
+		method( // violation: Ternary argument: condition must be on the opening paren line.
 				R.string.ok, true
 						? "a"
 						: "b"
@@ -14,11 +14,11 @@ class InputMultilineCallThisTernaryViolation {
 
 	void thisSingleLineTernaryWrongClose() {
 		method(this, true ? "a" : "b"
-		); // violation: single-line ternary, closing paren on wrong line
+		); // violation: Single-line ternary argument: closing paren must be on the same line.
 	}
 
 	void thisTernaryNotOnOpening() {
-		method( // violation: ternary not on opening paren line
+		method( // violation: Ternary argument: condition must be on the opening paren line.
 				this, true
 						? "a"
 						: "b"
@@ -28,6 +28,6 @@ class InputMultilineCallThisTernaryViolation {
 	void thisTernaryOnClosing() {
 		method(this, true
 				? "a"
-				: "b"); // violation: arg on closing paren line
+				: "b"); // violation: In multiline calls/signatures, no arguments on the closing paren line.
 	}
 }

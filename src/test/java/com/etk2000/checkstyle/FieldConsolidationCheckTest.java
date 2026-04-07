@@ -33,17 +33,14 @@ public class FieldConsolidationCheckTest {
 		assertEquals(14, violations.size());
 		var i = 0;
 
-		// Two same-type primitive fields
 		assertEquals(13, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Fields 'beta' and 'alpha' (type 'int') should be declared on one line.", violations.get(i++).getMessage());
 
-		// Two same-type reference fields
 		assertEquals(19, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Fields 'second' and 'first' (type 'String') should be declared on one line.", violations.get(i++).getMessage());
 
-		// Three consecutive same-type fields (2 violations)
 		assertEquals(25, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Fields 'b' and 'a' (type 'int') should be declared on one line.", violations.get(i++).getMessage());
@@ -57,12 +54,10 @@ public class FieldConsolidationCheckTest {
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Fields 'beta' and 'alpha' (type 'int') should be declared on one line.", violations.get(i++).getMessage());
 
-		// Same parameterless annotation
 		assertEquals(42, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Fields 'beta' and 'alpha' (type 'int') should be declared on one line.", violations.get(i++).getMessage());
 
-		// Same annotation with identical params
 		assertEquals(50, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Fields 'beta' and 'alpha' (type 'int') should be declared on one line.", violations.get(i++).getMessage());
@@ -77,7 +72,6 @@ public class FieldConsolidationCheckTest {
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Fields 'beta' and 'alpha' (type 'int') should be declared on one line.", violations.get(i++).getMessage());
 
-		// Static same-type fields
 		assertEquals(72, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Fields 'shared' and 'global' (type 'int') should be declared on one line.", violations.get(i++).getMessage());
@@ -92,12 +86,10 @@ public class FieldConsolidationCheckTest {
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Fields 'beta' and 'alpha' (type 'String[][]') should be declared on one line.", violations.get(i++).getMessage());
 
-		// Generic type match
 		assertEquals(90, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Fields 'words' and 'names' (type 'List<String>') should be declared on one line.", violations.get(i++).getMessage());
 
-		// Final without inline value
 		assertEquals(96, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Fields 'beta' and 'alpha' (type 'int') should be declared on one line.", violations.get(i++).getMessage());

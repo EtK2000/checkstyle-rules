@@ -6,7 +6,7 @@ class InputSingleCaseYieldViolation {
 			case 1:
 				yield 1;
 
-			case 2: // violation: blank line between single-line cases
+			case 2: // violation: No blank line between single-line switch cases.
 				yield 2;
 			default:
 				yield 0;

@@ -6,10 +6,10 @@ import java.util.List;
 
 class InputSpecificApiCollectionsSortViolation {
 	void sortNoComparator(List<String> list) {
-		Collections.sort(list); // violation: use .sort(...)
+		Collections.sort(list); // violation: Use '.sort(...)' instead of 'Collections.sort(...)'.
 	}
 
 	void sortWithComparator(List<String> list) {
-		Collections.sort(list, Comparator.naturalOrder()); // violation: use .sort(...)
+		Collections.sort(list, Comparator.naturalOrder()); // violation: Use '.sort(...)' instead of 'Collections.sort(...)'.
 	}
 }

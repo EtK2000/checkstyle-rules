@@ -1,7 +1,6 @@
 package com.etk2000.checkstyle.inputs.singlecase;
 
 class InputBracedCaseBlankLineClean {
-	// braced cases without blank lines between them
 	int method(int x) {
 		switch (x) {
 			case 1: {

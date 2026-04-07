@@ -32,13 +32,13 @@ class InputMultilineCallSuperViolation {
 			super(
 					1,
 					2,
-					3); // violation: arg on closing paren line
+					3); // violation: In multiline calls/signatures, no arguments on the closing paren line.
 		}
 	}
 
 	static class OpeningViolation extends Base {
 		OpeningViolation() {
-			super(1, // violation: arg on opening paren line
+			super(1, // violation: In multiline calls/signatures, no arguments on the opening paren line.
 					2,
 					3
 			);
@@ -48,7 +48,7 @@ class InputMultilineCallSuperViolation {
 	static class SharedLineViolation extends Base {
 		SharedLineViolation() {
 			super(
-					1, 2, // violation: args sharing line
+					1, 2, // violation: In multiline calls/signatures, each argument must be on its own line.
 					3
 			);
 		}

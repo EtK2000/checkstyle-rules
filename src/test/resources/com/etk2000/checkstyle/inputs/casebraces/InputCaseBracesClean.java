@@ -17,7 +17,6 @@ class InputCaseBracesClean {
 				break;
 		}
 
-		// default with braces and variable definition
 		switch (x) {
 			case 1:
 				break;

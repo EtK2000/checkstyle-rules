@@ -3,7 +3,6 @@ package com.etk2000.checkstyle.inputs.redundantsuffix;
 import java.util.function.DoubleSupplier;
 
 class InputRedundantSuffixViolation {
-	// field declarations
 	long fieldLong = 0L; // violation: redundant L suffix
 	long fieldLong2 = 100L; // violation: redundant L suffix
 	long fieldLong3 = -1L; // violation: redundant L suffix
@@ -13,21 +12,17 @@ class InputRedundantSuffixViolation {
 	double fieldDouble2 = 0.0d; // violation: redundant d suffix
 	double fieldDouble3 = 3.14D; // violation: redundant D suffix
 
-	// hex, octal, binary with redundant suffix
 	long hexLong = 0xFFL; // violation: redundant L suffix
 	long octalLong = 07L; // violation: redundant L suffix
 	long binaryLong = 0b1010L; // violation: redundant L suffix
 	double hexDouble = 0x1.0p10d; // violation: redundant d suffix
 
-	// static and final fields
 	static long staticLong = 0L; // violation: redundant L suffix
 	static final long CONSTANT = 0L; // violation: redundant L suffix
 
-	// negative values
 	float negativeFloat = -0f; // violation: redundant f suffix
 	double negativeDouble = -0.0d; // violation: redundant d suffix
 
-	// array initializers
 	long[] longArray = {0L, 1L}; // violation x2: redundant L suffix
 	float[] floatArray = {0f}; // violation: redundant f suffix
 	double[] doubleArray = {0.0d, 1.0D}; // violation x2: redundant d suffix
@@ -42,18 +37,15 @@ class InputRedundantSuffixViolation {
 	double arithmeticDouble = 1.0 + 0.0d; // violation: redundant d suffix
 	DoubleSupplier lambdaDecimalD = () -> 0.0d; // violation: redundant d suffix
 
-	// cast expression
 	void castExpression() {
 		final long x = (long) 0L; // violation: redundant L suffix
 	}
 
-	// compound assignment
 	void compoundAssignment() {
 		long x = 0;
 		x += 0L; // violation: redundant L suffix
 	}
 
-	// local variable declarations
 	void localVariables() {
 		final long a = 0L; // violation: redundant L suffix
 		final long b = 1_000L; // violation: redundant L suffix
@@ -65,18 +57,15 @@ class InputRedundantSuffixViolation {
 		takesDouble(0.0d); // violation: redundant d suffix
 	}
 
-	// new array expression
 	void newArrayExpression() {
 		final long[] arr = new long[]{0L}; // violation: redundant L suffix
 	}
 
-	// reassignment
 	void reassignment() {
 		long x = 0;
 		x = 0L; // violation: redundant L suffix
 	}
 
-	// return statements
 	double returnDouble() {
 		return 0.0d; // violation: redundant d suffix
 	}
@@ -91,7 +80,6 @@ class InputRedundantSuffixViolation {
 
 	void takesDouble(double x) {}
 
-	// ternary in typed variable
 	void ternary(boolean flag) {
 		final long x = flag ? 0L : 1L; // violation x2: redundant L suffix
 	}

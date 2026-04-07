@@ -4,11 +4,11 @@ import java.util.function.Consumer;
 
 class InputMultilineCallResourceIdViolation {
 	void androidResourceIdLambdaNotOnOpening() {
-		method( // violation: lambda not on opening paren line
+		method( // violation: Inline block argument: must be on the opening paren line.
 				android.R.string.ok, x -> {
 					System.out.println(x);
 				}
-		); // violation: closing brace not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a, Consumer<Integer> c) {
@@ -16,21 +16,21 @@ class InputMultilineCallResourceIdViolation {
 
 	void resourceIdBracelessLambdaOnBodyLine() {
 		method(R.string.ok, v ->
-				System.out.println(v)); // violation: closing paren on body line
+				System.out.println(v)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
 	}
 
 	void resourceIdLambdaNotOnClosing() {
 		method(R.string.ok, x -> {
 			System.out.println(x);
 		}
-		); // violation: closing brace not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 
 	void resourceIdLambdaNotOnOpening() {
-		method( // violation: lambda not on opening paren line
+		method( // violation: Inline block argument: must be on the opening paren line.
 				R.string.ok, x -> {
 					System.out.println(x);
 				}
-		); // violation: closing brace not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 }

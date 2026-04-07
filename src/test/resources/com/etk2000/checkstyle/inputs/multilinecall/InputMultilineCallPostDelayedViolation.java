@@ -6,22 +6,22 @@ class InputMultilineCallPostDelayedViolation {
 			System.out.println("delayed");
 		},
 				1000
-		); // violation: delay not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 
 	void lambdaNotOnOpeningButDelayOnClosing() {
-		handler.postDelayed( // violation: lambda not on opening paren line
+		handler.postDelayed( // violation: Inline block argument: must be on the opening paren line.
 				() -> {
 					System.out.println("delayed");
 				}, 1000);
 	}
 
 	void lambdaNotOnOpeningLine() {
-		handler.postDelayed( // violation: lambda not on opening paren line
+		handler.postDelayed( // violation: Inline block argument: must be on the opening paren line.
 				() -> {
 					System.out.println("delayed");
 				},
 				1000
-		); // violation: delay not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 }

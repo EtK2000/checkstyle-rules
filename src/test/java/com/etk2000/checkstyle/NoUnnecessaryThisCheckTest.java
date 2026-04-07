@@ -43,11 +43,9 @@ public class NoUnnecessaryThisCheckTest {
 	public void testUnnecessaryFieldAccess() throws Exception {
 		final var violations = BaseCheckTest.runCheck(NoUnnecessaryThisCheck.class, DIR + "InputThisViolation.java");
 		assertEquals(2, violations.size());
-		// compact record constructor: this.field in non-assignment context
 		assertEquals(5, violations.get(0).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("Unnecessary 'this.field', only use when shadowing or in field assignment.", violations.get(0).getMessage());
-		// regular class: this.field without shadowing
 		assertEquals(13, violations.get(1).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("Unnecessary 'this.field', only use when shadowing or in field assignment.", violations.get(1).getMessage());

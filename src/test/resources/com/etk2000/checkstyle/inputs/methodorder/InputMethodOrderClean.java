@@ -1,7 +1,6 @@
 package com.etk2000.checkstyle.inputs.methodorder;
 
 class InputMethodOrderClean {
-	// static methods sorted alphabetically
 	static void alpha() {
 	}
 
@@ -11,7 +10,6 @@ class InputMethodOrderClean {
 	static void gamma() {
 	}
 
-	// instance methods sorted alphabetically
 	void delta() {
 	}
 

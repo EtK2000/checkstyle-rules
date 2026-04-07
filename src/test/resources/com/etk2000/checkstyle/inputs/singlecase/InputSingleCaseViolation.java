@@ -6,7 +6,7 @@ class InputSingleCaseViolation {
 			case 1:
 				return 1;
 
-			case 2:
+			case 2: // violation: No blank line between single-line switch cases.
 				return 2;
 			default:
 				return 0;

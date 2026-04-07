@@ -7,23 +7,23 @@ class InputMultilineCallSpecialMethodViolation {
 		method(requireContext().getString(
 				1
 		)
-		); // violation: closing paren not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 
 	void listOfFqnNotOnOpening() {
-		method( // violation: java.util.List.of not on opening paren line
+		method( // violation: Inline block argument: must be on the opening paren line.
 				java.util.List.of(
 						1, 2, 3
 				)
-		); // violation: closing paren not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 
 	void listOfNotOnOpening() {
-		method( // violation: List.of not on opening paren line
+		method( // violation: Inline block argument: must be on the opening paren line.
 				List.of(
 						1, 2, 3
 				)
-		); // violation: closing paren not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a) {

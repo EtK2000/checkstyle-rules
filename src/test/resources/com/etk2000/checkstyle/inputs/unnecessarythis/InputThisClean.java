@@ -25,7 +25,6 @@ class InputThisClean {
 		this.field = field;
 	}
 
-	// lambda: this.field needed because lambda-local variable shadows it
 	void lambdaLocalShadowing() {
 		final Runnable r = () -> {
 			final var field = 99;
@@ -33,12 +32,10 @@ class InputThisClean {
 		};
 	}
 
-	// lambda: this.field needed because lambda parameter shadows it
 	void lambdaParamShadowing() {
 		final IntConsumer c = field -> System.out.println(this.field);
 	}
 
-	// lambda: this.field needed because outer method param shadows it
 	void lambdaWithShadowing(int field) {
 		final Runnable r = () -> System.out.println(this.field);
 	}

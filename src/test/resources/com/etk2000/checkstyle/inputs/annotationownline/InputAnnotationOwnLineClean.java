@@ -7,10 +7,8 @@ import java.util.function.Consumer;
 @interface B {}
 @interface C {}
 
-// stacked on class, alphabetically ordered
 @A
 class InputAnnotationOwnLineClean {
-	// stacked on enum declaration
 	@A
 	enum Color {
 		@A
@@ -21,14 +19,11 @@ class InputAnnotationOwnLineClean {
 		GREEN
 	}
 
-	// stacked on interface
 	@A
 	interface Inner {}
 
-	// stacked on annotation type
 	@A
 	@interface Meta {
-		// stacked on annotation field, alphabetically ordered
 		@A
 		int priority();
 
@@ -37,7 +32,6 @@ class InputAnnotationOwnLineClean {
 		String value();
 	}
 
-	// stacked on record with compact constructor
 	@A
 	@B
 	record Pair(@A int x, int y) {
@@ -45,7 +39,6 @@ class InputAnnotationOwnLineClean {
 		Pair {}
 	}
 
-	// stacked on field, no blank line between annotation and declaration
 	@A
 	int field;
 
@@ -53,10 +46,8 @@ class InputAnnotationOwnLineClean {
 	@B
 	String multiAnnotatedField;
 
-	// no annotation at all (clean)
 	int plainField;
 
-	// stacked on constructor
 	@A
 	InputAnnotationOwnLineClean() {}
 
@@ -77,7 +68,6 @@ class InputAnnotationOwnLineClean {
 		final Consumer<String> c = (@A String s) -> {};
 	}
 
-	// stacked on local variable
 	void locals() {
 		@A
 		final var x = "hello";
@@ -87,11 +77,9 @@ class InputAnnotationOwnLineClean {
 		final var y = 42;
 	}
 
-	// stacked on method, alphabetically ordered
 	@A
 	void method() {}
 
-	// multiple annotations each on own line, alphabetically ordered
 	@A
 	@B
 	@C
@@ -100,7 +88,6 @@ class InputAnnotationOwnLineClean {
 	// parameter annotation is NOT checked by OwnLineCheck (inline context, boundary)
 	void paramMethod(@A String param) {}
 
-	// no annotation on method (clean)
 	void plainMethod() {}
 
 	// catch parameter is NOT checked (inline context, boundary)

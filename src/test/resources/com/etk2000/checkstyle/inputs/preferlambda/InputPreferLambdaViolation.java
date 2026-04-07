@@ -4,19 +4,19 @@ import java.util.function.Supplier;
 
 class InputPreferLambdaViolation {
 	void lambdaCandidates() {
-		final Runnable r = new Runnable() { // violation: prefer lambda
+		final Runnable r = new Runnable() { // violation: Use a lambda expression instead of anonymous 'Runnable'.
 			@Override
 			public void run() {
 				System.out.println("hello");
 			}
 		};
-		final Supplier<String> s = new Supplier<>() { // violation: prefer lambda
+		final Supplier<String> s = new Supplier<>() { // violation: Use a lambda expression instead of anonymous 'Supplier'.
 			@Override
 			public String get() {
 				return "world";
 			}
 		};
-		final var t = new Thread(new Runnable() { // violation: prefer lambda (method argument)
+		final var t = new Thread(new Runnable() { // violation: Use a lambda expression instead of anonymous 'Runnable'.
 			@Override
 			public void run() {
 				System.out.println("argument");
@@ -26,7 +26,7 @@ class InputPreferLambdaViolation {
 
 	// qualified this (Outer.this) is accessible from a lambda, so this is still a candidate
 	void qualifiedThis() {
-		final Runnable r = new Runnable() { // violation: prefer lambda
+		final Runnable r = new Runnable() { // violation: Use a lambda expression instead of anonymous 'Runnable'.
 			@Override
 			public void run() {
 				System.out.println(InputPreferLambdaViolation.this.toString());

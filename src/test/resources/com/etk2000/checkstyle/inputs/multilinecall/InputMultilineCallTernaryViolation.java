@@ -6,11 +6,11 @@ class InputMultilineCallTernaryViolation {
 
 	void singleLineTernaryWrongClose() {
 		method(true ? "a" : "b"
-		); // violation: single-line ternary close paren on wrong line
+		); // violation: Single-line ternary argument: closing paren must be on the same line.
 	}
 
 	void ternaryNotOnOpening() {
-		method( // violation: ternary condition not on opening paren line
+		method( // violation: Ternary argument: condition must be on the opening paren line.
 				true
 						? "a"
 						: "b"
@@ -20,6 +20,6 @@ class InputMultilineCallTernaryViolation {
 	void ternaryOnClosing() {
 		method(true
 				? "a"
-				: "b"); // violation: arg on closing paren line
+				: "b"); // violation: In multiline calls/signatures, no arguments on the closing paren line.
 	}
 }

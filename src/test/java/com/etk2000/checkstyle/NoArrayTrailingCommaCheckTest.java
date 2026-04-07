@@ -21,7 +21,7 @@ public class NoArrayTrailingCommaCheckTest {
 		assertEquals("No trailing comma in array initializer.", violations.get(0).getMessage());
 		assertEquals(5, violations.get(1).getLine());
 		assertEquals("No trailing comma in array initializer.", violations.get(1).getMessage());
-		assertEquals(8, violations.get(2).getLine());
+		assertEquals(7, violations.get(2).getLine());
 		assertEquals("No trailing comma in array initializer.", violations.get(2).getMessage());
 	}
 }

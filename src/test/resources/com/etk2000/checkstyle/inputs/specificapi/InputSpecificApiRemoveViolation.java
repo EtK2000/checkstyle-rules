@@ -4,10 +4,10 @@ import java.util.List;
 
 class InputSpecificApiRemoveViolation {
 	void removeFirst(List<String> list) {
-		list.remove(0); // violation: use removeFirst()
+		list.remove(0); // violation: Use '.removeFirst()' instead of '.remove(0)'.
 	}
 
 	void removeLast(List<String> list) {
-		list.remove(list.size() - 1); // violation: use removeLast()
+		list.remove(list.size() - 1); // violation: Use '.removeLast()' instead of '.remove(size() - 1)'.
 	}
 }

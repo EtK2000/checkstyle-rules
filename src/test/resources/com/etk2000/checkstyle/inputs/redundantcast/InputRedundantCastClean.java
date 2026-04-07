@@ -12,12 +12,10 @@ class InputRedundantCastClean {
 		return 0;
 	}
 
-	// cast of method return to different type (downcast/unbox)
 	void methodReturnCast() {
 		final int x = (int) getNumber();
 	}
 
-	// narrowing primitive: needed
 	void narrowingCast() {
 		final long x = 5;
 		final int y = (int) x;
@@ -63,7 +61,6 @@ class InputRedundantCastClean {
 		final long y = (long) x * 100;
 	}
 
-	// widening in array initializer
 	void wideningInArrayInit() {
 		final int x = 5;
 		final long[] arr = new long[]{(long) x};
@@ -87,7 +84,6 @@ class InputRedundantCastClean {
 		takesLong((long) x);
 	}
 
-	// widening in return from non-primitive method
 	Object wideningInNonPrimitiveReturn() {
 		final int x = 5;
 		return (long) x;
@@ -106,7 +102,6 @@ class InputRedundantCastClean {
 		final var z = flag ? (long) x : y;
 	}
 
-	// widening in ternary return from non-primitive method
 	Object wideningInTernaryNonPrimitiveReturn(boolean flag) {
 		final int x = 5;
 		return flag ? (long) x : 0;

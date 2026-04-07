@@ -24,7 +24,6 @@ class AllConstructorsIneligible {
 	}
 }
 
-/** Already a record. */
 record AlreadyRecord(int x, int y) {}
 
 /** Class extending another class: records implicitly extend Record. */
@@ -48,7 +47,6 @@ class ConstructorWithExpression {
 	}
 }
 
-/** Custom equals with @Override. */
 class CustomEquals {
 	final int id;
 
@@ -62,7 +60,6 @@ class CustomEquals {
 	}
 }
 
-/** Custom hashCode with @Override. */
 class CustomHashCode {
 	final String name;
 
@@ -76,7 +73,6 @@ class CustomHashCode {
 	}
 }
 
-/** Custom toString with @Override. */
 class CustomToString {
 	final double value;
 
@@ -105,7 +101,6 @@ class InstanceInit {
 	}
 }
 
-/** Mixed: some fields inline, some not. */
 class MixedInitialization {
 	final int computed;
 	final int constant = 42;
@@ -115,12 +110,10 @@ class MixedInitialization {
 	}
 }
 
-/** No fields at all. */
 class NoFields {
 	void doSomething() {}
 }
 
-/** No instance fields (only static). */
 class NoInstanceFields {
 	static final int CONSTANT = 42;
 
@@ -129,7 +122,6 @@ class NoInstanceFields {
 	}
 }
 
-/** Non-final instance field. */
 class NonFinalField {
 	int mutable;
 	final int immutable;

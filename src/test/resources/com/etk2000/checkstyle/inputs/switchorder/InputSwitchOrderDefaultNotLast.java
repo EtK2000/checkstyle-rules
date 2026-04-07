@@ -1,7 +1,6 @@
 package com.etk2000.checkstyle.inputs.switchorder;
 
 class InputSwitchOrderDefaultNotLast {
-	// enhanced switch
 	int enhanced(int x) {
 		return switch (x) {
 			default -> -1; // violation: default must be last
@@ -10,7 +9,6 @@ class InputSwitchOrderDefaultNotLast {
 		};
 	}
 
-	// traditional switch
 	int traditional(int x) {
 		switch (x) {
 			default: // violation: default must be last

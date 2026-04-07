@@ -91,7 +91,6 @@ class InputFieldSortingClean {
 	static final long PAST = NOW - 1000;
 	static final String GAMMA = "g";
 
-	// static: non-final
 	static int delta;
 
 	// instance: final with inline value, anonymous classes first (sorted among themselves)
@@ -110,7 +109,6 @@ class InputFieldSortingClean {
 	final int count = 0;
 	final String name = "default";
 
-	// instance: final without inline value
 	final List<String> items;
 	final Map<String, Integer> lookup;
 

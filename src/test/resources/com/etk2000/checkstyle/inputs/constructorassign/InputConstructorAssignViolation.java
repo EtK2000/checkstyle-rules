@@ -5,7 +5,7 @@ class InputConstructorAssignViolation {
 
 	InputConstructorAssignViolation(int alpha, int beta) {
 		this.beta = beta; // violation: beta before alpha
-		this.alpha = alpha;
+		this.alpha = alpha; // violation: Assignment 'this.alpha' must appear before 'this.beta' (alphabetical order).
 	}
 }
 
@@ -20,6 +20,6 @@ class InputConstructorAssignMultiBeforeSimple {
 				return beta.toString();
 			}
 		};
-		this.alpha = alpha; // violation: simple after multi-line
+		this.alpha = alpha; // violation: Simple assignment 'this.alpha' must appear before multi-line assignments.
 	}
 }

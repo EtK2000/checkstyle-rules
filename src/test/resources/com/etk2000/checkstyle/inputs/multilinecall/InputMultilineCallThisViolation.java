@@ -8,21 +8,21 @@ class InputMultilineCallThisViolation {
 
 	void thisBracelessLambdaOnBodyLine() {
 		method(this, v ->
-				System.out.println(v)); // violation: closing paren on body line
+				System.out.println(v)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
 	}
 
 	void thisLambdaNotOnClosing() {
 		method(this, x -> {
 			System.out.println(x);
 		}
-		); // violation: closing brace not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 
 	void thisLambdaNotOnOpening() {
-		method( // violation: inline block not on opening paren line
+		method( // violation: Inline block argument: must be on the opening paren line.
 				this, x -> {
 					System.out.println(x);
 				}
-		); // violation: closing brace not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 }

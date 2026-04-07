@@ -6,16 +6,16 @@ class InputMultilineCallAnonClassViolation {
 			public void run() {
 			}
 		}
-		); // violation: closing brace not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 
 	void anonClassNotOnOpening() {
-		method( // violation: anon class not on opening paren line
+		method( // violation: Inline block argument: must be on the opening paren line.
 				new Runnable() {
 					public void run() {
 					}
 				}
-		); // violation: closing brace not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Runnable r) {

@@ -6,11 +6,11 @@ class InputMultilineCallChainedConstructorViolation {
 	void chainedConstructorClosingOnChainLine() {
 		method(new JSONObject()
 				.put("key", "value")
-				.put("key2", "value2")); // violation: closing paren on chain end line
+				.put("key2", "value2")); // violation: In multiline calls/signatures, no arguments on the closing paren line.
 	}
 
 	void chainedConstructorNotOnOpeningLine() {
-		method( // violation: chained constructor not on opening paren line
+		method( // violation: Inline block argument: must be on the opening paren line.
 				new JSONObject()
 						.put("key", "value")
 						.put("key2", "value2")

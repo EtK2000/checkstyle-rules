@@ -49,10 +49,11 @@
 			value="Add a blank line after break; before the next case/default." />
 	</module>
 
-	<!-- Method parameters never final -->
+	<!-- Method parameters never final (also excludes matches inside comments, since
+		 violation comments may contain "(final" in the check's message text) -->
 	<module name="RegexpSingleline">
 		<property name="id" value="NoFinalParameters" />
-		<property name="format" value="^(?!.*\s:\s)(?!.*&quot;.*(\(final|,\s*final)).*(\(final |,\s*final )\S" />
+		<property name="format" value="^(?!.*\s:\s)(?!.*&quot;.*(\(final|,\s*final))(?!.*//.*(\(final|,\s*final)).*(\(final |,\s*final )\S" />
 		<property name="message" value="Method parameters must not be final." />
 	</module>
 

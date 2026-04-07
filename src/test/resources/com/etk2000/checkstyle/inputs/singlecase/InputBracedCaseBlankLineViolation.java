@@ -8,12 +8,12 @@ class InputBracedCaseBlankLineViolation {
 				return y;
 			}
 
-			case 2: { // violation: no blank line after braced case
+			case 2: { // violation: No blank line after braced case, the closing brace provides separation.
 				final var z = x + 2;
 				return z;
 			}
 
-			default: // violation: no blank line after braced case
+			default: // violation: No blank line after braced case, the closing brace provides separation.
 				return 0;
 		}
 	}

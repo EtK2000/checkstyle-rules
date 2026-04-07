@@ -18,7 +18,6 @@ public class PreferLiteralSuffixCheckTest {
 		final var violations = BaseCheckTest.runCheck(PreferLiteralSuffixCheck.class, DIR + "InputLiteralSuffixViolation.java");
 		assertEquals(32, violations.size());
 
-		// cast on left, literal on right — various operators and types
 		assertEquals(7, violations.get(0).getLine());
 		assertEquals("Use 'd' suffix on '100' instead of a cast.", violations.get(0).getMessage());
 
@@ -67,7 +66,6 @@ public class PreferLiteralSuffixCheckTest {
 		assertEquals(97, violations.get(15).getLine());
 		assertEquals("Use 'L' suffix on '0xFF' instead of a cast.", violations.get(15).getMessage());
 
-		// literal on left, cast on right — arithmetic, bitwise, comparison, shift, double, float
 		assertEquals(103, violations.get(16).getLine());
 		assertEquals("Use 'L' suffix on '100' instead of a cast.", violations.get(16).getMessage());
 
@@ -86,7 +84,6 @@ public class PreferLiteralSuffixCheckTest {
 		assertEquals(133, violations.get(21).getLine());
 		assertEquals("Use 'L' suffix on '1' instead of a cast.", violations.get(21).getMessage());
 
-		// negative/positive unary literals (left, right, positive)
 		assertEquals(139, violations.get(22).getLine());
 		assertEquals("Use 'L' suffix on '-100' instead of a cast.", violations.get(22).getMessage());
 
@@ -96,7 +93,6 @@ public class PreferLiteralSuffixCheckTest {
 		assertEquals(151, violations.get(24).getLine());
 		assertEquals("Use 'L' suffix on '+100' instead of a cast.", violations.get(24).getMessage());
 
-		// ternary — long/double/float, both branches
 		assertEquals(157, violations.get(25).getLine());
 		assertEquals("Use 'd' suffix on '0' instead of a cast.", violations.get(25).getMessage());
 
@@ -115,7 +111,6 @@ public class PreferLiteralSuffixCheckTest {
 		assertEquals(187, violations.get(30).getLine());
 		assertEquals("Use 'L' suffix on '0' instead of a cast.", violations.get(30).getMessage());
 
-		// ternary with negative literal
 		assertEquals(193, violations.get(31).getLine());
 		assertEquals("Use 'L' suffix on '-1' instead of a cast.", violations.get(31).getMessage());
 	}

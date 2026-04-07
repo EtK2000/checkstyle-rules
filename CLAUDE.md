@@ -171,7 +171,10 @@
 ## Naming & Comments
 
 - Always use understandable variable names (except `i`, `j`, `k` for index iteration)
-- No nonsense comments; only TODOs (FIXME for high priority) or explanations of complex logic
+- No slop comments. Never add comments that restate what the next few lines of code clearly say
+  (e.g. "// Create a new list", "// Return the result", "// Check if X is null"). Only TODOs
+  (FIXME for high priority) or explanations of genuinely non-obvious logic. If the code is clear
+  without a comment, don't add one
 - Magic numbers/strings should be `static final` variables, consolidated if correlated across
   classes
 
@@ -222,6 +225,9 @@
   context handling) before reaching for a suppression
 - After ANY code change (including test resources, comments, reordering), run the full test/check
   suite. See `docs/testing.md` for the correct command
+- Assume the codebase has zero pre-existing compilation errors, test failures, or checkstyle
+  violations. If checks fail after your changes, the failure is caused by your changes.
+  Do not try to verify whether it was pre-existing
 
 # Writing Style
 

@@ -15,7 +15,6 @@ public class PreferSpecificApiCheckTest {
 
 		var i = 0;
 
-		// assertEquals 2-arg
 		assertEquals(10, violations.get(i).getLine());
 		assertEquals("Use 'assertFalse' instead of 'assertEquals' with a 'false' literal.", violations.get(i++).getMessage());
 		assertEquals(14, violations.get(i).getLine());
@@ -29,7 +28,6 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(30, violations.get(i).getLine());
 		assertEquals("Use 'assertTrue' instead of 'assertEquals' with a 'true' literal.", violations.get(i++).getMessage());
 
-		// assertEquals 3-arg message-first (JUnit 4)
 		assertEquals(34, violations.get(i).getLine());
 		assertEquals("Use 'assertFalse' instead of 'assertEquals' with a 'false' literal.", violations.get(i++).getMessage());
 		assertEquals(38, violations.get(i).getLine());
@@ -43,7 +41,6 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(54, violations.get(i).getLine());
 		assertEquals("Use 'assertTrue' instead of 'assertEquals' with a 'true' literal.", violations.get(i++).getMessage());
 
-		// assertEquals 3-arg message-last (JUnit 5)
 		assertEquals(58, violations.get(i).getLine());
 		assertEquals("Use 'assertFalse' instead of 'assertEquals' with a 'false' literal.", violations.get(i++).getMessage());
 		assertEquals(62, violations.get(i).getLine());
@@ -51,7 +48,6 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(66, violations.get(i).getLine());
 		assertEquals("Use 'assertTrue' instead of 'assertEquals' with a 'true' literal.", violations.get(i++).getMessage());
 
-		// assertNotEquals 2-arg
 		assertEquals(70, violations.get(i).getLine());
 		assertEquals("Use 'assertTrue' instead of 'assertNotEquals' with a 'false' literal.", violations.get(i++).getMessage());
 		assertEquals(74, violations.get(i).getLine());
@@ -65,7 +61,6 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(90, violations.get(i).getLine());
 		assertEquals("Use 'assertFalse' instead of 'assertNotEquals' with a 'true' literal.", violations.get(i++).getMessage());
 
-		// assertNotEquals 3-arg message-first (JUnit 4)
 		assertEquals(94, violations.get(i).getLine());
 		assertEquals("Use 'assertTrue' instead of 'assertNotEquals' with a 'false' literal.", violations.get(i++).getMessage());
 		assertEquals(98, violations.get(i).getLine());
@@ -79,7 +74,6 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(114, violations.get(i).getLine());
 		assertEquals("Use 'assertFalse' instead of 'assertNotEquals' with a 'true' literal.", violations.get(i++).getMessage());
 
-		// assertNotEquals 3-arg message-last (JUnit 5)
 		assertEquals(118, violations.get(i).getLine());
 		assertEquals("Use 'assertTrue' instead of 'assertNotEquals' with a 'false' literal.", violations.get(i++).getMessage());
 		assertEquals(122, violations.get(i).getLine());
@@ -87,7 +81,6 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(126, violations.get(i).getLine());
 		assertEquals("Use 'assertFalse' instead of 'assertNotEquals' with a 'true' literal.", violations.get(i++).getMessage());
 
-		// assertNotSame 2-arg + 3-arg
 		assertEquals(130, violations.get(i).getLine());
 		assertEquals("Use 'assertNotNull' instead of 'assertNotSame' with a 'null' literal.", violations.get(i++).getMessage());
 		assertEquals(134, violations.get(i).getLine());
@@ -99,7 +92,6 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(146, violations.get(i).getLine());
 		assertEquals("Use 'assertNotNull' instead of 'assertNotSame' with a 'null' literal.", violations.get(i++).getMessage());
 
-		// assertSame 2-arg + 3-arg
 		assertEquals(150, violations.get(i).getLine());
 		assertEquals("Use 'assertNull' instead of 'assertSame' with a 'null' literal.", violations.get(i++).getMessage());
 		assertEquals(154, violations.get(i).getLine());
@@ -111,7 +103,6 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(166, violations.get(i).getLine());
 		assertEquals("Use 'assertNull' instead of 'assertSame' with a 'null' literal.", violations.get(i++).getMessage());
 
-		// qualified
 		assertEquals(170, violations.get(i).getLine());
 		assertEquals("Use 'assertTrue' instead of 'assertEquals' with a 'true' literal.", violations.get(i++).getMessage());
 	}
@@ -354,11 +345,9 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(13, violations.get(1).getLine());
 		assertEquals("Use '.getFirst()' instead of '.get(0)'.", violations.get(1).getMessage());
 
-		// list local: List has getFirst
 		assertEquals(22, violations.get(2).getLine());
 		assertEquals("Use '.getFirst()' instead of '.get(0)'.", violations.get(2).getMessage());
 
-		// list param: List has getFirst
 		assertEquals(26, violations.get(3).getLine());
 		assertEquals("Use '.getFirst()' instead of '.get(0)'.", violations.get(3).getMessage());
 

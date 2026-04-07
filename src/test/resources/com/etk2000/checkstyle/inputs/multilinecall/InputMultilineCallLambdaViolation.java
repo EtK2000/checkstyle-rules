@@ -5,22 +5,22 @@ import java.util.function.Consumer;
 class InputMultilineCallLambdaViolation {
 	void bracelessLambdaClosingOnBodyLine() {
 		method(v ->
-				System.out.println(v)); // violation: closing paren on body line
+				System.out.println(v)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
 	}
 
 	void lambdaNotOnClosingLine() {
 		method(x -> {
 			System.out.println(x);
 		}
-		); // violation: closing brace not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 
 	void lambdaNotOnOpeningLine() {
-		method( // violation: lambda not on opening paren line
+		method( // violation: Inline block argument: must be on the opening paren line.
 				x -> {
 					System.out.println(x);
 				}
-		); // violation: closing brace not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Consumer<Integer> c) {

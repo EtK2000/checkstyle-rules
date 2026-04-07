@@ -72,7 +72,6 @@ class InputRedundantSuffixClean {
 		return 0L;
 	}
 
-	// return with non-matching type context
 	int returnsInt() {
 		return 0;
 	}

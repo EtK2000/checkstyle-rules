@@ -20,7 +20,6 @@ public class EmptyBodyCheckTest {
 		final var violations = BaseCheckTest.runCheck(EmptyBodyCheck.class, DIR + "InputEmptyBodyViolation.java");
 		assertEquals(10, violations.size());
 
-		// empty else
 		assertEquals(7, violations.get(0).getLine());
 		assertEquals("Empty else body, remove it.", violations.get(0).getMessage());
 		assertEquals(14, violations.get(1).getLine());
@@ -34,7 +33,6 @@ public class EmptyBodyCheckTest {
 		assertEquals(40, violations.get(5).getLine());
 		assertEquals("Empty else body, remove it.", violations.get(5).getMessage());
 
-		// empty if
 		assertEquals(45, violations.get(6).getLine());
 		assertEquals("Empty if body, remove it (preserve any side effects in the condition).", violations.get(6).getMessage());
 		assertEquals(50, violations.get(7).getLine());
@@ -51,7 +49,6 @@ public class EmptyBodyCheckTest {
 		assertEquals(7, violations.size());
 		var i = 0;
 
-		// empty do-while
 		assertEquals(7, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Empty do-while body, remove it (preserve any side effects in the condition).", violations.get(i++).getMessage());
@@ -59,7 +56,6 @@ public class EmptyBodyCheckTest {
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Empty do-while body, remove it (preserve any side effects in the condition).", violations.get(i++).getMessage());
 
-		// empty for (block, enhanced for-each, statement)
 		assertEquals(17, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Empty for body, remove it (preserve any side effects in the condition/update).", violations.get(i++).getMessage());
@@ -70,7 +66,6 @@ public class EmptyBodyCheckTest {
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Empty for body, remove it (preserve any side effects in the condition/update).", violations.get(i++).getMessage());
 
-		// empty while
 		assertEquals(30, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Empty while body, remove it (preserve any side effects in the condition).", violations.get(i++).getMessage());

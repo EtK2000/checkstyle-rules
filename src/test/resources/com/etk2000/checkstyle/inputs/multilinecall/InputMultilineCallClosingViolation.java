@@ -5,10 +5,10 @@ class InputMultilineCallClosingViolation {
 		System.out.println(
 				1,
 				2,
-				3); // violation: arg on closing paren line
+				3); // violation: In multiline calls/signatures, no arguments on the closing paren line.
 
 		method(
-				1, 2); // violation: arg on closing paren line
+				1, 2); // violation: In multiline calls/signatures, no arguments on the closing paren line.
 	}
 
 	void method(int a, int b) {

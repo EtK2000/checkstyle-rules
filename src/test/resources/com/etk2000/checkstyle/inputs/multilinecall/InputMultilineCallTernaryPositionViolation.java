@@ -3,7 +3,7 @@ package com.etk2000.checkstyle.inputs.multilinecall;
 class InputMultilineCallTernaryPositionViolation {
 	void colonOnQuestionLine() {
 		method(true
-				? "a" : "b" // violation: : on ? line
+				? "a" : "b" // violation: Ternary ':' must be on the line immediately after the true branch.
 		);
 	}
 
@@ -11,7 +11,7 @@ class InputMultilineCallTernaryPositionViolation {
 		method(true
 				? "a"
 
-				: "b" // violation: : not immediately after true branch
+				: "b" // violation: Ternary ':' must be on the line immediately after the true branch.
 		);
 	}
 
@@ -19,7 +19,7 @@ class InputMultilineCallTernaryPositionViolation {
 	}
 
 	void questionOnConditionLine() {
-		method(true ? // violation: ? on condition line
+		method(true ? // violation: Ternary '?' must be on the line immediately after the condition.
 				"a"
 				: "b"
 		);
@@ -28,7 +28,7 @@ class InputMultilineCallTernaryPositionViolation {
 	void questionTwoLinesAfterCondition() {
 		method(true
 
-				? "a" // violation: ? not immediately after condition
+				? "a" // violation: Ternary '?' must be on the line immediately after the condition.
 				: "b"
 		);
 	}

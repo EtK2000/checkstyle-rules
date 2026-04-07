@@ -30,7 +30,6 @@ public class NoCaseBracesCheckTest {
 		assertEquals(2, violations.size());
 		assertEquals(6, violations.get(0).getLine());
 		assertEquals(msg, violations.get(0).getMessage());
-		// default: with unnecessary braces
 		assertEquals(10, violations.get(1).getLine());
 		assertEquals(msg, violations.get(1).getMessage());
 	}

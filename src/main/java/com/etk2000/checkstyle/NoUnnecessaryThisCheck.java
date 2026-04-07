@@ -27,7 +27,6 @@ public class NoUnnecessaryThisCheck extends AbstractCheck {
 	private static Set<String> collectLocalNames(@Nonnull DetailAST enclosingDef) {
 		final var names = new HashSet<String>();
 
-		// collect parameter names
 		final var params = enclosingDef.findFirstToken(TokenTypes.PARAMETERS);
 		if (params != null) {
 			for (var param = params.getFirstChild(); param != null; param = param.getNextSibling()) {
@@ -39,7 +38,6 @@ public class NoUnnecessaryThisCheck extends AbstractCheck {
 			}
 		}
 
-		// collect local variable names from the method/constructor body
 		final var slist = enclosingDef.findFirstToken(TokenTypes.SLIST);
 		if (slist != null)
 			collectVariableNames(slist, names);

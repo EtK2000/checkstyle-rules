@@ -7,12 +7,12 @@ class InputSpecificApiToListViolation {
 	void collectToList(List<String> list) {
 		final var result = list.stream()
 				.filter(s -> !s.isEmpty())
-				.collect(Collectors.toList()); // violation: use .toList()
+				.collect(Collectors.toList()); // violation: Use '.toList()' instead of '.collect(Collectors.toList())'.
 	}
 
 	void collectToUnmodifiableList(List<String> list) {
 		final var result = list.stream()
 				.filter(s -> !s.isEmpty())
-				.collect(Collectors.toUnmodifiableList()); // violation: use .toList()
+				.collect(Collectors.toUnmodifiableList()); // violation: Use '.toList()' instead of '.collect(Collectors.toUnmodifiableList())'.
 	}
 }

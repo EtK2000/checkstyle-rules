@@ -8,16 +8,16 @@ class InputMultilineCallConstructorViolation {
 	void constructorNotOnClosingLine() {
 		method(new ArrayList<>(
 				Collections.nCopies(3, 1)
-		)
-		); // violation: closing paren not on closing paren line
+		) // violation: In multiline calls/signatures, no arguments on the closing paren line.
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 
 	void constructorNotOnOpeningLine() {
-		method( // violation: constructor not on opening paren line
+		method( // violation: Inline block argument: must be on the opening paren line.
 				new ArrayList<>(
 						Collections.nCopies(3, 1)
 				)
-		); // violation: closing paren not on closing paren line
+		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
 	}
 
 	void method(List<Integer> list) {

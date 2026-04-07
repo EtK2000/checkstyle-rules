@@ -2,10 +2,10 @@ package com.etk2000.checkstyle.inputs.fieldsorting;
 
 class InputFieldSortingChunkViolation {
 	int nonFinal;
-	final int finalNoValue; // violation: final without inline value after non-final
-	final int finalWithValue = 1; // violation: final with inline value after non-final
+	final int finalNoValue; // violation: Field 'finalNoValue' (final without inline value) must appear before non-final fields.
+	final int finalWithValue = 1; // violation: Field 'finalWithValue' (final with inline value) must appear before final without inline value fields.
 
-	InputFieldSortingChunkViolation(int finalNoValue) {
-		this.finalNoValue = finalNoValue;
+	InputFieldSortingChunkViolation(int value) {
+		this.finalNoValue = value;
 	}
 }

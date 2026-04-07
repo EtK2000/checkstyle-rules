@@ -21,33 +21,27 @@ public class InstanceofBeforeCastCheckTest {
 		assertEquals(6, violations.size());
 		var i = 0;
 
-		// cast before instanceof in &&
-		assertEquals(6, violations.get(i).getLine());
+		assertEquals(5, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Move 'instanceof String' before the cast to 'String'.", violations.get(i++).getMessage());
 
-		// cast buried deeper in left operand
-		assertEquals(12, violations.get(i).getLine());
+		assertEquals(10, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Move 'instanceof String' before the cast to 'String'.", violations.get(i++).getMessage());
 
-		// cast in variable assignment before instanceof
-		assertEquals(18, violations.get(i).getLine());
+		assertEquals(15, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Move 'instanceof String' before the cast to 'String'.", violations.get(i++).getMessage());
 
-		// cast in else block after positive instanceof
-		assertEquals(27, violations.get(i).getLine());
+		assertEquals(23, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Cast to 'String' is in a branch where 'instanceof String' is false, this will throw ClassCastException.", violations.get(i++).getMessage());
 
-		// cast in then block after negated instanceof
-		assertEquals(33, violations.get(i).getLine());
+		assertEquals(28, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Cast to 'String' is in a branch where 'instanceof String' is false, this will throw ClassCastException.", violations.get(i++).getMessage());
 
-		// cast in ternary false branch
-		assertEquals(38, violations.get(i).getLine());
+		assertEquals(32, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Cast to 'String' is in a branch where 'instanceof String' is false, this will throw ClassCastException.", violations.get(i++).getMessage());
 	}

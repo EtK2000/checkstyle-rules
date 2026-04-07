@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle.inputs.multilinecall;
 
-// getString calls that should NOT be treated as inline block args
 class InputMultilineCallGetStringNotContext {
 	void bareGetString() {
 		method(

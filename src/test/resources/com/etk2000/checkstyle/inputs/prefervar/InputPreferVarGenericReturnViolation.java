@@ -10,7 +10,7 @@ class InputPreferVarGenericReturnViolation {
 	}
 
 	void autoDetectedGenericVar() {
-		final var s = cast("hello"); // violation: Using 'var' with 'cast' loses generic type information, consider using an explicit type.
+		final var s = cast("hello"); // violation (warning): Using 'var' with 'cast' loses generic type information, consider using an explicit type.
 	}
 
 	void nonGenericMethod() {

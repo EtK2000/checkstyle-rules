@@ -38,11 +38,11 @@ public class SwitchCaseOrderCheckTest {
 	public void testInternalOrderViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(SwitchCaseOrderCheck.class, DIR + "InputSwitchOrderInternalViolation.java");
 		assertEquals(5, violations.size());
-		assertEquals("Comma-separated label '2' must appear before '3'.", violations.get(0).getMessage());
-		assertEquals("Comma-separated label 'delta' must appear before 'gamma'.", violations.get(1).getMessage());
-		assertEquals("Comma-separated label '0' must appear before 'a'.", violations.get(2).getMessage());
-		assertEquals("Comma-separated label 'ALPHA' must appear before '100'.", violations.get(3).getMessage());
-		assertEquals("Comma-separated label '1' must appear before '3'.", violations.get(4).getMessage());
+		assertEquals("Label '2' must appear before '3'.", violations.get(0).getMessage());
+		assertEquals("Label 'delta' must appear before 'gamma'.", violations.get(1).getMessage());
+		assertEquals("Label '0' must appear before 'a'.", violations.get(2).getMessage());
+		assertEquals("Label 'ALPHA' must appear before '100'.", violations.get(3).getMessage());
+		assertEquals("Label '1' must appear before '3'.", violations.get(4).getMessage());
 	}
 
 	@Test

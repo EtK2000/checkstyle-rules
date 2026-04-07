@@ -3,7 +3,6 @@ package com.etk2000.checkstyle.inputs.switchorder;
 class InputSwitchOrderViolation {
 	static final int ALPHA = 1;
 
-	// alpha out of order
 	String alphaWrong(String s) {
 		return switch (s) {
 			case "beta" -> "b";
@@ -12,7 +11,6 @@ class InputSwitchOrderViolation {
 		};
 	}
 
-	// default not last
 	int defaultNotLast(int x) {
 		switch (x) {
 			default:
@@ -22,7 +20,6 @@ class InputSwitchOrderViolation {
 		}
 	}
 
-	// string letter before digit content
 	String letterBeforeDigitString(String s) {
 		return switch (s) {
 			case "abc" -> "letters";
@@ -43,7 +40,6 @@ class InputSwitchOrderViolation {
 		}
 	}
 
-	// numeric out of order
 	int numericWrong(int x) {
 		switch (x) {
 			case 10:
