@@ -8,6 +8,6 @@ class InputPreferVarChainViolation {
 
 	void chainedGenericReturnVar() {
 		// chain resolves: create() → GenericReturnHelper, find() needs target type
-		final var s = GenericReturnHelper.create().find(1); // violation: var with generic return type
+		final var s = GenericReturnHelper.create().find(1); // violation: Using 'var' with 'find' loses generic type information, consider using an explicit type.
 	}
 }

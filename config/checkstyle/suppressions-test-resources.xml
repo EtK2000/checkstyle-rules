@@ -83,6 +83,9 @@
 	<suppress checks="PreferPatternMatchingInstanceofCheck" files="inputs[\\/]instanceofbeforecast[\\/]" />
 	<suppress checks="PreferPrefixIncrementCheck" files="inputs[\\/]redundantcast[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]astutil[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]controlflow[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]emptybody[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]prefix[\\/]" />
 	<suppress checks="RedundantCastCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]literalsuffix[\\/]" />

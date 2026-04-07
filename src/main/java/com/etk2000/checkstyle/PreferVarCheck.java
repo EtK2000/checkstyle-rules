@@ -291,8 +291,35 @@ public class PreferVarCheck extends AbstractCheck {
 	@CheckReturnValue
 	private static boolean isLocalVariable(@Nonnull DetailAST varDef) {
 		final var parent = varDef.getParent();
-		// local variables live in SLIST (block), not OBJBLOCK (class body)
-		return parent != null && parent.getType() == TokenTypes.SLIST;
+		// local variables live in SLIST (block) or FOR_INIT (traditional for-loop)
+		return parent != null
+				&& (parent.getType() == TokenTypes.SLIST || parent.getType() == TokenTypes.FOR_INIT);
+	}
+
+	/**
+	 * Returns whether the variable definition is part of a multi-variable
+	 * declaration (e.g. {@code int x = 1, y = 2;}). Multi-var declarations
+	 * can't use {@code var}, so they must be downgraded to a warning.
+	 * <p>
+	 * Detection: multi-var declarations have COMMA siblings between the
+	 * VARIABLE_DEF nodes. Separate statements ({@code int a; int b;}) have
+	 * SEMI siblings instead.
+	 */
+	@CheckReturnValue
+	private static boolean isMultiVarDeclaration(@Nonnull DetailAST varDef) {
+		for (var sibling = varDef.getNextSibling(); sibling != null; sibling = sibling.getNextSibling()) {
+			if (sibling.getType() == TokenTypes.COMMA)
+				return true;
+			if (sibling.getType() == TokenTypes.SEMI)
+				return false;
+		}
+		for (var sibling = varDef.getPreviousSibling(); sibling != null; sibling = sibling.getPreviousSibling()) {
+			if (sibling.getType() == TokenTypes.COMMA)
+				return true;
+			if (sibling.getType() == TokenTypes.SEMI)
+				return false;
+		}
+		return false;
 	}
 
 	/**
@@ -501,6 +528,13 @@ public class PreferVarCheck extends AbstractCheck {
 				final var assign = ast.findFirstToken(TokenTypes.ASSIGN);
 				if (assign == null)
 					return;
+
+				// multi-var declarations (int x = 1, y = 2;) can't use var
+				if (isMultiVarDeclaration(ast)) {
+					if (!isVarType(ast))
+						logWarning(ast, MSG_LOCAL);
+					return;
+				}
 
 				// skip null initializers (type can't be inferred)
 				if (isInitializerNull(assign))

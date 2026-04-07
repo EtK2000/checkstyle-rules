@@ -265,6 +265,23 @@ checkstyle rules on them. Methods in test resources must be alphabetically order
 
 Run `./gradlew check` (not just `test`) after any change to catch these.
 
+### Violation comments
+
+Violation comments in test resource files MUST use exact message text:
+`// violation: <exact AuditEvent.getMessage() text>` for errors,
+`// violation (warning): <exact message>` for warnings.
+Never use shorthand, paraphrases, or descriptions. The comment IS the expected message.
+
+- Clean files must have ZERO violation comments
+- Violation files must have a comment on EVERY violation line
+- No clean cases in violation files, no violation cases in clean files
+
+### Assertion completeness
+
+Every test assertion on a violation MUST check all three: line number, severity level, AND message.
+Never assert just line + count. Never assert line without severity. Never skip message validation
+on "obvious" cases. Every single violation gets all three checks, no exceptions.
+
 ## Running tests
 
 Always use `./gradlew check`, never a subset like `test` or `checkstyleMain checkstyleTest`. The

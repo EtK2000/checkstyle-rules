@@ -189,45 +189,110 @@ public class PreferVarCheckTest {
 	@Test
 	public void testExplicitTypeViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarViolation.java");
-		assertEquals(10, violations.size());
+		assertEquals(23, violations.size());
 
-		// for-each with explicit type
-		assertEquals(9, violations.getFirst().getLine());
-		assertEquals("For-each loop must use 'var' instead of an explicit type.", violations.getFirst().getMessage());
+		final var localMsg = "Local variable must use 'var' instead of an explicit type.";
+		final var forEachMsg = "For-each loop must use 'var' instead of an explicit type.";
+		final var tryMsg = "Try-with-resources must use 'var' instead of an explicit type.";
+		final var arrayMsg = "Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.";
+		var i = 0;
 
-		// for-each with explicit type
-		assertEquals(12, violations.get(1).getLine());
-		assertEquals("For-each loop must use 'var' instead of an explicit type.", violations.get(1).getMessage());
+		// annotated local variable (@Nonnull on own line, position at annotation)
+		assertEquals(15, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
 
-		// local with explicit type
-		assertEquals(17, violations.get(2).getLine());
-		assertEquals("Local variable must use 'var' instead of an explicit type.", violations.get(2).getMessage());
+		// constructor calls (Object, HashMap<>)
+		assertEquals(20, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
+		assertEquals(21, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
 
-		assertEquals(18, violations.get(3).getLine());
-		assertEquals("Local variable must use 'var' instead of an explicit type.", violations.get(3).getMessage());
+		// for-each (String, Integer)
+		assertEquals(26, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(forEachMsg, violations.get(i++).getMessage());
+		assertEquals(29, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(forEachMsg, violations.get(i++).getMessage());
 
-		assertEquals(19, violations.get(4).getLine());
-		assertEquals("Local variable must use 'var' instead of an explicit type.", violations.get(4).getMessage());
+		// for-each annotated (@Nonnull String)
+		assertEquals(35, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(forEachMsg, violations.get(i++).getMessage());
 
-		// explicit array initializer: var names = new String[]{"a", "b"}
-		assertEquals(20, violations.get(5).getLine());
-		assertEquals("Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.", violations.get(5).getMessage());
+		// for-each generic type (Entry<String, Integer>)
+		assertEquals(41, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(forEachMsg, violations.get(i++).getMessage());
 
-		// explicit array initializer: String[] numbers = new String[]{"1"}
-		assertEquals(21, violations.get(6).getLine());
-		assertEquals("Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.", violations.get(6).getMessage());
+		// for-loop init (int)
+		assertEquals(46, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
 
-		// explicit array initializer: int[][] matrix = new int[][]{{1}, {2}}
-		assertEquals(22, violations.get(7).getLine());
-		assertEquals("Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.", violations.get(7).getMessage());
+		// for-loop init (Iterator<String>)
+		assertEquals(52, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
 
-		// complex anonymous class with explicit type
-		assertEquals(23, violations.get(8).getLine());
-		assertEquals("Local variable must use 'var' instead of an explicit type.", violations.get(8).getMessage());
+		// local variables (int, String, List<Integer>)
+		assertEquals(57, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
+		assertEquals(58, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
+		assertEquals(59, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
 
-		// try-with-resources with explicit type
-		assertEquals(34, violations.get(9).getLine());
-		assertEquals("Try-with-resources must use 'var' instead of an explicit type.", violations.get(9).getMessage());
+		// explicit array initializers (var + new String[], String[] + new String[], int[][] + new int[][])
+		assertEquals(60, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(arrayMsg, violations.get(i++).getMessage());
+		assertEquals(61, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(arrayMsg, violations.get(i++).getMessage());
+		assertEquals(62, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(arrayMsg, violations.get(i++).getMessage());
+
+		// complex anonymous class
+		assertEquals(63, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
+
+		// method call (String.valueOf) and chain (.trim().toLowerCase())
+		assertEquals(74, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
+		assertEquals(75, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
+
+		// wildcard (List<?>), nested generic (Map<String, List<Integer>>), concrete (ArrayList<String>)
+		assertEquals(79, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
+		assertEquals(80, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
+		assertEquals(81, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(localMsg, violations.get(i++).getMessage());
+
+		// try-with-resources
+		assertEquals(85, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(tryMsg, violations.get(i++).getMessage());
+
+		// try-with-resources annotated
+		assertEquals(91, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(tryMsg, violations.get(i++).getMessage());
 	}
 
 	@Test
@@ -249,6 +314,49 @@ public class PreferVarCheckTest {
 		assertEquals(17, violations.get(1).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("Local variable must use 'var' instead of an explicit type.", violations.get(1).getMessage());
+	}
+
+	@Test
+	public void testMultiVarWarning() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarMultiVarViolation.java");
+		assertEquals(7, violations.size());
+
+		final var msg = "Local variable must use 'var' instead of an explicit type.";
+
+		// multi-var annotated (@Nonnull on own line, position at annotation)
+		assertEquals(7, violations.get(0).getLine());
+		assertEquals(SeverityLevel.WARNING, violations.get(0).getSeverityLevel());
+		assertEquals(msg, violations.get(0).getMessage());
+
+		// multi-var for-init
+		assertEquals(12, violations.get(1).getLine());
+		assertEquals(SeverityLevel.WARNING, violations.get(1).getSeverityLevel());
+		assertEquals(msg, violations.get(1).getMessage());
+
+		// multi-var for-init annotated (@Nonnull inline)
+		assertEquals(17, violations.get(2).getLine());
+		assertEquals(SeverityLevel.WARNING, violations.get(2).getSeverityLevel());
+		assertEquals(msg, violations.get(2).getMessage());
+
+		// multi-var local: final int x = 1, y = 2;
+		assertEquals(22, violations.get(3).getLine());
+		assertEquals(SeverityLevel.WARNING, violations.get(3).getSeverityLevel());
+		assertEquals(msg, violations.get(3).getMessage());
+
+		// multi-var local: final String a = "a", b = "b";
+		assertEquals(23, violations.get(4).getLine());
+		assertEquals(SeverityLevel.WARNING, violations.get(4).getSeverityLevel());
+		assertEquals(msg, violations.get(4).getMessage());
+
+		// multi-var with method call + literal
+		assertEquals(27, violations.get(5).getLine());
+		assertEquals(SeverityLevel.WARNING, violations.get(5).getSeverityLevel());
+		assertEquals(msg, violations.get(5).getMessage());
+
+		// multi-var partial init
+		assertEquals(31, violations.get(6).getLine());
+		assertEquals(SeverityLevel.WARNING, violations.get(6).getSeverityLevel());
+		assertEquals(msg, violations.get(6).getMessage());
 	}
 
 	@Test

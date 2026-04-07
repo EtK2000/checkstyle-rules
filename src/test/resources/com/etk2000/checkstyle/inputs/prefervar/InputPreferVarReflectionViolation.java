@@ -5,15 +5,15 @@ import java.util.Optional;
 
 class InputPreferVarReflectionViolation {
 	void staticCallGenericVar() {
-		final var list = Collections.emptyList(); // violation: var with generic return type
-		final var opt = Optional.empty(); // violation: var with generic return type
+		final var list = Collections.emptyList(); // violation: Using 'var' with 'emptyList' loses generic type information, consider using an explicit type.
+		final var opt = Optional.empty(); // violation: Using 'var' with 'empty' loses generic type information, consider using an explicit type.
 	}
 
 	void staticCallNonGeneric() {
-		final String s = String.valueOf(42); // violation: local must use var
+		final String s = String.valueOf(42); // violation: Local variable must use 'var' instead of an explicit type.
 	}
 
 	void typeArgsOnReflectionGeneric() {
-		final var list = Collections.<String>emptyList(); // violation: prefer explicit type over type args
+		final var list = Collections.<String>emptyList(); // violation: Prefer explicit type over type arguments on 'emptyList'.
 	}
 }

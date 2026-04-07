@@ -2,11 +2,19 @@ package com.etk2000.checkstyle.inputs.prefervar;
 
 import java.io.ByteArrayInputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import javax.annotation.Nonnull;
+
 class InputPreferVarClean {
 	String field = "not flagged";
+
+	void annotatedLocalVariable() {
+		@Nonnull
+		final var s = "hello";
+	}
 
 	void forEach() {
 		final var list = List.of("a", "b");
@@ -14,6 +22,31 @@ class InputPreferVarClean {
 			System.out.println(item);
 		for (final var item : list)
 			System.out.println(item);
+	}
+
+	void forEachAnnotated() {
+		final var list = List.of("a", "b");
+		for (@Nonnull var item : list)
+			System.out.println(item);
+		for (@Nonnull final var item : list)
+			System.out.println(item);
+	}
+
+	void forEachGenericType() {
+		final var map = Map.of("a", 1);
+		for (var entry : map.entrySet())
+			System.out.println(entry);
+	}
+
+	void forLoopInit() {
+		for (var i = 0; i < 10; ++i)
+			System.out.println(i);
+	}
+
+	void forLoopInitReferenceType() {
+		final var list = List.of("a", "b");
+		for (var it = list.iterator(); it.hasNext(); )
+			System.out.println(it.next());
 	}
 
 	void knownParseMethodWithVar() {
@@ -59,6 +92,17 @@ class InputPreferVarClean {
 		final float fl = 5L;
 	}
 
+	void localVariableNoInit() {
+		// no initializer — no violation (can't infer type)
+		final int x;
+		final String s;
+	}
+
+	void localVariableNoInitMultiVar() {
+		// multi-var without initializers — no violation (no ASSIGN)
+		final int x, y;
+	}
+
 	void localVariables() {
 		final var x = 42;
 		final var s = "hello";
@@ -90,6 +134,12 @@ class InputPreferVarClean {
 
 	void tryWithResources() throws Exception {
 		try (var in = new ByteArrayInputStream(new byte[0])) {
+			System.out.println(in.read());
+		}
+	}
+
+	void tryWithResourcesAnnotated() throws Exception {
+		try (@Nonnull var in = new ByteArrayInputStream(new byte[0])) {
 			System.out.println(in.read());
 		}
 	}
