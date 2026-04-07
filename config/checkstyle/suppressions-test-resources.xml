@@ -79,6 +79,7 @@
 	<suppress checks="NumericalPrefixesInfixesSuffixesCharacterCase" files="inputs[\\/]redundantsuffix[\\/]" />
 	<suppress checks="OneStatementPerLine" files="inputs[\\/]controlflow[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]astutil[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]multilinecall[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]switchorder[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]fieldsorting[\\/]" />

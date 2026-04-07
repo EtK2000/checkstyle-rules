@@ -3,6 +3,8 @@ package com.etk2000.checkstyle;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+
 import org.junit.Test;
 
 public class AnnotationSameLineCheckTest {
@@ -87,7 +89,7 @@ public class AnnotationSameLineCheckTest {
 	@Test
 	public void testPlacementViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(AnnotationSameLineCheck.class, DIR + "InputAnnotationSameLineViolation.java");
-		assertEquals(9, violations.size());
+		assertEquals(10, violations.size());
 
 		assertEquals(12, violations.get(0).getLine());  // record component
 		assertEquals(18, violations.get(1).getLine());  // constructor param
@@ -99,7 +101,12 @@ public class AnnotationSameLineCheckTest {
 		assertEquals(73, violations.get(7).getLine());  // method param
 		assertEquals(79, violations.get(8).getLine());  // multi annotation
 
-		for (final var violation : violations)
-			assertEquals(MSG_PLACEMENT, violation.getMessage());
+		for (var i = 0; i < 9; ++i)
+			assertEquals(MSG_PLACEMENT, violations.get(i).getMessage());
+
+		// placement wrong AND order wrong: only placement reported (early return)
+		assertEquals(86, violations.get(9).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(9).getSeverityLevel());
+		assertEquals("Annotation 'B' must be on the same line as the declaration.", violations.get(9).getMessage());
 	}
 }

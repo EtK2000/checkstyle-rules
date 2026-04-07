@@ -3,6 +3,8 @@ package com.etk2000.checkstyle;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+
 import org.junit.Test;
 
 public class SwitchCaseOrderCheckTest {
@@ -46,12 +48,31 @@ public class SwitchCaseOrderCheckTest {
 	@Test
 	public void testNumericEdgeCaseViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(SwitchCaseOrderCheck.class, DIR + "InputSwitchOrderNumericEdgeCases.java");
-		assertEquals(5, violations.size());
+		assertEquals(6, violations.size());
+
+		assertEquals(8, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("Case '0b0001' must appear before '0b1010'.", violations.get(0).getMessage());
+
+		assertEquals(17, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("Case 'a' must appear before 'z'.", violations.get(1).getMessage());
+
+		assertEquals(26, violations.get(2).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(2).getSeverityLevel());
 		assertEquals("Case '0x0A' must appear before '0xFF'.", violations.get(2).getMessage());
+
+		assertEquals(35, violations.get(3).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(3).getSeverityLevel());
 		assertEquals("Case '10L' must appear before '100L'.", violations.get(3).getMessage());
+
+		assertEquals(44, violations.get(4).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(4).getSeverityLevel());
 		assertEquals("Case '010' must appear before '017'.", violations.get(4).getMessage());
+
+		assertEquals(53, violations.get(5).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(5).getSeverityLevel());
+		assertEquals("Case '999' must appear before '1_000'.", violations.get(5).getMessage());
 	}
 
 	@Test

@@ -145,7 +145,7 @@ public class SwitchCaseOrderCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	private static double parseNumeric(@Nonnull String label) {
-		var text = label;
+		var text = label.replace("_", "");
 
 		// strip suffixes (L/f/d), but not from hex literals where A-F are valid digits
 		if (!text.isEmpty() && !isHexLiteral(text)) {

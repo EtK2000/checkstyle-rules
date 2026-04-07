@@ -20,6 +20,15 @@ class InputEmptyInfiniteLoopViolation {
 		}
 	}
 
+	void emptyForTrue() {
+		for (;true;); // violation: empty infinite for
+	}
+
+	void emptyForTrueBlock() {
+		for (;true;) { // violation: empty infinite for
+		}
+	}
+
 	void emptyWhileTrue() {
 		while (true); // violation: empty infinite while
 	}

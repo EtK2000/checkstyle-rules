@@ -33,16 +33,28 @@ public class InfiniteEmptyLoopCheck extends AbstractCheck {
 	}
 
 	/**
-	 * Checks if a for loop has no init, condition, or update: {@code for(;;)}.
+	 * Checks if a for loop is infinite: {@code for(;;)} or {@code for(;true;)}.
+	 * Requires empty init and iterator; condition must be either empty or {@code true}.
 	 */
 	@CheckReturnValue
 	private static boolean isInfiniteFor(@Nonnull DetailAST forAst) {
 		final var cond = forAst.findFirstToken(TokenTypes.FOR_CONDITION);
 		final var init = forAst.findFirstToken(TokenTypes.FOR_INIT);
 		final var iter = forAst.findFirstToken(TokenTypes.FOR_ITERATOR);
-		return cond != null && cond.getChildCount() == 0
-				&& init != null && init.getChildCount() == 0
-				&& iter != null && iter.getChildCount() == 0;
+		if (init == null || init.getChildCount() != 0 || iter == null || iter.getChildCount() != 0)
+			return false;
+		if (cond == null)
+			return false;
+		// for(;;) — empty condition
+		if (cond.getChildCount() == 0)
+			return true;
+		// for(;true;) — literal true condition
+		final var expr = cond.getFirstChild();
+		if (expr != null && expr.getType() == TokenTypes.EXPR) {
+			final var child = expr.getFirstChild();
+			return child != null && child.getType() == TokenTypes.LITERAL_TRUE;
+		}
+		return false;
 	}
 
 	/**

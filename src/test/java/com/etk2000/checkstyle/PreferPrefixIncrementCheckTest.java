@@ -3,6 +3,8 @@ package com.etk2000.checkstyle;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+
 import org.junit.Test;
 
 public class PreferPrefixIncrementCheckTest {
@@ -16,28 +18,45 @@ public class PreferPrefixIncrementCheckTest {
 	@Test
 	public void testPostfixViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferPrefixIncrementCheck.class, DIR + "InputPrefixViolation.java");
-		assertEquals(6, violations.size());
+		assertEquals(8, violations.size());
+		var i = 0;
+
+		// braced do-while
+		assertEquals(7, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use prefix increment (++x) instead of postfix (x++).", violations.get(i++).getMessage());
+
+		// braceless do-while
+		assertEquals(14, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use prefix increment (++x) instead of postfix (x++).", violations.get(i++).getMessage());
 
 		// braceless else
-		assertEquals(9, violations.get(0).getLine());
-		assertEquals("Use prefix increment (++x) instead of postfix (x++).", violations.get(0).getMessage());
+		assertEquals(23, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use prefix increment (++x) instead of postfix (x++).", violations.get(i++).getMessage());
 
 		// braceless if
-		assertEquals(15, violations.get(1).getLine());
-		assertEquals("Use prefix increment (++x) instead of postfix (x++).", violations.get(1).getMessage());
+		assertEquals(29, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use prefix increment (++x) instead of postfix (x++).", violations.get(i++).getMessage());
 
 		// braceless while (decrement)
-		assertEquals(21, violations.get(2).getLine());
-		assertEquals("Use prefix decrement (--x) instead of postfix (x--).", violations.get(2).getMessage());
+		assertEquals(35, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use prefix decrement (--x) instead of postfix (x--).", violations.get(i++).getMessage());
 
 		// for-loop update
-		assertEquals(25, violations.get(3).getLine());
-		assertEquals("Use prefix increment (++x) instead of postfix (x++).", violations.get(3).getMessage());
+		assertEquals(39, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use prefix increment (++x) instead of postfix (x++).", violations.get(i++).getMessage());
 
 		// standalone statement
-		assertEquals(32, violations.get(4).getLine());
-		assertEquals("Use prefix increment (++x) instead of postfix (x++).", violations.get(4).getMessage());
-		assertEquals(33, violations.get(5).getLine());
-		assertEquals("Use prefix decrement (--x) instead of postfix (x--).", violations.get(5).getMessage());
+		assertEquals(46, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use prefix increment (++x) instead of postfix (x++).", violations.get(i++).getMessage());
+		assertEquals(47, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use prefix decrement (--x) instead of postfix (x--).", violations.get(i++).getMessage());
 	}
 }

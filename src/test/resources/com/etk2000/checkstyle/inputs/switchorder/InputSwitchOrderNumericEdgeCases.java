@@ -45,4 +45,13 @@ class InputSwitchOrderNumericEdgeCases {
 			default -> 0;
 		};
 	}
+
+	// underscore literal out of order
+	int underscoreWrong(int x) {
+		return switch (x) {
+			case 1_000 -> 1000;
+			case 999 -> 999; // violation: 999 must appear before 1_000
+			default -> 0;
+		};
+	}
 }

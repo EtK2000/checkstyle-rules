@@ -147,6 +147,19 @@ class InputSwitchOrderClean {
 		}
 	}
 
+	// negative binary, hex, octal sorted numerically
+	int negativeMixedRadix(int x) {
+		return switch (x) {
+			case -0xFF -> -255;
+			case -077 -> -63;
+			case -0b1010 -> -10;
+			case -1 -> -1;
+			case 0 -> 0;
+			case 1 -> 1;
+			default -> 0;
+		};
+	}
+
 	// numeric sorted
 	int numericSorted(int x) {
 		switch (x) {
@@ -181,5 +194,15 @@ class InputSwitchOrderClean {
 			default:
 				return 0;
 		}
+	}
+
+	// underscore numeric literals sorted numerically
+	int underscoreSorted(int x) {
+		return switch (x) {
+			case 100 -> 100;
+			case 1_000 -> 1000;
+			case 10_000 -> 10000;
+			default -> 0;
+		};
 	}
 }

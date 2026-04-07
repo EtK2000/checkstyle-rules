@@ -338,7 +338,7 @@ public class RedundantCastCheck extends AbstractCheck {
 		if (firstChild == null)
 			return null;
 
-		return switch (firstChild.getType()) {
+		final var baseName = switch (firstChild.getType()) {
 			case TokenTypes.IDENT -> firstChild.getText();
 			case TokenTypes.LITERAL_BOOLEAN -> "boolean";
 			case TokenTypes.LITERAL_BYTE -> "byte";
@@ -350,6 +350,21 @@ public class RedundantCastCheck extends AbstractCheck {
 			case TokenTypes.LITERAL_SHORT -> "short";
 			default -> null;
 		};
+		if (baseName == null)
+			return null;
+
+		// count array brackets (ARRAY_DECLARATOR siblings of the base type under TYPE)
+		var arrayDepth = 0;
+		for (var child = firstChild; child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.ARRAY_DECLARATOR)
+				++arrayDepth;
+		}
+		if (arrayDepth == 0)
+			return baseName;
+		final var sb = new StringBuilder(baseName);
+		for (var i = 0; i < arrayDepth; ++i)
+			sb.append("[]");
+		return sb.toString();
 	}
 
 	@CheckReturnValue

@@ -37,3 +37,13 @@ class InputConstructorAssignClean {
 		this.gamma = this.alpha + 2;
 	}
 }
+
+class InputConstructorAssignMixedCase {
+	int alpha;
+	Object Beta;
+
+	InputConstructorAssignMixedCase(int alpha, Object Beta) {
+		this.alpha = alpha;
+		this.Beta = Beta;
+	}
+}

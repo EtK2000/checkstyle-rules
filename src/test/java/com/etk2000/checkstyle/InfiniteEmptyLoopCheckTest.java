@@ -3,6 +3,8 @@ package com.etk2000.checkstyle;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+
 import org.junit.Test;
 
 public class InfiniteEmptyLoopCheckTest {
@@ -16,19 +18,48 @@ public class InfiniteEmptyLoopCheckTest {
 	@Test
 	public void testInfiniteLoopViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(InfiniteEmptyLoopCheck.class, DIR + "InputEmptyInfiniteLoopViolation.java");
-		assertEquals(6, violations.size());
-		assertEquals(5, violations.get(0).getLine());
-		assertEquals("Empty infinite do-while loop, this will hang.", violations.get(0).getMessage());
-		assertEquals(10, violations.get(1).getLine());
-		assertEquals("Empty infinite do-while loop, this will hang.", violations.get(1).getMessage());
-		assertEquals(15, violations.get(2).getLine());
-		assertEquals("Empty infinite for loop, this will hang.", violations.get(2).getMessage());
-		assertEquals(19, violations.get(3).getLine());
-		assertEquals("Empty infinite for loop, this will hang.", violations.get(3).getMessage());
-		assertEquals(24, violations.get(4).getLine());
-		assertEquals("Empty infinite while loop, this will hang.", violations.get(4).getMessage());
-		assertEquals(28, violations.get(5).getLine());
-		assertEquals("Empty infinite while loop, this will hang.", violations.get(5).getMessage());
+		assertEquals(8, violations.size());
+		var i = 0;
+
+		// do; while(true);
+		assertEquals(5, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty infinite do-while loop, this will hang.", violations.get(i++).getMessage());
+
+		// do {} while(true);
+		assertEquals(10, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty infinite do-while loop, this will hang.", violations.get(i++).getMessage());
+
+		// for(;;);
+		assertEquals(15, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty infinite for loop, this will hang.", violations.get(i++).getMessage());
+
+		// for(;;) {}
+		assertEquals(19, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty infinite for loop, this will hang.", violations.get(i++).getMessage());
+
+		// for(;true;);
+		assertEquals(24, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty infinite for loop, this will hang.", violations.get(i++).getMessage());
+
+		// for(;true;) {}
+		assertEquals(28, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty infinite for loop, this will hang.", violations.get(i++).getMessage());
+
+		// while(true);
+		assertEquals(33, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty infinite while loop, this will hang.", violations.get(i++).getMessage());
+
+		// while(true) {}
+		assertEquals(37, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty infinite while loop, this will hang.", violations.get(i++).getMessage());
 	}
 
 	@Test

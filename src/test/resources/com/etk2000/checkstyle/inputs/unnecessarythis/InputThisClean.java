@@ -2,6 +2,12 @@ package com.etk2000.checkstyle.inputs.unnecessarythis;
 
 import java.util.function.IntConsumer;
 
+record InputThisCleanRecord(int field) {
+	InputThisCleanRecord {
+		this.field = field + 1;
+	}
+}
+
 class InputThisClean {
 	int field;
 

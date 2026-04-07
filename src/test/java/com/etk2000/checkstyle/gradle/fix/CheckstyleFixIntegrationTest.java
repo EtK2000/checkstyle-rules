@@ -191,9 +191,29 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testBlankLineBetweenSingleCasesMultipleBlankLines() throws Exception {
+		final var file = tempDir.newFile("SwitchMulti.java");
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\t\treturn;\n\n\n\n\t\t\tcase 2:\n\t\t\t\treturn;\n\t\t}\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\t\treturn;\n\t\t\tcase 2:\n\t\t\t\treturn;\n\t\t}\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
 	public void testDoubleBlankLines() throws Exception {
 		final var file = tempDir.newFile("Dbl.java");
 		Files.writeString(file.toPath(), "class T {\n\tint x;\n\n\n\tint y;\n}");
+
+		assertEquals("class T {\n\tint x;\n\n\tint y;\n}", runFixAndGetResult(file));
+	}
+
+	@Test
+	public void testDoubleBlankLinesTriple() throws Exception {
+		final var file = tempDir.newFile("Dbl3.java");
+		Files.writeString(file.toPath(), "class T {\n\tint x;\n\n\n\n\tint y;\n}");
 
 		assertEquals("class T {\n\tint x;\n\n\tint y;\n}", runFixAndGetResult(file));
 	}
@@ -215,12 +235,31 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testExplicitInitializationMultiDeclaration() throws Exception {
+		final var file = tempDir.newFile("InitMulti.java");
+		Files.writeString(file.toPath(), "class T {\n\tint a = 0, b;\n}");
+
+		assertEquals("class T {\n\tint a, b;\n}", runFixAndGetResult(file));
+	}
+
+	@Test
 	public void testFinalLocalVariable() throws Exception {
 		final var file = tempDir.newFile("Final.java");
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tint x = 5;\n\t\tvar y = \"hello\";\n\t}\n}");
 
 		assertEquals(
 				"class T {\n\tvoid f() {\n\t\tfinal var x = 5;\n\t\tfinal var y = \"hello\";\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testFinalLocalVariableTabIndented() throws Exception {
+		final var file = tempDir.newFile("FinalTab.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tif (true) {\n\t\t\tint x = 5;\n\t\t}\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tvoid f() {\n\t\tif (true) {\n\t\t\tfinal var x = 5;\n\t\t}\n\t}\n}",
 				runFixAndGetResult(file)
 		);
 	}
@@ -269,12 +308,34 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPostfixDecrement() throws Exception {
+		final var file = tempDir.newFile("Decr.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid run() {\n\t\tint i = 5;\n\t\ti--;\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tvoid run() {\n\t\tvar i = 5;\n\t\t--i;\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
 	public void testPostfixIncrement() throws Exception {
 		final var file = tempDir.newFile("Incr.java");
 		Files.writeString(file.toPath(), "class T {\n\tvoid run() {\n\t\tint i = 0;\n\t\ti++;\n\t}\n}");
 
 		assertEquals(
 				"class T {\n\tvoid run() {\n\t\tvar i = 0;\n\t\t++i;\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPostfixIncrementForLoop() throws Exception {
+		final var file = tempDir.newFile("IncrFor.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid run() {\n\t\tfor (var i = 0; i < 10; i++)\n\t\t\tSystem.out.println(i);\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tvoid run() {\n\t\tfor (var i = 0; i < 10; ++i)\n\t\t\tSystem.out.println(i);\n\t}\n}",
 				runFixAndGetResult(file)
 		);
 	}
@@ -498,6 +559,22 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testRedundantModifierPrivateEnumConstructor() throws Exception {
+		final var file = tempDir.newFile("EnumCtor.java");
+		Files.writeString(file.toPath(), "enum Color {\n\tRED(1);\n\n\tprivate Color(int code) {\n\t}\n}");
+
+		assertEquals("enum Color {\n\tRED(1);\n\n\tColor(int code) {\n\t}\n}", runFixAndGetResult(file));
+	}
+
+	@Test
+	public void testRedundantModifierStaticInterfaceField() throws Exception {
+		final var file = tempDir.newFile("IfaceField.java");
+		Files.writeString(file.toPath(), "interface T {\n\tstatic int VALUE = 5;\n}");
+
+		assertEquals("interface T {\n\tint VALUE = 5;\n}", runFixAndGetResult(file));
+	}
+
+	@Test
 	public void testRedundantNumericSuffix() throws Exception {
 		final var file = tempDir.newFile("Suffix.java");
 		Files.writeString(file.toPath(), "class T {\n\tlong x = 100L;\n\tdouble d = 1.0d;\n}");
@@ -506,11 +583,27 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testRedundantNumericSuffixHexAndBinaryAndFloat() throws Exception {
+		final var file = tempDir.newFile("SuffixHex.java");
+		Files.writeString(file.toPath(), "class T {\n\tlong a = 0xFFL;\n\tfloat b = 100F;\n\tlong c = 0b1010L;\n}");
+
+		assertEquals("class T {\n\tlong a = 0xFF;\n\tfloat b = 100;\n\tlong c = 0b1010;\n}", runFixAndGetResult(file));
+	}
+
+	@Test
 	public void testSuperCall() throws Exception {
 		final var file = tempDir.newFile("Child.java");
 		Files.writeString(file.toPath(), "class Child extends Object {\n\tChild() {\n\t\tsuper();\n\t}\n}");
 
 		assertEquals("class Child extends Object {\n\tChild() {\n\t}\n}", runFixAndGetResult(file));
+	}
+
+	@Test
+	public void testSuperCallTabIndented() throws Exception {
+		final var file = tempDir.newFile("ChildTab.java");
+		Files.writeString(file.toPath(), "class Outer {\n\tclass Inner extends Object {\n\t\tInner() {\n\t\t\tsuper();\n\t\t}\n\t}\n}");
+
+		assertEquals("class Outer {\n\tclass Inner extends Object {\n\t\tInner() {\n\t\t}\n\t}\n}", runFixAndGetResult(file));
 	}
 
 	@Test
@@ -550,12 +643,31 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testTrailingWhitespaceTabOnly() throws Exception {
+		final var file = tempDir.newFile("TrailTab.java");
+		Files.writeString(file.toPath(), "class T {\t\t\n\tint x;\n}");
+
+		assertEquals("class T {\n\tint x;\n}", runFixAndGetResult(file));
+	}
+
+	@Test
 	public void testUnnecessaryThis() throws Exception {
 		final var file = tempDir.newFile("This.java");
 		Files.writeString(file.toPath(), "class T {\n\tint value;\n\tint get() {\n\t\treturn this.value;\n\t}\n}");
 
 		assertEquals(
 				"class T {\n\tint value;\n\tint get() {\n\t\treturn value;\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testUnnecessaryThisChained() throws Exception {
+		final var file = tempDir.newFile("ThisChain.java");
+		Files.writeString(file.toPath(), "class T {\n\tString value;\n\tint get() {\n\t\treturn this.value.length();\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tString value;\n\tint get() {\n\t\treturn value.length();\n\t}\n}",
 				runFixAndGetResult(file)
 		);
 	}
@@ -575,5 +687,14 @@ public class CheckstyleFixIntegrationTest {
 		Files.writeString(file.toPath(), "class T {\n\tlong x = 3000000000l;\n}");
 
 		assertEquals("class T {\n\tlong x = 3000000000L;\n}", runFixAndGetResult(file));
+	}
+
+	@Test
+	public void testUpperEllHex() throws Exception {
+		// hex value exceeding int range to avoid RedundantNumericSuffix interference
+		final var file = tempDir.newFile("EllHex.java");
+		Files.writeString(file.toPath(), "class T {\n\tlong x = 0xB00000000l;\n}");
+
+		assertEquals("class T {\n\tlong x = 0xB00000000L;\n}", runFixAndGetResult(file));
 	}
 }

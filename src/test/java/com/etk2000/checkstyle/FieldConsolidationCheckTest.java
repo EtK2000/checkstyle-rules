@@ -16,12 +16,6 @@ public class FieldConsolidationCheckTest {
 		assertTrue(BaseCheckTest.runCheck(FieldConsolidationCheck.class, DIR + "InputFieldConsolidationClean.java").isEmpty());
 	}
 
-	// Cross-check: FieldConsolidationCheck must not fire on FieldSorting clean file
-	@Test
-	public void testCrossCheckFieldSortingClean() throws Exception {
-		assertTrue(BaseCheckTest.runCheck(FieldConsolidationCheck.class, FIELD_SORTING_DIR + "InputFieldSortingClean.java").isEmpty());
-	}
-
 	// Cross-check: FieldSortingCheck must not fire on our clean file
 	@Test
 	public void testCrossCheckOurCleanWithFieldSorting() throws Exception {

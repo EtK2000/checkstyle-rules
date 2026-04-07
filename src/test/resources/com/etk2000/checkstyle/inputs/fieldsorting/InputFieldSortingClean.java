@@ -120,9 +120,11 @@ class InputFieldSortingClean {
 	double ratio;
 	double[] ratios;
 	int index;
+	int elements[];
 	int[] indices;
 	int[][] matrix;
 	long timestamp;
+	java.util.concurrent.atomic.AtomicInteger counter;
 	List<String> data;
 	String label;
 	String[] labels;

@@ -1,6 +1,20 @@
 package com.etk2000.checkstyle.inputs.prefix;
 
 class InputPrefixViolation {
+	void bracedDoWhile(boolean flag) {
+		var i = 0;
+		do {
+			i++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		} while (flag);
+	}
+
+	void bracelessDoWhile(boolean flag) {
+		var i = 0;
+		do
+			i++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		while (flag);
+	}
+
 	void bracelessElse(boolean flag) {
 		var i = 0;
 		if (flag)

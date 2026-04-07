@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.inputs.emptybody;
 
+import java.util.List;
+
 class InputEmptyLoopViolation {
 	void emptyDoWhileBlock(int x) {
 		do { // violation: empty do-while body
@@ -14,6 +16,10 @@ class InputEmptyLoopViolation {
 	void emptyForBlock(int x) {
 		for (int i = 0; i < x; ++i) { // violation: empty for body
 		}
+	}
+
+	void emptyForEachStatement(List<String> list) {
+		for (String s : list); // violation: empty for body
 	}
 
 	void emptyForStatement(int x) {

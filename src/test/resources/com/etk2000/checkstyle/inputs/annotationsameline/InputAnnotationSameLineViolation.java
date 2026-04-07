@@ -80,4 +80,11 @@ class InputAnnotationSameLineViolation {
 			@B
 			String param
 	) {}
+
+	// violation: placement wrong AND order wrong (only placement reported due to early return)
+	void placementAndOrder(
+			@B // violation: Annotation 'B' must be on the same line as the declaration.
+			@A
+			String param
+	) {}
 }

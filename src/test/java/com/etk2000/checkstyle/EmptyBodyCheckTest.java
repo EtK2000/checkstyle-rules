@@ -3,6 +3,8 @@ package com.etk2000.checkstyle;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+
 import org.junit.Test;
 
 public class EmptyBodyCheckTest {
@@ -46,24 +48,34 @@ public class EmptyBodyCheckTest {
 	@Test
 	public void testEmptyLoopViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(EmptyBodyCheck.class, DIR + "InputEmptyLoopViolation.java");
-		assertEquals(6, violations.size());
+		assertEquals(7, violations.size());
+		var i = 0;
 
 		// empty do-while
-		assertEquals(5, violations.get(0).getLine());
-		assertEquals("Empty do-while body, remove it (preserve any side effects in the condition).", violations.get(0).getMessage());
-		assertEquals(10, violations.get(1).getLine());
-		assertEquals("Empty do-while body, remove it (preserve any side effects in the condition).", violations.get(1).getMessage());
+		assertEquals(7, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty do-while body, remove it (preserve any side effects in the condition).", violations.get(i++).getMessage());
+		assertEquals(12, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty do-while body, remove it (preserve any side effects in the condition).", violations.get(i++).getMessage());
 
-		// empty for
-		assertEquals(15, violations.get(2).getLine());
-		assertEquals("Empty for body, remove it (preserve any side effects in the condition/update).", violations.get(2).getMessage());
-		assertEquals(20, violations.get(3).getLine());
-		assertEquals("Empty for body, remove it (preserve any side effects in the condition/update).", violations.get(3).getMessage());
+		// empty for (block, enhanced for-each, statement)
+		assertEquals(17, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty for body, remove it (preserve any side effects in the condition/update).", violations.get(i++).getMessage());
+		assertEquals(22, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty for body, remove it (preserve any side effects in the condition/update).", violations.get(i++).getMessage());
+		assertEquals(26, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty for body, remove it (preserve any side effects in the condition/update).", violations.get(i++).getMessage());
 
 		// empty while
-		assertEquals(24, violations.get(4).getLine());
-		assertEquals("Empty while body, remove it (preserve any side effects in the condition).", violations.get(4).getMessage());
-		assertEquals(29, violations.get(5).getLine());
-		assertEquals("Empty while body, remove it (preserve any side effects in the condition).", violations.get(5).getMessage());
+		assertEquals(30, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty while body, remove it (preserve any side effects in the condition).", violations.get(i++).getMessage());
+		assertEquals(35, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Empty while body, remove it (preserve any side effects in the condition).", violations.get(i++).getMessage());
 	}
 }
