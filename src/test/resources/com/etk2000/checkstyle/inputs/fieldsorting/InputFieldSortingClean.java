@@ -3,7 +3,79 @@ package com.etk2000.checkstyle.inputs.fieldsorting;
 import java.util.List;
 import java.util.Map;
 
+enum InputFieldSortingCleanEnum {
+	ALPHA,
+	BETA,
+	GAMMA;
+
+	static final int MAX = 10;
+	static final int MIN = 1;
+}
+
+enum InputFieldSortingCleanEnumOuter {
+	ALPHA,
+	BETA;
+
+	enum Inner {
+		FIRST,
+		SECOND
+	}
+}
+
+enum InputFieldSortingCleanEnumSingle {
+	ONLY_ONE
+}
+
+enum InputFieldSortingCleanEnumWithBodies {
+	ADD {
+		@Override
+		int apply(int a, int b) {
+			return a + b;
+		}
+	},
+	SUBTRACT {
+		@Override
+		int apply(int a, int b) {
+			return a - b;
+		}
+	};
+
+	abstract int apply(int a, int b);
+}
+
+enum InputFieldSortingCleanEnumWithMembers {
+	APPLE("red"),
+	BANANA("yellow"),
+	CHERRY("red");
+
+	final String color;
+
+	InputFieldSortingCleanEnumWithMembers(String color) {
+		this.color = color;
+	}
+
+	String getColor() {
+		return color;
+	}
+}
+
+enum InputFieldSortingCleanEnumWithSeparators {
+	ALPHA,
+
+	// Beta is the second letter
+	BETA,
+
+	@Deprecated
+	GAMMA
+}
+
 class InputFieldSortingClean {
+	enum InnerSorted {
+		FIRST,
+		SECOND,
+		THIRD
+	}
+
 	// static: final with inline value, anonymous class first then regular
 	static final Runnable STATIC_TASK = new Runnable() {
 		@Override

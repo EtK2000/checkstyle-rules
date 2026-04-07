@@ -1,7 +1,8 @@
 package com.etk2000.checkstyle.inputs.classstructure;
 
 enum InputClassStructureEnum {
-	A, B;
+	A,
+	B;
 
 	void instanceMethod() {}
 

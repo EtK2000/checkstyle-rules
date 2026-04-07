@@ -31,6 +31,8 @@ public class FieldSortingCheck extends AbstractCheck {
 	private static final String MSG_ANON_CLASS = "field.sort.anon.class";
 	private static final String MSG_CHUNK = "field.sort.chunk";
 	private static final String MSG_DEPENDENCY = "field.sort.dependency";
+	private static final String MSG_ENUM_CONSTANT = "field.sort.enum.constant";
+	private static final String MSG_ENUM_SAME_LINE = "field.sort.enum.same.line";
 	private static final String MSG_NAME = "field.sort.name";
 	private static final String MSG_TYPE = "field.sort.type";
 
@@ -193,6 +195,21 @@ public class FieldSortingCheck extends AbstractCheck {
 		return sb.toString();
 	}
 
+	private void checkEnumConstants(@Nonnull ArrayList<DetailAST> constants) {
+		for (var i = 1; i < constants.size(); ++i) {
+			final var prevIdent = constants.get(i - 1).findFirstToken(TokenTypes.IDENT);
+			final var currIdent = constants.get(i).findFirstToken(TokenTypes.IDENT);
+			final var prevName = prevIdent.getText();
+			final var currName = currIdent.getText();
+
+			if (currIdent.getLineNo() == prevIdent.getLineNo())
+				log(constants.get(i), MSG_ENUM_SAME_LINE, currName);
+
+			if (currName.compareToIgnoreCase(prevName) < 0)
+				log(constants.get(i), MSG_ENUM_CONSTANT, currName, prevName);
+		}
+	}
+
 	private void checkFieldGroup(@Nonnull ArrayList<DetailAST> fields) {
 		if (fields.size() < 2)
 			return;
@@ -275,19 +292,22 @@ public class FieldSortingCheck extends AbstractCheck {
 
 	@Override
 	public void visitToken(@Nonnull DetailAST ast) {
+		final var enumConstants = new ArrayList<DetailAST>();
 		final var staticFields = new ArrayList<DetailAST>();
 		final var instanceFields = new ArrayList<DetailAST>();
 
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() != TokenTypes.VARIABLE_DEF)
-				continue;
-
-			if (isStatic(child))
-				staticFields.add(child);
-			else
-				instanceFields.add(child);
+			if (child.getType() == TokenTypes.ENUM_CONSTANT_DEF)
+				enumConstants.add(child);
+			else if (child.getType() == TokenTypes.VARIABLE_DEF) {
+				if (isStatic(child))
+					staticFields.add(child);
+				else
+					instanceFields.add(child);
+			}
 		}
 
+		checkEnumConstants(enumConstants);
 		checkFieldGroup(staticFields);
 		checkFieldGroup(instanceFields);
 	}

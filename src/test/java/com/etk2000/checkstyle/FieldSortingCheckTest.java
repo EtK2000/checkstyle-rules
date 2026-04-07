@@ -3,6 +3,8 @@ package com.etk2000.checkstyle;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+
 import org.junit.Test;
 
 public class FieldSortingCheckTest {
@@ -59,6 +61,76 @@ public class FieldSortingCheckTest {
 		// beta references alpha via this.alpha, but alpha is declared after beta
 		assertEquals(12, violations.get(1).getLine());
 		assertEquals("Field 'beta' references 'alpha' which should be declared before it.", violations.get(1).getMessage());
+	}
+
+	@Test
+	public void testEnumConstantViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingEnumConstantViolation.java");
+		assertEquals(8, violations.size());
+		var i = 0;
+		// basic misordered with static fields
+		assertEquals(5, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'ALPHA' must appear before 'ZEBRA' (alphabetical order).", violations.get(i++).getMessage());
+		// fully reversed
+		assertEquals(13, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'BRAVO' must appear before 'CHARLIE' (alphabetical order).", violations.get(i++).getMessage());
+		assertEquals(14, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'ALPHA' must appear before 'BRAVO' (alphabetical order).", violations.get(i++).getMessage());
+		// with constructor + params + fields + methods
+		assertEquals(19, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'BANANA' must appear before 'CHERRY' (alphabetical order).", violations.get(i++).getMessage());
+		assertEquals(20, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'APPLE' must appear before 'BANANA' (alphabetical order).", violations.get(i++).getMessage());
+		// with anonymous class bodies
+		assertEquals(40, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'ADD' must appear before 'SUBTRACT' (alphabetical order).", violations.get(i++).getMessage());
+		// inner in class
+		assertEquals(53, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'FIRST' must appear before 'SECOND' (alphabetical order).", violations.get(i++).getMessage());
+		// inner in enum
+		assertEquals(63, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'XENON' must appear before 'YELLOW' (alphabetical order).", violations.get(i++).getMessage());
+	}
+
+	@Test
+	public void testEnumSameLineViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingEnumSameLineViolation.java");
+		assertEquals(7, violations.size());
+		var i = 0;
+		// two on same line
+		assertEquals(4, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'BETA' must be on its own line.", violations.get(i++).getMessage());
+		// three on same line
+		assertEquals(8, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'BETA' must be on its own line.", violations.get(i++).getMessage());
+		assertEquals(8, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'GAMMA' must be on its own line.", violations.get(i++).getMessage());
+		// with constructor params
+		assertEquals(12, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'BANANA' must be on its own line.", violations.get(i++).getMessage());
+		// inner enum
+		assertEquals(17, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'BETA' must be on its own line.", violations.get(i++).getMessage());
+		// same-line + misordered (both violations fire, ordering sorts before same-line by key)
+		assertEquals(22, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'ALPHA' must appear before 'ZEBRA' (alphabetical order).", violations.get(i++).getMessage());
+		assertEquals(22, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'ALPHA' must be on its own line.", violations.get(i++).getMessage());
 	}
 
 	@Test

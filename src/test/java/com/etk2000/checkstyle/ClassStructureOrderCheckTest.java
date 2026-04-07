@@ -25,7 +25,7 @@ public class ClassStructureOrderCheckTest {
 	public void testEnumStaticAfterInstance() throws Exception {
 		final var violations = BaseCheckTest.runCheck(ClassStructureOrderCheck.class, DIR + "InputClassStructureEnum.java");
 		assertEquals(1, violations.size());
-		assertEquals(8, violations.getFirst().getLine());
+		assertEquals(9, violations.getFirst().getLine());
 		assertEquals("'staticMethod' (static method) must appear before instance method section.", violations.getFirst().getMessage());
 	}
 

@@ -90,6 +90,7 @@ Checks intentionally left without auto-fix support because the transformation is
 
 | Check             | Reason                                                                                                         |
 |-------------------|----------------------------------------------------------------------------------------------------------------|
+| FieldSortingCheck | Reordering fields/enum constants requires moving multi-line blocks with dependency analysis                    |
 | PreferRecordCheck | Multi-line structural transformation: must rewrite class header, remove fields/constructor, adjust annotations |
 
 ## Future fix opportunities
