@@ -19,6 +19,14 @@ class InputInstanceofBeforeCastClean {
 			System.out.println("empty");
 	}
 
+	// cast in else after NEGATED instanceof is safe (double negative = confirmed)
+	void elseAfterNegatedInstanceof(Object obj) {
+		if (!(obj instanceof String))
+			System.out.println("not string");
+		else
+			System.out.println(((String) obj).length());
+	}
+
 	// no instanceof at all, just a cast
 	void noCastNoInstanceof(Object obj) {
 		if (((String) obj).isEmpty())
@@ -53,5 +61,16 @@ class InputInstanceofBeforeCastClean {
 	void standaloneInstanceof(Object obj) {
 		if (obj instanceof String)
 			System.out.println("is string");
+	}
+
+	// cast in ternary TRUE branch is safe (instanceof confirmed)
+	int ternaryTrueBranchCast(Object obj) {
+		return obj instanceof String ? ((String) obj).length() : 0;
+	}
+
+	// cast in then block after positive instanceof is safe
+	void thenAfterInstanceof(Object obj) {
+		if (obj instanceof String)
+			System.out.println(((String) obj).length());
 	}
 }

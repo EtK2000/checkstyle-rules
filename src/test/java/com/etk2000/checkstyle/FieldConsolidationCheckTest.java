@@ -9,7 +9,6 @@ import org.junit.Test;
 
 public class FieldConsolidationCheckTest {
 	private static final String DIR = "fieldconsolidation/";
-	private static final String FIELD_SORTING_DIR = "fieldsorting/";
 
 	@Test
 	public void testClean() throws Exception {
