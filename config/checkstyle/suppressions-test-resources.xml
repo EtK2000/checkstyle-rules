@@ -24,6 +24,10 @@
 	<suppress checks="NoArrayTrailingCommaCheck" files="inputs[\\/]arraycomma[\\/]" />
 	<suppress checks="NoBlankLineBetweenSingleCasesCheck" files="inputs[\\/]singlecase[\\/]" />
 	<suppress checks="NoCaseBracesCheck" files="inputs[\\/]casebraces[\\/]" />
+	<suppress checks="LambdaParameterTypeCheck" files="inputs[\\/]nofinalparameters[\\/]" />
+	<suppress checks="NoFinalParametersCheck" files="inputs[\\/]nofinalparameters[\\/]" />
+	<suppress checks="NoFinalParametersCheck" files="inputs[\\/]prefervar[\\/]" />
+	<suppress checks="NoFinalParametersCheck" files="inputs[\\/]regex[\\/]" />
 	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]unnecessarythis[\\/]" />
 	<suppress checks="OverloadMethodOrderCheck" files="inputs[\\/]overload[\\/]" />
@@ -44,7 +48,6 @@
 	<suppress id="NoBlankLineAfterClassBrace" files="inputs[\\/]regex[\\/]" />
 	<suppress id="NoBlankLineBeforeClosingBrace" files="inputs[\\/]regex[\\/]" />
 	<suppress id="NoDoubleBlankLines" files="inputs[\\/]regex[\\/]" />
-	<suppress id="NoFinalParameters" files="inputs[\\/]regex[\\/]" />
 	<suppress id="NoSpaceIndent" files="inputs[\\/]regex[\\/]" />
 	<suppress id="NoTrailingNewline" files="inputs[\\/]regex[\\/]" />
 	<suppress id="NoTrailingWhitespace" files="inputs[\\/]regex[\\/]" />

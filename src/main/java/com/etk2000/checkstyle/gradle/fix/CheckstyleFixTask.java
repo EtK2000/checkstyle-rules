@@ -4,6 +4,7 @@ import com.etk2000.checkstyle.AnnotationOwnLineCheck;
 import com.etk2000.checkstyle.AnnotationSameLineCheck;
 import com.etk2000.checkstyle.LambdaParameterTypeCheck;
 import com.etk2000.checkstyle.NoArrayTrailingCommaCheck;
+import com.etk2000.checkstyle.NoFinalParametersCheck;
 import com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck;
 import com.etk2000.checkstyle.NoUnnecessaryThisCheck;
 import com.etk2000.checkstyle.PreferPrefixIncrementCheck;
@@ -64,6 +65,7 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 	static {
 		final var commaFixer = new NoArrayTrailingCommaFixer();
 		final var deleteLineFixer = new DeleteLineFixer();
+		final var modifierFixer = new RedundantModifierFixer();
 		FIXERS = Map.ofEntries(
 				Map.entry(AnnotationOwnLineCheck.class.getName(), new AnnotationOwnLineFixer()),
 				Map.entry(AnnotationSameLineCheck.class.getName(), new AnnotationSameLineFixer()),
@@ -72,14 +74,15 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 				Map.entry(FinalLocalVariableCheck.class.getName(), new FinalLocalVariableFixer()),
 				Map.entry(LambdaParameterTypeCheck.class.getName(), new LambdaParameterTypeFixer()),
 				Map.entry(NoArrayTrailingCommaCheck.class.getName(), commaFixer),
+				Map.entry(NoFinalParametersCheck.class.getName(), modifierFixer),
 				Map.entry(NoBlankLineBetweenSingleCasesCheck.class.getName(), new NoBlankLineBetweenSingleCasesFixer()),
 				Map.entry(NoEnumTrailingCommaCheck.class.getName(), commaFixer),
 				Map.entry(NoUnnecessaryThisCheck.class.getName(), new NoUnnecessaryThisFixer()),
 				Map.entry(PreferPrefixIncrementCheck.class.getName(), new PreferPrefixIncrementFixer()),
 				Map.entry(PreferSpecificApiCheck.class.getName(), new PreferSpecificApiFixer()),
-			Map.entry(PreferVarCheck.class.getName(), new PreferVarFixer()),
+				Map.entry(PreferVarCheck.class.getName(), new PreferVarFixer()),
 				Map.entry(RedundantImportCheck.class.getName(), deleteLineFixer),
-				Map.entry(RedundantModifierCheck.class.getName(), new RedundantModifierFixer()),
+				Map.entry(RedundantModifierCheck.class.getName(), modifierFixer),
 				Map.entry(RedundantNumericSuffixCheck.class.getName(), new RedundantNumericSuffixFixer()),
 				Map.entry(UnusedImportsCheck.class.getName(), deleteLineFixer),
 				Map.entry(UpperEllCheck.class.getName(), new UpperEllFixer())
@@ -110,7 +113,7 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 		);
 
 		var fixed = 0;
-		for (final var event : violations) {
+		for (var event : violations) {
 			final var fixer = resolveFixer(event, fixers, moduleIdFixers);
 			if (fixer == null)
 				continue;
@@ -181,7 +184,7 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 	public void fix() throws Exception {
 		final var treeWalkerConfig = new DefaultConfiguration(TreeWalker.class.getName());
 		treeWalkerConfig.addProperty("tabWidth", String.valueOf(TAB_WIDTH));
-		for (final var checkName : FIXERS.keySet()) {
+		for (var checkName : FIXERS.keySet()) {
 			final var checkConfig = new DefaultConfiguration(checkName);
 			if (checkName.equals(FinalLocalVariableCheck.class.getName()))
 				checkConfig.addProperty("validateEnhancedForLoopVariable", "false");
@@ -252,7 +255,7 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 		var totalFixed = 0;
 		var totalSkipped = 0;
 
-		for (final var entry : violationsByFile.entrySet()) {
+		for (var entry : violationsByFile.entrySet()) {
 			final var filePath = Path.of(entry.getKey());
 			final var violations = entry.getValue();
 			final var totalViolations = violations.size();

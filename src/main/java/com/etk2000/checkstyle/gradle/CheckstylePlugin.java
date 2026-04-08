@@ -265,7 +265,7 @@ public class CheckstylePlugin implements Plugin<Project> {
 			ext.getConfigProperties().put("minSdk", resolveMinSdk(p));
 
 			// add compile and test classpaths so reflection-based checks can resolve project types
-			for (final var name : new String[]{"compileClasspath", "testCompileClasspath"}) {
+			for (var name : new String[]{"compileClasspath", "testCompileClasspath"}) {
 				final var classpath = p.getConfigurations().findByName(name);
 				if (classpath != null)
 					checkstyleConfig.getDependencies().add(p.getDependencies().create(p.files(classpath)));

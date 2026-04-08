@@ -28,7 +28,7 @@ public class CheckstyleFixIntegrationTest {
 	@Nonnull
 	private List<AuditEvent> runChecks(@Nonnull File file) throws Exception {
 		final var treeWalkerConfig = new DefaultConfiguration(TreeWalker.class.getName());
-		for (final var checkName : CheckstyleFixTask.FIXERS.keySet()) {
+		for (var checkName : CheckstyleFixTask.FIXERS.keySet()) {
 			final var checkConfig = new DefaultConfiguration(checkName);
 			if (checkName.endsWith("FinalLocalVariableCheck"))
 				checkConfig.addProperty("validateEnhancedForLoopVariable", "false");
@@ -340,6 +340,52 @@ public class CheckstyleFixIntegrationTest {
 		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1,};\n\tlong x = 100L;\n}");
 
 		assertEquals("class T {\n\tint[] a = {1};\n\tlong x = 100;\n}", runFixAndGetResult(file));
+	}
+
+	@Test
+	public void testNoFinalParametersCatch() throws Exception {
+		final var file = tempDir.newFile("CatchFinal.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\ttry {\n\t\t\tSystem.out.println();\n\t\t}\n\t\tcatch (final Exception e) {\n\t\t\tSystem.out.println(e);\n\t\t}\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tvoid f() {\n\t\ttry {\n\t\t\tSystem.out.println();\n\t\t}\n\t\tcatch (Exception e) {\n\t\t\tSystem.out.println(e);\n\t\t}\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testNoFinalParametersConstructor() throws Exception {
+		final var file = tempDir.newFile("CtorFinal.java");
+		Files.writeString(file.toPath(), "class T {\n\tT(final int x) {}\n}");
+
+		assertEquals("class T {\n\tT(int x) {}\n}", runFixAndGetResult(file));
+	}
+
+	@Test
+	public void testNoFinalParametersForEach() throws Exception {
+		final var file = tempDir.newFile("ForEachFinal.java");
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f(List<String> list) {\n\t\tfor (final var item : list)\n\t\t\tSystem.out.println(item);\n\t}\n}");
+
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid f(List<String> list) {\n\t\tfor (var item : list)\n\t\t\tSystem.out.println(item);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testNoFinalParametersMethod() throws Exception {
+		final var file = tempDir.newFile("ParamFinal.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(final int x, final String y) {}\n}");
+
+		assertEquals("class T {\n\tvoid f(int x, String y) {}\n}", runFixAndGetResult(file));
+	}
+
+	@Test
+	public void testNoFinalParametersSecondParam() throws Exception {
+		final var file = tempDir.newFile("SecondFinal.java");
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int x, final String y) {}\n}");
+
+		assertEquals("class T {\n\tvoid f(int x, String y) {}\n}", runFixAndGetResult(file));
 	}
 
 	@Test

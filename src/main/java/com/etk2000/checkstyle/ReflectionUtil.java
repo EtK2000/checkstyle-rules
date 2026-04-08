@@ -36,13 +36,13 @@ class ReflectionUtil {
 			case TypeVariable<?> tv when tv.getGenericDeclaration() instanceof Method ->
 					result.add(tv.getName());
 			case ParameterizedType pt -> {
-				for (final var arg : pt.getActualTypeArguments())
+				for (var arg : pt.getActualTypeArguments())
 					collectMethodLevelTypeVars(arg, result);
 			}
 			case WildcardType wt -> {
-				for (final var bound : wt.getUpperBounds())
+				for (var bound : wt.getUpperBounds())
 					collectMethodLevelTypeVars(bound, result);
-				for (final var bound : wt.getLowerBounds())
+				for (var bound : wt.getLowerBounds())
 					collectMethodLevelTypeVars(bound, result);
 			}
 			default -> {
@@ -56,7 +56,7 @@ class ReflectionUtil {
 	 * that replaces that {@code String} with {@code Charset}.
 	 *
 	 * @return the 0-based index of the charset {@code String} parameter,
-	 *         or -1 if no such overload pair exists
+	 * or -1 if no such overload pair exists
 	 */
 	@CheckReturnValue
 	static int findCharsetStringArgIndex(@Nonnull String fqcn, @Nonnull String methodName, int argCount) {
@@ -94,7 +94,7 @@ class ReflectionUtil {
 		if (clazz == null)
 			return null;
 
-		for (final var method : clazz.getMethods()) {
+		for (var method : clazz.getMethods()) {
 			if (method.getName().equals(methodName))
 				return method.getReturnType().getName();
 		}
@@ -154,7 +154,7 @@ class ReflectionUtil {
 			return false;
 
 		var hasAnyOverload = false;
-		for (final var method : clazz.getMethods()) {
+		for (var method : clazz.getMethods()) {
 			if (!method.getName().equals(methodName))
 				continue;
 
@@ -175,7 +175,7 @@ class ReflectionUtil {
 		if (clazz == null)
 			return false;
 
-		for (final var method : clazz.getMethods()) {
+		for (var method : clazz.getMethods()) {
 			if (method.getName().equals(methodName))
 				return true;
 		}
@@ -194,7 +194,7 @@ class ReflectionUtil {
 			return false;
 
 		var abstractCount = 0;
-		for (final var method : clazz.getMethods()) {
+		for (var method : clazz.getMethods()) {
 			if (!Modifier.isAbstract(method.getModifiers()))
 				continue;
 			// Object methods don't count for functional interface definition
@@ -240,7 +240,7 @@ class ReflectionUtil {
 			return false;
 
 		// remove type vars that appear in parameter types (inferable from args)
-		for (final var paramType : method.getGenericParameterTypes()) {
+		for (var paramType : method.getGenericParameterTypes()) {
 			final var paramTypeVars = new HashSet<String>();
 			collectMethodLevelTypeVars(paramType, paramTypeVars);
 			returnTypeVars.removeAll(paramTypeVars);
@@ -262,13 +262,13 @@ class ReflectionUtil {
 			return simpleName;
 
 		// check explicit imports
-		for (final var imp : imports) {
+		for (var imp : imports) {
 			if (imp.endsWith("." + simpleName))
 				return imp;
 		}
 
 		// check wildcard imports
-		for (final var imp : imports) {
+		for (var imp : imports) {
 			if (imp.endsWith(".*")) {
 				final var candidate = imp.substring(0, imp.length() - 1) + simpleName;
 				if (loadClass(candidate) != null)

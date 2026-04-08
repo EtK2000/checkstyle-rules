@@ -27,17 +27,17 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nullable
 	private static String fixAssertion(@Nonnull String line) {
-		for (final var rule : ASSERT_RULES) {
+		for (var rule : ASSERT_RULES) {
 			final var result = fixAssertionLiteralFirst(line, rule[0], rule[1], rule[2]);
 			if (result != null)
 				return result;
 		}
-		for (final var rule : ASSERT_RULES) {
+		for (var rule : ASSERT_RULES) {
 			final var result = fixAssertionLiteralLast(line, rule[0], rule[1], rule[2]);
 			if (result != null)
 				return result;
 		}
-		for (final var rule : ASSERT_RULES) {
+		for (var rule : ASSERT_RULES) {
 			final var result = fixAssertionLiteralMiddle(line, rule[0], rule[1], rule[2]);
 			if (result != null)
 				return result;
@@ -134,7 +134,7 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 				{"Collections.unmodifiableMap(", "Map.copyOf("},
 				{"Collections.unmodifiableSet(", "Set.copyOf("}
 		};
-		for (final var r : replacements) {
+		for (var r : replacements) {
 			final var idx = line.indexOf(r[0]);
 			if (idx >= 0)
 				return line.substring(0, idx) + r[1] + line.substring(idx + r[0].length());
@@ -149,7 +149,7 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nullable
 	private static String fixCollectToList(@Nonnull String line) {
-		for (final var collector : new String[]{"toList", "toUnmodifiableList"}) {
+		for (var collector : new String[]{"toList", "toUnmodifiableList"}) {
 			final var pattern = ".collect(Collectors." + collector + "())";
 			final var idx = line.indexOf(pattern);
 			if (idx >= 0)
@@ -183,7 +183,7 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 				{".keySet().contains(", ".containsKey("},
 				{".values().contains(", ".containsValue("}
 		};
-		for (final var r : replacements) {
+		for (var r : replacements) {
 			final var idx = line.indexOf(r[0]);
 			if (idx >= 0)
 				return line.substring(0, idx) + r[1] + line.substring(idx + r[0].length());

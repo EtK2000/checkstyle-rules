@@ -54,18 +54,6 @@
 			value="Add a blank line after break; before the next case/default." />
 	</module>
 
-	<!-- Method parameters never final (exclude enhanced for-each which contains " : ").
-		 Regex: first negative lookahead excludes lines with ` : ` (for-each loops like
-		 `for (final var x : list)`). Second negative lookahead excludes lines where
-		 `(final` or `, final` appears inside a string literal (a `"` precedes the match).
-		 `(\(final |,\s*final )` matches `final` after an opening paren or comma (i.e. a
-		 parameter position). `\S` ensures `final` is followed by a type name. -->
-	<module name="RegexpSingleline">
-		<property name="id" value="NoFinalParameters" />
-		<property name="format" value="^(?!.*\s:\s)(?!.*&quot;.*(\(final|,\s*final)).*(\(final |,\s*final )\S" />
-		<property name="message" value="Method parameters must not be final." />
-	</module>
-
 	<!-- No trailing whitespace (also ensures blank lines are completely empty) -->
 	<module name="RegexpSingleline">
 		<property name="id" value="NoTrailingWhitespace" />
@@ -143,6 +131,15 @@
 
 		<!-- Custom: Multiline call/signature formatting -->
 		<module name="com.etk2000.checkstyle.MultilineCallFormattingCheck" />
+
+		<!-- Custom: Parameters and for-each variables must not be final (error) -->
+		<module name="com.etk2000.checkstyle.NoFinalParametersCheck" />
+
+		<!-- Custom: For-loop init variables should not be final (warning, conflicts with FinalLocalVariable) -->
+		<module name="com.etk2000.checkstyle.NoFinalParametersCheck">
+			<property name="severity" value="warning" />
+			<property name="tokens" value="FOR_INIT" />
+		</module>
 
 		<!-- Custom: No trailing comma in array initializers -->
 		<module name="com.etk2000.checkstyle.NoArrayTrailingCommaCheck" />

@@ -15,7 +15,6 @@ public class RegexRulesTest {
 	private static final String FMT_NO_BLANK_LINE_AFTER_CLASS_BRACE = "(class|interface|enum|record)\\s+\\w[^{]*\\{\\s*\\n\\s*\\n";
 	private static final String FMT_NO_BLANK_LINE_BEFORE_CLOSING_BRACE = "\\n[^\\S\\n]*\\n[^\\S\\n]*\\}";
 	private static final String FMT_NO_DOUBLE_BLANK_LINES = "\\n\\s*\\n\\s*\\n";
-	private static final String FMT_NO_FINAL_PARAMETERS = "^(?!.*\\s:\\s)(?!.*\".*(\\(final|,\\s*final)).*(\\(final |,\\s*final )\\S";
 	private static final String FMT_NO_SPACE_INDENT = "^ (?!\\*)(?!@)";
 	private static final String FMT_NO_TRAILING_NEWLINE = "\\n\\z";
 	private static final String FMT_NO_TRAILING_WHITESPACE = "[ \\t]+$";
@@ -72,19 +71,6 @@ public class RegexRulesTest {
 	public void testNoDoubleBlankLinesViolation() throws Exception {
 		final var violations = BaseCheckTest.runRegexCheck(MULTI, FMT_NO_DOUBLE_BLANK_LINES, DIR + "InputNoDoubleBlankLinesViolation.java");
 		assertEquals(1, violations.size());
-	}
-
-	// --- NoFinalParameters ---
-
-	@Test
-	public void testNoFinalParametersClean() throws Exception {
-		assertTrue(BaseCheckTest.runRegexCheck(SINGLE, FMT_NO_FINAL_PARAMETERS, DIR + "InputNoFinalParametersClean.java").isEmpty());
-	}
-
-	@Test
-	public void testNoFinalParametersViolation() throws Exception {
-		final var violations = BaseCheckTest.runRegexCheck(SINGLE, FMT_NO_FINAL_PARAMETERS, DIR + "InputNoFinalParametersViolation.java");
-		assertEquals(4, violations.size());
 	}
 
 	// --- NoSpaceIndent ---

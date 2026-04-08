@@ -74,7 +74,7 @@ class LambdaParameterTypeFixer implements CheckstyleFixer {
 
 		// if any param has annotations, all must use var (Java requires uniform form)
 		var anyAnnotated = false;
-		for (final var param : params) {
+		for (var param : params) {
 			if (param.contains("@")) {
 				anyAnnotated = true;
 				break;

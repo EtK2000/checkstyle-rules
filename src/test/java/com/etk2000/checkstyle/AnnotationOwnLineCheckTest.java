@@ -97,7 +97,7 @@ public class AnnotationOwnLineCheckTest {
 		assertEquals(43, violations.get(15).getLine());
 		assertEquals(46, violations.get(16).getLine());
 
-		for (final var violation : violations)
+		for (var violation : violations)
 			assertEquals("Annotation 'A' must be on its own line.", violation.getMessage());
 	}
 }

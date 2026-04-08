@@ -91,7 +91,7 @@ public class AnnotationSameLineCheck extends AbstractCheck {
 		final var declLine = declarationLine(ast);
 
 		// check same-line violations
-		for (final var annotation : annotations) {
+		for (var annotation : annotations) {
 			if (annotation.getLineNo() != declLine) {
 				log(annotation, MSG_KEY, AstUtil.annotationName(annotation));
 				return;
@@ -100,7 +100,7 @@ public class AnnotationSameLineCheck extends AbstractCheck {
 
 		// check alphabetical order (only when all annotations are inline)
 		String previousName = null;
-		for (final var annotation : annotations) {
+		for (var annotation : annotations) {
 			final var name = AstUtil.annotationName(annotation);
 			if (previousName != null && name.compareTo(previousName) < 0)
 				log(annotation, MSG_ORDER, name, previousName);

@@ -49,14 +49,6 @@
 			value="Add a blank line after break; before the next case/default." />
 	</module>
 
-	<!-- Method parameters never final (also excludes matches inside comments, since
-		 violation comments may contain "(final" in the check's message text) -->
-	<module name="RegexpSingleline">
-		<property name="id" value="NoFinalParameters" />
-		<property name="format" value="^(?!.*\s:\s)(?!.*&quot;.*(\(final|,\s*final))(?!.*//.*(\(final|,\s*final)).*(\(final |,\s*final )\S" />
-		<property name="message" value="Method parameters must not be final." />
-	</module>
-
 	<!-- No trailing whitespace -->
 	<module name="RegexpSingleline">
 		<property name="id" value="NoTrailingWhitespace" />
@@ -98,6 +90,11 @@
 		<module name="com.etk2000.checkstyle.InstanceofBeforeCastCheck" />
 		<module name="com.etk2000.checkstyle.MethodAlphabeticalOrderCheck" />
 		<module name="com.etk2000.checkstyle.MultilineCallFormattingCheck" />
+		<module name="com.etk2000.checkstyle.NoFinalParametersCheck" />
+		<module name="com.etk2000.checkstyle.NoFinalParametersCheck">
+			<property name="severity" value="warning" />
+			<property name="tokens" value="FOR_INIT" />
+		</module>
 		<module name="com.etk2000.checkstyle.NoArrayTrailingCommaCheck" />
 		<module name="com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck" />
 		<module name="com.etk2000.checkstyle.NoCaseBracesCheck" />

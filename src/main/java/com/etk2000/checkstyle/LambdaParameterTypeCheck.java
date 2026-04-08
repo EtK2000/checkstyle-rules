@@ -118,14 +118,14 @@ public class LambdaParameterTypeCheck extends AbstractCheck {
 
 		// determine if any parameter has annotations
 		var anyAnnotated = false;
-		for (final var param : paramDefs) {
+		for (var param : paramDefs) {
 			if (hasAnnotations(param)) {
 				anyAnnotated = true;
 				break;
 			}
 		}
 
-		for (final var param : paramDefs) {
+		for (var param : paramDefs) {
 			if (isImplicitType(param))
 				continue;
 

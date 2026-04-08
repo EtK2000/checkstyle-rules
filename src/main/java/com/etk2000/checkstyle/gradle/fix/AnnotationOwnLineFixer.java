@@ -22,7 +22,7 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 		if (parsed.annotations().size() > 1 || !parsed.remaining().isEmpty()) {
 			AnnotationFixerUtil.sortAnnotations(parsed.annotations());
 			final var replacement = new ArrayList<String>();
-			for (final var annotation : parsed.annotations())
+			for (var annotation : parsed.annotations())
 				replacement.add(indent + annotation);
 			if (!parsed.remaining().isEmpty())
 				replacement.add(indent + parsed.remaining());
@@ -61,7 +61,7 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 			return null;
 
 		final var replacement = new ArrayList<String>();
-		for (final var annotation : sorted)
+		for (var annotation : sorted)
 			replacement.add(indent + annotation);
 		return new FixResult(start, end, replacement);
 	}

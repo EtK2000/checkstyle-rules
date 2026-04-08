@@ -105,13 +105,13 @@ public class AnnotationOwnLineCheck extends AbstractCheck {
 		final var reportedLines = new HashSet<Integer>();
 
 		// check same-line violations (multiple annotations or annotation + declaration)
-		for (final var annotation : annotations) {
+		for (var annotation : annotations) {
 			final var line = annotation.getLineNo();
 			if (reportedLines.contains(line))
 				continue;
 
 			var sharesLine = false;
-			for (final var other : annotations) {
+			for (var other : annotations) {
 				if (other != annotation && other.getLineNo() == line) {
 					sharesLine = true;
 					break;
@@ -136,7 +136,7 @@ public class AnnotationOwnLineCheck extends AbstractCheck {
 
 		// check alphabetical order
 		String previousName = null;
-		for (final var annotation : annotations) {
+		for (var annotation : annotations) {
 			final var name = AstUtil.annotationName(annotation);
 			if (previousName != null && name.compareTo(previousName) < 0)
 				log(annotation, MSG_ORDER, name, previousName);
