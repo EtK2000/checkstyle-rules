@@ -219,6 +219,138 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testDoWhileBracedTier1() throws Exception {
+		final var file = tempDir.newFile("DoTier1.java");
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo {\n\t\t\t--x;\n\t\t} while (x > 0);\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(int x) {\n\t\tdo --x; while (x > 0);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testDoWhileBracedTier2() throws Exception {
+		final var file = tempDir.newFile("DoTier2.java");
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo {\n\t\t\tSystem.out.println(x);\n\t\t} while (x > 0);\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(int x) {\n\t\tdo System.out.println(x);\n\t\twhile (x > 0);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testDoWhileBracedTier3() throws Exception {
+		final var file = tempDir.newFile("DoTier3.java");
+		final var input = "class T {\n\tvoid f(java.util.List<String> list) {\n\t\tdo {\n\t\t\tlist.subList(0, 1).clear();\n\t\t} while (!list.isEmpty());\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(java.util.List<String> list) {\n\t\tdo\n\t\t\tlist.subList(0, 1).clear();\n\t\twhile (!list.isEmpty());\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testDoWhileBracedTier3ComplexRhs() throws Exception {
+		final var file = tempDir.newFile("DoTier3Rhs.java");
+		final var input = "class T {\n\tvoid f(int x, int y) {\n\t\tdo {\n\t\t\tx += 5 * y;\n\t\t} while (x < 100);\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(int x, int y) {\n\t\tdo\n\t\t\tx += 5 * y;\n\t\twhile (x < 100);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testDoWhileMissingBraces() throws Exception {
+		final var file = tempDir.newFile("DoMissing.java");
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo\n\t\t\tif (x > 0)\n\t\t\t\t--x;\n\t\twhile (x > 0);\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(int x) {\n\t\tdo {\n\t\t\tif (x > 0)\n\t\t\t\t--x;\n\t\t} while (x > 0);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testDoWhileOwnLineTier1() throws Exception {
+		final var file = tempDir.newFile("DoOwn1.java");
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo\n\t\t\t--x;\n\t\twhile (x > 0);\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(int x) {\n\t\tdo --x; while (x > 0);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testDoWhileOwnLineTier2() throws Exception {
+		final var file = tempDir.newFile("DoOwn2.java");
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo\n\t\t\tSystem.out.println(x);\n\t\twhile (x > 0);\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(int x) {\n\t\tdo System.out.println(x);\n\t\twhile (x > 0);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testDoWhileTier1SplitJoins() throws Exception {
+		final var file = tempDir.newFile("DoT1Split.java");
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo --x;\n\t\twhile (x > 0);\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(int x) {\n\t\tdo --x; while (x > 0);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testDoWhileTier2WhileOnSameLine() throws Exception {
+		final var file = tempDir.newFile("DoSplit.java");
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo System.out.println(x); while (x > 0);\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(int x) {\n\t\tdo System.out.println(x);\n\t\twhile (x > 0);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testDoWhileTier3AsTier2() throws Exception {
+		final var file = tempDir.newFile("DoT3T2.java");
+		final var input = "class T {\n\tvoid f(java.util.List<String> list) {\n\t\tdo list.subList(0, 1).clear();\n\t\twhile (!list.isEmpty());\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(java.util.List<String> list) {\n\t\tdo\n\t\t\tlist.subList(0, 1).clear();\n\t\twhile (!list.isEmpty());\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testDoWhileTier3OneLiner() throws Exception {
+		final var file = tempDir.newFile("DoT3One.java");
+		final var input = "class T {\n\tvoid f(java.util.List<String> list) {\n\t\tdo list.subList(0, 1).clear(); while (!list.isEmpty());\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(java.util.List<String> list) {\n\t\tdo\n\t\t\tlist.subList(0, 1).clear();\n\t\twhile (!list.isEmpty());\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
 	public void testEnumTrailingComma() throws Exception {
 		final var file = tempDir.newFile("Color.java");
 		Files.writeString(file.toPath(), "enum Color {\n\tRED,\n\tGREEN,\n}");

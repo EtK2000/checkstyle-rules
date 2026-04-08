@@ -2,6 +2,7 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import com.etk2000.checkstyle.AnnotationOwnLineCheck;
 import com.etk2000.checkstyle.AnnotationSameLineCheck;
+import com.etk2000.checkstyle.ControlFlowBracesCheck;
 import com.etk2000.checkstyle.LambdaParameterTypeCheck;
 import com.etk2000.checkstyle.NoArrayTrailingCommaCheck;
 import com.etk2000.checkstyle.NoFinalParametersCheck;
@@ -70,6 +71,7 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 				Map.entry(AnnotationOwnLineCheck.class.getName(), new AnnotationOwnLineFixer()),
 				Map.entry(AnnotationSameLineCheck.class.getName(), new AnnotationSameLineFixer()),
 				Map.entry(AvoidNoArgumentSuperConstructorCallCheck.class.getName(), new AvoidNoArgumentSuperCallFixer()),
+				Map.entry(ControlFlowBracesCheck.class.getName(), new ControlFlowBracesFixer()),
 				Map.entry(ExplicitInitializationCheck.class.getName(), new ExplicitInitializationFixer()),
 				Map.entry(FinalLocalVariableCheck.class.getName(), new FinalLocalVariableFixer()),
 				Map.entry(LambdaParameterTypeCheck.class.getName(), new LambdaParameterTypeFixer()),

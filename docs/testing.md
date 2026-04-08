@@ -93,31 +93,128 @@ Use this as a **driving process while writing code**, not a post-hoc audit. Do n
 then write a fixer, then write tests. Instead: write one branch of the check, write its tests, then
 the next branch and its tests, then the fixer and its tests.
 
-### Before writing any code
+### Before writing any code (BLOCKING - do not skip or defer)
 
-1. List every AST context / token type the check will handle
-2. For each context, decide: clean example, violation example, boundary example (should NOT fire)
-3. For checks with multiple violation types (e.g. placement + ordering + blank lines), repeat step 2
-   per violation type
-4. If the check has a related check that partitions contexts, list the cross-check file pairs
-5. Write this matrix down (on paper, in a comment, in the plan). Every cell must be filled before
-   declaring done
+These steps produce the test matrix. No code is written until the matrix is complete and reviewed.
 
-### While writing code
+1. List every AST token type the check will visit and every expression/body type it will classify
+2. If the check has categories (tiers, modes, severity levels), build the full NxN permutation matrix
+   (see "Permutation matrix" below). Write out every cell explicitly
+3. For each category/token type, list: clean example, violation example, boundary example (nearby
+   value that should NOT fire). Be specific - write actual code snippets, not descriptions
+4. For each violation type (message key), repeat step 3
+5. List every boundary dimension (what single change flips one category to another). For each
+   dimension, write the clean-side snippet and the violation-side snippet side by side
+6. If a token type cannot appear in test resource files (blocked by another check), note it as
+   requiring a direct AST unit test
+7. If the check has a related check that partitions contexts, list the cross-check file pairs
+8. Write all of the above into the plan. Do not proceed to code until every cell, boundary, and
+   token type has a planned test. This is the most important step. Gaps in the matrix become gaps in
+   coverage. Filling the matrix after writing code is post-hoc rationalization, not test-driven
+   development
 
-6. After writing each `if`/`switch`/`return` branch, immediately write the test for both paths
-7. After writing a fixer `fix()` method, immediately write unit tests for every return path (both
-   `null` returns and each `FixResult` shape)
-8. After registering the fixer in `FIXERS`, immediately write the integration test(s) - one per fix
-   type, asserting exact full output
+### While writing code (interleaved - never batch)
 
-### After all code is written
+9. Write ONE branch of the check. Immediately write the clean and violation test resource lines for
+   that branch. Immediately write the check test assertions. Run `./gradlew check`. Only then write
+   the next branch
+10. After completing ALL check branches: write the fixer. For each `return null`, immediately write
+    the fixer unit test. For each `return new FixResult(...)`, immediately write the fixer unit test.
+    For each fix type, immediately write the integration test. Run `./gradlew check` after each test
+11. Write direct AST unit tests for any token types identified in step 6
 
-9. Re-read this entire checklist top to bottom
-10. Verify the matrix from step 2 - trace every cell to a specific test method name
-11. Verify every branch in the source has a test exercising both true and false
-12. Verify every violation test asserts exact count, line numbers, and messages
-13. Run `./gradlew check`
+### After all code is written (exhaustive audit - do not skip)
+
+12. Run the 6-step exhaustive audit (see "Exhaustive audit process" below). This is not optional. Do
+    not declare done, do not say "coverage is complete", do not move on until every step produces
+    zero gaps
+13. Trace every cell of the matrix from step 2 to a specific test method name. If any cell maps to
+    "tested implicitly" or "same code path as X", that cell is NOT covered - add an explicit test
+14. Verify every violation test asserts all three: exact line number, severity level, AND message
+15. Run `./gradlew check` one final time
+
+### Permutation matrix (for checks with tiers, categories, or modes)
+
+When a check classifies inputs into categories (e.g., tiers, severity levels, format modes) and
+enforces a specific format per category, build an NxN permutation matrix: actual category vs.
+formatted-as category. Every cell must be tested.
+
+Example: `ControlFlowBracesCheck` has 3 do-while tiers (tier 1 = all one line, tier 2 = body on do
+line + while split, tier 3 = body on own line). The matrix is:
+
+| Actual \ Written as | Tier 1        | Tier 2        | Tier 3        |
+|---------------------|---------------|---------------|---------------|
+| **Tier 1**          | Clean         | Violation     | Violation     |
+| **Tier 2**          | Violation     | Clean         | Violation     |
+| **Tier 3**          | Violation     | Violation     | Clean         |
+
+The diagonal is clean (correct format). Every off-diagonal cell is a violation. **Every cell needs
+three layers of coverage:**
+
+1. **Check test**: clean file for diagonal, violation file for off-diagonal, with exact line/severity/
+   message assertions
+2. **Fixer unit test**: for every off-diagonal cell, a unit test that inputs the wrong format and
+   asserts the fixer produces the correct format
+3. **Integration test**: for every off-diagonal cell, an end-to-end test running the full pipeline
+
+Do not declare coverage complete until every cell has all three layers. If a check has N categories,
+that is N^2 cells to fill (N clean + N^2 - N violation/fixer). Trace each cell to specific test
+method names.
+
+### Direct AST unit tests (for token types blocked by other checks)
+
+When a token type (e.g., `POST_INC`/`POST_DEC`) cannot appear in test resource files because
+another check (e.g., `PreferPrefixIncrementCheck`) would flag it, write direct AST unit tests
+instead. Parse a temp file with `JavaParser.parse()`, walk the AST to find the relevant node, and
+call the check's package-private methods directly.
+
+```java
+// example: test POST_INC directly via AST
+var source = "class T { void f(int x) { do x++; while (x > 0); } }";
+var tmp = File.createTempFile("test", ".java");
+Files.writeString(tmp.toPath(), source);
+var ast = JavaParser.parse(new FileContents(new FileText(tmp, StandardCharsets.UTF_8.name())));
+var doBody = findFirst(ast, TokenTypes.LITERAL_DO).getFirstChild();
+assertTrue(SomeCheck.isSimpleExpression(doBody));
+```
+
+This is the only way to achieve full token-type coverage when test resource checkstyle rules
+conflict. Use this for every token in a `switch` or `if` chain that shares a code path with other
+tokens but has a distinct AST type. Same code path does not mean same coverage: a future edit could
+accidentally drop one token from the case list.
+
+### Exhaustive audit process
+
+After all code and tests are written, run this audit before declaring done. Do not skip it.
+
+**Step 1: Branch trace.** For every `if`, `switch case`, `else`, and early `return` in the source,
+write down:
+- The condition
+- The test exercising the TRUE path (file:line or test method name)
+- The test exercising the FALSE path
+Mark MISSING if either path lacks a test. Fix before proceeding.
+
+**Step 2: Token type trace.** For every token type in a `switch` or `if` chain, verify there is a
+dedicated test (either in test resources or direct AST unit test). Do not rely on shared case arms
+as proof of coverage.
+
+**Step 3: Permutation matrix trace.** If the check has categories (step 5 above), verify every cell
+has check test + fixer unit test + integration test.
+
+**Step 4: Boundary pair trace.** For every dimension that causes a category transition (e.g., "has
+DOT" flips tier 1 to tier 2), verify both sides of the boundary are tested: a clean case just
+inside the boundary and a violation/clean case just outside.
+
+**Step 5: Fixer return path trace.** For every `return null` and every `return new FixResult(...)`
+in the fixer, name the unit test that exercises it. Skip only paths that are provably unreachable
+(called from a context that already validated the precondition).
+
+**Step 6: Edge case trace.** For the specific AST token the check handles, list structural edge
+cases (empty body, nested constructs, construct inside other constructs, braced vs. unbraced
+variants). Verify each is in the clean or violation file.
+
+If any step reveals a gap, fix it immediately. Then re-run the full audit from step 1 (gaps often
+cascade). Only after a full clean pass through all 6 steps is coverage complete.
 
 ### Context coverage (for checks that handle multiple AST contexts)
 

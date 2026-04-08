@@ -3,14 +3,14 @@ package com.etk2000.checkstyle.inputs.controlflow;
 class InputControlFlowNested {
 	void deepNesting(int x) {
 		if (x > 0) { // correct — braced body is multi-line
-			for (int i = 0; i < x; ++i) // violation: missing braces on multi-line body
+			for (int i = 0; i < x; ++i) // violation: Braceless control flow has multi-line body, add braces.
 				if (i > 0)
 					System.out.println(i);
 		}
 	}
 
 	void outerMissingBraces(int x) {
-		for (int i = 0; i < x; ++i) // violation: missing braces on multi-line body
+		for (int i = 0; i < x; ++i) // violation: Braceless control flow has multi-line body, add braces.
 			if (i > 0)
 				System.out.println(i);
 	}

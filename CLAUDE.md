@@ -99,7 +99,14 @@
   ```
   The `for` body is two lines (`if` + `stmt`), so it needs braces, but the `if` body is one line
   (`stmt`), so it doesn't
-- Never one-line simple ifs/whiles/fors/do-whiles
+- Never one-line simple ifs/whiles/fors. Do-while has tier-based formatting:
+  - Tier 1 (all one line): simple body without dots + non-compound while condition.
+    `do --x; while (x > 0);`
+  - Tier 2 (body on do line, while on next): dotted method call body, or compound while condition.
+    `do list.add(x);\nwhile (x > 0);`
+  - Tier 3 (body on own line): chained calls, new expressions, complex RHS.
+    `do\n\tcomplex();\nwhile (x > 0);`
+  When body is on the `do` line (tiers 1 and 2), never use braces
 - In switch statements: blank line after `break;` before the next case; no blank line between
   single-line cases (case label + one statement like `return`/`throw`/`yield`). No blank line
   after a braced case (the closing brace provides visual separation)

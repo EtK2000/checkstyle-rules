@@ -4,25 +4,26 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 
 ## TreeWalker checks (FIXERS map)
 
-| Check                                    | Fixer                              | Notes                                                              |
-|------------------------------------------|------------------------------------|--------------------------------------------------------------------|
-| AvoidNoArgumentSuperConstructorCallCheck | AvoidNoArgumentSuperCallFixer      | Removes `super()` call                                             |
-| ExplicitInitializationCheck              | ExplicitInitializationFixer        | Removes `= 0`/`= null`/`= false` etc.                              |
-| FinalLocalVariableCheck                  | FinalLocalVariableFixer            | Adds `final` keyword                                               |
-| LambdaParameterTypeCheck                 | LambdaParameterTypeFixer           | See sub-rules below                                                |
-| NoArrayTrailingCommaCheck                | NoArrayTrailingCommaFixer          | Removes trailing comma                                             |
-| NoBlankLineBetweenSingleCasesCheck       | NoBlankLineBetweenSingleCasesFixer | Removes blank line                                                 |
-| NoEnumTrailingCommaCheck                 | NoArrayTrailingCommaFixer          | Same fixer as array trailing comma                                 |
-| NoFinalParametersCheck                   | RedundantModifierFixer             | Removes `final` keyword from parameter                             |
-| NoUnnecessaryThisCheck                   | NoUnnecessaryThisFixer             | Removes `this.` prefix                                             |
-| PreferPrefixIncrementCheck               | PreferPrefixIncrementFixer         | Moves `++`/`--` to prefix position                                 |
-| PreferSpecificApiCheck                   | PreferSpecificApiFixer             | See sub-rules below                                                |
-| PreferVarCheck                           | PreferVarFixer                     | Replaces type with `var`; converts explicit array init to implicit |
-| RedundantImportCheck                     | DeleteLineFixer                    | Deletes import line                                                |
-| RedundantModifierCheck                   | RedundantModifierFixer             | Removes redundant modifier keyword                                 |
-| RedundantNumericSuffixCheck              | RedundantNumericSuffixFixer        | Removes redundant `L`/`f`/`d` suffix                               |
-| UnusedImportsCheck                       | DeleteLineFixer                    | Deletes import line                                                |
-| UpperEllCheck                            | UpperEllFixer                      | Changes `l` to `L`                                                 |
+| Check                                    | Fixer                              | Notes                                                                            |
+|------------------------------------------|------------------------------------|----------------------------------------------------------------------------------|
+| AvoidNoArgumentSuperConstructorCallCheck | AvoidNoArgumentSuperCallFixer      | Removes `super()` call                                                           |
+| ControlFlowBracesCheck                   | ControlFlowBracesFixer             | Do-while only: removes unnecessary braces, fixes one-liners, adds missing braces |
+| ExplicitInitializationCheck              | ExplicitInitializationFixer        | Removes `= 0`/`= null`/`= false` etc.                                            |
+| FinalLocalVariableCheck                  | FinalLocalVariableFixer            | Adds `final` keyword                                                             |
+| LambdaParameterTypeCheck                 | LambdaParameterTypeFixer           | See sub-rules below                                                              |
+| NoArrayTrailingCommaCheck                | NoArrayTrailingCommaFixer          | Removes trailing comma                                                           |
+| NoBlankLineBetweenSingleCasesCheck       | NoBlankLineBetweenSingleCasesFixer | Removes blank line                                                               |
+| NoEnumTrailingCommaCheck                 | NoArrayTrailingCommaFixer          | Same fixer as array trailing comma                                               |
+| NoFinalParametersCheck                   | RedundantModifierFixer             | Removes `final` keyword from parameter                                           |
+| NoUnnecessaryThisCheck                   | NoUnnecessaryThisFixer             | Removes `this.` prefix                                                           |
+| PreferPrefixIncrementCheck               | PreferPrefixIncrementFixer         | Moves `++`/`--` to prefix position                                               |
+| PreferSpecificApiCheck                   | PreferSpecificApiFixer             | See sub-rules below                                                              |
+| PreferVarCheck                           | PreferVarFixer                     | Replaces type with `var`; converts explicit array init to implicit               |
+| RedundantImportCheck                     | DeleteLineFixer                    | Deletes import line                                                              |
+| RedundantModifierCheck                   | RedundantModifierFixer             | Removes redundant modifier keyword                                               |
+| RedundantNumericSuffixCheck              | RedundantNumericSuffixFixer        | Removes redundant `L`/`f`/`d` suffix                                             |
+| UnusedImportsCheck                       | DeleteLineFixer                    | Deletes import line                                                              |
+| UpperEllCheck                            | UpperEllFixer                      | Changes `l` to `L`                                                               |
 
 ## Regex checks (MODULE_ID_FIXERS map)
 

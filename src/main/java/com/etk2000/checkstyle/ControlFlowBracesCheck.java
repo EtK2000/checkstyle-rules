@@ -14,9 +14,22 @@ import javax.annotation.Nonnull;
  *     <li>No unnecessary braces: single-line body must not be wrapped in braces</li>
  *     <li>Missing braces: braceless body spanning multiple lines must have braces</li>
  * </ul>
+ * Do-while has tier-based formatting:
+ * <ul>
+ *     <li>Tier 1 (simple body, no dot, simple while): all on one line</li>
+ *     <li>Tier 2 (simple body with dot, or compound while): body on do line, while on next</li>
+ *     <li>Tier 3 (non-simple body): body on own line (standard rules)</li>
+ * </ul>
  * Each nesting level is evaluated independently.
  */
 public class ControlFlowBracesCheck extends AbstractCheck {
+	static final int TIER_1 = 1;
+	static final int TIER_2 = 2;
+	static final int TIER_3 = 3;
+
+	private static final String MSG_DO_WHILE_BODY_ON_DO_LINE = "control.flow.do.while.body.on.do.line";
+	private static final String MSG_DO_WHILE_ONE_LINE = "control.flow.do.while.one.line";
+	private static final String MSG_DO_WHILE_WHILE_NEXT_LINE = "control.flow.do.while.while.next.line";
 	private static final String MSG_MISSING_BRACES = "control.flow.missing.braces";
 	private static final String MSG_ONE_LINER = "control.flow.one.liner";
 	private static final String MSG_UNNECESSARY_BRACES = "control.flow.unnecessary.braces";
@@ -30,10 +43,94 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	private static int bodyLineCountOfBlock(@Nonnull DetailAST slist) {
-		// count lines between the braces (exclusive)
 		final var open = slist.getLineNo();
 		final var close = slist.findFirstToken(TokenTypes.RCURLY).getLineNo();
 		return close - open - 1;
+	}
+
+	/**
+	 * Checks whether any node in the subtree is a binary operator
+	 * (arithmetic, comparison, logical, bitwise, shift).
+	 */
+	@CheckReturnValue
+	private static boolean containsBinaryOp(@Nonnull DetailAST node) {
+		return switch (node.getType()) {
+			case TokenTypes.BAND, TokenTypes.BOR, TokenTypes.BSR, TokenTypes.BXOR,
+			     TokenTypes.DIV, TokenTypes.EQUAL, TokenTypes.GE, TokenTypes.GT,
+			     TokenTypes.LAND, TokenTypes.LE, TokenTypes.LOR, TokenTypes.LT,
+			     TokenTypes.MINUS, TokenTypes.MOD, TokenTypes.NOT_EQUAL, TokenTypes.PLUS,
+			     TokenTypes.QUESTION, TokenTypes.SL, TokenTypes.SR, TokenTypes.STAR -> true;
+			default -> {
+				for (var child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
+					if (containsBinaryOp(child))
+						yield true;
+				}
+				yield false;
+			}
+		};
+	}
+
+	/**
+	 * Checks whether the subtree contains a DOT node.
+	 */
+	@CheckReturnValue
+	private static boolean containsDot(@Nonnull DetailAST node) {
+		if (node.getType() == TokenTypes.DOT)
+			return true;
+		for (var child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (containsDot(child))
+				return true;
+		}
+		return false;
+	}
+
+	@CheckReturnValue
+	private static boolean containsLandLor(@Nonnull DetailAST node) {
+		if (node.getType() == TokenTypes.LAND || node.getType() == TokenTypes.LOR)
+			return true;
+		for (var child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (containsLandLor(child))
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Checks whether the DOT subtree contains a METHOD_CALL node,
+	 * indicating method chaining (e.g. {@code a.b().c()}).
+	 */
+	@CheckReturnValue
+	private static boolean containsMethodCall(@Nonnull DetailAST node) {
+		for (var child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.METHOD_CALL)
+				return true;
+			if (containsMethodCall(child))
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Determines the formatting tier for a do-while body.
+	 * <ul>
+	 *     <li>Tier 1: all on one line (simple body, no dot, simple while condition)</li>
+	 *     <li>Tier 2: body on do line, while on next (simple body, but dot or compound while)</li>
+	 *     <li>Tier 3: body on own line (non-simple body)</li>
+	 * </ul>
+	 */
+	@CheckReturnValue
+	static int determineTier(@Nonnull DetailAST body, @Nonnull DetailAST doAst) {
+		if (!isDoWhileLineEligible(body))
+			return TIER_3;
+
+		final var expr = body.getFirstChild();
+		if (containsDot(expr))
+			return TIER_2;
+
+		if (isCompoundCondition(doAst))
+			return TIER_2;
+
+		return TIER_1;
 	}
 
 	@CheckReturnValue
@@ -46,6 +143,60 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 		};
 	}
 
+	/**
+	 * Returns whether the RHS of an assignment/compound-assignment contains
+	 * a binary operator, making the expression too complex for tier 1.
+	 */
+	@CheckReturnValue
+	private static boolean hasComplexRhs(@Nonnull DetailAST expr) {
+		return switch (expr.getType()) {
+			case TokenTypes.ASSIGN, TokenTypes.BAND_ASSIGN, TokenTypes.BOR_ASSIGN,
+			     TokenTypes.BSR_ASSIGN, TokenTypes.BXOR_ASSIGN, TokenTypes.DIV_ASSIGN,
+			     TokenTypes.MINUS_ASSIGN, TokenTypes.MOD_ASSIGN, TokenTypes.PLUS_ASSIGN,
+			     TokenTypes.SL_ASSIGN, TokenTypes.SR_ASSIGN, TokenTypes.STAR_ASSIGN -> {
+				final var rhs = expr.getLastChild();
+				yield rhs != null && containsBinaryOp(rhs);
+			}
+			default -> false;
+		};
+	}
+
+	/**
+	 * Returns whether the while condition in a do-while contains compound
+	 * operators ({@code &&}, {@code ||}), making it too complex for tier 1.
+	 */
+	@CheckReturnValue
+	private static boolean isCompoundCondition(@Nonnull DetailAST doAst) {
+		// find the condition EXPR after DO_WHILE in LITERAL_DO's children
+		var foundWhile = false;
+		for (var child = doAst.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.DO_WHILE)
+				foundWhile = true;
+			else if (foundWhile && child.getType() == TokenTypes.EXPR)
+				return containsLandLor(child);
+		}
+		return false;
+	}
+
+	/**
+	 * Returns whether the body qualifies to be on the {@code do} line
+	 * (tiers 1 and 2). The body must be a simple expression without
+	 * chained method calls or complex RHS.
+	 */
+	@CheckReturnValue
+	static boolean isDoWhileLineEligible(@Nonnull DetailAST body) {
+		if (!isSimpleExpression(body))
+			return false;
+
+		final var expr = body.getFirstChild();
+
+		// assignments with complex RHS are tier 3
+		if (hasComplexRhs(expr))
+			return false;
+
+		return true;
+	}
+
 	@CheckReturnValue
 	private static boolean isOneLiner(@Nonnull DetailAST keyword, @Nonnull DetailAST body) {
 		if (body.getType() == TokenTypes.SLIST)
@@ -53,11 +204,40 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 		return body.getLineNo() == keyword.getLineNo();
 	}
 
+	/**
+	 * Returns whether the body is a simple expression: increment/decrement,
+	 * assignment, compound assignment, or a single non-chained method call.
+	 */
+	@CheckReturnValue
+	static boolean isSimpleExpression(@Nonnull DetailAST body) {
+		if (body.getType() != TokenTypes.EXPR)
+			return false;
+
+		final var expr = body.getFirstChild();
+		return switch (expr.getType()) {
+			case TokenTypes.ASSIGN, TokenTypes.BAND_ASSIGN, TokenTypes.BOR_ASSIGN,
+			     TokenTypes.BSR_ASSIGN, TokenTypes.BXOR_ASSIGN, TokenTypes.DEC,
+			     TokenTypes.DIV_ASSIGN, TokenTypes.INC, TokenTypes.MINUS_ASSIGN,
+			     TokenTypes.MOD_ASSIGN, TokenTypes.PLUS_ASSIGN, TokenTypes.POST_DEC,
+			     TokenTypes.POST_INC, TokenTypes.SL_ASSIGN, TokenTypes.SR_ASSIGN,
+			     TokenTypes.STAR_ASSIGN -> true;
+			case TokenTypes.METHOD_CALL -> {
+				final var dot = expr.findFirstToken(TokenTypes.DOT);
+				yield dot == null || !containsMethodCall(dot);
+			}
+			default -> false;
+		};
+	}
+
 	private void checkBody(@Nonnull DetailAST keyword, @Nonnull DetailAST body) {
 		if (body.getType() == TokenTypes.EMPTY_STAT)
 			return;
 
-		// one-liner check
+		if (keyword.getType() == TokenTypes.LITERAL_DO) {
+			checkDoWhile(keyword, body);
+			return;
+		}
+
 		if (isOneLiner(keyword, body)) {
 			log(keyword, MSG_ONE_LINER);
 			return;
@@ -66,13 +246,49 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 		final var lines = bodyLineCount(body);
 
 		if (body.getType() == TokenTypes.SLIST) {
-			// braced body — flag if body is single-line
 			if (lines == 1)
 				log(keyword, MSG_UNNECESSARY_BRACES);
 		}
-		else if (lines > 1) {
-			// braceless body spanning multiple lines
+		else if (lines > 1)
 			log(keyword, MSG_MISSING_BRACES);
+	}
+
+	private void checkDoWhile(@Nonnull DetailAST keyword, @Nonnull DetailAST body) {
+		final var tier = determineTier(body, keyword);
+		final var bodyOnDoLine = isOneLiner(keyword, body);
+		final var whileAst = keyword.findFirstToken(TokenTypes.DO_WHILE);
+		final var bodyLastLine = AstUtil.lastLine(body);
+		final var whileOnBodyLine = whileAst != null && whileAst.getLineNo() == bodyLastLine;
+
+		// braced body — always unnecessary for single-line do-while bodies
+		if (body.getType() == TokenTypes.SLIST) {
+			if (bodyLineCountOfBlock(body) == 1)
+				log(keyword, MSG_UNNECESSARY_BRACES);
+			return;
+		}
+
+		// multi-line braceless body — always needs braces regardless of tier
+		if (bodyLineCount(body) > 1) {
+			log(keyword, MSG_MISSING_BRACES);
+			return;
+		}
+
+		switch (tier) {
+			case TIER_1 -> {
+				if (!bodyOnDoLine || !whileOnBodyLine)
+					log(keyword, MSG_DO_WHILE_ONE_LINE);
+			}
+			case TIER_2 -> {
+				if (!bodyOnDoLine)
+					log(keyword, MSG_DO_WHILE_BODY_ON_DO_LINE);
+				else if (whileOnBodyLine)
+					log(keyword, MSG_DO_WHILE_WHILE_NEXT_LINE);
+			}
+			case TIER_3 -> {
+				if (bodyOnDoLine)
+					log(keyword, MSG_ONE_LINER);
+			}
+			default -> { }
 		}
 	}
 
@@ -107,7 +323,6 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 
 		checkBody(ast, body);
 
-		// check else/else-if
 		if (ast.getType() != TokenTypes.LITERAL_IF)
 			return;
 
@@ -119,7 +334,6 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 		if (elseBody == null)
 			return;
 
-		// else-if: skip missing-braces check (else-if is one construct)
 		if (elseBody.getType() == TokenTypes.LITERAL_IF)
 			return;
 
