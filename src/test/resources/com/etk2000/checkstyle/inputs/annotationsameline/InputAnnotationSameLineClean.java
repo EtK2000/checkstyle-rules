@@ -41,7 +41,7 @@ class InputAnnotationSameLineClean {
 	}
 
 	void lambda() {
-		final Consumer<String> c = (@A String s) -> {};
+		final Consumer<String> c = (@A var s) -> {};
 	}
 
 	void method(@A String param) {}

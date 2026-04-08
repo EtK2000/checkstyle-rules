@@ -187,11 +187,36 @@ built-in checks).
 
 ## Common pitfalls
 
+- **New checks break existing test resources**: when you register a new check in `checkstyle.xml`,
+  it immediately fires on ALL source files AND test resources via `checkstyleTestResources`. Before
+  running `./gradlew check`, search existing test resources for patterns your check would flag
+  (e.g. `grep -r "(String x) ->"` for a lambda type check). Update those files first, or your
+  build will fail with violations in files you didn't write.
+
 - **Test resource files are checked too**: the Input*.java files go through
   `checkstyleTestResources` which runs the project's own rules. Methods must be alphabetically
   ordered, blank lines after `break;` before `case`/`default`, no trailing whitespace, etc.
+
 - **AST structure varies by context**: `do-while` body is the first child of `LITERAL_DO`
   (before the condition), unlike `if`/`while`/`for` where the body follows `RPAREN`. Always
   verify AST structure empirically.
+
+- **`AstUtil.typeText()` returns empty string for primitives**: if your check logs type names in
+  violation messages (e.g. "use X instead of '{0}'"), handle primitive types explicitly. The TYPE
+  node for `int`, `boolean`, etc. contains keyword tokens (`LITERAL_INT`, `LITERAL_BOOLEAN`), not
+  `IDENT` tokens, so `AstUtil.typeText()` returns `""`. Use a switch on the child token type to
+  map to the primitive name.
+
 - **`DetailAST.getColumnNo()` is tab-expanded**: column numbers account for tab width (default
   8). This matters if your check uses column positions for anything.
+
+- **Cross-check ALL files, not just representative ones**: when your check is related to another
+  check (e.g., both handle annotations on parameters), cross-check EVERY test resource file from
+  the related check, not just 2-3 "representative" ones. A file that looks unrelated might
+  contain a lambda or edge case that triggers your check unexpectedly.
+
+- **Group-state logic needs permutation tests**: when your check sets a flag by iterating a group
+  (e.g., "any param has annotations?"), test the flag-triggering item in every position within
+  the group (first, last, all, none). The code path is the same, but different iteration orders
+  expose different bugs in fixers and in the check's own per-item loop. See the multi-item
+  permutation coverage section in `docs/testing.md`.

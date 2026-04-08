@@ -121,6 +121,9 @@
 		<!-- Custom: Empty infinite loops are errors (for(;;), while(true), do;while(true)) -->
 		<module name="com.etk2000.checkstyle.InfiniteEmptyLoopCheck" />
 
+		<!-- Custom: Lambda parameters should use implicit types (or var with annotations) -->
+		<module name="com.etk2000.checkstyle.LambdaParameterTypeCheck" />
+
 		<!-- Custom: Combine same-type uninitialized fields on one line -->
 		<module name="com.etk2000.checkstyle.FieldConsolidationCheck" />
 

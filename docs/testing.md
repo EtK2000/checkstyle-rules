@@ -18,9 +18,16 @@ Tests verify the exact count, line numbers, and messages of violations. Clean te
 
 ```java
 final var violations = BaseCheckTest.runCheck(SomeCheck.class, DIR + "InputViolation.java");
-assertEquals(3, violations.size());
-assertEquals(10, violations.get(0).getLine());
-assertEquals("Expected message.", violations.get(0).getMessage());
+
+assertEquals(3,violations.size());
+
+assertEquals(10,violations.get(0).
+
+getLine());
+
+assertEquals("Expected message.",violations.get(0).
+
+getMessage());
 ```
 
 ### Regex tests
@@ -123,7 +130,8 @@ METHOD_DEF, VARIABLE_DEF), every context must appear in all three test categorie
    text-based and context-agnostic)
 
 If a check has multiple violation types (e.g. same-line placement, blank lines, alphabetical order),
-each violation type needs its own set of clean + violation examples. Use separate violation files per
+each violation type needs its own set of clean + violation examples. Use separate violation files
+per
 violation type to keep them manageable.
 
 **Boundary contexts**: the clean file must also include examples of contexts the check should NOT
@@ -140,8 +148,13 @@ territory.
 
 ```java
 // AnnotationOwnLineCheck must not fire on any SameLine test files
-assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR + "Clean.java").isEmpty());
-assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR + "Violation.java").isEmpty());
+assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR +"Clean.java").
+
+isEmpty());
+
+assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR +"Violation.java").
+
+isEmpty());
 // ... and vice versa for every file
 ```
 
@@ -151,12 +164,39 @@ Trace every `if`, `switch`, `while` condition, and early `return` in the code. E
 have a dedicated test. After writing code, re-read it and confirm every conditional has a test that
 exercises both the true and false paths.
 
+### Multi-item permutation coverage
+
+When a check processes multiple items in a group (e.g., multiple lambda params, multiple fields in
+a declaration, multiple annotations) and the check's behavior depends on the GROUP state (like
+"does any item have an annotation?"), test every permutation of per-item states. This is not the
+same as branch coverage -- the code paths are identical, but the data flows through different
+iterations.
+
+Example: `LambdaParameterTypeCheck` has `anyAnnotated` logic that inspects ALL params to decide
+whether to suggest `var` vs implicit. For a 2-param lambda, these cases are distinct:
+
+| First param   | Second param  | Expected          |
+|---------------|---------------|-------------------|
+| `@A String x` | `String y`    | Both MSG_VAR      |
+| `String x`    | `@A String y` | Both MSG_VAR      |
+| `@A String x` | `@B String y` | Both MSG_VAR      |
+| `String x`    | `String y`    | Both MSG_IMPLICIT |
+
+The first three share the same code path (anyAnnotated=true), but testing only case 1 missed a
+fixer bug where non-annotated params in an annotated context were stripped to implicit instead of
+getting `var`. Case 2 caught it because the fixer iterated params left-to-right and handled the
+non-annotated first param differently.
+
+**Rule**: when code loops over a group and sets a flag from any member, test the flag-setting member
+in every position (first, middle, last, all).
+
 ### Boundary pairing
 
 For every value a function accepts, write a rejection test with a "nearby" invalid value. This
 catches over-matching.
 
 Examples from this project:
+
 - `ExplicitInitializationFixer` accepts `0.0f` (zero) → must reject `1.0f` (non-zero)
 - `ExplicitInitializationFixer` accepts `'\u0000'` → must reject `'\u0001'`
 - `DoubleBlankLineFixer` accepts 2 consecutive blanks → must reject 1 blank (the boundary)
@@ -212,8 +252,10 @@ Assert the exact full output string, not fragments via `contains()`. This catche
 modifications to lines the test wasn't looking at.
 
 When a fixer handles mutually exclusive conventions (e.g. JUnit 4 message-first vs JUnit 5
-message-last), each convention needs its own integration test combining multiple patterns in a single
-file. This verifies that fixers for one convention don't silently mangle lines belonging to the other.
+message-last), each convention needs its own integration test combining multiple patterns in a
+single
+file. This verifies that fixers for one convention don't silently mangle lines belonging to the
+other.
 A single-pattern test per convention is not enough because interference only surfaces when multiple
 fixer code paths run against the same file.
 

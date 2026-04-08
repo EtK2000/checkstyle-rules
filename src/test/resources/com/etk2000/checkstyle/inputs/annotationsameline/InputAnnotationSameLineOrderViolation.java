@@ -32,7 +32,7 @@ class InputAnnotationSameLineOrderViolation {
 	}
 
 	void lambda() {
-		final Consumer<String> c = (@B @A String s) -> {}; // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+		final Consumer<String> c = (@B @A var s) -> {}; // violation: Annotation 'A' must appear before 'B' (alphabetical order).
 	}
 
 	void method(@B @A String param) {} // violation: Annotation 'A' must appear before 'B' (alphabetical order).

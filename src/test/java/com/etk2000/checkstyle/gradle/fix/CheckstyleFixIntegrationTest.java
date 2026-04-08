@@ -278,6 +278,50 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testFixLambdaParamRemoveParens() throws Exception {
+		final var file = tempDir.newFile("LamParen.java");
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.forEach((x) -> System.out.println(x));\n\t}\n}");
+
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.forEach(x -> System.out.println(x));\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testFixLambdaParamRemoveType() throws Exception {
+		final var file = tempDir.newFile("LamType.java");
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.forEach((String x) -> System.out.println(x));\n\t}\n}");
+
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.forEach(x -> System.out.println(x));\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testFixLambdaParamReplaceTypeWithVar() throws Exception {
+		final var file = tempDir.newFile("LamVar.java");
+		Files.writeString(file.toPath(), "import java.util.List;\n@interface A {}\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.forEach((@A String x) -> System.out.println(x));\n\t}\n}");
+
+		assertEquals(
+				"import java.util.List;\n@interface A {}\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.forEach((@A var x) -> System.out.println(x));\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testFixLambdaParamReplaceTypeWithVarMultiParam() throws Exception {
+		final var file = tempDir.newFile("LamVarMulti.java");
+		Files.writeString(file.toPath(), "import java.util.List;\n@interface A {}\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.sort((@A String x, String y) -> x.compareTo(y));\n\t}\n}");
+
+		assertEquals(
+				"import java.util.List;\n@interface A {}\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.sort((@A var x, var y) -> x.compareTo(y));\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
 	public void testFixOrderBottomToTop() throws Exception {
 		final var file = tempDir.newFile("Order.java");
 		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1,};\n\tint[] b = {2,};\n\tint[] c = {3,};\n}");

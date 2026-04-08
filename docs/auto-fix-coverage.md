@@ -9,6 +9,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | AvoidNoArgumentSuperConstructorCallCheck | AvoidNoArgumentSuperCallFixer      | Removes `super()` call                                             |
 | ExplicitInitializationCheck              | ExplicitInitializationFixer        | Removes `= 0`/`= null`/`= false` etc.                              |
 | FinalLocalVariableCheck                  | FinalLocalVariableFixer            | Adds `final` keyword                                               |
+| LambdaParameterTypeCheck                 | LambdaParameterTypeFixer           | See sub-rules below                                                |
 | NoArrayTrailingCommaCheck                | NoArrayTrailingCommaFixer          | Removes trailing comma                                             |
 | NoBlankLineBetweenSingleCasesCheck       | NoBlankLineBetweenSingleCasesFixer | Removes blank line                                                 |
 | NoEnumTrailingCommaCheck                 | NoArrayTrailingCommaFixer          | Same fixer as array trailing comma                                 |
@@ -83,6 +84,20 @@ pattern matching, returning null (skipping) for patterns that require structural
 | `Collections.unmodifiableSet(x)`                   | `Set.copyOf(x)`  | Yes                           |
 | `Collections.unmodifiableMap(x)`                   | `Map.copyOf(x)`  | Yes                           |
 | `Collections.unmodifiableList(Arrays.asList(...))` | `List.of(...)`   | Partial (gives `List.copyOf`) |
+
+## LambdaParameterTypeCheck sub-rules
+
+The fixer handles all three violation types in a single pass. For single non-annotated params, the
+fixer goes straight to naked form (removing both type and parens).
+
+| Violation             | Input                           | Fix output                |
+|-----------------------|---------------------------------|---------------------------|
+| Unnecessary parens    | `(x) ->`                        | `x ->`                    |
+| Use implicit (single) | `(String x) ->` / `(var x) ->`  | `x ->`                    |
+| Use implicit (multi)  | `(String x, int y) ->`          | `(x, y) ->`               |
+| Use var (single)      | `(@A String x) ->`              | `(@A var x) ->`           |
+| Use var (multi mixed) | `(@A String x, String y) ->`    | `(@A var x, var y) ->`    |
+| Use var (multi both)  | `(@A String x, @B String y) ->` | `(@A var x, @B var y) ->` |
 
 ## Checks without fixers
 
