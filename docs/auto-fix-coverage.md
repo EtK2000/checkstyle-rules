@@ -27,10 +27,14 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 
 ## Regex checks (MODULE_ID_FIXERS map)
 
-| Module ID            | Fixer                   | Notes                     |
-|----------------------|-------------------------|---------------------------|
-| NoDoubleBlankLines   | DoubleBlankLineFixer    | Removes extra blank line  |
-| NoTrailingWhitespace | TrailingWhitespaceFixer | Trims trailing whitespace |
+| Module ID                     | Fixer                            | Notes                                                          |
+|-------------------------------|----------------------------------|----------------------------------------------------------------|
+| BlankLineAfterBreak           | BlankLineAfterBreakFixer         | Inserts blank line after `break;` before next `case`/`default` |
+| NoBlankLineAfterClassBrace    | BlankLineAfterClassBraceFixer    | Removes blank lines after class/interface/enum/record `{`      |
+| NoBlankLineBeforeClosingBrace | BlankLineBeforeClosingBraceFixer | Removes blank lines before `}`                                 |
+| NoDoubleBlankLines            | DoubleBlankLineFixer             | Removes extra blank line                                       |
+| NoTrailingNewline             | TrailingNewlineFixer             | Removes trailing blank lines at EOF                            |
+| NoTrailingWhitespace          | TrailingWhitespaceFixer          | Trims trailing whitespace                                      |
 
 ## PreferSpecificApiCheck sub-rules
 
@@ -100,6 +104,13 @@ fixer goes straight to naked form (removing both type and parens).
 | Use var (single)      | `(@A String x) ->`              | `(@A var x) ->`           |
 | Use var (multi mixed) | `(@A String x, String y) ->`    | `(@A var x, var y) ->`    |
 | Use var (multi both)  | `(@A String x, @B String y) ->` | `(@A var x, @B var y) ->` |
+
+## Regex checks without fixers
+
+| Module ID     | Reason                                                                                            |
+|---------------|---------------------------------------------------------------------------------------------------|
+| NoSpaceIndent | Converting leading spaces to tabs requires knowing the original indent width (2? 4? 8?), which is |
+|               | ambiguous. A wrong guess changes visual indentation. See `docs/regex-fixer-edge-cases.md`.        |
 
 ## Checks without fixers
 

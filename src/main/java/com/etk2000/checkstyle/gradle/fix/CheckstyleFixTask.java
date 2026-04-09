@@ -51,12 +51,20 @@ import javax.annotation.Nullable;
 @DisableCachingByDefault(because = "Modifies source files in place")
 public abstract class CheckstyleFixTask extends DefaultTask {
 	private static final int TAB_WIDTH = 8;
+	private static final String BLANK_LINE_AFTER_BREAK_ID = "BlankLineAfterBreak";
+	private static final String BLANK_LINE_AFTER_CLASS_BRACE_ID = "NoBlankLineAfterClassBrace";
+	private static final String BLANK_LINE_BEFORE_CLOSING_BRACE_ID = "NoBlankLineBeforeClosingBrace";
 	private static final String DOUBLE_BLANK_LINES_ID = "NoDoubleBlankLines";
+	private static final String TRAILING_NEWLINE_ID = "NoTrailingNewline";
 	private static final String TRAILING_WHITESPACE_ID = "NoTrailingWhitespace";
 
 	// keyed by module id (Checker-level modules like RegexpSingleline/RegexpMultiline)
 	static final Map<String, CheckstyleFixer> MODULE_ID_FIXERS = Map.of(
+			BLANK_LINE_AFTER_BREAK_ID, new BlankLineAfterBreakFixer(),
+			BLANK_LINE_AFTER_CLASS_BRACE_ID, new BlankLineAfterClassBraceFixer(),
+			BLANK_LINE_BEFORE_CLOSING_BRACE_ID, new BlankLineBeforeClosingBraceFixer(),
 			DOUBLE_BLANK_LINES_ID, new DoubleBlankLineFixer(),
+			TRAILING_NEWLINE_ID, new TrailingNewlineFixer(),
 			TRAILING_WHITESPACE_ID, new TrailingWhitespaceFixer()
 	);
 
@@ -197,11 +205,35 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 		checkerConfig.addChild(treeWalkerConfig);
 
 		// Checker-level regex modules
+		final var blankAfterBreakConfig = new DefaultConfiguration("RegexpMultiline");
+		blankAfterBreakConfig.addProperty("id", BLANK_LINE_AFTER_BREAK_ID);
+		blankAfterBreakConfig.addProperty("format", "break\\s*;\\n[^\\S\\n]*(case |default[\\s:])");
+		blankAfterBreakConfig.addProperty("message", "Add a blank line after break; before the next case/default.");
+		checkerConfig.addChild(blankAfterBreakConfig);
+
+		final var blankAfterClassBraceConfig = new DefaultConfiguration("RegexpMultiline");
+		blankAfterClassBraceConfig.addProperty("id", BLANK_LINE_AFTER_CLASS_BRACE_ID);
+		blankAfterClassBraceConfig.addProperty("format", "(class|interface|enum|record)\\s+\\w[^{]*\\{\\s*\\n\\s*\\n");
+		blankAfterClassBraceConfig.addProperty("message", "No blank line at start of a class/interface/enum/record.");
+		checkerConfig.addChild(blankAfterClassBraceConfig);
+
+		final var blankBeforeCloseBraceConfig = new DefaultConfiguration("RegexpMultiline");
+		blankBeforeCloseBraceConfig.addProperty("id", BLANK_LINE_BEFORE_CLOSING_BRACE_ID);
+		blankBeforeCloseBraceConfig.addProperty("format", "\\n[^\\S\\n]*\\n[^\\S\\n]*\\}");
+		blankBeforeCloseBraceConfig.addProperty("message", "No blank line before closing brace.");
+		checkerConfig.addChild(blankBeforeCloseBraceConfig);
+
 		final var doubleBlankConfig = new DefaultConfiguration("RegexpMultiline");
 		doubleBlankConfig.addProperty("id", DOUBLE_BLANK_LINES_ID);
 		doubleBlankConfig.addProperty("format", "\\n\\s*\\n\\s*\\n");
 		doubleBlankConfig.addProperty("message", "No double blank lines.");
 		checkerConfig.addChild(doubleBlankConfig);
+
+		final var trailingNewlineConfig = new DefaultConfiguration("RegexpMultiline");
+		trailingNewlineConfig.addProperty("id", TRAILING_NEWLINE_ID);
+		trailingNewlineConfig.addProperty("format", "\\n\\z");
+		trailingNewlineConfig.addProperty("message", "File must not end with a trailing newline.");
+		checkerConfig.addChild(trailingNewlineConfig);
 
 		final var trailingWsConfig = new DefaultConfiguration("RegexpSingleline");
 		trailingWsConfig.addProperty("id", TRAILING_WHITESPACE_ID);

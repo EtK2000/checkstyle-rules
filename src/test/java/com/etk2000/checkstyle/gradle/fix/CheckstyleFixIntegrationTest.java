@@ -39,11 +39,35 @@ public class CheckstyleFixIntegrationTest {
 		checkerConfig.addChild(treeWalkerConfig);
 
 		// Checker-level regex modules
+		final var blankAfterBreakConfig = new DefaultConfiguration("RegexpMultiline");
+		blankAfterBreakConfig.addProperty("id", "BlankLineAfterBreak");
+		blankAfterBreakConfig.addProperty("format", "break\\s*;\\n[^\\S\\n]*(case |default[\\s:])");
+		blankAfterBreakConfig.addProperty("message", "Add a blank line after break; before the next case/default.");
+		checkerConfig.addChild(blankAfterBreakConfig);
+
+		final var blankAfterClassBraceConfig = new DefaultConfiguration("RegexpMultiline");
+		blankAfterClassBraceConfig.addProperty("id", "NoBlankLineAfterClassBrace");
+		blankAfterClassBraceConfig.addProperty("format", "(class|interface|enum|record)\\s+\\w[^{]*\\{\\s*\\n\\s*\\n");
+		blankAfterClassBraceConfig.addProperty("message", "No blank line at start of a class/interface/enum/record.");
+		checkerConfig.addChild(blankAfterClassBraceConfig);
+
+		final var blankBeforeCloseBraceConfig = new DefaultConfiguration("RegexpMultiline");
+		blankBeforeCloseBraceConfig.addProperty("id", "NoBlankLineBeforeClosingBrace");
+		blankBeforeCloseBraceConfig.addProperty("format", "\\n[^\\S\\n]*\\n[^\\S\\n]*\\}");
+		blankBeforeCloseBraceConfig.addProperty("message", "No blank line before closing brace.");
+		checkerConfig.addChild(blankBeforeCloseBraceConfig);
+
 		final var doubleBlankConfig = new DefaultConfiguration("RegexpMultiline");
 		doubleBlankConfig.addProperty("id", "NoDoubleBlankLines");
 		doubleBlankConfig.addProperty("format", "\\n\\s*\\n\\s*\\n");
 		doubleBlankConfig.addProperty("message", "No double blank lines.");
 		checkerConfig.addChild(doubleBlankConfig);
+
+		final var trailingNewlineConfig = new DefaultConfiguration("RegexpMultiline");
+		trailingNewlineConfig.addProperty("id", "NoTrailingNewline");
+		trailingNewlineConfig.addProperty("format", "\\n\\z");
+		trailingNewlineConfig.addProperty("message", "File must not end with a trailing newline.");
+		checkerConfig.addChild(trailingNewlineConfig);
 
 		final var trailingWsConfig = new DefaultConfiguration("RegexpSingleline");
 		trailingWsConfig.addProperty("id", "NoTrailingWhitespace");
@@ -176,6 +200,63 @@ public class CheckstyleFixIntegrationTest {
 		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1, 2,};\n}");
 
 		assertEquals("class T {\n\tint[] a = {1, 2};\n}", runFixAndGetResult(file));
+	}
+
+	@Test
+	public void testBlankLineAfterBreak() throws Exception {
+		final var file = tempDir.newFile("Break.java");
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\t\tdoSomething();\n\t\t\t\tbreak;\n\t\t\tcase 2:\n\t\t\t\tbreak;\n\t\t\tdefault:\n\t\t\t\tbreak;\n\t\t}\n\t}\n\tvoid doSomething() {}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\t\tdoSomething();\n\t\t\t\tbreak;\n\n\t\t\tcase 2:\n\t\t\t\tbreak;\n\n\t\t\tdefault:\n\t\t\t\tbreak;\n\t\t}\n\t}\n\tvoid doSomething() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testBlankLineAfterBreakFallThrough() throws Exception {
+		final var file = tempDir.newFile("BreakFall.java");
+		// fall-through cases (no break between case 1 and case 2) should be untouched
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\tcase 2:\n\t\t\t\tdoSomething();\n\t\t\t\tbreak;\n\t\t\tcase 3:\n\t\t\t\tbreak;\n\t\t}\n\t}\n\tvoid doSomething() {}\n}";
+		Files.writeString(file.toPath(), input);
+
+		assertEquals(
+				"class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\tcase 2:\n\t\t\t\tdoSomething();\n\t\t\t\tbreak;\n\n\t\t\tcase 3:\n\t\t\t\tbreak;\n\t\t}\n\t}\n\tvoid doSomething() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testBlankLineAfterClassBrace() throws Exception {
+		final var file = tempDir.newFile("ClassBrace.java");
+		Files.writeString(file.toPath(), "class T {\n\n\tint x;\n}");
+
+		assertEquals("class T {\n\tint x;\n}", runFixAndGetResult(file));
+	}
+
+	@Test
+	public void testBlankLineAfterClassBraceCombinedWithBeforeClose() throws Exception {
+		final var file = tempDir.newFile("ClassBraceBoth.java");
+		Files.writeString(file.toPath(), "class T {\n\n\tint x;\n\n}");
+
+		assertEquals("class T {\n\tint x;\n}", runFixAndGetResult(file));
+	}
+
+	@Test
+	public void testBlankLineAfterClassBraceMultiLine() throws Exception {
+		final var file = tempDir.newFile("ClassBraceMulti.java");
+		Files.writeString(file.toPath(), "class T\n\t\textends Base {\n\n\tint x;\n}");
+
+		assertEquals("class T\n\t\textends Base {\n\tint x;\n}", runFixAndGetResult(file));
+	}
+
+	@Test
+	public void testBlankLineBeforeClosingBrace() throws Exception {
+		final var file = tempDir.newFile("CloseBrace.java");
+		Files.writeString(file.toPath(), "class T {\n\tint x;\n\n}");
+
+		assertEquals("class T {\n\tint x;\n}", runFixAndGetResult(file));
 	}
 
 	@Test
@@ -854,6 +935,22 @@ public class CheckstyleFixIntegrationTest {
 		assertEquals(0, CheckstyleFixTask.tabColumnToCharIndex("abcdef", 0));
 		assertEquals(3, CheckstyleFixTask.tabColumnToCharIndex("abcdef", 3));
 		assertEquals(6, CheckstyleFixTask.tabColumnToCharIndex("abcdef", 6));
+	}
+
+	@Test
+	public void testTrailingNewline() throws Exception {
+		final var file = tempDir.newFile("TrailNl.java");
+		Files.writeString(file.toPath(), "class T {}\n");
+
+		assertEquals("class T {}", runFixAndGetResult(file));
+	}
+
+	@Test
+	public void testTrailingNewlineDouble() throws Exception {
+		final var file = tempDir.newFile("TrailNl2.java");
+		Files.writeString(file.toPath(), "class T {}\n\n");
+
+		assertEquals("class T {}", runFixAndGetResult(file));
 	}
 
 	@Test
