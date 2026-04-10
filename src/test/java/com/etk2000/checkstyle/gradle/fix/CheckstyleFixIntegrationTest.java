@@ -644,6 +644,61 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferMathMethodAbs() throws Exception {
+		final var file = tempDir.newFile("MathAbs.java");
+		Files.writeString(file.toPath(), "class T {\n\tint f(int a) {\n\t\treturn a < 0 ? -a : a;\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tint f(int a) {\n\t\treturn Math.abs(a);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferMathMethodClamp() throws Exception {
+		final var file = tempDir.newFile("MathClamp.java");
+		Files.writeString(file.toPath(), "class T {\n\tint f(int v, int lo, int hi) {\n\t\treturn Math.max(lo, Math.min(hi, v));\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tint f(int v, int lo, int hi) {\n\t\treturn Math.clamp(v, lo, hi);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferMathMethodMax() throws Exception {
+		final var file = tempDir.newFile("MathMax.java");
+		Files.writeString(file.toPath(), "class T {\n\tint f(int a, int b) {\n\t\treturn a > b ? a : b;\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tint f(int a, int b) {\n\t\treturn Math.max(a, b);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferMathMethodMaxPreDecrement() throws Exception {
+		final var file = tempDir.newFile("MathMaxDec.java");
+		Files.writeString(file.toPath(), "class T {\n\tint f(int a, int b) {\n\t\treturn --a > b ? a : b;\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tint f(int a, int b) {\n\t\treturn Math.max(--a, b);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferMathMethodMin() throws Exception {
+		final var file = tempDir.newFile("MathMin.java");
+		Files.writeString(file.toPath(), "class T {\n\tint f(int a, int b) {\n\t\treturn a < b ? a : b;\n\t}\n}");
+
+		assertEquals(
+				"class T {\n\tint f(int a, int b) {\n\t\treturn Math.min(a, b);\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
 	public void testPreferSpecificApiAssertJunit4() throws Exception {
 		final var file = tempDir.newFile("AssertJ4.java");
 		Files.writeString(file.toPath(), "import static org.junit.Assert.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nclass T {\n\tvoid run() {\n\t\tassertEquals(true, 1 == 1);\n\t\tassertEquals(new Object(), null);\n\t\tassertEquals(\"msg\", null, new Object());\n\t\tassertNotEquals(\"msg\", false, 1 == 1);\n\t}\n}");

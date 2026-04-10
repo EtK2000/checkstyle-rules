@@ -34,6 +34,7 @@
 	<suppress checks="PreferImportCheck" files="inputs[\\/]preferimport[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]preferlambda[\\/]" />
 	<suppress checks="PreferLiteralSuffixCheck" files="inputs[\\/]literalsuffix[\\/]" />
+	<suppress checks="PreferMathMethodCheck" files="inputs[\\/]mathmethod[\\/]" />
 	<suppress checks="PreferPatternMatchingInstanceofCheck" files="inputs[\\/]patterninstanceof[\\/]" />
 	<suppress checks="PreferPrefixIncrementCheck" files="inputs[\\/]prefix[\\/]" />
 	<suppress checks="PreferRecordCheck" files="inputs[\\/]preferrecord[\\/]" />

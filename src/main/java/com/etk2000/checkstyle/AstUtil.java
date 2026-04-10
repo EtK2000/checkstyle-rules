@@ -60,6 +60,49 @@ class AstUtil {
 		return false;
 	}
 
+	/**
+	 * Builds human-readable text for an expression AST.
+	 * Unlike {@link #exprText} which is designed for equality comparison,
+	 * this includes operators, dots, and brackets for display in messages.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static String displayText(@Nonnull DetailAST ast) {
+		return switch (ast.getType()) {
+			case TokenTypes.BAND -> displayText(ast.getFirstChild()) + " & " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.BNOT -> "~" + displayText(ast.getFirstChild());
+			case TokenTypes.BOR -> displayText(ast.getFirstChild()) + " | " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.BSR -> displayText(ast.getFirstChild()) + " >>> " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.BXOR -> displayText(ast.getFirstChild()) + " ^ " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.DEC -> "--" + displayText(ast.getFirstChild());
+			case TokenTypes.DIV -> displayText(ast.getFirstChild()) + " / " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.DOT -> displayText(ast.getFirstChild()) + "." + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.EQUAL -> displayText(ast.getFirstChild()) + " == " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.EXPR -> ast.getChildCount() == 1 ? displayText(ast.getFirstChild()) : exprText(ast);
+			case TokenTypes.GE -> displayText(ast.getFirstChild()) + " >= " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.GT -> displayText(ast.getFirstChild()) + " > " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.INC -> "++" + displayText(ast.getFirstChild());
+			case TokenTypes.INDEX_OP -> displayText(ast.getFirstChild()) + "[" + displayText(ast.getFirstChild().getNextSibling()) + "]";
+			case TokenTypes.LAND -> displayText(ast.getFirstChild()) + " && " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.LE -> displayText(ast.getFirstChild()) + " <= " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.LNOT -> "!" + displayText(ast.getFirstChild());
+			case TokenTypes.LOR -> displayText(ast.getFirstChild()) + " || " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.LT -> displayText(ast.getFirstChild()) + " < " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.MINUS -> displayText(ast.getFirstChild()) + " - " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.MOD -> displayText(ast.getFirstChild()) + " % " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.NOT_EQUAL -> displayText(ast.getFirstChild()) + " != " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.PLUS -> displayText(ast.getFirstChild()) + " + " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.POST_DEC -> displayText(ast.getFirstChild()) + "--";
+			case TokenTypes.POST_INC -> displayText(ast.getFirstChild()) + "++";
+			case TokenTypes.SL -> displayText(ast.getFirstChild()) + " << " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.SR -> displayText(ast.getFirstChild()) + " >> " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.STAR -> displayText(ast.getFirstChild()) + " * " + displayText(ast.getFirstChild().getNextSibling());
+			case TokenTypes.UNARY_MINUS -> "-" + displayText(ast.getFirstChild());
+			case TokenTypes.UNARY_PLUS -> "+" + displayText(ast.getFirstChild());
+			default -> ast.getText();
+		};
+	}
+
 	@CheckReturnValue
 	@Nonnull
 	static String exprText(@Nonnull DetailAST ast) {
@@ -201,6 +244,95 @@ class AstUtil {
 			// empty block: if (x) {}
 			case TokenTypes.SLIST -> body.getChildCount() == 1
 					&& body.getFirstChild().getType() == TokenTypes.RCURLY;
+			default -> false;
+		};
+	}
+
+	@CheckReturnValue
+	private static boolean isNumericZero(@Nonnull String value) {
+		if (value.isEmpty())
+			return false;
+
+		var s = value;
+
+		// strip trailing type suffix (D/F/L/d/f/l)
+		final var lastChar = s.charAt(s.length() - 1);
+		if (lastChar == 'D' || lastChar == 'F' || lastChar == 'L'
+				|| lastChar == 'd' || lastChar == 'f' || lastChar == 'l')
+			s = s.substring(0, s.length() - 1);
+
+		// strip underscores
+		s = s.replace("_", "");
+		if (s.isEmpty())
+			return false;
+
+		// strip hex/binary prefix
+		if (s.startsWith("0x") || s.startsWith("0X")
+				|| s.startsWith("0b") || s.startsWith("0B"))
+			s = s.substring(2);
+
+		// all remaining chars must be zeros, dots, and exponent parts that evaluate to zero
+		var hasDigit = false;
+		for (var i = 0; i < s.length(); ++i) {
+			final var c = s.charAt(i);
+			if (c == '0' || c == '.') {
+				if (c == '0')
+					hasDigit = true;
+			}
+			else if (c == 'E' || c == 'P' || c == 'e' || c == 'p') {
+				// exponent: skip optional sign, remaining must be zeros
+				var j = i + 1;
+				if (j < s.length() && (s.charAt(j) == '+' || s.charAt(j) == '-'))
+					++j;
+				if (j >= s.length())
+					return false;
+				for (; j < s.length(); ++j) {
+					if (s.charAt(j) != '0')
+						return false;
+				}
+				return hasDigit;
+			}
+			else
+				return false;
+		}
+		return hasDigit;
+	}
+
+	/**
+	 * Returns true if the expression has no side effects.
+	 * Pure: identifiers, field accesses, literals, array accesses,
+	 * unary plus/minus.
+	 * Not pure: method calls, constructors, increment/decrement, assignments.
+	 */
+	@CheckReturnValue
+	static boolean isPureExpression(@Nonnull DetailAST ast) {
+		return switch (ast.getType()) {
+			case TokenTypes.CHAR_LITERAL, TokenTypes.IDENT, TokenTypes.LITERAL_FALSE,
+			     TokenTypes.LITERAL_NULL, TokenTypes.LITERAL_THIS, TokenTypes.LITERAL_TRUE, TokenTypes.NUM_DOUBLE,
+			     TokenTypes.NUM_FLOAT, TokenTypes.NUM_INT, TokenTypes.NUM_LONG,
+			     TokenTypes.RBRACK, TokenTypes.STRING_LITERAL -> true;
+			case TokenTypes.DOT, TokenTypes.EXPR, TokenTypes.INDEX_OP,
+			     TokenTypes.UNARY_MINUS, TokenTypes.UNARY_PLUS -> {
+				for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
+					if (!isPureExpression(child))
+						yield false;
+				}
+				yield true;
+			}
+			default -> false;
+		};
+	}
+
+	/**
+	 * Returns true if the AST node is a numeric literal whose value is zero.
+	 * Handles all Java numeric literal forms: decimal, hex, binary, octal,
+	 * underscores, exponent notation, and type suffixes.
+	 */
+	@CheckReturnValue
+	static boolean isZeroLiteral(@Nonnull DetailAST ast) {
+		return switch (ast.getType()) {
+			case TokenTypes.NUM_DOUBLE, TokenTypes.NUM_FLOAT,
+			     TokenTypes.NUM_INT, TokenTypes.NUM_LONG -> isNumericZero(ast.getText());
 			default -> false;
 		};
 	}

@@ -103,6 +103,9 @@
 		<module name="com.etk2000.checkstyle.PreferImportCheck" />
 		<module name="com.etk2000.checkstyle.PreferLambdaCheck" />
 		<module name="com.etk2000.checkstyle.PreferLiteralSuffixCheck" />
+		<module name="com.etk2000.checkstyle.PreferMathMethodCheck">
+			<property name="minSdk" value="${minSdk}" />
+		</module>
 		<module name="com.etk2000.checkstyle.PreferPatternMatchingInstanceofCheck" />
 		<module name="com.etk2000.checkstyle.PreferPrefixIncrementCheck" />
 		<module name="com.etk2000.checkstyle.PreferRecordCheck" />

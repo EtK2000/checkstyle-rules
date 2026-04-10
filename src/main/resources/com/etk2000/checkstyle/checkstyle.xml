@@ -157,6 +157,11 @@
 			<property name="minSdk" value="${minSdk}" />
 		</module>
 
+		<!-- Custom: Prefer Math.max/min/abs/clamp over manual ternary comparisons -->
+		<module name="com.etk2000.checkstyle.PreferMathMethodCheck">
+			<property name="minSdk" value="${minSdk}" />
+		</module>
+
 		<!-- Custom: Prefer pattern matching instanceof over cast-after-check -->
 		<module name="com.etk2000.checkstyle.PreferPatternMatchingInstanceofCheck" />
 

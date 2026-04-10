@@ -16,6 +16,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | NoEnumTrailingCommaCheck                 | NoArrayTrailingCommaFixer          | Same fixer as array trailing comma                                               |
 | NoFinalParametersCheck                   | RedundantModifierFixer             | Removes `final` keyword from parameter                                           |
 | NoUnnecessaryThisCheck                   | NoUnnecessaryThisFixer             | Removes `this.` prefix                                                           |
+| PreferMathMethodCheck                    | PreferMathMethodFixer              | See sub-rules below                                                              |
 | PreferPrefixIncrementCheck               | PreferPrefixIncrementFixer         | Moves `++`/`--` to prefix position                                               |
 | PreferSpecificApiCheck                   | PreferSpecificApiFixer             | See sub-rules below                                                              |
 | PreferVarCheck                           | PreferVarFixer                     | Replaces type with `var`; converts explicit array init to implicit               |
@@ -35,6 +36,30 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | NoDoubleBlankLines            | DoubleBlankLineFixer             | Removes extra blank line                                       |
 | NoTrailingNewline             | TrailingNewlineFixer             | Removes trailing blank lines at EOF                            |
 | NoTrailingWhitespace          | TrailingWhitespaceFixer          | Trims trailing whitespace                                      |
+
+## PreferMathMethodCheck sub-rules
+
+The fixer uses regex for ternary patterns and paren-balanced parsing for clamp patterns.
+
+### Ternary (max/min/abs)
+
+| Pattern                                 | Replacement        | Auto-fix               |
+|-----------------------------------------|--------------------|------------------------|
+| `a > b ? a : b` (4 operator variants)   | `Math.max(a, b)`   | Yes                    |
+| `a < b ? a : b` (4 operator variants)   | `Math.min(a, b)`   | Yes                    |
+| `a < 0 ? -a : a` (8 variants)           | `Math.abs(a)`      | Yes                    |
+| `--a > b ? a : b` (prefix mutation)     | `Math.max(--a, b)` | Yes                    |
+| `(a) > (b) ? (a) : (b)` (parenthesized) | `Math.max(a, b)`   | No (regex limitation)  |
+| Multiline ternary                       | `Math.max(a, b)`   | No (single-line fixer) |
+
+### Clamp (minSdk >= 35)
+
+| Pattern                                 | Replacement                     | Auto-fix             |
+|-----------------------------------------|---------------------------------|----------------------|
+| `Math.max(lo, Math.min(hi, val))`       | `Math.clamp(val, lo, hi)`       | Yes                  |
+| `Math.min(hi, Math.max(lo, val))`       | `Math.clamp(val, lo, hi)`       | Yes                  |
+| Reversed arg order (inner call first)   | `Math.clamp(val, lo, hi)`       | Yes                  |
+| Nested calls in args (e.g. `foo(a, b)`) | `Math.clamp(foo(a, b), lo, hi)` | Yes (paren-balanced) |
 
 ## PreferSpecificApiCheck sub-rules
 

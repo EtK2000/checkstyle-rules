@@ -7,12 +7,16 @@ import static org.junit.Assert.assertTrue;
 
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.FileContents;
+import com.puppycrawl.tools.checkstyle.api.FileText;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Objects;
 
 import javax.annotation.Nonnull;
@@ -20,6 +24,32 @@ import javax.annotation.Nullable;
 
 public class AstUtilTest {
 	private static DetailAST root;
+
+	private static void assertDisplayBinary(@Nonnull String op, int tokenType) throws Exception {
+		final var ast = parseSource("class T { void f(int a, int b) { var x = a " + op + " b; } }");
+		final var node = findFirst(ast, tokenType);
+		assertEquals("a " + op + " b", AstUtil.displayText(node));
+	}
+
+	private static void assertDisplayPrefixUnary(@Nonnull String op, int tokenType) throws Exception {
+		final var ast = parseSource("class T { void f(int a) { var x = " + op + "a; } }");
+		final var node = findFirst(ast, tokenType);
+		assertEquals(op + "a", AstUtil.displayText(node));
+	}
+
+	private static void assertNegativeZero(@Nonnull String literal) throws Exception {
+		final var ast = parseSource("class T { void f() { var x = " + literal + "; } }");
+		final var unaryMinus = findFirst(ast, TokenTypes.UNARY_MINUS);
+		assertFalse(AstUtil.isZeroLiteral(unaryMinus));
+		for (var type : new int[]{TokenTypes.NUM_DOUBLE, TokenTypes.NUM_FLOAT, TokenTypes.NUM_INT, TokenTypes.NUM_LONG}) {
+			final var num = findFirst(unaryMinus, type);
+			if (num != null) {
+				assertTrue(AstUtil.isZeroLiteral(num));
+				return;
+			}
+		}
+		throw new AssertionError("No numeric literal found in: " + literal);
+	}
 
 	@Nullable
 	private static DetailAST findFirst(@Nonnull DetailAST node, int tokenType) {
@@ -48,11 +78,43 @@ public class AstUtilTest {
 		return null;
 	}
 
+	private static boolean isZeroLiteral(@Nonnull String literal) throws Exception {
+		final var ast = parseSource("class T { void f() { var x = " + literal + "; } }");
+		for (var type : new int[]{TokenTypes.NUM_DOUBLE, TokenTypes.NUM_FLOAT, TokenTypes.NUM_INT, TokenTypes.NUM_LONG}) {
+			final var num = findFirst(ast, type);
+			if (num != null)
+				return AstUtil.isZeroLiteral(num);
+		}
+		throw new AssertionError("No numeric literal found in: " + literal);
+	}
+
 	@Nonnull
 	private static DetailAST parse(@Nonnull String inputPath) throws Exception {
 		final var url = AstUtilTest.class.getResource("/com/etk2000/checkstyle/inputs/" + inputPath);
 		Objects.requireNonNull(url, "Test input file not found: " + inputPath);
 		return JavaParser.parseFile(new File(url.toURI()), JavaParser.Options.WITH_COMMENTS);
+	}
+
+	@Nonnull
+	private static DetailAST parseExprFirstChild(@Nonnull String source) throws Exception {
+		final var ast = parseSource(source);
+		final var assign = findFirst(ast, TokenTypes.ASSIGN);
+		Objects.requireNonNull(assign, "No ASSIGN found");
+		final var expr = assign.getFirstChild();
+		Objects.requireNonNull(expr, "No child of ASSIGN");
+		return expr.getType() == TokenTypes.EXPR ? expr.getFirstChild() : expr;
+	}
+
+	@Nonnull
+	private static DetailAST parseSource(@Nonnull String source) throws Exception {
+		final var tmp = File.createTempFile("test", ".java");
+		try {
+			Files.writeString(tmp.toPath(), source);
+			return JavaParser.parse(new FileContents(new FileText(tmp, StandardCharsets.UTF_8.name())));
+		}
+		finally {
+			tmp.delete();
+		}
 	}
 
 	@BeforeClass
@@ -62,18 +124,30 @@ public class AstUtilTest {
 
 	@Test
 	public void testAnnotationNameQualified() {
-		// @javax.annotation.CheckReturnValue on the class
 		final var classAnnotation = findFirst(root, TokenTypes.ANNOTATION);
-		// first annotation is the qualified one on the class
 		assertEquals("CheckReturnValue", AstUtil.annotationName(classAnnotation));
 	}
 
 	@Test
 	public void testAnnotationNameSimple() {
-		// @Nonnull on the field — find it inside the class body
 		final var objBlock = findFirst(root, TokenTypes.OBJBLOCK);
 		final var fieldAnnotation = findFirst(objBlock, TokenTypes.ANNOTATION);
 		assertEquals("Nonnull", AstUtil.annotationName(fieldAnnotation));
+	}
+
+	@Test
+	public void testCollectAnnotationsMultiple() throws Exception {
+		final var ast = parseSource("class T { void f(@Deprecated @Override String p) {} }");
+		final var param = findFirst(ast, TokenTypes.PARAMETER_DEF);
+		final var modifiers = param.findFirstToken(TokenTypes.MODIFIERS);
+		assertEquals(2, AstUtil.collectAnnotations(modifiers).size());
+	}
+
+	@Test
+	public void testCollectAnnotationsNone() {
+		final var method = findMethod(root, "emptyBlock");
+		final var params = method.findFirstToken(TokenTypes.PARAMETERS);
+		assertTrue(AstUtil.collectAnnotations(params).isEmpty());
 	}
 
 	@Test
@@ -89,14 +163,206 @@ public class AstUtilTest {
 	}
 
 	@Test
+	public void testContainsCastToWrongExpr() {
+		final var method = findMethod(root, "castWrongExpr");
+		assertFalse(AstUtil.containsCastTo(method, "String", "obj"));
+	}
+
+	@Test
+	public void testContainsCastToWrongType() {
+		final var method = findMethod(root, "castWrongType");
+		assertFalse(AstUtil.containsCastTo(method, "String", "obj"));
+	}
+
+	@Test
+	public void testDisplayTextBand() throws Exception {
+		assertDisplayBinary("&", TokenTypes.BAND);
+	}
+
+	@Test
+	public void testDisplayTextBnot() throws Exception {
+		assertDisplayPrefixUnary("~", TokenTypes.BNOT);
+	}
+
+	@Test
+	public void testDisplayTextBor() throws Exception {
+		assertDisplayBinary("|", TokenTypes.BOR);
+	}
+
+	@Test
+	public void testDisplayTextBsr() throws Exception {
+		assertDisplayBinary(">>>", TokenTypes.BSR);
+	}
+
+	@Test
+	public void testDisplayTextBxor() throws Exception {
+		assertDisplayBinary("^", TokenTypes.BXOR);
+	}
+
+	@Test
+	public void testDisplayTextDec() throws Exception {
+		final var ast = parseSource("class T { void f(int a) { --a; } }");
+		final var dec = findFirst(ast, TokenTypes.DEC);
+		assertEquals("--a", AstUtil.displayText(dec));
+	}
+
+	@Test
+	public void testDisplayTextDefault() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = 42; } }");
+		final var num = findFirst(ast, TokenTypes.NUM_INT);
+		assertEquals("42", AstUtil.displayText(num));
+	}
+
+	@Test
+	public void testDisplayTextDiv() throws Exception {
+		assertDisplayBinary("/", TokenTypes.DIV);
+	}
+
+	@Test
+	public void testDisplayTextDot() throws Exception {
+		final var node = parseExprFirstChild("class T { int x; void f() { int a = this.x; } }");
+		assertEquals("this.x", AstUtil.displayText(node));
+	}
+
+	@Test
+	public void testDisplayTextEqual() throws Exception {
+		assertDisplayBinary("==", TokenTypes.EQUAL);
+	}
+
+	@Test
+	public void testDisplayTextGe() throws Exception {
+		assertDisplayBinary(">=", TokenTypes.GE);
+	}
+
+	@Test
+	public void testDisplayTextGt() throws Exception {
+		assertDisplayBinary(">", TokenTypes.GT);
+	}
+
+	@Test
+	public void testDisplayTextInc() throws Exception {
+		final var ast = parseSource("class T { void f(int a) { ++a; } }");
+		final var inc = findFirst(ast, TokenTypes.INC);
+		assertEquals("++a", AstUtil.displayText(inc));
+	}
+
+	@Test
+	public void testDisplayTextIndexOp() throws Exception {
+		final var node = parseExprFirstChild("class T { void f(int[] arr) { int a = arr[0]; } }");
+		assertEquals("arr[0]", AstUtil.displayText(node));
+	}
+
+	@Test
+	public void testDisplayTextIndexOpNested() throws Exception {
+		final var node = parseExprFirstChild("class T { void f(int[][] arr) { int a = arr[0][1]; } }");
+		assertEquals("arr[0][1]", AstUtil.displayText(node));
+	}
+
+	@Test
+	public void testDisplayTextIndexOpNestedInside() throws Exception {
+		final var node = parseExprFirstChild("class T { void f(int[] arr, int[] idx) { int a = arr[idx[0]]; } }");
+		assertEquals("arr[idx[0]]", AstUtil.displayText(node));
+	}
+
+	@Test
+	public void testDisplayTextIndexOpWithDot() throws Exception {
+		final var node = parseExprFirstChild("class T { int[] x; void f() { int a = this.x[0]; } }");
+		assertEquals("this.x[0]", AstUtil.displayText(node));
+	}
+
+	@Test
+	public void testDisplayTextLand() throws Exception {
+		assertDisplayBinary("&&", TokenTypes.LAND);
+	}
+
+	@Test
+	public void testDisplayTextLe() throws Exception {
+		assertDisplayBinary("<=", TokenTypes.LE);
+	}
+
+	@Test
+	public void testDisplayTextLnot() throws Exception {
+		assertDisplayPrefixUnary("!", TokenTypes.LNOT);
+	}
+
+	@Test
+	public void testDisplayTextLor() throws Exception {
+		assertDisplayBinary("||", TokenTypes.LOR);
+	}
+
+	@Test
+	public void testDisplayTextLt() throws Exception {
+		assertDisplayBinary("<", TokenTypes.LT);
+	}
+
+	@Test
+	public void testDisplayTextMinus() throws Exception {
+		assertDisplayBinary("-", TokenTypes.MINUS);
+	}
+
+	@Test
+	public void testDisplayTextMod() throws Exception {
+		assertDisplayBinary("%", TokenTypes.MOD);
+	}
+
+	@Test
+	public void testDisplayTextNotEqual() throws Exception {
+		assertDisplayBinary("!=", TokenTypes.NOT_EQUAL);
+	}
+
+	@Test
+	public void testDisplayTextPlus() throws Exception {
+		assertDisplayBinary("+", TokenTypes.PLUS);
+	}
+
+	@Test
+	public void testDisplayTextPostDec() throws Exception {
+		final var ast = parseSource("class T { void f(int a) { a--; } }");
+		final var postDec = findFirst(ast, TokenTypes.POST_DEC);
+		assertEquals("a--", AstUtil.displayText(postDec));
+	}
+
+	@Test
+	public void testDisplayTextPostInc() throws Exception {
+		final var ast = parseSource("class T { void f(int a) { a++; } }");
+		final var postInc = findFirst(ast, TokenTypes.POST_INC);
+		assertEquals("a++", AstUtil.displayText(postInc));
+	}
+
+	@Test
+	public void testDisplayTextSl() throws Exception {
+		assertDisplayBinary("<<", TokenTypes.SL);
+	}
+
+	@Test
+	public void testDisplayTextSr() throws Exception {
+		assertDisplayBinary(">>", TokenTypes.SR);
+	}
+
+	@Test
+	public void testDisplayTextStar() throws Exception {
+		assertDisplayBinary("*", TokenTypes.STAR);
+	}
+
+	@Test
+	public void testDisplayTextUnaryMinus() throws Exception {
+		final var node = parseExprFirstChild("class T { void f(int a) { int b = -a; } }");
+		assertEquals("-a", AstUtil.displayText(node));
+	}
+
+	@Test
+	public void testDisplayTextUnaryPlus() throws Exception {
+		final var node = parseExprFirstChild("class T { void f(int a) { int b = +a; } }");
+		assertEquals("+a", AstUtil.displayText(node));
+	}
+
+	@Test
 	public void testExprText() {
 		final var method = findMethod(root, "castAndResolve");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
-		// first statement is the variable def: String s = (String) obj;
 		final var varDef = slist.findFirstToken(TokenTypes.VARIABLE_DEF);
 		final var assign = varDef.findFirstToken(TokenTypes.ASSIGN);
 		final var expr = assign.getFirstChild();
-		// the expression is the typecast (String) obj
 		assertEquals("String)obj", AstUtil.exprText(expr));
 	}
 
@@ -117,6 +383,13 @@ public class AstUtilTest {
 	}
 
 	@Test
+	public void testIsEmptyBodyDefaultToken() throws Exception {
+		final var ast = parseSource("class T { void f() { int x = 1; } }");
+		final var varDef = findFirst(ast, TokenTypes.VARIABLE_DEF);
+		assertFalse(AstUtil.isEmptyBody(varDef));
+	}
+
+	@Test
 	public void testIsEmptyBodyNonEmpty() {
 		final var method = findMethod(root, "castAndResolve");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
@@ -128,16 +401,385 @@ public class AstUtilTest {
 		final var method = findMethod(root, "emptyStatement");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
 		final var ifNode = slist.findFirstToken(TokenTypes.LITERAL_IF);
-		// the body of if (flag); is an EMPTY_STAT
 		final var rparen = ifNode.findFirstToken(TokenTypes.RPAREN);
 		final var body = rparen.getNextSibling();
 		assertTrue(AstUtil.isEmptyBody(body));
 	}
 
 	@Test
+	public void testIsPureExpressionAssign() throws Exception {
+		final var ast = parseSource("class T { void f(int x) { x = 1; } }");
+		final var assign = findFirst(ast, TokenTypes.ASSIGN);
+		assertFalse(AstUtil.isPureExpression(assign));
+	}
+
+	@Test
+	public void testIsPureExpressionCharLiteral() throws Exception {
+		final var node = parseExprFirstChild("class T { void f() { char a = 'x'; } }");
+		assertTrue(AstUtil.isPureExpression(node));
+	}
+
+	@Test
+	public void testIsPureExpressionDot() throws Exception {
+		final var node = parseExprFirstChild("class T { int x; void f() { int a = this.x; } }");
+		assertTrue(AstUtil.isPureExpression(node));
+	}
+
+	@Test
+	public void testIsPureExpressionIdent() throws Exception {
+		final var node = parseExprFirstChild("class T { void f() { int a = 1; } }");
+		assertTrue(AstUtil.isPureExpression(node));
+	}
+
+	@Test
+	public void testIsPureExpressionIndexOp() throws Exception {
+		final var node = parseExprFirstChild("class T { void f(int[] arr) { int a = arr[0]; } }");
+		assertTrue(AstUtil.isPureExpression(node));
+	}
+
+	@Test
+	public void testIsPureExpressionLiteralFalse() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = false; } }");
+		final var lit = findFirst(ast, TokenTypes.LITERAL_FALSE);
+		assertTrue(AstUtil.isPureExpression(lit));
+	}
+
+	@Test
+	public void testIsPureExpressionLiteralNull() throws Exception {
+		final var ast = parseSource("class T { void f() { Object x = null; } }");
+		final var lit = findFirst(ast, TokenTypes.LITERAL_NULL);
+		assertTrue(AstUtil.isPureExpression(lit));
+	}
+
+	@Test
+	public void testIsPureExpressionLiteralTrue() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = true; } }");
+		final var lit = findFirst(ast, TokenTypes.LITERAL_TRUE);
+		assertTrue(AstUtil.isPureExpression(lit));
+	}
+
+	@Test
+	public void testIsPureExpressionMethodCall() throws Exception {
+		final var node = parseExprFirstChild("class T { void f() { int a = foo(); } int foo() { return 0; } }");
+		assertFalse(AstUtil.isPureExpression(node));
+	}
+
+	@Test
+	public void testIsPureExpressionNewObject() throws Exception {
+		final var node = parseExprFirstChild("class T { void f() { Object a = new Object(); } }");
+		assertFalse(AstUtil.isPureExpression(node));
+	}
+
+	@Test
+	public void testIsPureExpressionNumDouble() throws Exception {
+		final var ast = parseSource("class T { void f() { double x = 1.0d; } }");
+		final var num = findFirst(ast, TokenTypes.NUM_DOUBLE);
+		assertTrue(AstUtil.isPureExpression(num));
+	}
+
+	@Test
+	public void testIsPureExpressionNumFloat() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = 1.0f; } }");
+		final var num = findFirst(ast, TokenTypes.NUM_FLOAT);
+		assertTrue(AstUtil.isPureExpression(num));
+	}
+
+	@Test
+	public void testIsPureExpressionNumInt() throws Exception {
+		final var node = parseExprFirstChild("class T { void f() { int a = 42; } }");
+		assertTrue(AstUtil.isPureExpression(node));
+	}
+
+	@Test
+	public void testIsPureExpressionNumLong() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = 1L; } }");
+		final var num = findFirst(ast, TokenTypes.NUM_LONG);
+		assertTrue(AstUtil.isPureExpression(num));
+	}
+
+	@Test
+	public void testIsPureExpressionPostDecrement() throws Exception {
+		final var ast = parseSource("class T { void f(int x) { x--; } }");
+		final var postDec = findFirst(ast, TokenTypes.POST_DEC);
+		assertFalse(AstUtil.isPureExpression(postDec));
+	}
+
+	@Test
+	public void testIsPureExpressionPostIncrement() throws Exception {
+		final var ast = parseSource("class T { void f(int x) { x++; } }");
+		final var postInc = findFirst(ast, TokenTypes.POST_INC);
+		assertFalse(AstUtil.isPureExpression(postInc));
+	}
+
+	@Test
+	public void testIsPureExpressionPreDecrement() throws Exception {
+		final var ast = parseSource("class T { void f(int x) { --x; } }");
+		final var preDec = findFirst(ast, TokenTypes.DEC);
+		assertFalse(AstUtil.isPureExpression(preDec));
+	}
+
+	@Test
+	public void testIsPureExpressionPreIncrement() throws Exception {
+		final var ast = parseSource("class T { void f(int x) { ++x; } }");
+		final var preInc = findFirst(ast, TokenTypes.INC);
+		assertFalse(AstUtil.isPureExpression(preInc));
+	}
+
+	@Test
+	public void testIsPureExpressionStringLiteral() throws Exception {
+		final var node = parseExprFirstChild("class T { void f() { String a = \"hello\"; } }");
+		assertTrue(AstUtil.isPureExpression(node));
+	}
+
+	@Test
+	public void testIsPureExpressionThis() throws Exception {
+		final var ast = parseSource("class T { void f() { Object a = this; } }");
+		final var literalThis = findFirst(ast, TokenTypes.LITERAL_THIS);
+		assertTrue(AstUtil.isPureExpression(literalThis));
+	}
+
+	@Test
+	public void testIsPureExpressionUnaryMinus() throws Exception {
+		final var node = parseExprFirstChild("class T { void f(int a) { int b = -a; } }");
+		assertTrue(AstUtil.isPureExpression(node));
+	}
+
+	@Test
+	public void testIsPureExpressionUnaryPlus() throws Exception {
+		final var node = parseExprFirstChild("class T { void f(int a) { int b = +a; } }");
+		assertTrue(AstUtil.isPureExpression(node));
+	}
+
+	@Test
+	public void testIsZeroLiteralBinaryLongZero() throws Exception {
+		assertTrue(isZeroLiteral("0b0L"));
+	}
+
+	@Test
+	public void testIsZeroLiteralBinaryZero() throws Exception {
+		assertTrue(isZeroLiteral("0b0"));
+	}
+
+	@Test
+	public void testIsZeroLiteralBinaryZeroUppercase() throws Exception {
+		assertTrue(isZeroLiteral("0B0"));
+	}
+
+	@Test
+	public void testIsZeroLiteralDecimalInt() throws Exception {
+		assertTrue(isZeroLiteral("0"));
+	}
+
+	@Test
+	public void testIsZeroLiteralDoubleWithExponent() throws Exception {
+		assertTrue(isZeroLiteral("0.0e0"));
+	}
+
+	@Test
+	public void testIsZeroLiteralDoubleWithExponentSign() throws Exception {
+		assertTrue(isZeroLiteral("0.0e+0"));
+	}
+
+	@Test
+	public void testIsZeroLiteralDoubleWithSuffix() throws Exception {
+		assertTrue(isZeroLiteral("0.0d"));
+	}
+
+	@Test
+	public void testIsZeroLiteralDoubleZero() throws Exception {
+		assertTrue(isZeroLiteral("0.0"));
+	}
+
+	@Test
+	public void testIsZeroLiteralFloatZero() throws Exception {
+		assertTrue(isZeroLiteral("0.0f"));
+	}
+
+	@Test
+	public void testIsZeroLiteralFloatZeroNoDecimal() throws Exception {
+		assertTrue(isZeroLiteral("0f"));
+	}
+
+	@Test
+	public void testIsZeroLiteralHexLongZero() throws Exception {
+		assertTrue(isZeroLiteral("0x0L"));
+	}
+
+	@Test
+	public void testIsZeroLiteralHexZero() throws Exception {
+		assertTrue(isZeroLiteral("0x0"));
+	}
+
+	@Test
+	public void testIsZeroLiteralHexZeroUppercase() throws Exception {
+		assertTrue(isZeroLiteral("0X0"));
+	}
+
+	@Test
+	public void testIsZeroLiteralLeadingDotZero() throws Exception {
+		assertTrue(isZeroLiteral(".0"));
+	}
+
+	@Test
+	public void testIsZeroLiteralLongZero() throws Exception {
+		assertTrue(isZeroLiteral("0L"));
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeBinary() throws Exception {
+		assertNegativeZero("-0b0");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeBinaryLong() throws Exception {
+		assertNegativeZero("-0b0L");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeBinaryUppercase() throws Exception {
+		assertNegativeZero("-0B0");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeDecimal() throws Exception {
+		assertNegativeZero("-0");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeDouble() throws Exception {
+		assertNegativeZero("-0.0");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeDoubleExponent() throws Exception {
+		assertNegativeZero("-0.0e0");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeDoubleExponentMinus() throws Exception {
+		assertNegativeZero("-0.0e-0");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeDoubleExponentPlus() throws Exception {
+		assertNegativeZero("-0.0e+0");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeDoubleSuffix() throws Exception {
+		assertNegativeZero("-0.0d");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeFloat() throws Exception {
+		assertNegativeZero("-0.0f");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeFloatNoDecimal() throws Exception {
+		assertNegativeZero("-0f");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeHex() throws Exception {
+		assertNegativeZero("-0x0");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeHexLong() throws Exception {
+		assertNegativeZero("-0x0L");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeHexUppercase() throws Exception {
+		assertNegativeZero("-0X0");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeLeadingDot() throws Exception {
+		assertNegativeZero("-.0");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeLong() throws Exception {
+		assertNegativeZero("-0L");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeTrailingDot() throws Exception {
+		assertNegativeZero("-0.");
+	}
+
+	@Test
+	public void testIsZeroLiteralNegativeUnderscore() throws Exception {
+		assertNegativeZero("-0_0");
+	}
+
+	@Test
+	public void testIsZeroLiteralNonNumericToken() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = true; } }");
+		final var literalTrue = findFirst(ast, TokenTypes.LITERAL_TRUE);
+		assertFalse(AstUtil.isZeroLiteral(literalTrue));
+	}
+
+	@Test
+	public void testIsZeroLiteralNonZeroBinary() throws Exception {
+		assertFalse(isZeroLiteral("0b1"));
+	}
+
+	@Test
+	public void testIsZeroLiteralNonZeroDouble() throws Exception {
+		assertFalse(isZeroLiteral("1.0"));
+	}
+
+	@Test
+	public void testIsZeroLiteralNonZeroExponent() throws Exception {
+		assertFalse(isZeroLiteral("0.0e1"));
+	}
+
+	@Test
+	public void testIsZeroLiteralNonZeroFloat() throws Exception {
+		assertFalse(isZeroLiteral("1.0f"));
+	}
+
+	@Test
+	public void testIsZeroLiteralNonZeroHex() throws Exception {
+		assertFalse(isZeroLiteral("0x1"));
+	}
+
+	@Test
+	public void testIsZeroLiteralNonZeroInt() throws Exception {
+		assertFalse(isZeroLiteral("1"));
+	}
+
+	@Test
+	public void testIsZeroLiteralNonZeroLeadingDot() throws Exception {
+		assertFalse(isZeroLiteral(".1"));
+	}
+
+	@Test
+	public void testIsZeroLiteralNonZeroLong() throws Exception {
+		assertFalse(isZeroLiteral("1L"));
+	}
+
+	@Test
+	public void testIsZeroLiteralTrailingDotZero() throws Exception {
+		assertTrue(isZeroLiteral("0."));
+	}
+
+	@Test
+	public void testIsZeroLiteralUnderscoreZero() throws Exception {
+		assertTrue(isZeroLiteral("0_0"));
+	}
+
+	@Test
+	public void testIsZeroLiteralZeroExponentMinusSign() throws Exception {
+		assertTrue(isZeroLiteral("0.0e-0"));
+	}
+
+	@Test
 	public void testLastLineMultiLine() {
 		final var method = findMethod(root, "multiLine");
-		// method spans multiple lines (signature + body)
 		assertTrue(AstUtil.lastLine(method) > method.getLineNo());
 	}
 
@@ -145,16 +787,28 @@ public class AstUtilTest {
 	public void testLastLineSingleLine() {
 		final var method = findMethod(root, "emptyBlock");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
-		// the RCURLY is on the next line, so lastLine > slist line
 		final var rcurly = slist.findFirstToken(TokenTypes.RCURLY);
 		assertEquals(rcurly.getLineNo(), AstUtil.lastLine(slist));
+	}
+
+	@Test
+	public void testResolveVariableTypeConstructorParameter() {
+		final var objBlock = findFirst(root, TokenTypes.OBJBLOCK);
+		final var ctor = findFirst(objBlock, TokenTypes.CTOR_DEF);
+		final var slist = ctor.findFirstToken(TokenTypes.SLIST);
+		assertEquals("String", AstUtil.resolveVariableType(slist, "ctorParam"));
+	}
+
+	@Test
+	public void testResolveVariableTypeField() {
+		final var method = findMethod(root, "emptyBlock");
+		assertEquals("java.util.List", AstUtil.resolveVariableType(method, "qualifiedField"));
 	}
 
 	@Test
 	public void testResolveVariableTypeLocalVariable() {
 		final var method = findMethod(root, "castAndResolve");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
-		// find the method call System.out.println(s) — use `s` from within it
 		final var exprNode = slist.getFirstChild().getNextSibling();
 		assertEquals("String", AstUtil.resolveVariableType(exprNode, "s"));
 	}
@@ -167,6 +821,13 @@ public class AstUtilTest {
 	}
 
 	@Test
+	public void testResolveVariableTypePrimitive() {
+		final var method = findMethod(root, "primitiveLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
 	public void testResolveVariableTypeUnknown() {
 		final var method = findMethod(root, "castAndResolve");
 		assertNull(AstUtil.resolveVariableType(method, "nonexistent"));
@@ -176,19 +837,28 @@ public class AstUtilTest {
 	public void testResolveVariableTypeVar() {
 		final var method = findMethod(root, "varLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
-		// var x = "hello" — should return null since var is not a real type
 		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
 	@Test
+	public void testTypeTextPrimitive() {
+		final var method = findMethod(root, "primitiveLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		final var varDef = slist.findFirstToken(TokenTypes.VARIABLE_DEF);
+		final var type = varDef.findFirstToken(TokenTypes.TYPE);
+		assertEquals("", AstUtil.typeText(type));
+	}
+
+	@Test
 	public void testTypeTextQualified() {
-		// java.util.List qualifiedField; — has a DOT in the type
 		final var objBlock = findFirst(root, TokenTypes.OBJBLOCK);
-		// find the second VARIABLE_DEF (qualifiedField)
 		var varDef = objBlock.findFirstToken(TokenTypes.VARIABLE_DEF);
-		varDef = varDef.getNextSibling();
-		while (varDef != null && varDef.getType() != TokenTypes.VARIABLE_DEF)
+		// skip to qualifiedField (4th VARIABLE_DEF: field, noAnnotationField, primitiveField, qualifiedField)
+		for (var i = 0; i < 3; ++i) {
 			varDef = varDef.getNextSibling();
+			while (varDef != null && varDef.getType() != TokenTypes.VARIABLE_DEF)
+				varDef = varDef.getNextSibling();
+		}
 		final var type = varDef.findFirstToken(TokenTypes.TYPE);
 		assertEquals("javautilList", AstUtil.typeText(type));
 	}

@@ -356,6 +356,30 @@ other.
 A single-pattern test per convention is not enough because interference only surfaces when multiple
 fixer code paths run against the same file.
 
+### Fixer regex robustness
+
+When a fixer uses regex to match code patterns, test for these attack vectors:
+
+**False positives from partial matches.** `Matcher.find()` matches anywhere in the line. A regex
+for `a > b ? a : b` will also match inside `++a > b ? a : b`, producing `++Math.max(a, b)`.
+Test with prefix and suffix characters around the pattern. Use negative lookbehind to reject
+unwanted prefixes.
+
+**Nested expressions.** Regex character classes like `[^,]+` and `[^)]+` split at the FIRST
+delimiter, not at the correct nesting depth. `Math.max(a, Math.min(b, foo(c, d)))` breaks
+because `[^)]+` captures `foo(c, d` (stops at the inner `)` instead of the outer). Test with
+nested method calls, casts, and parenthesized expressions in every argument position. Use
+paren-balanced parsing instead of regex for nested structures.
+
+**ReDoS (catastrophic backtracking).** Verify that no regex has overlapping alternatives with
+nested quantifiers (e.g. `(a+)+`, `(a|a)+`). Test with long inputs (100+ character operands)
+to confirm linear-time matching. Character classes like `[\w.\[\]]+` are safe (single class,
+no alternation). Alternations like `>=?|<=?` are safe (no overlap, fail fast).
+
+**Multiline.** If the check can fire on expressions that span multiple lines, test that the
+fixer either handles it or returns null gracefully. Never produce a partial fix that corrupts
+the file.
+
 ### Test resource consolidation
 
 Never create a violation file with only one violation. Group related violations into shared files by
@@ -376,26 +400,34 @@ pattern that should NOT trigger the check. If a check has special handling for `
 
 ### AST structure awareness
 
-Checkstyle's AST doesn't always match intuition. `do-while` bodies are the first child of
-`LITERAL_DO` (before the condition), while `if`/`while`/`for` bodies follow `RPAREN`. This caused
-`PreferPrefixIncrementCheck` to miss braceless `do` loops (documented in
-`docs/prefer-prefix-increment-braceless-do.md`).
+See `docs/ast-structure.md` for the full reference on Checkstyle's AST quirks (ternary children
+order, INDEX_OP's hidden RBRACK, comparison operators as parent nodes, pre vs post increment
+semantics, `exprText` vs `displayText`, etc.).
 
 When a test unexpectedly produces zero violations, check the AST structure with Checkstyle's
 `-t` flag or by adding debug prints in the check's `visitToken()`.
 
-**Annotation values use different token types depending on form.** A single value like
-`@SuppressWarnings("unused")` wraps the value in `EXPR`, but an array value like
-`@SuppressWarnings({"unused", "all"})` uses `ANNOTATION_ARRAY_INIT` instead (no `EXPR` wrapper).
-Named params (`@Anno(key = value)`) use `ANNOTATION_MEMBER_VALUE_PAIR`, where the value child is
-`EXPR` for single values or `ANNOTATION_ARRAY_INIT` for arrays. Any code that inspects annotation
-values must handle all three token types. When writing tests for annotation handling, always include
-cases with single values, array values, and named params (both single and array).
+### Numeric literal permutations
 
-**Array type declarations normalize in the AST.** Both Java-style (`int[] x`) and C-style
-(`int x[]`) produce `ARRAY_DECLARATOR` siblings under `TYPE`. Compound declarations like
-`int[] x[]` produce two `ARRAY_DECLARATOR` siblings, identical to `int[][] x`. When comparing
-types, always test Java-style, C-style, and compound arrays to verify they match correctly.
+When a check or fixer handles numeric literals (zero detection, suffix removal, etc.), test ALL
+Java literal forms. Missing even one form is a bug. The full set:
+
+**Integer forms**: `0`, `0x0` (hex), `0X0` (hex uppercase prefix), `0b0` (binary), `0B0` (binary
+uppercase prefix), `0_0` (underscore separator)
+
+**Long forms**: every integer form with `L` suffix (e.g. `0L`, `0x0L`, `0b0L`)
+
+**Float forms**: `0.0f`, `0f` (no decimal), `0.f` (trailing dot)
+
+**Double forms**: `0.0`, `0.0d` (explicit suffix), `0.` (trailing dot), `.0` (leading dot),
+`0.0e0` (exponent), `0.0e+0` (exponent with plus), `0.0e-0` (exponent with minus)
+
+**Negative forms**: every form above prefixed with `-`. In the AST, `-0` is `UNARY_MINUS{NUM_INT}`
+(two nodes), not a single negative literal. Tests must verify both that `isZeroLiteral(UNARY_MINUS)`
+returns false and that `isZeroLiteral(child NUM token)` returns true.
+
+**Boundary pairs**: for every zero form, test a non-zero value with the same notation (e.g. `0x0`
+is zero, `0x1` is non-zero; `0.0e0` is zero, `0.0e1` is non-zero).
 
 ## Common mistakes
 

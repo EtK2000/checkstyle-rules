@@ -105,6 +105,13 @@ resources.
 
 ## Common pitfalls
 
+- **Column-awareness**: if the check can fire multiple times on the same line (e.g., two
+  `.get(0)` calls), the fixer MUST use the `column` parameter to target the correct occurrence.
+  Use `line.indexOf(pattern, column)` or validate that the pattern exists at the expected column,
+  not `line.indexOf(pattern)` from position 0. If the check structurally can't fire twice on one
+  line (e.g., line-range operations, whole-statement matches like `super()`), the column can
+  safely be ignored. See `docs/targeted-fixing.md` for the full audit of existing fixers.
+
 - **Tab columns**: the fixer receives character indices, not tab-expanded columns. Unit tests
   without tabs will pass even if column handling is wrong. Always write an integration test with
   tab-indented code.
@@ -144,3 +151,27 @@ resources.
 - **Checkstyle auto-created tasks**: the plugin has a task name conflict with the `java` plugin
   (see `checkstyle-task-name-conflict.md`). This doesn't affect fixer development but matters
   for integration testing in consumer projects.
+
+- **Regex partial matches**: when using regex to match code patterns, `Matcher.find()` matches
+  anywhere in the line. If the pattern can match a substring of a larger construct, the fixer
+  will corrupt the line. For example, a ternary regex matching `a > b ? a : b` will also match
+  inside `++a > b ? a : b`, producing `++Math.max(a, b)`. Use negative lookbehind (`(?<![+-])`)
+  or anchor the match appropriately. Always write fixer tests with prefix/suffix characters
+  around the matched pattern. See "Fixer regex robustness" in `docs/testing.md` for the full
+  checklist (partial matches, nested expressions, ReDoS, multiline).
+
+- **Paren-balanced parsing over regex for nested expressions**: regex character classes like
+  `[^,]+` and `[^)]+` break on nested calls (they split at the first delimiter, not the
+  correct nesting depth). Use a paren-balancing scanner that tracks `(`/`)` depth. See
+  `PreferMathMethodFixer.findAtDepthZero()` for an example. See also
+  `docs/fixer-architecture-redesign.md` for the longer-term solution of giving fixers AST
+  access.
+
+- **Prefix increment/decrement in condition operands**: `--a > b ? a : b` is semantically
+  equivalent to `Math.max(--a, b)` because the mutation happens before the ternary evaluates.
+  If the fixer's regex captures `--a` as the operand, it must use the full captured text
+  (including `--`) in the replacement but strip it when comparing against branch operands
+  (since the branches use the post-mutation variable name `a`, not `--a`).
+
+- **Update auto-fix-coverage.md**: when adding a fixer, add it to `docs/auto-fix-coverage.md`
+  in the appropriate table (TreeWalker checks or regex checks).

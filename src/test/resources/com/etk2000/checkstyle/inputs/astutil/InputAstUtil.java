@@ -6,11 +6,22 @@ import javax.annotation.Nonnull;
 class InputAstUtil {
 	@Nonnull
 	int field;
+	int noAnnotationField, primitiveField;
 	java.util.List qualifiedField; // intentional FQN: tested by AstUtilTest.testTypeTextQualified
+
+	InputAstUtil(String ctorParam) {}
 
 	void castAndResolve(Object obj) {
 		final String s = (String) obj;
 		System.out.println(s);
+	}
+
+	void castWrongExpr(Object obj) {
+		final String s = (String) this;
+	}
+
+	void castWrongType(Object obj) {
+		final Integer n = (Integer) obj;
 	}
 
 	void emptyBlock() {
@@ -24,6 +35,10 @@ class InputAstUtil {
 			int a,
 			int b
 	) {}
+
+	void primitiveLocal() {
+		final int x = 1;
+	}
 
 	void varLocal() {
 		final var x = "hello";

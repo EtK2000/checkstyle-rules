@@ -64,6 +64,27 @@ Use Checkstyle's `-t` flag or print the AST in a test to explore the tree struct
 - For complex receiver type resolution, use `ReflectionUtil`
 - For AST traversal utilities, use `AstUtil`
 
+### AstUtil reference
+
+Common utilities in `AstUtil` (check before writing your own):
+
+- `displayText(DetailAST)`: human-readable text for messages. Handles operators, dots, brackets,
+  increment/decrement. Use for violation message construction
+- `exprText(DetailAST)`: structural text for equality comparison. Concatenates leaf text without
+  operators. Use for comparing whether two AST expressions refer to the same thing
+- `isPureExpression(DetailAST)`: checks if an expression has no side effects (identifiers, field
+  accesses, literals, array accesses, unary operators). Use for gating transformations that
+  require operand purity
+- `isZeroLiteral(DetailAST)`: checks if a numeric literal is zero. Handles all Java literal forms
+  (hex, binary, underscore, exponent, suffixes). Use instead of comparing `getText()` against `"0"`
+- `resolveVariableType(DetailAST, String)`: finds the declared type of a variable by walking up
+  scopes. Returns null for primitives and `var`
+- `getReceiverTypeName(DetailAST)`: finds the type of a method call's receiver
+
+When adding general-purpose utilities, add them to `AstUtil` with tests in `AstUtilTest` rather
+than keeping them private in the check class. This prevents duplication when another check needs
+the same logic.
+
 ### MinSdk gating
 
 If the suggested API requires a minimum Android SDK version, accept a `minSdk` property:
@@ -71,18 +92,39 @@ If the suggested API requires a minimum Android SDK version, accept a `minSdk` p
 ```java
 private int minSdk = Integer.MAX_VALUE;
 
+/**
+ * Sets the minimum SDK version for the target platform.
+ * <p>Called by Checkstyle via reflection when {@code minSdk} is set in the config.</p>
+ */
+@SuppressWarnings("unused")
 public void setMinSdk(int minSdk) {
     this.minSdk = minSdk;
 }
 ```
 
+The `@SuppressWarnings("unused")` documents that Checkstyle calls the setter via reflection. Add
+Javadoc explaining which APIs the gate affects.
+
 And check it before logging: `if (minSdk >= REQUIRED_API) log(...)`.
 
-Configure the property in `checkstyle.xml`:
+Configure the property in **both** XML files:
+
+`src/main/resources/com/etk2000/checkstyle/checkstyle.xml`:
 ```xml
 <module name="com.etk2000.checkstyle.MyNewCheck">
     <property name="minSdk" value="${minSdk}" />
 </module>
+```
+
+`config/checkstyle/checkstyle-test-resources.xml` (same entry, same location alphabetically):
+```xml
+<module name="com.etk2000.checkstyle.MyNewCheck">
+    <property name="minSdk" value="${minSdk}" />
+</module>
+```
+
+Forgetting the test-resources config means the check runs on test resource files with
+`minSdk = Integer.MAX_VALUE` (all gates open), which may not match the intended behavior.
 ```
 
 ## 2. Message key
@@ -185,6 +227,21 @@ Run `./gradlew check`. This checks:
 Add the check to the appropriate table in `README.md` (custom checks, regex rules, or
 built-in checks).
 
+## 8. Register suppression for test resources
+
+Add a suppression in `config/checkstyle/suppressions-test-resources.xml` so the check doesn't fire
+on its own violation test files:
+
+```xml
+<suppress checks="MyNewCheck" files="inputs[\\/]mynewcheck[\\/]" />
+```
+
+This goes in the first section (alphabetically by check name) where each check suppresses itself in
+its own test directory.
+
+If your check also fires on test resources for OTHER checks (e.g., a ternary check fires on
+ternaries in the `controlflow/` test directory), add cross-check suppressions in the second section.
+
 ## Common pitfalls
 
 - **New checks break existing test resources**: when you register a new check in `checkstyle.xml`,
@@ -197,9 +254,8 @@ built-in checks).
   `checkstyleTestResources` which runs the project's own rules. Methods must be alphabetically
   ordered, blank lines after `break;` before `case`/`default`, no trailing whitespace, etc.
 
-- **AST structure varies by context**: `do-while` body is the first child of `LITERAL_DO`
-  (before the condition), unlike `if`/`while`/`for` where the body follows `RPAREN`. Always
-  verify AST structure empirically.
+- **AST structure varies by context**: see `docs/ast-structure.md` for the full reference.
+  Always verify AST structure empirically.
 
 - **`AstUtil.typeText()` returns empty string for primitives**: if your check logs type names in
   violation messages (e.g. "use X instead of '{0}'"), handle primitive types explicitly. The TYPE
