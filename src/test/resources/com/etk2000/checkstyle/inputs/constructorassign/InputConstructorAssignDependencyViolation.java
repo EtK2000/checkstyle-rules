@@ -8,3 +8,14 @@ class InputConstructorAssignDependencyViolation {
 		this.alpha = alpha;
 	}
 }
+
+// dependency violation within a var sub-group (same code path as above but in GROUP_VAR context)
+class InputConstructorAssignVarDependencyViolation {
+	int alpha, beta;
+
+	InputConstructorAssignVarDependencyViolation(int beta, int x) {
+		final var computed = x * 2;
+		this.alpha = computed + this.beta; // violation: Assignment 'this.alpha' references 'this.beta' which should be assigned before it.
+		this.beta = computed;
+	}
+}

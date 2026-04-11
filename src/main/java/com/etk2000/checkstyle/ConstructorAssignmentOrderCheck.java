@@ -5,7 +5,9 @@ import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -13,34 +15,60 @@ import javax.annotation.Nullable;
 
 /**
  * Checkstyle check that enforces field assignments in constructors and
- * instance initializers are ordered alphabetically in two chunks:
- * (1) simple one-line assignments, then (2) multi-line assignments.
- * Within each chunk, assignments must be alphabetical by field name.
+ * instance initializers are ordered in three groups:
+ * (1) simple one-line assignments without local variables,
+ * (2) multi-line assignments without local variables,
+ * (3) assignments that use local variables (sub-grouped by variable
+ * declaration order).
+ * Within each group/sub-group, assignments must be alphabetical by field
+ * name, with field-to-field dependency exceptions.
  */
 public class ConstructorAssignmentOrderCheck extends AbstractCheck {
+	private record AssignmentInfo(@Nonnull DetailAST ast, @Nonnull String fieldName, int group, int subGroup) {}
+
+	private static final int GROUP_MULTI = 1;
+	private static final int GROUP_SIMPLE = 0;
+	private static final int GROUP_VAR = 2;
 	private static final String MSG_DEPENDENCY = "constructor.assign.dependency";
 	private static final String MSG_MULTI_BEFORE_SIMPLE = "constructor.assign.multi.before.simple";
+	private static final String MSG_NON_VAR_BEFORE_VAR = "constructor.assign.non.var.before.var";
 	private static final String MSG_ORDER = "constructor.assign.order";
+	private static final String MSG_VAR_GROUP_ORDER = "constructor.assign.var.group.order";
 
-	private static void collectFieldReferences(@Nonnull DetailAST ast, @Nonnull HashSet<String> result) {
-		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
-			// look for this.field references
-			if (child.getType() == TokenTypes.DOT) {
-				final var thisToken = child.getFirstChild();
-				if (thisToken != null && thisToken.getType() == TokenTypes.LITERAL_THIS) {
-					final var fieldIdent = thisToken.getNextSibling();
-					if (fieldIdent != null && fieldIdent.getType() == TokenTypes.IDENT)
-						result.add(fieldIdent.getText());
-				}
+	private static void collectFieldReferences(@Nonnull DetailAST ast, @Nonnull Set<String> result) {
+		if (ast.getType() == TokenTypes.DOT) {
+			final var thisToken = ast.getFirstChild();
+			if (thisToken != null && thisToken.getType() == TokenTypes.LITERAL_THIS) {
+				final var fieldIdent = thisToken.getNextSibling();
+				if (fieldIdent != null && fieldIdent.getType() == TokenTypes.IDENT)
+					result.add(fieldIdent.getText());
 			}
-			collectFieldReferences(child, result);
 		}
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectFieldReferences(child, result);
+	}
+
+	private static void collectLocalVarReferences(
+			@Nonnull DetailAST ast,
+			@Nonnull Set<String> localVarNames,
+			@Nonnull Set<String> result
+	) {
+		// skip this.field patterns entirely (the IDENT child is a field name, not a local var)
+		if (ast.getType() == TokenTypes.DOT
+				&& ast.getFirstChild() != null
+				&& ast.getFirstChild().getType() == TokenTypes.LITERAL_THIS)
+			return;
+
+		if (ast.getType() == TokenTypes.IDENT && localVarNames.contains(ast.getText()))
+			result.add(ast.getText());
+
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectLocalVarReferences(child, localVarNames, result);
 	}
 
 	@CheckReturnValue
 	@Nullable
 	private static String extractFieldName(@Nonnull DetailAST exprStatement) {
-		// look for: EXPR -> ASSIGN -> DOT(LITERAL_THIS, IDENT)
 		final var expr = exprStatement.getFirstChild();
 		if (expr == null || expr.getType() != TokenTypes.ASSIGN)
 			return null;
@@ -66,11 +94,22 @@ public class ConstructorAssignmentOrderCheck extends AbstractCheck {
 	}
 
 	private void checkAssignmentOrder(@Nonnull DetailAST body) {
-		final var simpleAssignments = new ArrayList<DetailAST>();
-		final var multiAssignments = new ArrayList<DetailAST>();
-		var seenMulti = false;
+		// phase 1: scan for local variable declarations and field assignments
+		final var localVarNames = new HashSet<String>();
+		final var localVarOrder = new HashMap<String, Integer>();
+		var varDeclCount = 0;
+		final var assignments = new ArrayList<AssignmentInfo>();
 
 		for (var child = body.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.VARIABLE_DEF) {
+				final var ident = child.findFirstToken(TokenTypes.IDENT);
+				if (ident != null) {
+					localVarNames.add(ident.getText());
+					localVarOrder.put(ident.getText(), varDeclCount++);
+				}
+				continue;
+			}
+
 			if (child.getType() != TokenTypes.EXPR)
 				continue;
 
@@ -78,66 +117,83 @@ public class ConstructorAssignmentOrderCheck extends AbstractCheck {
 			if (fieldName == null)
 				continue;
 
-			if (isMultiLine(child)) {
-				seenMulti = true;
-				multiAssignments.add(child);
+			// determine which local variables are referenced in the RHS
+			final var usedVars = new HashSet<String>();
+			final var assign = child.getFirstChild();
+			if (assign != null && assign.getChildCount() > 1)
+				collectLocalVarReferences(assign.getLastChild(), localVarNames, usedVars);
+
+			final int group;
+			final int subGroup;
+			if (usedVars.isEmpty()) {
+				group = isMultiLine(child) ? GROUP_MULTI : GROUP_SIMPLE;
+				subGroup = -1;
 			}
 			else {
-				if (seenMulti)
-					log(child, MSG_MULTI_BEFORE_SIMPLE, fieldName);
-				simpleAssignments.add(child);
+				group = GROUP_VAR;
+				subGroup = usedVars.stream()
+						.mapToInt(v -> localVarOrder.getOrDefault(v, -1))
+						.max()
+						.orElse(-1);
 			}
+
+			assignments.add(new AssignmentInfo(child, fieldName, group, subGroup));
 		}
 
-		checkChunkOrder(simpleAssignments);
-		checkChunkOrder(multiAssignments);
-	}
-
-	private void checkChunkOrder(@Nonnull ArrayList<DetailAST> assignments) {
-		if (assignments.size() < 2)
-			return;
-
-		// collect assigned field names and their RHS dependencies
+		// phase 2: collect all assigned field names for dependency checking
 		final var assignedFields = new HashSet<String>();
-		for (var assignment : assignments) {
-			final var name = extractFieldName(assignment);
-			if (name != null)
-				assignedFields.add(name);
-		}
+		for (var info : assignments)
+			assignedFields.add(info.fieldName);
 
+		// phase 3: pairwise comparison
 		for (var i = 1; i < assignments.size(); ++i) {
 			final var prev = assignments.get(i - 1);
 			final var curr = assignments.get(i);
-			final var prevName = extractFieldName(prev);
-			final var currName = extractFieldName(curr);
-			if (prevName == null || currName == null)
+
+			// different major group: check group ordering
+			if (prev.group > curr.group) {
+				if (prev.group == GROUP_VAR)
+					log(curr.ast, MSG_NON_VAR_BEFORE_VAR, curr.fieldName);
+				else
+					log(curr.ast, MSG_MULTI_BEFORE_SIMPLE, curr.fieldName);
+				continue;
+			}
+			if (prev.group < curr.group)
 				continue;
 
-			// collect this.field references on the RHS of each assignment
-			final var currRefs = new HashSet<String>();
-			final var assign = curr.getFirstChild();
-			if (assign != null && assign.getChildCount() > 1)
-				collectFieldReferences(assign.getLastChild(), currRefs);
-			currRefs.retainAll(assignedFields);
+			// same major group VAR: check sub-group ordering
+			if (prev.group == GROUP_VAR) {
+				if (prev.subGroup > curr.subGroup) {
+					log(curr.ast, MSG_VAR_GROUP_ORDER, curr.fieldName, prev.fieldName);
+					continue;
+				}
+				if (prev.subGroup < curr.subGroup)
+					continue;
+			}
 
-			final var prevRefs = new HashSet<String>();
-			final var prevAssign = prev.getFirstChild();
+			// same group + same sub-group: check field deps and alphabetical
+			final var currFieldRefs = new HashSet<String>();
+			final var currAssign = curr.ast.getFirstChild();
+			if (currAssign != null && currAssign.getChildCount() > 1)
+				collectFieldReferences(currAssign.getLastChild(), currFieldRefs);
+			currFieldRefs.retainAll(assignedFields);
+
+			final var prevFieldRefs = new HashSet<String>();
+			final var prevAssign = prev.ast.getFirstChild();
 			if (prevAssign != null && prevAssign.getChildCount() > 1)
-				collectFieldReferences(prevAssign.getLastChild(), prevRefs);
-			prevRefs.retainAll(assignedFields);
+				collectFieldReferences(prevAssign.getLastChild(), prevFieldRefs);
+			prevFieldRefs.retainAll(assignedFields);
 
-			// curr depends on prev: ordering is justified
-			if (currRefs.contains(prevName))
+			if (currFieldRefs.contains(prev.fieldName))
 				continue;
 
-			// prev depends on curr: curr should be assigned first
-			if (prevRefs.contains(currName)) {
-				log(prev, MSG_DEPENDENCY, prevName, currName);
+			if (prevFieldRefs.contains(curr.fieldName)) {
+				log(prev.ast, MSG_DEPENDENCY, prev.fieldName, curr.fieldName);
 				continue;
 			}
 
-			if (currName.compareToIgnoreCase(prevName) < 0)
-				log(curr, MSG_ORDER, currName, prevName);
+			if (curr.fieldName.compareToIgnoreCase(prev.fieldName) < 0)
+				log(curr.ast, MSG_ORDER, curr.fieldName, prev.fieldName);
 		}
 	}
 
