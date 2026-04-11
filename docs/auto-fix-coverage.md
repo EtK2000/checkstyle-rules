@@ -16,6 +16,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | NoEnumTrailingCommaCheck                 | NoArrayTrailingCommaFixer          | Same fixer as array trailing comma                                               |
 | NoFinalParametersCheck                   | RedundantModifierFixer             | Removes `final` keyword from parameter                                           |
 | NoUnnecessaryThisCheck                   | NoUnnecessaryThisFixer             | Removes `this.` prefix                                                           |
+| PreferCollectionInterfaceCheck           | PreferCollectionInterfaceFixer     | Replaces concrete collection type with interface (e.g. `ArrayList` to `List`)    |
 | PreferMathMethodCheck                    | PreferMathMethodFixer              | See sub-rules below                                                              |
 | PreferPrefixIncrementCheck               | PreferPrefixIncrementFixer         | Moves `++`/`--` to prefix position                                               |
 | PreferSpecificApiCheck                   | PreferSpecificApiFixer             | See sub-rules below                                                              |

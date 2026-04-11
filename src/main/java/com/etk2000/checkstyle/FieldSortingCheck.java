@@ -7,6 +7,8 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
@@ -94,7 +96,7 @@ public class FieldSortingCheck extends AbstractCheck {
 		return varDef.findFirstToken(TokenTypes.ASSIGN) != null ? 0 : 1;
 	}
 
-	private static void collectIdents(@Nonnull DetailAST ast, @Nonnull HashSet<String> result) {
+	private static void collectIdents(@Nonnull DetailAST ast, @Nonnull Set<String> result) {
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
 			// skip anonymous class bodies: references inside methods are deferred, not init-time
 			if (child.getType() == TokenTypes.OBJBLOCK && ast.getType() == TokenTypes.LITERAL_NEW)
@@ -137,12 +139,12 @@ public class FieldSortingCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	@Nonnull
-	private static HashMap<String, HashSet<String>> fieldDependencies(@Nonnull ArrayList<DetailAST> fields) {
+	private static Map<String, Set<String>> fieldDependencies(@Nonnull List<DetailAST> fields) {
 		final var fieldNames = new HashSet<String>();
 		for (var field : fields)
 			fieldNames.add(fieldName(field));
 
-		final var deps = new HashMap<String, HashSet<String>>();
+		final var deps = new HashMap<String, Set<String>>();
 		for (var field : fields) {
 			final var assign = field.findFirstToken(TokenTypes.ASSIGN);
 			if (assign == null)
@@ -195,7 +197,7 @@ public class FieldSortingCheck extends AbstractCheck {
 		return sb.toString();
 	}
 
-	private void checkEnumConstants(@Nonnull ArrayList<DetailAST> constants) {
+	private void checkEnumConstants(@Nonnull List<DetailAST> constants) {
 		for (var i = 1; i < constants.size(); ++i) {
 			final var prevIdent = constants.get(i - 1).findFirstToken(TokenTypes.IDENT);
 			final var currIdent = constants.get(i).findFirstToken(TokenTypes.IDENT);
@@ -210,7 +212,7 @@ public class FieldSortingCheck extends AbstractCheck {
 		}
 	}
 
-	private void checkFieldGroup(@Nonnull ArrayList<DetailAST> fields) {
+	private void checkFieldGroup(@Nonnull List<DetailAST> fields) {
 		if (fields.size() < 2)
 			return;
 

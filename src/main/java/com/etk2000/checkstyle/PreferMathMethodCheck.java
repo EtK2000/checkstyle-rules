@@ -150,8 +150,8 @@ public class PreferMathMethodCheck extends AbstractCheck {
 
 		final var op = condition.getType();
 
-		final boolean trueIsLeft = trueText.equals(leftText) && falseText.equals(rightText);
-		final boolean trueIsRight = trueText.equals(rightText) && falseText.equals(leftText);
+		final var trueIsLeft = trueText.equals(leftText) && falseText.equals(rightText);
+		final var trueIsRight = trueText.equals(rightText) && falseText.equals(leftText);
 
 		if (!trueIsLeft && !trueIsRight)
 			return null;

@@ -5,6 +5,7 @@ import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -75,7 +76,7 @@ public class OverloadMethodOrderCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	@Nonnull
-	private static ArrayList<String> getParamTypes(@Nonnull DetailAST methodDef) {
+	private static List<String> getParamTypes(@Nonnull DetailAST methodDef) {
 		final var types = new ArrayList<String>();
 		final var params = methodDef.findFirstToken(TokenTypes.PARAMETERS);
 		for (var param = params.getFirstChild(); param != null; param = param.getNextSibling()) {

@@ -5,6 +5,8 @@ import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -21,7 +23,7 @@ public class FieldConsolidationCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	@Nonnull
-	private static ArrayList<String> annotationKeys(@Nonnull DetailAST varDef) {
+	private static List<String> annotationKeys(@Nonnull DetailAST varDef) {
 		final var result = new ArrayList<String>();
 		final var modifiers = varDef.findFirstToken(TokenTypes.MODIFIERS);
 		if (modifiers != null) {
@@ -103,7 +105,7 @@ public class FieldConsolidationCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	@Nonnull
-	private static TreeSet<Integer> modifierKeywords(@Nonnull DetailAST varDef) {
+	private static Set<Integer> modifierKeywords(@Nonnull DetailAST varDef) {
 		final var result = new TreeSet<Integer>();
 		final var modifiers = varDef.findFirstToken(TokenTypes.MODIFIERS);
 		if (modifiers != null) {

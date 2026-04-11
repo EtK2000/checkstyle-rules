@@ -8,6 +8,7 @@ import com.etk2000.checkstyle.NoArrayTrailingCommaCheck;
 import com.etk2000.checkstyle.NoFinalParametersCheck;
 import com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck;
 import com.etk2000.checkstyle.NoUnnecessaryThisCheck;
+import com.etk2000.checkstyle.PreferCollectionInterfaceCheck;
 import com.etk2000.checkstyle.PreferMathMethodCheck;
 import com.etk2000.checkstyle.PreferPrefixIncrementCheck;
 import com.etk2000.checkstyle.PreferSpecificApiCheck;
@@ -90,6 +91,7 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 				Map.entry(NoBlankLineBetweenSingleCasesCheck.class.getName(), new NoBlankLineBetweenSingleCasesFixer()),
 				Map.entry(NoEnumTrailingCommaCheck.class.getName(), commaFixer),
 				Map.entry(NoUnnecessaryThisCheck.class.getName(), new NoUnnecessaryThisFixer()),
+				Map.entry(PreferCollectionInterfaceCheck.class.getName(), new PreferCollectionInterfaceFixer()),
 				Map.entry(PreferMathMethodCheck.class.getName(), new PreferMathMethodFixer()),
 				Map.entry(PreferPrefixIncrementCheck.class.getName(), new PreferPrefixIncrementFixer()),
 				Map.entry(PreferSpecificApiCheck.class.getName(), new PreferSpecificApiFixer()),

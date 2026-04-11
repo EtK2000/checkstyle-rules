@@ -5,6 +5,7 @@ import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -93,7 +94,7 @@ public class SwitchCaseOrderCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	@Nonnull
-	private static ArrayList<Label> getLabels(@Nonnull DetailAST caseGroupOrRule) {
+	private static List<Label> getLabels(@Nonnull DetailAST caseGroupOrRule) {
 		final var labels = new ArrayList<Label>();
 		for (var child = caseGroupOrRule.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() == TokenTypes.LITERAL_CASE) {

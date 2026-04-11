@@ -6,10 +6,49 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 public class ReflectionUtilTest {
+	static Stream<Arguments> findCollectionInterfaceConcreteTypes() {
+		return Stream.of(
+				Arguments.of("java.util.ArrayDeque", "Deque"),
+				Arguments.of("java.util.ArrayList", "List"),
+				Arguments.of("java.util.HashMap", "Map"),
+				Arguments.of("java.util.HashSet", "Set"),
+				Arguments.of("java.util.Hashtable", "Map"),
+				Arguments.of("java.util.IdentityHashMap", "Map"),
+				Arguments.of("java.util.LinkedHashMap", "Map"),
+				Arguments.of("java.util.LinkedHashSet", "Set"),
+				Arguments.of("java.util.PriorityQueue", "Queue"),
+				Arguments.of("java.util.Stack", "List"),
+				Arguments.of("java.util.TreeMap", "Map"),
+				Arguments.of("java.util.TreeSet", "Set"),
+				Arguments.of("java.util.Vector", "List"),
+				Arguments.of("java.util.WeakHashMap", "Map"),
+				Arguments.of("java.util.concurrent.ArrayBlockingQueue", "Queue"),
+				Arguments.of("java.util.concurrent.ConcurrentHashMap", "Map"),
+				Arguments.of("java.util.concurrent.ConcurrentLinkedDeque", "Deque"),
+				Arguments.of("java.util.concurrent.ConcurrentLinkedQueue", "Queue"),
+				Arguments.of("java.util.concurrent.ConcurrentSkipListMap", "Map"),
+				Arguments.of("java.util.concurrent.ConcurrentSkipListSet", "Set"),
+				Arguments.of("java.util.concurrent.CopyOnWriteArrayList", "List"),
+				Arguments.of("java.util.concurrent.CopyOnWriteArraySet", "Set"),
+				Arguments.of("java.util.concurrent.DelayQueue", "Queue"),
+				Arguments.of("java.util.concurrent.LinkedBlockingDeque", "Deque"),
+				Arguments.of("java.util.concurrent.LinkedBlockingQueue", "Queue"),
+				Arguments.of("java.util.concurrent.LinkedTransferQueue", "Queue"),
+				Arguments.of("java.util.concurrent.PriorityBlockingQueue", "Queue"),
+				Arguments.of("java.util.concurrent.SynchronousQueue", "Queue"),
+				Arguments.of("java.util.EnumMap", "Map")
+		);
+	}
+
 	@Test
 	public void testFindCharsetStringArgIndexConstructors() {
 		// String(byte[], String charsetName) -> String(byte[], Charset)
@@ -65,6 +104,30 @@ public class ReflectionUtilTest {
 	public void testFindCharsetStringArgIndexWrongArgCount() {
 		assertEquals(-1, ReflectionUtil.findCharsetStringArgIndex("java.lang.String", "getBytes", 3));
 		assertEquals(-1, ReflectionUtil.findCharsetStringArgIndex("java.lang.String", "new", 5));
+	}
+
+	@MethodSource("findCollectionInterfaceConcreteTypes")
+	@ParameterizedTest
+	public void testFindCollectionInterfaceConcrete(String fqcn, String expected) {
+		assertEquals(expected, ReflectionUtil.findCollectionInterface(fqcn));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {
+			"com.nonexistent.FakeClass",
+			"java.lang.Integer",
+			"java.lang.String",
+			"java.util.AbstractList",
+			"java.util.EnumSet",
+			"java.util.LinkedList",
+			"java.util.AbstractMap",
+			"java.util.AbstractSet",
+			"java.util.List",
+			"java.util.Map",
+			"java.util.Set"
+	})
+	public void testFindCollectionInterfaceNull(String fqcn) {
+		assertNull(ReflectionUtil.findCollectionInterface(fqcn));
 	}
 
 	@Test

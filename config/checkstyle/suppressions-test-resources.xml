@@ -31,6 +31,7 @@
 	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]unnecessarythis[\\/]" />
 	<suppress checks="OverloadMethodOrderCheck" files="inputs[\\/]overload[\\/]" />
+	<suppress checks="PreferCollectionInterfaceCheck" files="inputs[\\/]collectioninterface[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]preferimport[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]preferlambda[\\/]" />
 	<suppress checks="PreferLiteralSuffixCheck" files="inputs[\\/]literalsuffix[\\/]" />
@@ -90,6 +91,7 @@
 	<suppress checks="NumericalPrefixesInfixesSuffixesCharacterCase" files="inputs[\\/]redundantsuffix[\\/]" />
 	<suppress checks="OneStatementPerLine" files="inputs[\\/]controlflow[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]astutil[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]collectioninterface[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]multilinecall[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]switchorder[\\/]" />

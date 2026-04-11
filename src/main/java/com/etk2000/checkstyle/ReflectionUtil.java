@@ -8,9 +8,13 @@ import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 import java.nio.charset.Charset;
+import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
@@ -81,6 +85,41 @@ class ReflectionUtil {
 			}
 		}
 		return -1;
+	}
+
+	/**
+	 * Given a FQCN, returns the simple name of the most specific collection
+	 * interface the class implements (List, Set, Map, Deque, Queue, Collection),
+	 * or {@code null} if the class is not a concrete collection type.
+	 * Only flags concrete (non-abstract, non-interface) classes.
+	 * Priority: List > Set > Map > Deque > Queue > Collection.
+	 */
+	@CheckReturnValue
+	@Nullable
+	static String findCollectionInterface(@Nonnull String fqcn) {
+		final var clazz = loadClass(fqcn);
+		if (clazz == null || clazz.isInterface() || Modifier.isAbstract(clazz.getModifiers()))
+			return null;
+
+		// skip types that implement multiple collection interfaces
+		// (e.g. LinkedList implements both List and Deque)
+		if (List.class.isAssignableFrom(clazz) && Deque.class.isAssignableFrom(clazz))
+			return null;
+
+		// alphabetical, except Collection last (matches everything)
+		if (Deque.class.isAssignableFrom(clazz))
+			return "Deque";
+		if (List.class.isAssignableFrom(clazz))
+			return "List";
+		if (Map.class.isAssignableFrom(clazz))
+			return "Map";
+		if (Queue.class.isAssignableFrom(clazz))
+			return "Queue";
+		if (Set.class.isAssignableFrom(clazz))
+			return "Set";
+		if (Collection.class.isAssignableFrom(clazz))
+			return "Collection";
+		return null;
 	}
 
 	/**

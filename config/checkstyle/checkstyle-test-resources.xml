@@ -100,6 +100,7 @@
 		<module name="com.etk2000.checkstyle.NoCaseBracesCheck" />
 		<module name="com.etk2000.checkstyle.NoUnnecessaryThisCheck" />
 		<module name="com.etk2000.checkstyle.OverloadMethodOrderCheck" />
+		<module name="com.etk2000.checkstyle.PreferCollectionInterfaceCheck" />
 		<module name="com.etk2000.checkstyle.PreferImportCheck" />
 		<module name="com.etk2000.checkstyle.PreferLambdaCheck" />
 		<module name="com.etk2000.checkstyle.PreferLiteralSuffixCheck" />

@@ -677,6 +677,39 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferCollectionInterfaceMultiSameLine() throws Exception {
+		final var file = tempDir.resolve("ColMulti.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.ArrayList;\nimport java.util.HashMap;\nclass T {\n\tvoid f(ArrayList<String> a, HashMap<String, Integer> b) {}\n}");
+
+		assertEquals(
+				"import java.util.ArrayList;\nimport java.util.HashMap;\nclass T {\n\tvoid f(List<String> a, Map<String, Integer> b) {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferCollectionInterfaceParam() throws Exception {
+		final var file = tempDir.resolve("ColParam.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.HashSet;\nclass T {\n\tvoid f(HashSet<String> s) {}\n}");
+
+		assertEquals(
+				"import java.util.HashSet;\nclass T {\n\tvoid f(Set<String> s) {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testPreferCollectionInterfaceReturn() throws Exception {
+		final var file = tempDir.resolve("ColReturn.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.ArrayList;\nclass T {\n\tArrayList<String> f() {\n\t\treturn new ArrayList<>();\n\t}\n}");
+
+		assertEquals(
+				"import java.util.ArrayList;\nclass T {\n\tList<String> f() {\n\t\treturn new ArrayList<>();\n\t}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
 	public void testPreferMathMethodAbs() throws Exception {
 		final var file = tempDir.resolve("MathAbs.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint f(int a) {\n\t\treturn a < 0 ? -a : a;\n\t}\n}");

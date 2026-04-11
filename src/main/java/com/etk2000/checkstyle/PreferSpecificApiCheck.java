@@ -8,6 +8,7 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
@@ -159,56 +160,56 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		return sb.toString();
 	}
 
-	private static void collectAssertionCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectAssertionCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && assertionSimplification(ast) != null)
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectAssertionCalls(child, results);
 	}
 
-	private static void collectCollectionsCopyOfCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectCollectionsCopyOfCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && collectionsCopyOfReplacement(ast) != null)
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectCollectionsCopyOfCalls(child, results);
 	}
 
-	private static void collectCollectionsFactoryCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectCollectionsFactoryCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && collectionsFactoryReplacement(ast) != null)
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectCollectionsFactoryCalls(child, results);
 	}
 
-	private static void collectCollectionsSortCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectCollectionsSortCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isCollectionsSortCall(ast))
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectCollectionsSortCalls(child, results);
 	}
 
-	private static void collectCollectToListCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectCollectToListCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isCollectToListCall(ast))
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectCollectToListCalls(child, results);
 	}
 
-	private static void collectEqualsEmptyStringCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectEqualsEmptyStringCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isEqualsEmptyString(ast))
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectEqualsEmptyStringCalls(child, results);
 	}
 
-	private static void collectGetCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectGetCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isGetCall(ast))
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectGetCalls(child, results);
 	}
 
-	private static void collectIndexOfContainsComparisons(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectIndexOfContainsComparisons(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (indexOfContainsReplacement(ast) != null)
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
@@ -289,49 +290,49 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		};
 	}
 
-	private static void collectMapChainCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectMapChainCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && mapChainReplacement(ast) != null)
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectMapChainCalls(child, results);
 	}
 
-	private static void collectRemoveCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectRemoveCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isRemoveCall(ast))
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectRemoveCalls(child, results);
 	}
 
-	private static void collectReplaceAllLiteralCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectReplaceAllLiteralCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isReplaceAllWithLiteral(ast))
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectReplaceAllLiteralCalls(child, results);
 	}
 
-	private static void collectSizeEmptyComparisons(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectSizeEmptyComparisons(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (isEmptyReplacement(ast) != null)
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectSizeEmptyComparisons(child, results);
 	}
 
-	private static void collectStreamCountCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectStreamCountCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isStreamCountCall(ast))
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectStreamCountCalls(child, results);
 	}
 
-	private static void collectStreamFindFirstIsPresentCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectStreamFindFirstIsPresentCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isStreamFindFirstIsPresentCall(ast))
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectStreamFindFirstIsPresentCalls(child, results);
 	}
 
-	private static void collectStreamForEachCalls(@Nonnull DetailAST ast, @Nonnull ArrayList<DetailAST> results) {
+	private static void collectStreamForEachCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isStreamForEachCall(ast))
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())

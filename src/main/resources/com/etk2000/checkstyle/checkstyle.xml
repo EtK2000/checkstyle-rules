@@ -171,6 +171,9 @@
 		<!-- Custom: Prefer literal suffix over widening cast in arithmetic -->
 		<module name="com.etk2000.checkstyle.PreferLiteralSuffixCheck" />
 
+		<!-- Custom: Prefer collection interface types over concrete types in method/constructor signatures -->
+		<module name="com.etk2000.checkstyle.PreferCollectionInterfaceCheck" />
+
 		<!-- Custom: Prefer imports over fully qualified names (warning, not error) -->
 		<module name="com.etk2000.checkstyle.PreferImportCheck">
 			<property name="severity" value="warning" />
