@@ -40,6 +40,8 @@
 	<suppress checks="PreferRecordCheck" files="inputs[\\/]preferrecord[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]specificapi[\\/]" />
 	<suppress checks="PreferStandardCharsetsCheck" files="inputs[\\/]standardcharsets[\\/]" />
+	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]annotationsyntax[\\/]" />
+	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="RedundantCastCheck" files="inputs[\\/]redundantcast[\\/]" />
 	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]redundantsuffix[\\/]" />
 	<suppress checks="SwitchCaseOrderCheck" files="inputs[\\/]switchorder[\\/]" />

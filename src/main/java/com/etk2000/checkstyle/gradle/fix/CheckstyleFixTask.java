@@ -12,6 +12,7 @@ import com.etk2000.checkstyle.PreferMathMethodCheck;
 import com.etk2000.checkstyle.PreferPrefixIncrementCheck;
 import com.etk2000.checkstyle.PreferSpecificApiCheck;
 import com.etk2000.checkstyle.PreferVarCheck;
+import com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck;
 import com.etk2000.checkstyle.RedundantNumericSuffixCheck;
 import com.puppycrawl.tools.checkstyle.Checker;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
@@ -93,6 +94,7 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 				Map.entry(PreferPrefixIncrementCheck.class.getName(), new PreferPrefixIncrementFixer()),
 				Map.entry(PreferSpecificApiCheck.class.getName(), new PreferSpecificApiFixer()),
 				Map.entry(PreferVarCheck.class.getName(), new PreferVarFixer()),
+				Map.entry(RedundantAnnotationSyntaxCheck.class.getName(), new RedundantAnnotationSyntaxFixer()),
 				Map.entry(RedundantImportCheck.class.getName(), deleteLineFixer),
 				Map.entry(RedundantModifierCheck.class.getName(), modifierFixer),
 				Map.entry(RedundantNumericSuffixCheck.class.getName(), new RedundantNumericSuffixFixer()),

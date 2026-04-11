@@ -117,6 +117,7 @@
 		</module>
 		<module name="com.etk2000.checkstyle.PreferVarCheck" />
 		<module name="com.etk2000.checkstyle.RedundantCastCheck" />
+		<module name="com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck" />
 		<module name="com.etk2000.checkstyle.RedundantNumericSuffixCheck" />
 		<module name="com.etk2000.checkstyle.SwitchCaseOrderCheck" />
 

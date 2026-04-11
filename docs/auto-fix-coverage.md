@@ -20,6 +20,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | PreferPrefixIncrementCheck               | PreferPrefixIncrementFixer         | Moves `++`/`--` to prefix position                                               |
 | PreferSpecificApiCheck                   | PreferSpecificApiFixer             | See sub-rules below                                                              |
 | PreferVarCheck                           | PreferVarFixer                     | Replaces type with `var`; converts explicit array init to implicit               |
+| RedundantAnnotationSyntaxCheck           | RedundantAnnotationSyntaxFixer     | Removes `()` or `value =`                                                        |
 | RedundantImportCheck                     | DeleteLineFixer                    | Deletes import line                                                              |
 | RedundantModifierCheck                   | RedundantModifierFixer             | Removes redundant modifier keyword                                               |
 | RedundantNumericSuffixCheck              | RedundantNumericSuffixFixer        | Removes redundant `L`/`f`/`d` suffix                                             |

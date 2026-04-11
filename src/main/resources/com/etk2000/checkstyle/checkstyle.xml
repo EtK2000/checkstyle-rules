@@ -197,6 +197,9 @@
 		<!-- Custom: Flag redundant type casts (same-type or implicit widening) -->
 		<module name="com.etk2000.checkstyle.RedundantCastCheck" />
 
+		<!-- Custom: Flag redundant annotation syntax (@A() and @A(value = x)) -->
+		<module name="com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck" />
+
 		<!-- Custom: Flag redundant numeric suffixes (L, f, d) -->
 		<module name="com.etk2000.checkstyle.RedundantNumericSuffixCheck" />
 

@@ -193,6 +193,28 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testAnnotationSyntaxEmptyParens() throws Exception {
+		final var file = tempDir.resolve("AnnSynEmpty.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\t@Deprecated()\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@Deprecated\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testAnnotationSyntaxExplicitValue() throws Exception {
+		final var file = tempDir.resolve("AnnSynValue.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\t@SuppressWarnings(value = \"unchecked\")\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@SuppressWarnings(\"unchecked\")\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
 	public void testApplyFixesSkipsUnknownViolations() throws Exception {
 		final var file = tempDir.resolve("Unknown.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1, 2,};\n}");
