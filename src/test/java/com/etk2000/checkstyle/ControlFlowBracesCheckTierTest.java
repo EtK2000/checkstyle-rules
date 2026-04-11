@@ -1,8 +1,8 @@
 package com.etk2000.checkstyle;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
@@ -10,11 +10,16 @@ import com.puppycrawl.tools.checkstyle.api.FileContents;
 import com.puppycrawl.tools.checkstyle.api.FileText;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
 
@@ -60,94 +65,25 @@ public class ControlFlowBracesCheckTierTest {
 		return null;
 	}
 
-	@Test
-	public void testIsSimpleAssign() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x = 0; while (x > 0);")));
+	static Stream<Arguments> tierProvider() {
+		return Stream.of(
+				Arguments.of("do --x; while (x > 0);", ControlFlowBracesCheck.TIER_1),
+				Arguments.of("do x--; while (x > 0);", ControlFlowBracesCheck.TIER_1),
+				Arguments.of("do x++; while (x > 0);", ControlFlowBracesCheck.TIER_1),
+				Arguments.of("do --x; while (x > 0 && x < 100);", ControlFlowBracesCheck.TIER_2),
+				Arguments.of("do --x; while (x > 0 || x < 100);", ControlFlowBracesCheck.TIER_2),
+				Arguments.of("do System.out.println(x); while (x > 0);", ControlFlowBracesCheck.TIER_2),
+				Arguments.of("do x = System.out.hashCode(); while (x > 0);", ControlFlowBracesCheck.TIER_2),
+				Arguments.of("do x = x + y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x += 5 * y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do new Object(); while (x > 0);", ControlFlowBracesCheck.TIER_3)
+		);
 	}
 
-	@Test
-	public void testIsSimpleCompoundAssignBand() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x &= 1; while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleCompoundAssignBor() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x |= 1; while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleCompoundAssignBsr() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x >>>= 1; while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleCompoundAssignBxor() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x ^= 1; while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleCompoundAssignDiv() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x /= 2; while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleCompoundAssignMinus() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x -= 1; while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleCompoundAssignMod() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x %= 3; while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleCompoundAssignPlus() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x += 5; while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleCompoundAssignSl() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x <<= 1; while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleCompoundAssignSr() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x >>= 1; while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleCompoundAssignStar() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x *= 2; while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleDec() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do --x; while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleInc() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do ++x; while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleMethodCallBare() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do f(x, y); while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleMethodCallChainedReturnsFalse() throws Exception {
-		assertFalse(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x.a().b(); while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleMethodCallDotted() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do System.out.println(x); while (x > 0);")));
-	}
-
-	@Test
-	public void testIsSimpleNewReturnsFalse() throws Exception {
-		assertFalse(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do new Object(); while (x > 0);")));
+	@ParameterizedTest
+	@ValueSource(strings = {"do x.a().b(); while (x > 0);", "do new Object(); while (x > 0);"})
+	void testIsSimpleFalse(String doWhileCode) throws Exception {
+		assertFalse(ControlFlowBracesCheck.isSimpleExpression(findDoBody(doWhileCode)));
 	}
 
 	@Test
@@ -161,73 +97,24 @@ public class ControlFlowBracesCheckTierTest {
 		assertFalse(ControlFlowBracesCheck.isSimpleExpression(doAst.getFirstChild()));
 	}
 
-	@Test
-	public void testIsSimplePostDec() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x--; while (x > 0);")));
+	@ParameterizedTest
+	@ValueSource(strings = {"do x = 0; while (x > 0);", "do x &= 1; while (x > 0);",
+			"do x |= 1; while (x > 0);", "do x >>>= 1; while (x > 0);",
+			"do x ^= 1; while (x > 0);", "do x /= 2; while (x > 0);",
+			"do x -= 1; while (x > 0);", "do x %= 3; while (x > 0);",
+			"do x += 5; while (x > 0);", "do x <<= 1; while (x > 0);",
+			"do x >>= 1; while (x > 0);", "do x *= 2; while (x > 0);",
+			"do --x; while (x > 0);", "do ++x; while (x > 0);",
+			"do f(x, y); while (x > 0);", "do System.out.println(x); while (x > 0);",
+			"do x--; while (x > 0);", "do x++; while (x > 0);"})
+	void testIsSimpleTrue(String doWhileCode) throws Exception {
+		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody(doWhileCode)));
 	}
 
-	@Test
-	public void testIsSimplePostInc() throws Exception {
-		assertTrue(ControlFlowBracesCheck.isSimpleExpression(findDoBody("do x++; while (x > 0);")));
-	}
-
-	@Test
-	public void testTierComplexRhsAssignIsTier3() throws Exception {
-		final var doAst = findDoNode("do x = x + y; while (x > 0);");
-		assertEquals(ControlFlowBracesCheck.TIER_3, ControlFlowBracesCheck.determineTier(doAst.getFirstChild(), doAst));
-	}
-
-	@Test
-	public void testTierComplexRhsCompoundIsTier3() throws Exception {
-		final var doAst = findDoNode("do x += 5 * y; while (x > 0);");
-		assertEquals(ControlFlowBracesCheck.TIER_3, ControlFlowBracesCheck.determineTier(doAst.getFirstChild(), doAst));
-	}
-
-	@Test
-	public void testTierCompoundWhileAndIsTier2() throws Exception {
-		final var doAst = findDoNode("do --x; while (x > 0 && x < 100);");
-		assertEquals(ControlFlowBracesCheck.TIER_2, ControlFlowBracesCheck.determineTier(doAst.getFirstChild(), doAst));
-	}
-
-	@Test
-	public void testTierCompoundWhileOrIsTier2() throws Exception {
-		final var doAst = findDoNode("do --x; while (x > 0 || x < 100);");
-		assertEquals(ControlFlowBracesCheck.TIER_2, ControlFlowBracesCheck.determineTier(doAst.getFirstChild(), doAst));
-	}
-
-	@Test
-	public void testTierDottedBodyIsTier2() throws Exception {
-		final var doAst = findDoNode("do System.out.println(x); while (x > 0);");
-		assertEquals(ControlFlowBracesCheck.TIER_2, ControlFlowBracesCheck.determineTier(doAst.getFirstChild(), doAst));
-	}
-
-	@Test
-	public void testTierDottedRhsIsTier2() throws Exception {
-		final var doAst = findDoNode("do x = System.out.hashCode(); while (x > 0);");
-		assertEquals(ControlFlowBracesCheck.TIER_2, ControlFlowBracesCheck.determineTier(doAst.getFirstChild(), doAst));
-	}
-
-	@Test
-	public void testTierNewObjectIsTier3() throws Exception {
-		final var doAst = findDoNode("do new Object(); while (x > 0);");
-		assertEquals(ControlFlowBracesCheck.TIER_3, ControlFlowBracesCheck.determineTier(doAst.getFirstChild(), doAst));
-	}
-
-	@Test
-	public void testTierPostDecIsTier1() throws Exception {
-		final var doAst = findDoNode("do x--; while (x > 0);");
-		assertEquals(ControlFlowBracesCheck.TIER_1, ControlFlowBracesCheck.determineTier(doAst.getFirstChild(), doAst));
-	}
-
-	@Test
-	public void testTierPostIncIsTier1() throws Exception {
-		final var doAst = findDoNode("do x++; while (x > 0);");
-		assertEquals(ControlFlowBracesCheck.TIER_1, ControlFlowBracesCheck.determineTier(doAst.getFirstChild(), doAst));
-	}
-
-	@Test
-	public void testTierSimpleDecrementIsTier1() throws Exception {
-		final var doAst = findDoNode("do --x; while (x > 0);");
-		assertEquals(ControlFlowBracesCheck.TIER_1, ControlFlowBracesCheck.determineTier(doAst.getFirstChild(), doAst));
+	@MethodSource("tierProvider")
+	@ParameterizedTest
+	void testTierClassification(String doWhileCode, int expectedTier) throws Exception {
+		final var doAst = findDoNode(doWhileCode);
+		assertEquals(expectedTier, ControlFlowBracesCheck.determineTier(doAst.getFirstChild(), doAst));
 	}
 }

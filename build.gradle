@@ -48,7 +48,12 @@ dependencies {
 	implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
 	testImplementation "com.puppycrawl.tools:checkstyle:${checkstyleVersion}"
-	testImplementation 'junit:junit:4.13.2'
+	testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+	useJUnitPlatform()
 }
 
 tasks.withType(Checkstyle).configureEach {

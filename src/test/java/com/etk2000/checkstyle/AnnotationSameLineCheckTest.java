@@ -1,11 +1,11 @@
 package com.etk2000.checkstyle;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class AnnotationSameLineCheckTest {
 	private static final String DIR = "annotationsameline/";

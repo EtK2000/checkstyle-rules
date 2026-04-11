@@ -1,9 +1,9 @@
 package com.etk2000.checkstyle;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
@@ -11,13 +11,18 @@ import com.puppycrawl.tools.checkstyle.api.FileContents;
 import com.puppycrawl.tools.checkstyle.api.FileText;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -49,6 +54,37 @@ public class AstUtilTest {
 			}
 		}
 		throw new AssertionError("No numeric literal found in: " + literal);
+	}
+
+	static Stream<Arguments> displayTextBinaryProvider() {
+		return Stream.of(
+				Arguments.of("&", TokenTypes.BAND),
+				Arguments.of("|", TokenTypes.BOR),
+				Arguments.of(">>>", TokenTypes.BSR),
+				Arguments.of("^", TokenTypes.BXOR),
+				Arguments.of("/", TokenTypes.DIV),
+				Arguments.of("==", TokenTypes.EQUAL),
+				Arguments.of(">=", TokenTypes.GE),
+				Arguments.of(">", TokenTypes.GT),
+				Arguments.of("&&", TokenTypes.LAND),
+				Arguments.of("<=", TokenTypes.LE),
+				Arguments.of("||", TokenTypes.LOR),
+				Arguments.of("<", TokenTypes.LT),
+				Arguments.of("-", TokenTypes.MINUS),
+				Arguments.of("%", TokenTypes.MOD),
+				Arguments.of("!=", TokenTypes.NOT_EQUAL),
+				Arguments.of("+", TokenTypes.PLUS),
+				Arguments.of("<<", TokenTypes.SL),
+				Arguments.of(">>", TokenTypes.SR),
+				Arguments.of("*", TokenTypes.STAR)
+		);
+	}
+
+	static Stream<Arguments> displayTextPrefixUnaryProvider() {
+		return Stream.of(
+				Arguments.of("~", TokenTypes.BNOT),
+				Arguments.of("!", TokenTypes.LNOT)
+		);
 	}
 
 	@Nullable
@@ -117,7 +153,7 @@ public class AstUtilTest {
 		}
 	}
 
-	@BeforeClass
+	@BeforeAll
 	public static void setUp() throws Exception {
 		root = parse("astutil/InputAstUtil.java");
 	}
@@ -174,29 +210,10 @@ public class AstUtilTest {
 		assertFalse(AstUtil.containsCastTo(method, "String", "obj"));
 	}
 
-	@Test
-	public void testDisplayTextBand() throws Exception {
-		assertDisplayBinary("&", TokenTypes.BAND);
-	}
-
-	@Test
-	public void testDisplayTextBnot() throws Exception {
-		assertDisplayPrefixUnary("~", TokenTypes.BNOT);
-	}
-
-	@Test
-	public void testDisplayTextBor() throws Exception {
-		assertDisplayBinary("|", TokenTypes.BOR);
-	}
-
-	@Test
-	public void testDisplayTextBsr() throws Exception {
-		assertDisplayBinary(">>>", TokenTypes.BSR);
-	}
-
-	@Test
-	public void testDisplayTextBxor() throws Exception {
-		assertDisplayBinary("^", TokenTypes.BXOR);
+	@MethodSource("displayTextBinaryProvider")
+	@ParameterizedTest
+	void testDisplayTextBinary(String op, int tokenType) throws Exception {
+		assertDisplayBinary(op, tokenType);
 	}
 
 	@Test
@@ -214,29 +231,9 @@ public class AstUtilTest {
 	}
 
 	@Test
-	public void testDisplayTextDiv() throws Exception {
-		assertDisplayBinary("/", TokenTypes.DIV);
-	}
-
-	@Test
 	public void testDisplayTextDot() throws Exception {
 		final var node = parseExprFirstChild("class T { int x; void f() { int a = this.x; } }");
 		assertEquals("this.x", AstUtil.displayText(node));
-	}
-
-	@Test
-	public void testDisplayTextEqual() throws Exception {
-		assertDisplayBinary("==", TokenTypes.EQUAL);
-	}
-
-	@Test
-	public void testDisplayTextGe() throws Exception {
-		assertDisplayBinary(">=", TokenTypes.GE);
-	}
-
-	@Test
-	public void testDisplayTextGt() throws Exception {
-		assertDisplayBinary(">", TokenTypes.GT);
 	}
 
 	@Test
@@ -271,51 +268,6 @@ public class AstUtilTest {
 	}
 
 	@Test
-	public void testDisplayTextLand() throws Exception {
-		assertDisplayBinary("&&", TokenTypes.LAND);
-	}
-
-	@Test
-	public void testDisplayTextLe() throws Exception {
-		assertDisplayBinary("<=", TokenTypes.LE);
-	}
-
-	@Test
-	public void testDisplayTextLnot() throws Exception {
-		assertDisplayPrefixUnary("!", TokenTypes.LNOT);
-	}
-
-	@Test
-	public void testDisplayTextLor() throws Exception {
-		assertDisplayBinary("||", TokenTypes.LOR);
-	}
-
-	@Test
-	public void testDisplayTextLt() throws Exception {
-		assertDisplayBinary("<", TokenTypes.LT);
-	}
-
-	@Test
-	public void testDisplayTextMinus() throws Exception {
-		assertDisplayBinary("-", TokenTypes.MINUS);
-	}
-
-	@Test
-	public void testDisplayTextMod() throws Exception {
-		assertDisplayBinary("%", TokenTypes.MOD);
-	}
-
-	@Test
-	public void testDisplayTextNotEqual() throws Exception {
-		assertDisplayBinary("!=", TokenTypes.NOT_EQUAL);
-	}
-
-	@Test
-	public void testDisplayTextPlus() throws Exception {
-		assertDisplayBinary("+", TokenTypes.PLUS);
-	}
-
-	@Test
 	public void testDisplayTextPostDec() throws Exception {
 		final var ast = parseSource("class T { void f(int a) { a--; } }");
 		final var postDec = findFirst(ast, TokenTypes.POST_DEC);
@@ -329,19 +281,10 @@ public class AstUtilTest {
 		assertEquals("a++", AstUtil.displayText(postInc));
 	}
 
-	@Test
-	public void testDisplayTextSl() throws Exception {
-		assertDisplayBinary("<<", TokenTypes.SL);
-	}
-
-	@Test
-	public void testDisplayTextSr() throws Exception {
-		assertDisplayBinary(">>", TokenTypes.SR);
-	}
-
-	@Test
-	public void testDisplayTextStar() throws Exception {
-		assertDisplayBinary("*", TokenTypes.STAR);
+	@MethodSource("displayTextPrefixUnaryProvider")
+	@ParameterizedTest
+	void testDisplayTextPrefixUnary(String op, int tokenType) throws Exception {
+		assertDisplayPrefixUnary(op, tokenType);
 	}
 
 	@Test
@@ -550,169 +493,17 @@ public class AstUtilTest {
 		assertTrue(AstUtil.isPureExpression(node));
 	}
 
-	@Test
-	public void testIsZeroLiteralBinaryLongZero() throws Exception {
-		assertTrue(isZeroLiteral("0b0L"));
+	@ParameterizedTest
+	@ValueSource(strings = {"1", "1L", "1.0", "1.0f", "0x1", "0b1", ".1", "0.0e1"})
+	void testIsZeroLiteralFalse(String literal) throws Exception {
+		assertFalse(isZeroLiteral(literal));
 	}
 
-	@Test
-	public void testIsZeroLiteralBinaryZero() throws Exception {
-		assertTrue(isZeroLiteral("0b0"));
-	}
-
-	@Test
-	public void testIsZeroLiteralBinaryZeroUppercase() throws Exception {
-		assertTrue(isZeroLiteral("0B0"));
-	}
-
-	@Test
-	public void testIsZeroLiteralDecimalInt() throws Exception {
-		assertTrue(isZeroLiteral("0"));
-	}
-
-	@Test
-	public void testIsZeroLiteralDoubleWithExponent() throws Exception {
-		assertTrue(isZeroLiteral("0.0e0"));
-	}
-
-	@Test
-	public void testIsZeroLiteralDoubleWithExponentSign() throws Exception {
-		assertTrue(isZeroLiteral("0.0e+0"));
-	}
-
-	@Test
-	public void testIsZeroLiteralDoubleWithSuffix() throws Exception {
-		assertTrue(isZeroLiteral("0.0d"));
-	}
-
-	@Test
-	public void testIsZeroLiteralDoubleZero() throws Exception {
-		assertTrue(isZeroLiteral("0.0"));
-	}
-
-	@Test
-	public void testIsZeroLiteralFloatZero() throws Exception {
-		assertTrue(isZeroLiteral("0.0f"));
-	}
-
-	@Test
-	public void testIsZeroLiteralFloatZeroNoDecimal() throws Exception {
-		assertTrue(isZeroLiteral("0f"));
-	}
-
-	@Test
-	public void testIsZeroLiteralHexLongZero() throws Exception {
-		assertTrue(isZeroLiteral("0x0L"));
-	}
-
-	@Test
-	public void testIsZeroLiteralHexZero() throws Exception {
-		assertTrue(isZeroLiteral("0x0"));
-	}
-
-	@Test
-	public void testIsZeroLiteralHexZeroUppercase() throws Exception {
-		assertTrue(isZeroLiteral("0X0"));
-	}
-
-	@Test
-	public void testIsZeroLiteralLeadingDotZero() throws Exception {
-		assertTrue(isZeroLiteral(".0"));
-	}
-
-	@Test
-	public void testIsZeroLiteralLongZero() throws Exception {
-		assertTrue(isZeroLiteral("0L"));
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeBinary() throws Exception {
-		assertNegativeZero("-0b0");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeBinaryLong() throws Exception {
-		assertNegativeZero("-0b0L");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeBinaryUppercase() throws Exception {
-		assertNegativeZero("-0B0");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeDecimal() throws Exception {
-		assertNegativeZero("-0");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeDouble() throws Exception {
-		assertNegativeZero("-0.0");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeDoubleExponent() throws Exception {
-		assertNegativeZero("-0.0e0");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeDoubleExponentMinus() throws Exception {
-		assertNegativeZero("-0.0e-0");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeDoubleExponentPlus() throws Exception {
-		assertNegativeZero("-0.0e+0");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeDoubleSuffix() throws Exception {
-		assertNegativeZero("-0.0d");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeFloat() throws Exception {
-		assertNegativeZero("-0.0f");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeFloatNoDecimal() throws Exception {
-		assertNegativeZero("-0f");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeHex() throws Exception {
-		assertNegativeZero("-0x0");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeHexLong() throws Exception {
-		assertNegativeZero("-0x0L");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeHexUppercase() throws Exception {
-		assertNegativeZero("-0X0");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeLeadingDot() throws Exception {
-		assertNegativeZero("-.0");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeLong() throws Exception {
-		assertNegativeZero("-0L");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeTrailingDot() throws Exception {
-		assertNegativeZero("-0.");
-	}
-
-	@Test
-	public void testIsZeroLiteralNegativeUnderscore() throws Exception {
-		assertNegativeZero("-0_0");
+	@ParameterizedTest
+	@ValueSource(strings = {"-0", "-0L", "-0.0", "-0.0f", "-0f", "-0.0d", "-0.", "-.0", "-0x0",
+			"-0X0", "-0x0L", "-0b0", "-0B0", "-0b0L", "-0_0", "-0.0e0", "-0.0e+0", "-0.0e-0"})
+	void testIsZeroLiteralNegativeZero(String literal) throws Exception {
+		assertNegativeZero(literal);
 	}
 
 	@Test
@@ -722,59 +513,11 @@ public class AstUtilTest {
 		assertFalse(AstUtil.isZeroLiteral(literalTrue));
 	}
 
-	@Test
-	public void testIsZeroLiteralNonZeroBinary() throws Exception {
-		assertFalse(isZeroLiteral("0b1"));
-	}
-
-	@Test
-	public void testIsZeroLiteralNonZeroDouble() throws Exception {
-		assertFalse(isZeroLiteral("1.0"));
-	}
-
-	@Test
-	public void testIsZeroLiteralNonZeroExponent() throws Exception {
-		assertFalse(isZeroLiteral("0.0e1"));
-	}
-
-	@Test
-	public void testIsZeroLiteralNonZeroFloat() throws Exception {
-		assertFalse(isZeroLiteral("1.0f"));
-	}
-
-	@Test
-	public void testIsZeroLiteralNonZeroHex() throws Exception {
-		assertFalse(isZeroLiteral("0x1"));
-	}
-
-	@Test
-	public void testIsZeroLiteralNonZeroInt() throws Exception {
-		assertFalse(isZeroLiteral("1"));
-	}
-
-	@Test
-	public void testIsZeroLiteralNonZeroLeadingDot() throws Exception {
-		assertFalse(isZeroLiteral(".1"));
-	}
-
-	@Test
-	public void testIsZeroLiteralNonZeroLong() throws Exception {
-		assertFalse(isZeroLiteral("1L"));
-	}
-
-	@Test
-	public void testIsZeroLiteralTrailingDotZero() throws Exception {
-		assertTrue(isZeroLiteral("0."));
-	}
-
-	@Test
-	public void testIsZeroLiteralUnderscoreZero() throws Exception {
-		assertTrue(isZeroLiteral("0_0"));
-	}
-
-	@Test
-	public void testIsZeroLiteralZeroExponentMinusSign() throws Exception {
-		assertTrue(isZeroLiteral("0.0e-0"));
+	@ParameterizedTest
+	@ValueSource(strings = {"0", "0L", "0.0", "0.0f", "0f", "0.0d", "0.", ".0", "0x0", "0X0",
+			"0x0L", "0b0", "0B0", "0b0L", "0_0", "0.0e0", "0.0e+0", "0.0e-0"})
+	void testIsZeroLiteralTrue(String literal) throws Exception {
+		assertTrue(isZeroLiteral(literal));
 	}
 
 	@Test

@@ -1,23 +1,24 @@
 package com.etk2000.checkstyle.gradle;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.gradle.testfixtures.ProjectBuilder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class CheckstylePluginMinSdkTest {
-	@Rule
-	public final TemporaryFolder tempDir = new TemporaryFolder();
+	@TempDir
+	Path tempDir;
 
 	@Test
 	public void testManifestMinSdkParsed() throws Exception {
-		final var projectDir = tempDir.newFolder("project");
+		final var projectDir = Files.createDirectory(tempDir.resolve("project")).toFile();
 		final var manifestDir = new File(projectDir, "src/main");
 		manifestDir.mkdirs();
 
@@ -32,7 +33,7 @@ public class CheckstylePluginMinSdkTest {
 
 	@Test
 	public void testManifestMinSdkWithSpaces() throws Exception {
-		final var projectDir = tempDir.newFolder("project2");
+		final var projectDir = Files.createDirectory(tempDir.resolve("project2")).toFile();
 		final var manifestDir = new File(projectDir, "src/main");
 		manifestDir.mkdirs();
 
@@ -47,7 +48,7 @@ public class CheckstylePluginMinSdkTest {
 
 	@Test
 	public void testManifestWithoutMinSdkReturnsNull() throws Exception {
-		final var projectDir = tempDir.newFolder("project4");
+		final var projectDir = Files.createDirectory(tempDir.resolve("project4")).toFile();
 		final var manifestDir = new File(projectDir, "src/main");
 		manifestDir.mkdirs();
 
@@ -62,21 +63,21 @@ public class CheckstylePluginMinSdkTest {
 
 	@Test
 	public void testNoManifestReturnsNull() throws Exception {
-		final var projectDir = tempDir.newFolder("project3");
+		final var projectDir = Files.createDirectory(tempDir.resolve("project3")).toFile();
 		final var project = ProjectBuilder.builder().withProjectDir(projectDir).build();
 		assertNull(CheckstylePlugin.readMinSdkFromManifest(project));
 	}
 
 	@Test
 	public void testResolveMinSdkDefaultsToMaxForNonAndroid() throws Exception {
-		final var projectDir = tempDir.newFolder("project6");
+		final var projectDir = Files.createDirectory(tempDir.resolve("project6")).toFile();
 		final var project = ProjectBuilder.builder().withProjectDir(projectDir).build();
 		assertEquals(String.valueOf(Integer.MAX_VALUE), CheckstylePlugin.resolveMinSdk(project));
 	}
 
 	@Test
 	public void testResolveMinSdkFallsBackToManifest() throws Exception {
-		final var projectDir = tempDir.newFolder("project5");
+		final var projectDir = Files.createDirectory(tempDir.resolve("project5")).toFile();
 		final var manifestDir = new File(projectDir, "src/main");
 		manifestDir.mkdirs();
 

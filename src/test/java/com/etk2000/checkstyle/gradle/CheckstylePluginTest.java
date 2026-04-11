@@ -1,25 +1,26 @@
 package com.etk2000.checkstyle.gradle;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.gradle.api.plugins.quality.CheckstyleExtension;
 import org.gradle.testfixtures.ProjectBuilder;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Properties;
 
 public class CheckstylePluginTest {
-	@Rule
-	public final TemporaryFolder tempDir = new TemporaryFolder();
+	@TempDir
+	Path tempDir;
 
 	@Test
 	public void testApplyConfiguresProject() throws Exception {
-		final var projectDir = tempDir.newFolder("project");
+		final var projectDir = Files.createDirectory(tempDir.resolve("project")).toFile();
 		final var project = ProjectBuilder.builder().withProjectDir(projectDir).build();
 		project.getConfigurations().create("compileOnly");
 		new CheckstylePlugin().apply(project);
@@ -39,7 +40,7 @@ public class CheckstylePluginTest {
 
 	@Test
 	public void testExtractCheckstyleConfig() throws Exception {
-		final var projectDir = tempDir.newFolder("project");
+		final var projectDir = Files.createDirectory(tempDir.resolve("project")).toFile();
 		final var project = ProjectBuilder.builder().withProjectDir(projectDir).build();
 		final var outputFile = new File(projectDir, "build/checkstyle.xml");
 		final var task = project.getTasks().register(
