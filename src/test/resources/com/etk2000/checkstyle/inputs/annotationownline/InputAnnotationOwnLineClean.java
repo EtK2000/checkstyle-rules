@@ -6,6 +6,9 @@ import java.util.function.Consumer;
 @interface A {}
 @interface B {}
 @interface C {}
+@interface V {
+	String[] value();
+}
 
 @A
 class InputAnnotationOwnLineClean {
@@ -84,6 +87,25 @@ class InputAnnotationOwnLineClean {
 	@B
 	@C
 	void multiAnnotatedMethod() {}
+
+	@V({
+		"a",
+		"b"
+	})
+	void multiLineAnnotation() {}
+
+	@A
+	@V({
+		"a",
+		"b"
+	})
+	void multiLineAnnotationAfterSingleLine() {}
+
+	@A
+	@V({
+		"b"
+	})
+	void multiLineSingleThenMultiLine() {}
 
 	// parameter annotation is NOT checked by OwnLineCheck (inline context, boundary)
 	void paramMethod(@A String param) {}

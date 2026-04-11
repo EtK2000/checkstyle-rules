@@ -3,6 +3,8 @@ package com.etk2000.checkstyle;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+
 import org.junit.jupiter.api.Test;
 
 public class AnnotationOwnLineCheckTest {
@@ -12,16 +14,28 @@ public class AnnotationOwnLineCheckTest {
 	@Test
 	public void testBlankLineViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, DIR + "InputAnnotationOwnLineBlankViolation.java");
-		assertEquals(3, violations.size());
+		assertEquals(6, violations.size());
 
-		assertEquals(7, violations.get(0).getLine());
+		assertEquals(10, violations.get(0).getLine());
 		assertEquals("No blank line after annotation 'A'.", violations.get(0).getMessage());
 
-		assertEquals(11, violations.get(1).getLine());
+		assertEquals(14, violations.get(1).getLine());
 		assertEquals("No blank line after annotation 'A'.", violations.get(1).getMessage());
 
-		assertEquals(16, violations.get(2).getLine());
+		assertEquals(19, violations.get(2).getLine());
 		assertEquals("No blank line after annotation 'A'.", violations.get(2).getMessage());
+
+		assertEquals(25, violations.get(3).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(3).getSeverityLevel());
+		assertEquals("No blank line after annotation 'V'.", violations.get(3).getMessage());
+
+		assertEquals(29, violations.get(4).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(4).getSeverityLevel());
+		assertEquals("No blank line after annotation 'A'.", violations.get(4).getMessage());
+
+		assertEquals(37, violations.get(5).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(5).getSeverityLevel());
+		assertEquals("No blank line inside annotation 'V'.", violations.get(5).getMessage());
 	}
 
 	@Test

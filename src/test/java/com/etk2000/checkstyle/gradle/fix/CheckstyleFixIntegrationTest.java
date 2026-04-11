@@ -138,6 +138,17 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testAnnotationOwnLineBlankMultiLine() throws Exception {
+		final var file = tempDir.resolve("AnnBlankMulti.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\t@SuppressWarnings({\n\t\t\"unchecked\",\n\t\t\"rawtypes\"\n\t})\n\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@SuppressWarnings({\n\t\t\"unchecked\",\n\t\t\"rawtypes\"\n\t})\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
 	public void testAnnotationOwnLineReorder() throws Exception {
 		final var file = tempDir.resolve("AnnReorder.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Override\n\t@Deprecated\n\tvoid method() {}\n}");

@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
  */
 public class AnnotationOwnLineCheck extends AbstractCheck {
 	private static final String MSG_BLANK_LINE = "annotation.own.line.blank";
+	private static final String MSG_BLANK_LINE_INTERNAL = "annotation.own.line.blank.internal";
 	private static final String MSG_KEY = "annotation.own.line";
 	private static final String MSG_ORDER = "annotation.alphabetical.order";
 
@@ -125,13 +126,25 @@ public class AnnotationOwnLineCheck extends AbstractCheck {
 		}
 
 		// check blank lines between consecutive annotations, and between last annotation and declaration
+		final var fileLines = getFileContents().getLines();
 		for (var i = 0; i < annotations.size(); ++i) {
-			final var currentLine = annotations.get(i).getLineNo();
+			final var annotation = annotations.get(i);
+			final var startLine = annotation.getLineNo();
+			final var currentLastLine = AstUtil.lastLine(annotation);
+
+			// check for blank lines inside multi-line annotations
+			for (var line = startLine; line < currentLastLine; ++line) {
+				if (fileLines[line].isBlank()) {
+					log(line + 1, 0, MSG_BLANK_LINE_INTERNAL, AstUtil.annotationName(annotation));
+					break;
+				}
+			}
+
 			final var nextLine = i + 1 < annotations.size()
 					? annotations.get(i + 1).getLineNo()
 					: declLine;
-			if (nextLine - currentLine > 1)
-				log(annotations.get(i), MSG_BLANK_LINE, AstUtil.annotationName(annotations.get(i)));
+			if (nextLine - currentLastLine > 1)
+				log(currentLastLine, annotation.getColumnNo(), MSG_BLANK_LINE, AstUtil.annotationName(annotation));
 		}
 
 		// check alphabetical order

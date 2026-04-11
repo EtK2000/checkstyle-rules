@@ -46,6 +46,28 @@ public class AnnotationOwnLineFixerTest {
 	}
 
 	@Test
+	public void testBlankLineBelowMultiLineAnnotation() {
+		// violation is reported at annotation's last line (the closing paren line)
+		final var lines = new ArrayList<>(List.of("\t@V({", "\t\t\"a\"", "\t})", "", "\tvoid f() {}"));
+		final var result = fixer.fix(lines, 2, 0);
+		assertNotNull(result);
+		assertEquals(3, result.startLine());
+		assertEquals(3, result.endLine());
+		assertEquals(List.of(), result.replacement());
+	}
+
+	@Test
+	public void testBlankLineInsideAnnotation() {
+		// violation is on the blank line itself
+		final var lines = new ArrayList<>(List.of("\t@V({", "", "\t\t\"a\"", "\t})", "\tvoid f() {}"));
+		final var result = fixer.fix(lines, 1, 0);
+		assertNotNull(result);
+		assertEquals(1, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(List.of(), result.replacement());
+	}
+
+	@Test
 	public void testEscapedQuoteInStringParam() {
 		final var lines = new ArrayList<>(List.of("\t@A(\"he said \\\"hi\\\"\") @B void f() {}"));
 		final var result = fixer.fix(lines, 0, 0);

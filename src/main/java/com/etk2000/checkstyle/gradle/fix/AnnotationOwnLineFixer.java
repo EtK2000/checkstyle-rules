@@ -14,12 +14,22 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 			return null;
 
 		final var line = lines.get(lineIndex);
+
+		// case 0: blank line inside a multi-line annotation - remove it
+		if (line.isBlank()) {
+			var lastBlank = lineIndex;
+			while (lastBlank + 1 < lines.size() && lines.get(lastBlank + 1).isBlank())
+				++lastBlank;
+			return new FixResult(lineIndex, lastBlank, List.of());
+		}
+
 		final var stripped = line.stripLeading();
 		final var indent = line.substring(0, line.length() - stripped.length());
 
 		// case 1: multiple annotations or annotation + declaration on same line - split and sort
 		final var parsed = AnnotationFixerUtil.parseAnnotations(stripped);
-		if (parsed.annotations().size() > 1 || !parsed.remaining().isEmpty()) {
+		if (parsed.annotations().size() > 1
+				|| (!parsed.annotations().isEmpty() && !parsed.remaining().isEmpty())) {
 			AnnotationFixerUtil.sortAnnotations(parsed.annotations());
 			final var replacement = new ArrayList<String>();
 			for (var annotation : parsed.annotations())
