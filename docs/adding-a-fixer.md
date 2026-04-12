@@ -25,6 +25,25 @@ class MyFixer implements CheckstyleFixer {
 The `column` parameter is a character index, not a tab-expanded column. The conversion happens
 in `applyFixes()` before calling the fixer. Don't do your own tab conversion.
 
+**Adding imports**: if the fix introduces a new type reference (e.g., replacing
+`Collections.emptyList()` with `List.of()`), use the 4-arg constructor to request the import:
+
+```java
+return new FixResult(lineIndex, lineIndex, List.of(fixed), Set.of("java.util.List"));
+```
+
+The `importsToAdd` set contains fully qualified class names. `applyFixes()` inserts them in
+sorted position within the correct package group after all line fixes are applied. If the
+import already exists, it is skipped. When imports are added, `applyFixes()` signals
+`needsSecondPass = true` so the fix task runs a second pass to clean up cascading violations
+(e.g., the old import becoming unused).
+
+If the fix doesn't need imports, use the 3-arg constructor (defaults to empty set):
+
+```java
+return new FixResult(lineIndex, lineIndex, List.of(fixed));
+```
+
 ### 2. Register the fixer
 
 **For TreeWalker checks** (most checks): add to `FIXERS` in `CheckstyleFixTask`:
@@ -77,20 +96,33 @@ In `src/test/java/com/etk2000/checkstyle/gradle/fix/MyFixerTest.java`:
 
 ### 5. Write integration test
 
-In `CheckstyleFixIntegrationTest`, add a test that runs the full pipeline:
+In `CheckstyleFixIntegrationTest`, add a test that runs the full pipeline. Call `applyFixes()`
+directly so you can assert the exact output, `fixCount`, and `needsSecondPass`:
 
 ```java
 @Test
 public void testMyFix() throws Exception {
-    final var file = tempDir.newFile("My.java");
+    final var file = tempDir.resolve("My.java").toFile();
     Files.writeString(file.toPath(), "class T {\n\t...\n}");
 
-    assertEquals("class T {\n\t...(fixed)...\n}", runFixAndGetResult(file));
+    final var violations = runChecks(file);
+    final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
+    final var result = CheckstyleFixAction.applyFixes(
+            lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS
+    );
+    assertEquals("class T {\n\t...(fixed)...\n}", String.join("\n", lines));
+    assertEquals(1, result.fixCount());
+    assertFalse(result.needsSecondPass());
 }
 ```
 
-Assert the **exact full output**, not fragments. Use inputs that only trigger the check being
-tested (avoid cross-check interference).
+Assert the **exact full output**, not fragments. Assert `fixCount` to catch accidental extra
+or missing fixes. Assert `needsSecondPass` to verify the fixer correctly signals whether
+imports were added. Use inputs that only trigger the check being tested (avoid cross-check
+interference).
+
+If the fixer adds imports, also write a multi-pass test using `runFixMultiPass()` to verify
+the unused old import gets cleaned up on the second pass.
 
 If the check is a Checker-level module, also configure it in `runChecks()`.
 
@@ -127,8 +159,10 @@ resources.
   the appropriate transformation.
 
 - **One-pass convergence**: if fixing violation A produces code that triggers violation B from
-  the SAME check, collapse both fixes into one fixer pass. The fix task runs Checkstyle once and
-  applies all detected violations. It does NOT re-run Checkstyle after fixing. So if your fixer
+  the SAME check, collapse both fixes into one fixer pass. The fix task runs Checkstyle and
+  applies all detected violations in a single pass. If a fixer adds imports (via `importsToAdd`),
+  the task runs a second pass to clean up cascading violations (e.g., unused imports). But the
+  second pass is only for cross-check cascading, not for same-check convergence. So if your fixer
   for `(String x) ->` produces `(x) ->` (still a violation), the parens won't be removed until
   the NEXT `checkstyleFix` run. Instead, go directly to the final form: `x ->`. Always ask:
   "would the check fire on my fixer's output?" If yes, fix further.

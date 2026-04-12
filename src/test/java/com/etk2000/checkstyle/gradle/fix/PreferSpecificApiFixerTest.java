@@ -3,11 +3,13 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class PreferSpecificApiFixerTest {
 	private final CheckstyleFixer fixer = new PreferSpecificApiFixer();
@@ -18,6 +20,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertFalse(result);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -26,6 +29,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertFalse(result, \"msg\");", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -34,6 +38,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertNull(getValue());", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -42,6 +47,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertNull(\"msg\", obj);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -50,6 +56,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertNull(obj, \"msg\");", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -58,6 +65,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertTrue(value);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -66,6 +74,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertTrue(value);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -74,6 +83,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertTrue(\"msg\", value);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -82,6 +92,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertTrue(x);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -90,6 +101,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertNotNull(obj);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -98,6 +110,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertNotNull(obj);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -106,6 +119,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertNull(obj);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -114,6 +128,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tList<String> list = List.of();", result.replacement().getFirst());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -122,6 +137,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tMap<String, String> map = Map.of();", result.replacement().getFirst());
+		assertEquals(Set.of("java.util.Map"), result.importsToAdd());
 	}
 
 	@Test
@@ -130,6 +146,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tSet<String> set = Set.of();", result.replacement().getFirst());
+		assertEquals(Set.of("java.util.Set"), result.importsToAdd());
 	}
 
 	@Test
@@ -138,6 +155,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tSet<String> set = Set.of(\"a\");", result.replacement().getFirst());
+		assertEquals(Set.of("java.util.Set"), result.importsToAdd());
 	}
 
 	@Test
@@ -146,6 +164,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tList<String> list = List.of(\"a\");", result.replacement().getFirst());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -154,6 +173,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tMap<String, String> map = Map.of(\"k\", \"v\");", result.replacement().getFirst());
+		assertEquals(Set.of("java.util.Map"), result.importsToAdd());
 	}
 
 	@Test
@@ -162,6 +182,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tList<String> result = List.copyOf(list);", result.replacement().getFirst());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -170,6 +191,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tList<String> list = List.copyOf(Arrays.asList(\"a\", \"b\"));", result.replacement().getFirst());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -178,6 +200,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tMap<String, String> result = Map.copyOf(map);", result.replacement().getFirst());
+		assertEquals(Set.of("java.util.Map"), result.importsToAdd());
 	}
 
 	@Test
@@ -186,6 +209,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tSet<String> result = Set.copyOf(set);", result.replacement().getFirst());
+		assertEquals(Set.of("java.util.Set"), result.importsToAdd());
 	}
 
 	@Test
@@ -194,6 +218,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\t\t\t.toList();", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -202,6 +227,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\t\t\t.toList();", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -210,6 +236,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tif (s.isEmpty())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -218,6 +245,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tif (map.containsKey(\"key\"))", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -232,6 +260,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tString result = s.replace(\"foo\", \"bar\");", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -240,6 +269,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tlong count = list.size();", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -248,6 +278,7 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tlist.forEach(System.out::println);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -256,5 +287,6 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tif (map.containsValue(\"value\"))", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 }

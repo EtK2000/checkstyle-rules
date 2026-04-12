@@ -5,8 +5,8 @@ import com.etk2000.checkstyle.AnnotationSameLineCheck;
 import com.etk2000.checkstyle.ControlFlowBracesCheck;
 import com.etk2000.checkstyle.LambdaParameterTypeCheck;
 import com.etk2000.checkstyle.NoArrayTrailingCommaCheck;
-import com.etk2000.checkstyle.NoFinalParametersCheck;
 import com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck;
+import com.etk2000.checkstyle.NoFinalParametersCheck;
 import com.etk2000.checkstyle.NoUnnecessaryThisCheck;
 import com.etk2000.checkstyle.PreferCollectionInterfaceCheck;
 import com.etk2000.checkstyle.PreferMathMethodCheck;
@@ -46,12 +46,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAction.Params> {
+	record ApplyFixesResult(int fixCount, boolean needsSecondPass) {}
+
 	interface Params extends WorkParameters {
 		DirectoryProperty getSource();
 	}
@@ -110,9 +113,10 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 
 	/**
 	 * Applies fixes to lines based on violations, processing bottom-to-top.
-	 * Returns the number of fixes applied.
 	 */
-	static int applyFixes(
+	@CheckReturnValue
+	@Nonnull
+	static ApplyFixesResult applyFixes(
 			@Nonnull List<String> lines,
 			@Nonnull List<AuditEvent> violations,
 			@Nonnull Map<String, CheckstyleFixer> fixers
@@ -120,7 +124,9 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		return applyFixes(lines, violations, fixers, Map.of());
 	}
 
-	static int applyFixes(
+	@CheckReturnValue
+	@Nonnull
+	static ApplyFixesResult applyFixes(
 			@Nonnull List<String> lines,
 			@Nonnull List<AuditEvent> violations,
 			@Nonnull Map<String, CheckstyleFixer> fixers,
@@ -131,6 +137,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 						.thenComparing(Comparator.comparingInt(AuditEvent::getColumn).reversed())
 		);
 
+		final var importsToAdd = new TreeSet<String>();
 		var fixed = 0;
 		for (var event : violations) {
 			final var fixer = resolveFixer(event, fixers, moduleIdFixers);
@@ -146,59 +153,23 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			if (result.endLine() >= result.startLine())
 				lines.subList(result.startLine(), result.endLine() + 1).clear();
 			lines.addAll(result.startLine(), result.replacement());
+			importsToAdd.addAll(result.importsToAdd());
 			++fixed;
 		}
-		return fixed;
+
+		var needsSecondPass = false;
+		if (!importsToAdd.isEmpty()) {
+			final var added = insertMissingImports(lines, importsToAdd);
+			fixed += added;
+			needsSecondPass = added > 0;
+		}
+
+		return new ApplyFixesResult(fixed, needsSecondPass);
 	}
 
-	/**
-	 * Returns the set of check source names and module IDs that have fixers.
-	 * Used by tests to verify consistency with {@code FixableCheckNames}.
-	 */
 	@CheckReturnValue
 	@Nonnull
-	public static Set<String> fixableSourceNames() {
-		final var names = new HashSet<>(FIXERS.keySet());
-		names.addAll(MODULE_ID_FIXERS.keySet());
-		return names;
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static CheckstyleFixer resolveFixer(
-			@Nonnull AuditEvent event,
-			@Nonnull Map<String, CheckstyleFixer> fixers,
-			@Nonnull Map<String, CheckstyleFixer> moduleIdFixers
-	) {
-		final var fixer = fixers.get(event.getSourceName());
-		if (fixer != null)
-			return fixer;
-		final var moduleId = event.getModuleId();
-		if (moduleId != null)
-			return moduleIdFixers.get(moduleId);
-		return null;
-	}
-
-	/**
-	 * Converts a tab-expanded column (as reported by Checkstyle) to a
-	 * character index in the line. Checkstyle expands TABs to
-	 * {@link #TAB_WIDTH} when calculating column numbers.
-	 */
-	@CheckReturnValue
-	static int tabColumnToCharIndex(@Nonnull String line, int tabExpandedCol) {
-		var visualCol = 0;
-		for (var i = 0; i < line.length(); ++i) {
-			if (visualCol >= tabExpandedCol)
-				return i;
-			if (line.charAt(i) == '\t')
-				visualCol += TAB_WIDTH - (visualCol % TAB_WIDTH);
-			else
-				++visualCol;
-		}
-		return line.length();
-	}
-
-	private void doExecute() throws CheckstyleException, IOException {
+	private static DefaultConfiguration createCheckerConfig() {
 		final var treeWalkerConfig = new DefaultConfiguration(TreeWalker.class.getName());
 		treeWalkerConfig.addProperty("tabWidth", String.valueOf(TAB_WIDTH));
 		for (var checkName : FIXERS.keySet()) {
@@ -248,6 +219,13 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		trailingWsConfig.addProperty("message", "No trailing whitespace.");
 		checkerConfig.addChild(trailingWsConfig);
 
+		return checkerConfig;
+	}
+
+	private static boolean doExecute(
+			@Nonnull DefaultConfiguration checkerConfig,
+			@Nonnull List<File> files
+	) throws CheckstyleException, IOException {
 		final var checker = new Checker();
 		checker.setModuleClassLoader(NoArrayTrailingCommaCheck.class.getClassLoader());
 		checker.configure(checkerConfig);
@@ -280,18 +258,10 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			}
 		});
 
-		final var sourceDir = getParameters().getSource().get().getAsFile().toPath();
-		final List<File> files;
-		try (var stream = Files.walk(sourceDir)) {
-			files = stream
-					.filter(p -> p.toString().endsWith(".java"))
-					.map(Path::toFile)
-					.toList();
-		}
-
 		checker.process(files);
 		checker.destroy();
 
+		var needsSecondPass = false;
 		var filesFixed = 0;
 		var totalFixed = 0;
 		var totalSkipped = 0;
@@ -301,23 +271,175 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			final var violations = entry.getValue();
 			final var totalViolations = violations.size();
 			final var lines = new ArrayList<>(Files.readAllLines(filePath));
-			final var fileFixed = applyFixes(lines, violations, FIXERS, MODULE_ID_FIXERS);
+			final var result = applyFixes(lines, violations, FIXERS, MODULE_ID_FIXERS);
 
-			if (fileFixed > 0) {
+			if (result.fixCount() > 0) {
 				Files.writeString(filePath, String.join("\n", lines));
 				++filesFixed;
-				totalFixed += fileFixed;
+				totalFixed += result.fixCount();
 			}
-			totalSkipped += totalViolations - fileFixed;
+			if (result.needsSecondPass())
+				needsSecondPass = true;
+			totalSkipped += totalViolations - result.fixCount();
 		}
 
 		System.out.println("Fixed " + totalFixed + " violations in " + filesFixed + " files (" + totalSkipped + " skipped)");
+		return needsSecondPass;
+	}
+
+	/**
+	 * Returns the set of check source names and module IDs that have fixers.
+	 * Used by tests to verify consistency with {@code FixableCheckNames}.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	public static Set<String> fixableSourceNames() {
+		final var names = new HashSet<>(FIXERS.keySet());
+		names.addAll(MODULE_ID_FIXERS.keySet());
+		return names;
+	}
+
+	/**
+	 * Inserts missing import statements into the file lines in sorted position.
+	 * Returns the number of imports added.
+	 */
+	static int insertMissingImports(@Nonnull List<String> lines, @Nonnull Set<String> fqns) {
+		final var toAdd = new TreeSet<>(fqns);
+
+		// remove already-present imports
+		var lastImportIdx = -1;
+		var packageIdx = -1;
+		for (var i = 0; i < lines.size(); ++i) {
+			final var line = lines.get(i);
+			if (line.startsWith("package "))
+				packageIdx = i;
+			else if (line.startsWith("import ") && !line.startsWith("import static ")) {
+				lastImportIdx = i;
+				if (line.endsWith(";"))
+					toAdd.remove(line.substring(7, line.length() - 1));
+			}
+		}
+
+		if (toAdd.isEmpty())
+			return 0;
+
+		if (lastImportIdx >= 0) {
+			for (var fqn : toAdd) {
+				final var importLine = "import " + fqn + ";";
+				final var targetPrefix = "import " + fqn.substring(0, fqn.lastIndexOf('.') + 1);
+
+				// find the same-package group boundaries
+				var groupStart = -1;
+				var groupEnd = -1;
+				for (var i = 0; i <= lastImportIdx; ++i) {
+					if (lines.get(i).startsWith(targetPrefix)) {
+						if (groupStart < 0)
+							groupStart = i;
+						groupEnd = i;
+					}
+				}
+
+				int insertIdx;
+				if (groupStart >= 0) {
+					// insert within the same-package group in sorted order
+					insertIdx = groupEnd + 1;
+					for (var i = groupStart; i <= groupEnd; ++i) {
+						if (lines.get(i).compareTo(importLine) > 0) {
+							insertIdx = i;
+							break;
+						}
+					}
+				}
+				else {
+					// no same-package group, fall back to global alphabetical
+					insertIdx = lastImportIdx + 1;
+					for (var i = 0; i <= lastImportIdx; ++i) {
+						final var line = lines.get(i);
+						if (line.startsWith("import ") && !line.startsWith("import static ")
+								&& line.compareTo(importLine) > 0) {
+							insertIdx = i;
+							break;
+						}
+					}
+				}
+
+				lines.add(insertIdx, importLine);
+				++lastImportIdx;
+			}
+		}
+		else if (packageIdx >= 0) {
+			// no existing imports, insert after package with blank line
+			var insertIdx = packageIdx + 1;
+			if (insertIdx < lines.size() && lines.get(insertIdx).isEmpty())
+				++insertIdx;
+			else
+				lines.add(insertIdx++, "");
+			for (var fqn : toAdd)
+				lines.add(insertIdx++, "import " + fqn + ";");
+		}
+		else {
+			// no package, no imports
+			var insertIdx = 0;
+			for (var fqn : toAdd)
+				lines.add(insertIdx++, "import " + fqn + ";");
+		}
+
+		return toAdd.size();
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static CheckstyleFixer resolveFixer(
+			@Nonnull AuditEvent event,
+			@Nonnull Map<String, CheckstyleFixer> fixers,
+			@Nonnull Map<String, CheckstyleFixer> moduleIdFixers
+	) {
+		final var fixer = fixers.get(event.getSourceName());
+		if (fixer != null)
+			return fixer;
+		final var moduleId = event.getModuleId();
+		if (moduleId != null)
+			return moduleIdFixers.get(moduleId);
+		return null;
+	}
+
+	/**
+	 * Converts a tab-expanded column (as reported by Checkstyle) to a
+	 * character index in the line. Checkstyle expands TABs to
+	 * {@link #TAB_WIDTH} when calculating column numbers.
+	 */
+	@CheckReturnValue
+	static int tabColumnToCharIndex(@Nonnull String line, int tabExpandedCol) {
+		var visualCol = 0;
+		for (var i = 0; i < line.length(); ++i) {
+			if (visualCol >= tabExpandedCol)
+				return i;
+			if (line.charAt(i) == '\t')
+				visualCol += TAB_WIDTH - (visualCol % TAB_WIDTH);
+			else
+				++visualCol;
+		}
+		return line.length();
 	}
 
 	@Override
 	public void execute() {
 		try {
-			doExecute();
+			final var checkerConfig = createCheckerConfig();
+
+			final var sourceDir = getParameters().getSource().get().getAsFile().toPath();
+			final List<File> files;
+			try (var stream = Files.walk(sourceDir)) {
+				files = stream
+						.filter(p -> p.toString().endsWith(".java"))
+						.map(Path::toFile)
+						.toList();
+			}
+
+			// Pass 1: apply all fixes. Pass 2: clean up cascading violations
+			// (e.g. imports that became unused after a fixer replaced their usage).
+			if (doExecute(checkerConfig, files))
+				doExecute(checkerConfig, files);
 		}
 		catch (CheckstyleException | IOException e) {
 			throw new RuntimeException("Checkstyle fix failed", e);

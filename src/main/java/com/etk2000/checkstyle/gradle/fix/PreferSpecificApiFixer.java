@@ -1,6 +1,8 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -119,10 +121,11 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	/**
 	 * {@code Collections.emptyList()} -> {@code List.of()},
 	 * {@code Collections.singletonList(x)} -> {@code List.of(x)}, etc.
+	 * Adds the required import (e.g. {@code java.util.List}) to the given set.
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixCollectionsFactory(@Nonnull String line) {
+	private static String fixCollectionsFactory(@Nonnull String line, @Nonnull Set<String> imports) {
 		final String[][] replacements = {
 				{"Collections.emptyList()", "List.of()"},
 				{"Collections.emptyMap()", "Map.of()"},
@@ -136,8 +139,10 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 		};
 		for (var r : replacements) {
 			final var idx = line.indexOf(r[0]);
-			if (idx >= 0)
+			if (idx >= 0) {
+				imports.add("java.util." + r[1].substring(0, r[1].indexOf('.')));
 				return line.substring(0, idx) + r[1] + line.substring(idx + r[0].length());
+			}
 		}
 		return null;
 	}
@@ -230,15 +235,17 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 		return line.substring(0, idx) + ".forEach(" + line.substring(idx + pattern.length());
 	}
 
+	@CheckReturnValue
 	@Nullable
 	@Override
 	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
+		final var imports = new TreeSet<String>();
 
 		// try each fixable pattern in turn
 		var result = fixAssertion(line);
 		if (result == null)
-			result = fixCollectionsFactory(line);
+			result = fixCollectionsFactory(line, imports);
 		if (result == null)
 			result = fixCollectToList(line);
 		if (result == null)
@@ -254,6 +261,8 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 
 		if (result == null)
 			return null;
-		return new FixResult(lineIndex, lineIndex, List.of(result));
+		if (imports.isEmpty())
+			return new FixResult(lineIndex, lineIndex, List.of(result));
+		return new FixResult(lineIndex, lineIndex, List.of(result), imports);
 	}
 }

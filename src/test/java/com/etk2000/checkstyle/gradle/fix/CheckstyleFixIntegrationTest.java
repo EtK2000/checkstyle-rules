@@ -2,6 +2,7 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.puppycrawl.tools.checkstyle.Checker;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
@@ -120,10 +121,22 @@ public class CheckstyleFixIntegrationTest {
 		return String.join("\n", lines);
 	}
 
+	@Nonnull
+	private String runFixMultiPass(@Nonnull File file) throws Exception {
+		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
+		for (var pass = 0; pass < 2; ++pass) {
+			Files.writeString(file.toPath(), String.join("\n", lines));
+			final var violations = runChecks(file);
+			if (CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS).fixCount() == 0)
+				break;
+		}
+		return String.join("\n", lines);
+	}
+
 	private int runFixPipeline(@Nonnull File file) throws Exception {
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		return CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		return CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS).fixCount();
 	}
 
 	@Test
@@ -322,8 +335,8 @@ public class CheckstyleFixIntegrationTest {
 		assertFalse(violations.isEmpty());
 
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		final var fixed = CheckstyleFixAction.applyFixes(lines, violations, Map.of(), Map.of());
-		assertEquals(0, fixed);
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, Map.of(), Map.of());
+		assertEquals(0, result.fixCount());
 	}
 
 	@Test
@@ -616,10 +629,10 @@ public class CheckstyleFixIntegrationTest {
 
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		final var fixed = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 
 		assertEquals("class T {\n\tvoid f() {\n\t\tfinal int x, y;\n\t}\n}", String.join("\n", lines));
-		assertEquals(1, fixed);
+		assertEquals(1, result.fixCount());
 	}
 
 	@Test
@@ -673,10 +686,10 @@ public class CheckstyleFixIntegrationTest {
 
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		final var fixed = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS);
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS);
 
 		assertEquals("class T {\n\tint[] a = {1};\n\tint[] b = {2};\n\tint[] c = {3};\n}", String.join("\n", lines));
-		assertEquals(3, fixed);
+		assertEquals(3, result.fixCount());
 	}
 
 	@Test
@@ -890,9 +903,123 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("CollFactory.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn Collections.singletonList(\"a\");\n\t}\n}");
 
+		final var violations = runChecks(file);
+		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		assertEquals("import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn List.of(\"a\");\n\t}\n}", String.join("\n", lines));
+		assertEquals(1, result.fixCount());
+		assertFalse(result.needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiCollectionsFactoryAddsImport() throws Exception {
+		final var file = tempDir.resolve("CollFactoryImp.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nclass T {\n\tObject run() {\n\t\treturn Collections.emptyList();\n\t}\n}");
+
+		final var violations = runChecks(file);
+		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		assertEquals("import java.util.Collections;\nimport java.util.List;\nclass T {\n\tObject run() {\n\t\treturn List.of();\n\t}\n}", String.join("\n", lines));
+		assertEquals(2, result.fixCount());
+		assertTrue(result.needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiCollectionsFactoryImportAlreadyPresent() throws Exception {
+		final var file = tempDir.resolve("CollFactoryPresent.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn Collections.emptyList();\n\t}\n}");
+
+		final var violations = runChecks(file);
+		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		assertEquals("import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn List.of();\n\t}\n}", String.join("\n", lines));
+		assertEquals(1, result.fixCount());
+		assertFalse(result.needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiCollectionsFactoryImportBetweenGroups() throws Exception {
+		final var file = tempDir.resolve("CollFactoryGroups.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\n\nimport javax.annotation.Nonnull;\nclass T {\n\t@Nonnull\n\tObject run() {\n\t\treturn Collections.emptyList();\n\t}\n}");
+
+		final var violations = runChecks(file);
+		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		assertEquals("import java.util.Collections;\nimport java.util.List;\n\nimport javax.annotation.Nonnull;\nclass T {\n\t@Nonnull\n\tObject run() {\n\t\treturn List.of();\n\t}\n}", String.join("\n", lines));
+		assertEquals(2, result.fixCount());
+		assertTrue(result.needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiCollectionsFactoryMultipleImports() throws Exception {
+		final var file = tempDir.resolve("CollFactoryMulti.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nclass T {\n\tObject a() {\n\t\treturn Collections.emptyList();\n\t}\n\tObject b() {\n\t\treturn Collections.emptyMap();\n\t}\n\tObject c() {\n\t\treturn Collections.emptySet();\n\t}\n}");
+
+		final var violations = runChecks(file);
+		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		assertEquals("import java.util.Collections;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Set;\nclass T {\n\tObject a() {\n\t\treturn List.of();\n\t}\n\tObject b() {\n\t\treturn Map.of();\n\t}\n\tObject c() {\n\t\treturn Set.of();\n\t}\n}", String.join("\n", lines));
+		assertEquals(6, result.fixCount());
+		assertTrue(result.needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiCollectionsFactoryMultipleImportsWithGroupSeparator() throws Exception {
+		final var file = tempDir.resolve("CollFactoryMultiGrp.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\n\nimport javax.annotation.Nonnull;\nclass T {\n\t@Nonnull\n\tObject a() {\n\t\treturn Collections.emptyList();\n\t}\n\t@Nonnull\n\tObject b() {\n\t\treturn Collections.emptySet();\n\t}\n}");
+
+		final var violations = runChecks(file);
+		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		assertEquals("import java.util.Collections;\nimport java.util.List;\nimport java.util.Set;\n\nimport javax.annotation.Nonnull;\nclass T {\n\t@Nonnull\n\tObject a() {\n\t\treturn List.of();\n\t}\n\t@Nonnull\n\tObject b() {\n\t\treturn Set.of();\n\t}\n}", String.join("\n", lines));
+		assertEquals(4, result.fixCount());
+		assertTrue(result.needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiCollectionsFactoryNeedsSecondPass() throws Exception {
+		final var file = tempDir.resolve("CollFactoryFlag.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nclass T {\n\tObject run() {\n\t\treturn Collections.emptyList();\n\t}\n}");
+
+		final var violations = runChecks(file);
+		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		assertEquals(2, result.fixCount());
+		assertTrue(result.needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiCollectionsFactoryPartialImport() throws Exception {
+		final var file = tempDir.resolve("CollFactoryPartial.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> a() {\n\t\treturn Collections.emptyList();\n\t}\n\tObject b() {\n\t\treturn Collections.emptySet();\n\t}\n}");
+
+		final var violations = runChecks(file);
+		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		assertEquals("import java.util.Collections;\nimport java.util.List;\nimport java.util.Set;\nclass T {\n\tList<String> a() {\n\t\treturn List.of();\n\t}\n\tObject b() {\n\t\treturn Set.of();\n\t}\n}", String.join("\n", lines));
+		assertEquals(3, result.fixCount());
+		assertTrue(result.needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiCollectionsFactoryRemovesUnusedImport() throws Exception {
+		final var file = tempDir.resolve("CollFactoryUnused.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nclass T {\n\tObject run() {\n\t\treturn Collections.emptyList();\n\t}\n}");
+
 		assertEquals(
-				"import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn List.of(\"a\");\n\t}\n}",
-				runFixAndGetResult(file)
+				"import java.util.List;\nclass T {\n\tObject run() {\n\t\treturn List.of();\n\t}\n}",
+				runFixMultiPass(file)
+		);
+	}
+
+	@Test
+	public void testPreferSpecificApiCollectionsFactoryRetainsUsedImport() throws Exception {
+		final var file = tempDir.resolve("CollFactoryUsed.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> a() {\n\t\treturn Collections.singletonList(\"a\");\n\t}\n\tvoid b(List<String> list) {\n\t\tCollections.sort(list);\n\t}\n}");
+
+		assertEquals(
+				"import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> a() {\n\t\treturn List.of(\"a\");\n\t}\n\tvoid b(List<String> list) {\n\t\tCollections.sort(list);\n\t}\n}",
+				runFixMultiPass(file)
 		);
 	}
 
@@ -916,6 +1043,18 @@ public class CheckstyleFixIntegrationTest {
 				"import java.util.Map;\nclass T {\n\tvoid run(Map<String, String> map) {\n\t\tif (map.containsKey(\"k\"))\n\t\t\treturn;\n\t}\n}",
 				runFixAndGetResult(file)
 		);
+	}
+
+	@Test
+	public void testPreferSpecificApiNoSecondPassForNonImportFix() throws Exception {
+		final var file = tempDir.resolve("NoImpFix.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tString run(String s) {\n\t\treturn s.replaceAll(\"foo\", \"bar\");\n\t}\n}");
+
+		final var violations = runChecks(file);
+		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		assertEquals(1, result.fixCount());
+		assertFalse(result.needsSecondPass());
 	}
 
 	@Test
