@@ -143,8 +143,23 @@ public class AnnotationOwnLineCheck extends AbstractCheck {
 			final var nextLine = i + 1 < annotations.size()
 					? annotations.get(i + 1).getLineNo()
 					: declLine;
-			if (nextLine - currentLastLine > 1)
-				log(currentLastLine, annotation.getColumnNo(), MSG_BLANK_LINE, AstUtil.annotationName(annotation));
+			if (nextLine - currentLastLine > 1) {
+				var inBlockComment = false;
+				for (var line = currentLastLine; line < nextLine - 1; ++line) {
+					final var trimmed = fileLines[line].stripLeading();
+					if (inBlockComment) {
+						if (trimmed.contains("*/"))
+							inBlockComment = false;
+						continue;
+					}
+					if (trimmed.startsWith("/*") && !trimmed.contains("*/"))
+						inBlockComment = true;
+					else if (fileLines[line].isBlank()) {
+						log(currentLastLine, annotation.getColumnNo(), MSG_BLANK_LINE, AstUtil.annotationName(annotation));
+						break;
+					}
+				}
+			}
 		}
 
 		// check alphabetical order

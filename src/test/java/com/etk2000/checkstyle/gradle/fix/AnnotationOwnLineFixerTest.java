@@ -35,8 +35,97 @@ public class AnnotationOwnLineFixerTest {
 	}
 
 	@Test
+	public void testBlankLineAfterBlockCommentBelow() {
+		final var lines = new ArrayList<>(List.of("\t@A", "\t/* block */", "", "\tvoid f() {}"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(List.of(), result.replacement());
+	}
+
+	@Test
+	public void testBlankLineAfterJavadocBelow() {
+		final var lines = new ArrayList<>(List.of("\t@A", "\t/** Javadoc. */", "", "\tvoid f() {}"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(List.of(), result.replacement());
+	}
+
+	@Test
+	public void testBlankLineAfterLineCommentBelow() {
+		final var lines = new ArrayList<>(List.of("\t@A", "\t// comment", "", "\tvoid f() {}"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(List.of(), result.replacement());
+	}
+
+	@Test
+	public void testBlankLineAfterMultiLineBlockCommentBelow() {
+		final var lines = new ArrayList<>(List.of("\t@A", "\t/*", "\t * comment", "\t */", "", "\tvoid f() {}"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals(4, result.startLine());
+		assertEquals(4, result.endLine());
+		assertEquals(List.of(), result.replacement());
+	}
+
+	@Test
+	public void testBlankLineAfterMultiLineBlockCommentWithInternalBlankBelow() {
+		final var lines = new ArrayList<>(List.of("\t@A", "\t/*", "\t * comment", "\t *", "\t * more", "\t */", "", "\tvoid f() {}"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals(6, result.startLine());
+		assertEquals(6, result.endLine());
+		assertEquals(List.of(), result.replacement());
+	}
+
+	@Test
+	public void testBlankLineBeforeBlockCommentBelow() {
+		final var lines = new ArrayList<>(List.of("\t@A", "", "\t/* block */", "\tvoid f() {}"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals(1, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(List.of(), result.replacement());
+	}
+
+	@Test
+	public void testBlankLineBeforeJavadocBelow() {
+		final var lines = new ArrayList<>(List.of("\t@A", "", "\t/** Javadoc. */", "\tvoid f() {}"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals(1, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(List.of(), result.replacement());
+	}
+
+	@Test
+	public void testBlankLineBeforeLineCommentBelow() {
+		final var lines = new ArrayList<>(List.of("\t@A", "", "\t// comment", "\tvoid f() {}"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals(1, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(List.of(), result.replacement());
+	}
+
+	@Test
+	public void testBlankLineBeforeMultiLineBlockCommentBelow() {
+		final var lines = new ArrayList<>(List.of("\t@A", "", "\t/*", "\t * comment", "\t */", "\tvoid f() {}"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals(1, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(List.of(), result.replacement());
+	}
+
+	@Test
 	public void testBlankLineBelow() {
-		// violation is on annotation before the blank line
 		final var lines = new ArrayList<>(List.of("\t@A", "", "\t@B", "\tvoid f() {}"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
@@ -47,7 +136,6 @@ public class AnnotationOwnLineFixerTest {
 
 	@Test
 	public void testBlankLineBelowMultiLineAnnotation() {
-		// violation is reported at annotation's last line (the closing paren line)
 		final var lines = new ArrayList<>(List.of("\t@V({", "\t\t\"a\"", "\t})", "", "\tvoid f() {}"));
 		final var result = fixer.fix(lines, 2, 0);
 		assertNotNull(result);
@@ -58,13 +146,22 @@ public class AnnotationOwnLineFixerTest {
 
 	@Test
 	public void testBlankLineInsideAnnotation() {
-		// violation is on the blank line itself
 		final var lines = new ArrayList<>(List.of("\t@V({", "", "\t\t\"a\"", "\t})", "\tvoid f() {}"));
 		final var result = fixer.fix(lines, 1, 0);
 		assertNotNull(result);
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of(), result.replacement());
+	}
+
+	@Test
+	public void testBlankLineInsideBlockCommentNoBlankAfter() {
+		final var lines = new ArrayList<>(List.of("\t@B", "\t@A", "\t/*", "", "\t */", "\tvoid f() {}"));
+		final var result = fixer.fix(lines, 1, 0);
+		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(List.of("\t@A", "\t@B"), result.replacement());
 	}
 
 	@Test
@@ -111,6 +208,16 @@ public class AnnotationOwnLineFixerTest {
 	@Test
 	public void testReorderBlock() {
 		final var lines = new ArrayList<>(List.of("\t@B", "\t@A", "\tvoid f() {}"));
+		final var result = fixer.fix(lines, 1, 0);
+		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(List.of("\t@A", "\t@B"), result.replacement());
+	}
+
+	@Test
+	public void testReorderBlockCommentBelowNoBlank() {
+		final var lines = new ArrayList<>(List.of("\t@B", "\t@A", "\t// comment", "\tvoid f() {}"));
 		final var result = fixer.fix(lines, 1, 0);
 		assertNotNull(result);
 		assertEquals(0, result.startLine());

@@ -14,28 +14,63 @@ public class AnnotationOwnLineCheckTest {
 	@Test
 	public void testBlankLineViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, DIR + "InputAnnotationOwnLineBlankViolation.java");
-		assertEquals(6, violations.size());
+		assertEquals(14, violations.size());
 
 		assertEquals(10, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("No blank line after annotation 'A'.", violations.get(0).getMessage());
 
 		assertEquals(14, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("No blank line after annotation 'A'.", violations.get(1).getMessage());
 
 		assertEquals(19, violations.get(2).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(2).getSeverityLevel());
 		assertEquals("No blank line after annotation 'A'.", violations.get(2).getMessage());
 
-		assertEquals(25, violations.get(3).getLine());
+		assertEquals(23, violations.get(3).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(3).getSeverityLevel());
-		assertEquals("No blank line after annotation 'V'.", violations.get(3).getMessage());
+		assertEquals("No blank line after annotation 'A'.", violations.get(3).getMessage());
 
-		assertEquals(29, violations.get(4).getLine());
+		assertEquals(28, violations.get(4).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(4).getSeverityLevel());
 		assertEquals("No blank line after annotation 'A'.", violations.get(4).getMessage());
 
-		assertEquals(37, violations.get(5).getLine());
+		assertEquals(33, violations.get(5).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(5).getSeverityLevel());
-		assertEquals("No blank line inside annotation 'V'.", violations.get(5).getMessage());
+		assertEquals("No blank line after annotation 'A'.", violations.get(5).getMessage());
+
+		assertEquals(38, violations.get(6).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(6).getSeverityLevel());
+		assertEquals("No blank line after annotation 'A'.", violations.get(6).getMessage());
+
+		assertEquals(46, violations.get(7).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(7).getSeverityLevel());
+		assertEquals("No blank line after annotation 'A'.", violations.get(7).getMessage());
+
+		assertEquals(51, violations.get(8).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(8).getSeverityLevel());
+		assertEquals("No blank line after annotation 'A'.", violations.get(8).getMessage());
+
+		assertEquals(56, violations.get(9).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(9).getSeverityLevel());
+		assertEquals("No blank line after annotation 'A'.", violations.get(9).getMessage());
+
+		assertEquals(61, violations.get(10).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(10).getSeverityLevel());
+		assertEquals("No blank line after annotation 'A'.", violations.get(10).getMessage());
+
+		assertEquals(71, violations.get(11).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(11).getSeverityLevel());
+		assertEquals("No blank line after annotation 'V'.", violations.get(11).getMessage());
+
+		assertEquals(75, violations.get(12).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(12).getSeverityLevel());
+		assertEquals("No blank line after annotation 'A'.", violations.get(12).getMessage());
+
+		assertEquals(83, violations.get(13).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(13).getSeverityLevel());
+		assertEquals("No blank line inside annotation 'V'.", violations.get(13).getMessage());
 	}
 
 	@Test

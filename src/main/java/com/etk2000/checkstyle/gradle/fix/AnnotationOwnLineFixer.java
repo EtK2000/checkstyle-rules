@@ -3,10 +3,25 @@ package com.etk2000.checkstyle.gradle.fix;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 class AnnotationOwnLineFixer implements CheckstyleFixer {
+	@CheckReturnValue
+	private static boolean isInsideOrStartsComment(@Nonnull String line, boolean inBlockComment) {
+		if (inBlockComment)
+			return true;
+		final var stripped = line.stripLeading();
+		return stripped.startsWith("//") || stripped.startsWith("/*") || stripped.startsWith("*");
+	}
+
+	@CheckReturnValue
+	private static boolean startsBlockComment(@Nonnull String line) {
+		final var stripped = line.stripLeading();
+		return stripped.startsWith("/*") && !stripped.contains("*/");
+	}
+
 	@Nullable
 	@Override
 	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
@@ -41,12 +56,25 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 
 		// single annotation on its own line
 
-		// case 2: blank line below - remove blank lines (violation is on annotation before the blank)
-		if (lineIndex + 1 < lines.size() && lines.get(lineIndex + 1).isBlank()) {
-			var lastBlank = lineIndex + 1;
-			while (lastBlank + 1 < lines.size() && lines.get(lastBlank + 1).isBlank())
-				++lastBlank;
-			return new FixResult(lineIndex + 1, lastBlank, List.of());
+		// case 2: blank line below (possibly after comment lines) - remove blank lines
+		{
+			var scan = lineIndex + 1;
+			var inBlock = false;
+			while (scan < lines.size() && isInsideOrStartsComment(lines.get(scan), inBlock)) {
+				if (inBlock) {
+					if (lines.get(scan).stripLeading().contains("*/"))
+						inBlock = false;
+				}
+				else if (startsBlockComment(lines.get(scan)))
+					inBlock = true;
+				++scan;
+			}
+			if (scan < lines.size() && lines.get(scan).isBlank()) {
+				var lastBlank = scan;
+				while (lastBlank + 1 < lines.size() && lines.get(lastBlank + 1).isBlank())
+					++lastBlank;
+				return new FixResult(scan, lastBlank, List.of());
+			}
 		}
 
 		// case 3: alphabetical order - collect block, sort, replace

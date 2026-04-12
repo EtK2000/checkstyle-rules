@@ -138,6 +138,105 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testAnnotationOwnLineBlankAfterBlockComment() throws Exception {
+		final var file = tempDir.resolve("AnnBlankBlock.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\t/* block */\n\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@Deprecated\n\t/* block */\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testAnnotationOwnLineBlankAfterJavadoc() throws Exception {
+		final var file = tempDir.resolve("AnnBlankJavadoc.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\t/** Javadoc. */\n\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@Deprecated\n\t/** Javadoc. */\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testAnnotationOwnLineBlankAfterLineComment() throws Exception {
+		final var file = tempDir.resolve("AnnBlankComment.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\t// comment\n\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@Deprecated\n\t// comment\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testAnnotationOwnLineBlankAfterMultiLineBlockComment() throws Exception {
+		final var file = tempDir.resolve("AnnBlankMultiBlock.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\t/*\n\t * comment\n\t */\n\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@Deprecated\n\t/*\n\t * comment\n\t */\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testAnnotationOwnLineBlankAfterMultiLineBlockCommentWithInternalBlank() throws Exception {
+		final var file = tempDir.resolve("AnnBlankAfterMultiBlockInternal.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\t/*\n\t * comment\n\t *\n\t * more\n\t */\n\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@Deprecated\n\t/*\n\t * comment\n\t *\n\t * more\n\t */\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testAnnotationOwnLineBlankBeforeBlockComment() throws Exception {
+		final var file = tempDir.resolve("AnnBlankBeforeBlock.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\n\t/* block */\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@Deprecated\n\t/* block */\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testAnnotationOwnLineBlankBeforeJavadoc() throws Exception {
+		final var file = tempDir.resolve("AnnBlankBeforeJavadoc.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\n\t/** Javadoc. */\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@Deprecated\n\t/** Javadoc. */\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testAnnotationOwnLineBlankBeforeLineComment() throws Exception {
+		final var file = tempDir.resolve("AnnBlankBeforeLine.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\n\t// comment\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@Deprecated\n\t// comment\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
+	public void testAnnotationOwnLineBlankBeforeMultiLineBlockComment() throws Exception {
+		final var file = tempDir.resolve("AnnBlankBeforeMultiBlock.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\n\t/*\n\t * comment\n\t */\n\tvoid method() {}\n}");
+
+		assertEquals(
+				"class T {\n\t@Deprecated\n\t/*\n\t * comment\n\t */\n\tvoid method() {}\n}",
+				runFixAndGetResult(file)
+		);
+	}
+
+	@Test
 	public void testAnnotationOwnLineBlankMultiLine() throws Exception {
 		final var file = tempDir.resolve("AnnBlankMulti.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@SuppressWarnings({\n\t\t\"unchecked\",\n\t\t\"rawtypes\"\n\t})\n\n\tvoid method() {}\n}");

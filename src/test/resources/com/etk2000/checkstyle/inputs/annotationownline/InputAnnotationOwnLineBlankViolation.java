@@ -20,6 +20,52 @@ class InputAnnotationOwnLineBlankViolation {
 
 	void blankBeforeMethod() {}
 
+	@A // violation: No blank line after annotation 'A'.
+	/* block comment */
+
+	void blankLineAfterBlockCommentBetweenAnnotationAndDecl() {}
+
+	@A // violation: No blank line after annotation 'A'.
+	/** Javadoc comment. */
+
+	void blankLineAfterJavadocBetweenAnnotationAndDecl() {}
+
+	@A // violation: No blank line after annotation 'A'.
+	// line comment
+
+	void blankLineAfterLineCommentBetweenAnnotationAndDecl() {}
+
+	@A // violation: No blank line after annotation 'A'.
+	/*
+	 * multi-line
+	 * block comment
+	 */
+
+	void blankLineAfterMultiLineBlockCommentBetweenAnnotationAndDecl() {}
+
+	@A // violation: No blank line after annotation 'A'.
+
+	/* block comment */
+	void blankLineBeforeBlockCommentBetweenAnnotationAndDecl() {}
+
+	@A // violation: No blank line after annotation 'A'.
+
+	/** Javadoc comment. */
+	void blankLineBeforeJavadocBetweenAnnotationAndDecl() {}
+
+	@A // violation: No blank line after annotation 'A'.
+
+	// line comment
+	void blankLineBeforeLineCommentBetweenAnnotationAndDecl() {}
+
+	@A // violation: No blank line after annotation 'A'.
+
+	/*
+	 * multi-line
+	 * block comment
+	 */
+	void blankLineBeforeMultiLineBlockCommentBetweenAnnotationAndDecl() {}
+
 	@V({
 		"a"
 	}) // violation: No blank line after annotation 'V'.

@@ -85,6 +85,52 @@ class InputAnnotationOwnLineClean {
 
 	@A
 	@B
+	/* block comment */
+	void methodWithBlockCommentAfterAnnotation() {}
+
+	@A
+	@B
+	/** Javadoc comment. */
+	void methodWithJavadocAfterAnnotation() {}
+
+	@A
+	@B
+	/**
+	 * Javadoc comment.
+	 *
+	 * <p>With blank line inside.
+	 */
+	void methodWithJavadocWithBlankLineAfterAnnotation() {}
+
+	@A
+	@B
+	// line comment
+	void methodWithLineCommentAfterAnnotation() {}
+
+	@A
+	// line comment
+	@B
+	void methodWithLineCommentBetweenAnnotations() {}
+
+	@A
+	@B
+	/*
+	 * multi-line
+	 * block comment
+	 */
+	void methodWithMultiLineBlockCommentAfterAnnotation() {}
+
+	@A
+	@B
+	/*
+	 * block comment
+	 *
+	 * with blank line inside
+	 */
+	void methodWithMultiLineBlockCommentWithBlankLineAfterAnnotation() {}
+
+	@A
+	@B
 	@C
 	void multiAnnotatedMethod() {}
 
