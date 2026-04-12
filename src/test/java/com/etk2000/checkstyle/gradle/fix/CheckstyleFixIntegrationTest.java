@@ -32,11 +32,19 @@ public class CheckstyleFixIntegrationTest {
 
 	@Nonnull
 	private List<AuditEvent> runChecks(@Nonnull File file) throws Exception {
+		return runChecks(file, String.valueOf(Integer.MAX_VALUE));
+	}
+
+	@Nonnull
+	private List<AuditEvent> runChecks(@Nonnull File file, @Nonnull String minSdk) throws Exception {
 		final var treeWalkerConfig = new DefaultConfiguration(TreeWalker.class.getName());
 		for (var checkName : CheckstyleFixAction.FIXERS.keySet()) {
 			final var checkConfig = new DefaultConfiguration(checkName);
 			if (checkName.endsWith("FinalLocalVariableCheck"))
 				checkConfig.addProperty("validateEnhancedForLoopVariable", "false");
+			if (checkName.endsWith("PreferMathMethodCheck")
+					|| checkName.endsWith("PreferSpecificApiCheck"))
+				checkConfig.addProperty("minSdk", minSdk);
 			treeWalkerConfig.addChild(checkConfig);
 		}
 
@@ -119,7 +127,12 @@ public class CheckstyleFixIntegrationTest {
 
 	@Nonnull
 	private FixOutput runFixAndGetResult(@Nonnull File file) throws Exception {
-		final var violations = runChecks(file);
+		return runFixAndGetResult(file, String.valueOf(Integer.MAX_VALUE));
+	}
+
+	@Nonnull
+	private FixOutput runFixAndGetResult(@Nonnull File file, @Nonnull String minSdk) throws Exception {
+		final var violations = runChecks(file, minSdk);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 		return new FixOutput(String.join("\n", lines), result);
@@ -839,6 +852,48 @@ public class CheckstyleFixIntegrationTest {
 
 		assertEquals("class T {\n\tint[] a = {1};\n\tint[] b = {2};\n\tint[] c = {3};\n}", String.join("\n", lines));
 		assertEquals(3, result.fixCount());
+	}
+
+	@Test
+	public void testMinSdkGatesCollectionsSort() throws Exception {
+		final var file = tempDir.resolve("MinSort.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tCollections.sort(list);\n\t}\n}");
+
+		// minSdk 23: below API 24 threshold, sort should NOT be fixed
+		final var below = runFixAndGetResult(file, "23");
+		assertEquals(0, below.result().fixCount());
+
+		// minSdk 24: at threshold, sort should be fixed
+		final var at = runFixAndGetResult(file, "24");
+		assertEquals(1, at.result().fixCount());
+	}
+
+	@Test
+	public void testMinSdkGatesStringFormat() throws Exception {
+		final var file = tempDir.resolve("MinFmt.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tString run(String name) {\n\t\treturn String.format(\"Hello %s\", name);\n\t}\n}");
+
+		// minSdk 33: below API 34 threshold, formatted should NOT be fixed
+		final var below = runFixAndGetResult(file, "33");
+		assertEquals(0, below.result().fixCount());
+
+		// minSdk 34: at threshold, formatted should be fixed
+		final var at = runFixAndGetResult(file, "34");
+		assertEquals(1, at.result().fixCount());
+	}
+
+	@Test
+	public void testMinSdkGatesToArray() throws Exception {
+		final var file = tempDir.resolve("MinArr.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tString[] run(List<String> list) {\n\t\treturn list.toArray(new String[0]);\n\t}\n}");
+
+		// minSdk 32: below API 33 threshold, toArray should NOT be fixed
+		final var below = runFixAndGetResult(file, "32");
+		assertEquals(0, below.result().fixCount());
+
+		// minSdk 33: at threshold, toArray should be fixed
+		final var at = runFixAndGetResult(file, "33");
+		assertEquals(1, at.result().fixCount());
 	}
 
 	@Test

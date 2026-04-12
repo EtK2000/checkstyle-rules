@@ -3,7 +3,9 @@ package com.etk2000.checkstyle.gradle.fix;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Classpath;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.work.DisableCachingByDefault;
@@ -25,12 +27,18 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 				spec.getClasspath().from(getCheckstyleClasspath())
 		).submit(
 				CheckstyleFixAction.class,
-				params -> params.getSource().set(getSource())
+				params -> {
+					params.getMinSdk().set(getMinSdk());
+					params.getSource().set(getSource());
+				}
 		);
 	}
 
 	@Classpath
 	public abstract ConfigurableFileCollection getCheckstyleClasspath();
+
+	@Input
+	public abstract Property<String> getMinSdk();
 
 	@Internal
 	public abstract DirectoryProperty getSource();

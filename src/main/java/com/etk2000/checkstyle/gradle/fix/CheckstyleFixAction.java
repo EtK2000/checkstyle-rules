@@ -32,6 +32,7 @@ import com.puppycrawl.tools.checkstyle.checks.imports.UnusedImportsCheck;
 import com.puppycrawl.tools.checkstyle.checks.modifier.RedundantModifierCheck;
 
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.provider.Property;
 import org.gradle.workers.WorkAction;
 import org.gradle.workers.WorkParameters;
 
@@ -56,6 +57,8 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 	record ApplyFixesResult(int fixCount, boolean needsSecondPass) {}
 
 	interface Params extends WorkParameters {
+		Property<String> getMinSdk();
+
 		DirectoryProperty getSource();
 	}
 
@@ -169,13 +172,16 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 
 	@CheckReturnValue
 	@Nonnull
-	private static DefaultConfiguration createCheckerConfig() {
+	private static DefaultConfiguration createCheckerConfig(@Nonnull String minSdk) {
 		final var treeWalkerConfig = new DefaultConfiguration(TreeWalker.class.getName());
 		treeWalkerConfig.addProperty("tabWidth", String.valueOf(TAB_WIDTH));
 		for (var checkName : FIXERS.keySet()) {
 			final var checkConfig = new DefaultConfiguration(checkName);
 			if (checkName.equals(FinalLocalVariableCheck.class.getName()))
 				checkConfig.addProperty("validateEnhancedForLoopVariable", "false");
+			if (checkName.equals(PreferMathMethodCheck.class.getName())
+					|| checkName.equals(PreferSpecificApiCheck.class.getName()))
+				checkConfig.addProperty("minSdk", minSdk);
 			treeWalkerConfig.addChild(checkConfig);
 		}
 
@@ -425,7 +431,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 	@Override
 	public void execute() {
 		try {
-			final var checkerConfig = createCheckerConfig();
+			final var checkerConfig = createCheckerConfig(getParameters().getMinSdk().get());
 
 			final var sourceDir = getParameters().getSource().get().getAsFile().toPath();
 			final List<File> files;

@@ -137,6 +137,7 @@ public class CheckstylePlugin implements Plugin<Project> {
 					task.setDescription("Auto-fix simple checkstyle violations in main sources.");
 					task.setGroup("verification");
 					task.getCheckstyleClasspath().from(checkstyleConfig);
+					task.getMinSdk().set(project.provider(() -> resolveMinSdk(project)));
 					task.getSource().set(project.file("src/main/java"));
 				}
 		);
@@ -159,6 +160,7 @@ public class CheckstylePlugin implements Plugin<Project> {
 					task.setDescription("Auto-fix simple checkstyle violations in test sources.");
 					task.setGroup("verification");
 					task.getCheckstyleClasspath().from(checkstyleConfig);
+					task.getMinSdk().set(project.provider(() -> resolveMinSdk(project)));
 					task.onlyIf(t -> testDir.exists());
 					task.getSource().set(testDir);
 				}
