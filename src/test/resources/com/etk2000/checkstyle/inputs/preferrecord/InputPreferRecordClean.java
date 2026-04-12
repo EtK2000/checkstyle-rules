@@ -206,6 +206,25 @@ class RhsNotSimple {
 	}
 }
 
+class WithExtendsAndImplements extends AbstractClass implements Cloneable {
+	final String name;
+
+	WithExtendsAndImplements(String name) {
+		super(0);
+		this.name = name;
+	}
+}
+
+class WithImplementsNonFinalField implements Cloneable {
+	int mutable;
+	final int immutable;
+
+	WithImplementsNonFinalField(int mutable, int immutable) {
+		this.immutable = immutable;
+		this.mutable = mutable;
+	}
+}
+
 class WrongParamType {
 	final long value;
 

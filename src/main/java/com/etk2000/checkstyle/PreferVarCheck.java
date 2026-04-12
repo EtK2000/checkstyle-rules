@@ -3,6 +3,7 @@ package com.etk2000.checkstyle;
 import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.HashSet;
@@ -275,7 +276,8 @@ public class PreferVarCheck extends AbstractCheck {
 		var methodCount = 0;
 		for (var child = objBlock.getFirstChild(); child != null; child = child.getNextSibling()) {
 			switch (child.getType()) {
-				case TokenTypes.LCURLY, TokenTypes.RCURLY -> {}
+				case TokenTypes.LCURLY, TokenTypes.RCURLY -> {
+				}
 				case TokenTypes.METHOD_DEF -> {
 					if (++methodCount > 1)
 						return false;
@@ -400,7 +402,8 @@ public class PreferVarCheck extends AbstractCheck {
 			case "double", "float", "long" -> true; // add ./F/L
 			default -> false;
 		}) || switch (declaredType) {
-			case "double" -> "float".equals(inferredType) || "long".equals(inferredType); // remove f / change L to .
+			case "double" ->
+					"float".equals(inferredType) || "long".equals(inferredType); // remove f / change L to .
 			case "float" -> "double".equals(inferredType); // add f
 			default -> false;
 		};
@@ -487,7 +490,7 @@ public class PreferVarCheck extends AbstractCheck {
 
 	private void logWarning(@Nonnull DetailAST ast, @Nonnull String msgKey, @Nonnull Object... args) {
 		final var savedSeverity = getSeverity();
-		setSeverity("warning");
+		setSeverity(SeverityLevel.WARNING.getName());
 		log(ast, msgKey, args);
 		setSeverity(savedSeverity);
 	}

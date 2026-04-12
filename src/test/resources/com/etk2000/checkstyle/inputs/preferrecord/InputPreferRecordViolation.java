@@ -4,7 +4,8 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
-@interface Ann {}
+@interface Ann {
+}
 
 class InputPreferRecordViolation { // violation: class should be a record
 	final int x;
@@ -225,10 +226,36 @@ class SingleField { // violation: class should be a record
 	}
 }
 
-class WithImplements implements Cloneable { // violation: class should be a record
+class WithGenericImplements implements Comparable<WithGenericImplements> { // violation (warning): class should be a record
+	final int value;
+
+	WithGenericImplements(int value) {
+		this.value = value;
+	}
+
+	@Override
+	public int compareTo(WithGenericImplements o) {
+		return Integer.compare(value, o.value);
+	}
+}
+
+class WithImplements implements Cloneable { // violation (warning): class should be a record
 	final int value;
 
 	WithImplements(int value) {
 		this.value = value;
+	}
+}
+
+class WithMultipleImplements implements Cloneable, Comparable<WithMultipleImplements> { // violation (warning): class should be a record
+	final int value;
+
+	WithMultipleImplements(int value) {
+		this.value = value;
+	}
+
+	@Override
+	public int compareTo(WithMultipleImplements o) {
+		return Integer.compare(value, o.value);
 	}
 }

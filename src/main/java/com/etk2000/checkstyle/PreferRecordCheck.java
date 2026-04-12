@@ -2,6 +2,7 @@ package com.etk2000.checkstyle;
 
 import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.Set;
@@ -33,6 +34,12 @@ public class PreferRecordCheck extends AbstractCheck {
 	private static boolean hasExtendsClause(@Nonnull DetailAST classDef) {
 		final var extendsClause = classDef.findFirstToken(TokenTypes.EXTENDS_CLAUSE);
 		return extendsClause != null && extendsClause.getChildCount() > 0;
+	}
+
+	@CheckReturnValue
+	private static boolean hasImplementsClause(@Nonnull DetailAST classDef) {
+		final var implementsClause = classDef.findFirstToken(TokenTypes.IMPLEMENTS_CLAUSE);
+		return implementsClause != null && implementsClause.getChildCount() > 0;
 	}
 
 	@CheckReturnValue
@@ -182,6 +189,13 @@ public class PreferRecordCheck extends AbstractCheck {
 			return;
 
 		final var ident = ast.findFirstToken(TokenTypes.IDENT);
-		log(ast, MSG_KEY, ident != null ? ident.getText() : "<unknown>");
+		if (hasImplementsClause(ast)) {
+			final var savedSeverity = getSeverity();
+			setSeverity(SeverityLevel.WARNING.getName());
+			log(ast, MSG_KEY, ident != null ? ident.getText() : "<unknown>");
+			setSeverity(savedSeverity);
+		}
+		else
+			log(ast, MSG_KEY, ident != null ? ident.getText() : "<unknown>");
 	}
 }
