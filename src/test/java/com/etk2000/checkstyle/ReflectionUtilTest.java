@@ -5,14 +5,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Set;
-import java.util.stream.Stream;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.Set;
+import java.util.stream.Stream;
+
+import javax.annotation.Nonnull;
 
 public class ReflectionUtilTest {
 	static Stream<Arguments> findCollectionInterfaceConcreteTypes() {
@@ -201,6 +203,31 @@ public class ReflectionUtilTest {
 	@Test
 	public void testHasMethodUnknownClass() {
 		assertFalse(ReflectionUtil.hasMethod("com.nonexistent.FakeClass", "method"));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {
+			"java.lang.String",
+			"java.lang.Object",
+			"java.io.File",
+			"java.util.ArrayList",
+			"com.nonexistent.FakeClass"
+	})
+	public void testIsCharSequenceNotStringFalse(@Nonnull String fqcn) {
+		assertFalse(ReflectionUtil.isCharSequenceNotString(fqcn));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {
+			"java.lang.CharSequence",
+			"java.lang.StringBuffer",
+			"java.lang.StringBuilder",
+			"java.nio.CharBuffer",
+			"javax.lang.model.element.Name",
+			"javax.swing.text.Segment"
+	})
+	public void testIsCharSequenceNotStringTrue(@Nonnull String fqcn) {
+		assertTrue(ReflectionUtil.isCharSequenceNotString(fqcn));
 	}
 
 	@Test

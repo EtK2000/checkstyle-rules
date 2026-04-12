@@ -447,12 +447,12 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		final var normalizedOp = indexOfOnLeft
 				? ast.getType()
 				: switch (ast.getType()) {
-					case TokenTypes.GE -> TokenTypes.LE;
-					case TokenTypes.GT -> TokenTypes.LT;
-					case TokenTypes.LE -> TokenTypes.GE;
-					case TokenTypes.LT -> TokenTypes.GT;
-					default -> ast.getType();
-				};
+			case TokenTypes.GE -> TokenTypes.LE;
+			case TokenTypes.GT -> TokenTypes.LT;
+			case TokenTypes.LE -> TokenTypes.GE;
+			case TokenTypes.LT -> TokenTypes.GT;
+			default -> ast.getType();
+		};
 
 		// with indexOf on the left: != -1 and >= 0 mean "contains", == -1 and < 0 mean "not contains"
 		return switch (normalizedOp) {
@@ -1304,13 +1304,46 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 	private boolean receiverHasMethod(@Nonnull DetailAST methodCall, @Nonnull String methodName) {
 		final var receiverTypeName = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
 		if (receiverTypeName == null)
-			return true; // can't resolve, assume it has the method
+			return true;
 
 		final var fqcn = ReflectionUtil.resolveClassName(receiverTypeName, packageName, imports);
 		if (fqcn == null)
-			return true; // can't resolve, assume it has the method
+			return true;
 
 		return ReflectionUtil.hasMethod(fqcn, methodName);
+	}
+
+	/**
+	 * Like {@link #receiverHasMethod} but returns {@code false} when the
+	 * type can't be resolved. Used for isEmpty replacements where a wrong
+	 * suggestion would break compilation (e.g. {@code File.length() > 0}
+	 * has no {@code isEmpty()}).
+	 */
+	@CheckReturnValue
+	private boolean receiverHasMethodStrict(@Nonnull DetailAST methodCall, @Nonnull String methodName) {
+		final var receiverTypeName = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
+		if (receiverTypeName == null)
+			return false;
+
+		final var fqcn = ReflectionUtil.resolveClassName(receiverTypeName, packageName, imports);
+		if (fqcn == null)
+			return false;
+
+		return ReflectionUtil.hasMethod(fqcn, methodName);
+	}
+
+	/**
+	 * Checks whether the receiver's {@code isEmpty()} comes from
+	 * {@link CharSequence} (API 35) rather than {@link String} (API 1).
+	 * Returns {@code false} if the receiver type can't be resolved.
+	 */
+	@CheckReturnValue
+	private boolean receiverIsCharSequenceNotString(@Nonnull DetailAST methodCall) {
+		final var typeName = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
+		if (typeName == null)
+			return false;
+		final var fqcn = ReflectionUtil.resolveClassName(typeName, packageName, imports);
+		return fqcn != null && ReflectionUtil.isCharSequenceNotString(fqcn);
 	}
 
 	/**
@@ -1393,8 +1426,11 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		final var calls = new ArrayList<DetailAST>();
 		collectEqualsEmptyStringCalls(ast, calls);
 		for (var call : calls) {
-			if (receiverHasMethod(call, "isEmpty"))
-				log(call, MSG_METHOD, ".isEmpty()", ".equals(\"\")");
+			if (!receiverHasMethodStrict(call, "isEmpty"))
+				continue;
+			if (minSdk < 35 && receiverIsCharSequenceNotString(call))
+				continue;
+			log(call, MSG_METHOD, ".isEmpty()", ".equals(\"\")");
 		}
 	}
 
@@ -1579,7 +1615,10 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		collectSizeEmptyComparisons(ast, comparisons);
 		for (var comparison : comparisons) {
 			final var sizeCall = sizeCallFromComparison(comparison);
-			if (sizeCall == null || !receiverHasMethod(sizeCall, "isEmpty"))
+			if (sizeCall == null || !receiverHasMethodStrict(sizeCall, "isEmpty"))
+				continue;
+
+			if (minSdk < 35 && receiverIsCharSequenceNotString(sizeCall))
 				continue;
 
 			final var replacement = isEmptyReplacement(comparison);

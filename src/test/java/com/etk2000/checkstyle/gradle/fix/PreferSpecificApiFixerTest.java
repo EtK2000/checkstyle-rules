@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -344,6 +346,73 @@ public class PreferSpecificApiFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tif (map.containsKey(\"key\"))", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testLengthIsEmptyAlreadyNegated() {
+		final var lines = new ArrayList<>(List.of("\t\tif (!str.length() > 0)"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (str.isEmpty())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testLengthIsEmptyComplexReceiverReturnsNull() {
+		final var lines = new ArrayList<>(List.of("\t\tif (getStr().length() > 0)"));
+		assertNull(fixer.fix(lines, 0, 0));
+	}
+
+	@Test
+	public void testLengthIsEmptyDottedReceiver() {
+		final var lines = new ArrayList<>(List.of("\t\tif (obj.name.length() > 0)"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (!obj.name.isEmpty())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@CsvSource({
+			// .length() positive normal
+			"str.length() == 0,    str.isEmpty()",
+			"str.length() <= 0,    str.isEmpty()",
+			"str.length() < 1,     str.isEmpty()",
+			// .length() negated normal
+			"str.length() != 0,    !str.isEmpty()",
+			"str.length() > 0,     !str.isEmpty()",
+			"str.length() >= 1,    !str.isEmpty()",
+			// .length() positive reversed
+			"0 == str.length(),    str.isEmpty()",
+			"0 >= str.length(),    str.isEmpty()",
+			"1 > str.length(),     str.isEmpty()",
+			// .length() negated reversed
+			"0 != str.length(),    !str.isEmpty()",
+			"0 < str.length(),     !str.isEmpty()",
+			"1 <= str.length(),    !str.isEmpty()",
+			// .size() positive normal
+			"list.size() == 0,     list.isEmpty()",
+			"list.size() <= 0,     list.isEmpty()",
+			"list.size() < 1,      list.isEmpty()",
+			// .size() negated normal
+			"list.size() != 0,     !list.isEmpty()",
+			"list.size() > 0,      !list.isEmpty()",
+			"list.size() >= 1,     !list.isEmpty()",
+			// .size() positive reversed
+			"0 == list.size(),     list.isEmpty()",
+			"0 >= list.size(),     list.isEmpty()",
+			"1 > list.size(),      list.isEmpty()",
+			// .size() negated reversed
+			"0 != list.size(),     !list.isEmpty()",
+			"0 < list.size(),      !list.isEmpty()",
+			"1 <= list.size(),     !list.isEmpty()"
+	})
+	@ParameterizedTest
+	public void testLengthOrSizeIsEmpty(String input, String expected) {
+		final var lines = new ArrayList<>(List.of("\t\tif (" + input.strip() + ")"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (" + expected.strip() + ")", result.replacement().getFirst());
 		assertTrue(result.importsToAdd().isEmpty());
 	}
 

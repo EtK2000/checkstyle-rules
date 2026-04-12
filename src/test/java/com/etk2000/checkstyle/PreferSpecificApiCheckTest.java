@@ -297,7 +297,7 @@ public class PreferSpecificApiCheckTest {
 	@Test
 	public void testIsEmptyViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiIsEmptyViolation.java");
-		assertEquals(13, violations.size());
+		assertEquals(15, violations.size());
 
 		var i = 0;
 		assertEquals(7, violations.get(i).getLine());
@@ -305,40 +305,55 @@ public class PreferSpecificApiCheckTest {
 		assertEquals("Use '.isEmpty()' instead of '.length() == 0'.", violations.get(i++).getMessage());
 		assertEquals(12, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals("Use '.!isEmpty()' instead of '.length() > 0'.", violations.get(i++).getMessage());
+		assertEquals("Use '.isEmpty()' instead of '.length() == 0'.", violations.get(i++).getMessage());
 		assertEquals(17, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals("Use '.isEmpty()' instead of '1 > .size()'.", violations.get(i++).getMessage());
+		assertEquals("Use '.!isEmpty()' instead of '.length() > 0'.", violations.get(i++).getMessage());
 		assertEquals(22, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals("Use '.!isEmpty()' instead of '1 <= .size()'.", violations.get(i++).getMessage());
+		assertEquals("Use '.isEmpty()' instead of '1 > .size()'.", violations.get(i++).getMessage());
 		assertEquals(27, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals("Use '.isEmpty()' instead of '.size() == 0'.", violations.get(i++).getMessage());
+		assertEquals("Use '.!isEmpty()' instead of '1 <= .size()'.", violations.get(i++).getMessage());
 		assertEquals(32, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals("Use '.!isEmpty()' instead of '.size() >= 1'.", violations.get(i++).getMessage());
+		assertEquals("Use '.isEmpty()' instead of '.size() == 0'.", violations.get(i++).getMessage());
 		assertEquals(37, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals("Use '.!isEmpty()' instead of '.size() > 0'.", violations.get(i++).getMessage());
+		assertEquals("Use '.!isEmpty()' instead of '.size() >= 1'.", violations.get(i++).getMessage());
 		assertEquals(42, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals("Use '.isEmpty()' instead of '.size() < 1'.", violations.get(i++).getMessage());
+		assertEquals("Use '.!isEmpty()' instead of '.size() > 0'.", violations.get(i++).getMessage());
 		assertEquals(47, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals("Use '.isEmpty()' instead of '.size() <= 0'.", violations.get(i++).getMessage());
+		assertEquals("Use '.isEmpty()' instead of '.size() < 1'.", violations.get(i++).getMessage());
 		assertEquals(52, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals("Use '.!isEmpty()' instead of '.size() != 0'.", violations.get(i++).getMessage());
+		assertEquals("Use '.isEmpty()' instead of '.size() <= 0'.", violations.get(i++).getMessage());
 		assertEquals(57, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals("Use '.isEmpty()' instead of '0 == .size()'.", violations.get(i++).getMessage());
+		assertEquals("Use '.!isEmpty()' instead of '.size() != 0'.", violations.get(i++).getMessage());
 		assertEquals(62, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals("Use '.isEmpty()' instead of '0 >= .size()'.", violations.get(i++).getMessage());
+		assertEquals("Use '.isEmpty()' instead of '0 == .size()'.", violations.get(i++).getMessage());
 		assertEquals(67, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isEmpty()' instead of '0 >= .size()'.", violations.get(i++).getMessage());
+		assertEquals(72, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Use '.!isEmpty()' instead of '0 < .size()'.", violations.get(i++).getMessage());
+		assertEquals(77, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.!isEmpty()' instead of '0 != .size()'.", violations.get(i++).getMessage());
+	}
+
+	@Test
+	public void testIsEmptyViolationMinSdk24SkipsCharSequence() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiIsEmptyViolation.java", "minSdk", "24"
+		);
+		assertEquals(14, violations.size());
+		assertEquals(12, violations.getFirst().getLine());
 	}
 
 	@Test

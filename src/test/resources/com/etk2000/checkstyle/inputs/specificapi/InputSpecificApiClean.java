@@ -9,6 +9,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -138,6 +139,16 @@ class InputSpecificApiClean {
 	void equalsNullSafe(String s) {
 		if ("".equals(s))
 			System.out.println("empty");
+	}
+
+	void fileLengthNotEmpty(File file) {
+		if (file.length() > 0)
+			System.out.println("file has content");
+	}
+
+	void fileLengthZero(File file) {
+		if (file.length() == 0)
+			System.out.println("file is empty");
 	}
 
 	void forEachAlready(List<String> list) {

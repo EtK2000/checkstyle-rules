@@ -294,6 +294,80 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 		return null;
 	}
 
+	@CheckReturnValue
+	@Nullable
+	private static String fixComparisonIsEmpty(@Nonnull String line, @Nonnull String method) {
+		// positive simple forms: .length() == 0, .length() <= 0, .length() < 1
+		final String[] positivePatterns = {
+				method + " == 0",
+				method + " <= 0",
+				method + " < 1"
+		};
+		for (var pattern : positivePatterns) {
+			final var idx = line.indexOf(pattern);
+			if (idx >= 0)
+				return line.substring(0, idx) + ".isEmpty()" + line.substring(idx + pattern.length());
+		}
+
+		// positive reversed forms: 0 == expr.length(), 0 >= expr.length(), 1 > expr.length()
+		final String[][] reversedPositive = {
+				{"0 == ", method},
+				{"0 >= ", method},
+				{"1 > ", method}
+		};
+		for (var rev : reversedPositive) {
+			final var idx = line.indexOf(rev[0]);
+			if (idx >= 0) {
+				final var methodIdx = line.indexOf(rev[1], idx + rev[0].length());
+				if (methodIdx >= 0) {
+					return line.substring(0, idx) + line.substring(idx + rev[0].length(), methodIdx)
+							+ ".isEmpty()" + line.substring(methodIdx + rev[1].length());
+				}
+			}
+		}
+
+		// negated simple forms: .length() != 0, .length() > 0, .length() >= 1
+		final String[] negatedPatterns = {
+				method + " != 0",
+				method + " > 0",
+				method + " >= 1"
+		};
+		for (var neg : negatedPatterns) {
+			final var idx = line.indexOf(neg);
+			if (idx >= 0) {
+				final var receiverStart = findReceiverStart(line, idx);
+				if (receiverStart < 0)
+					return null;
+				if (receiverStart > 0 && line.charAt(receiverStart - 1) == '!') {
+					return line.substring(0, receiverStart - 1) + line.substring(receiverStart, idx)
+							+ ".isEmpty()" + line.substring(idx + neg.length());
+				}
+				return line.substring(0, receiverStart) + "!" + line.substring(receiverStart, idx)
+						+ ".isEmpty()" + line.substring(idx + neg.length());
+			}
+		}
+
+		// negated reversed forms: 0 != expr.length(), 0 < expr.length(), 1 <= expr.length()
+		final String[][] reversedNegated = {
+				{"0 != ", method},
+				{"0 < ", method},
+				{"1 <= ", method}
+		};
+		for (var rev : reversedNegated) {
+			final var idx = line.indexOf(rev[0]);
+			if (idx >= 0) {
+				final var methodIdx = line.indexOf(rev[1], idx + rev[0].length());
+				if (methodIdx >= 0) {
+					final var receiver = line.substring(idx + rev[0].length(), methodIdx);
+					return line.substring(0, idx) + "!" + receiver
+							+ ".isEmpty()" + line.substring(methodIdx + rev[1].length());
+				}
+			}
+		}
+
+		return null;
+	}
+
 	/**
 	 * {@code .equals("")} -> {@code .isEmpty()}.
 	 * Only matches when the argument is literally {@code ""}.
@@ -323,6 +397,25 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 			final var idx = line.indexOf(r[0]);
 			if (idx >= 0)
 				return line.substring(0, idx) + r[1] + line.substring(idx + r[0].length());
+		}
+		return null;
+	}
+
+	/**
+	 * {@code .length() == 0} -> {@code .isEmpty()},
+	 * {@code .size() > 0} -> {@code !receiver.isEmpty()}, etc.
+	 * Handles all 6 comparison operators in both normal and reversed form,
+	 * for both {@code .length()} and {@code .size()}.
+	 * Negated forms scan backwards to find the receiver start.
+	 * Returns null for complex receivers (method calls, array access).
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixLengthOrSizeIsEmpty(@Nonnull String line) {
+		for (var method : new String[]{".length()", ".size()"}) {
+			final var result = fixComparisonIsEmpty(line, method);
+			if (result != null)
+				return result;
 		}
 		return null;
 	}
@@ -641,6 +734,8 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 			result = fixToArrayNewZero(line);
 		if (result == null)
 			result = fixTrimIsBlank(line);
+		if (result == null)
+			result = fixLengthOrSizeIsEmpty(line);
 
 		if (result == null)
 			return null;

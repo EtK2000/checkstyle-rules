@@ -51,7 +51,10 @@ public class CheckstylePlugin implements Plugin<Project> {
 	private static final Pattern MANIFEST_MIN_SDK = Pattern.compile(
 			"android:minSdkVersion\\s*=\\s*\"(\\d+)\""
 	);
-	private static final Pattern XML_ERROR_SOURCE = Pattern.compile("source=\"([^\"]+)\"");
+	private static final Pattern XML_ATTR_MESSAGE = Pattern.compile("message=\"([^\"]+)\"");
+	private static final Pattern XML_ATTR_SEVERITY = Pattern.compile("severity=\"([^\"]+)\"");
+	private static final Pattern XML_ATTR_SOURCE = Pattern.compile("source=\"([^\"]+)\"");
+	private static final Pattern XML_ERROR = Pattern.compile("<error\\b[^>]*/>");
 	private static final String CHECKSTYLE_VERSION;
 
 	static {
@@ -85,21 +88,41 @@ public class CheckstylePlugin implements Plugin<Project> {
 
 	/**
 	 * Counts total and fixable violations in a Checkstyle XML report file.
-	 * Returns {total, fixable}.
+	 * Returns {total, fixable}. TreeWalker violations are matched by source
+	 * name; regexp-based violations are matched by message (since their XML
+	 * source is the generic RegexpMultiline/RegexpSingleline class name).
 	 */
 	@Nonnull
-	private static int[] countViolations(@Nonnull File xmlReport, @Nonnull Set<String> fixableNames) {
+	@VisibleForTesting
+	static int[] countViolations(
+			@Nonnull File xmlReport,
+			@Nonnull Set<String> fixableNames,
+			@Nonnull Set<String> fixableMessages
+	) {
 		if (!xmlReport.exists())
 			return new int[]{0, 0};
 		try {
 			final var content = Files.readString(xmlReport.toPath());
-			final var matcher = XML_ERROR_SOURCE.matcher(content);
+			final var errorMatcher = XML_ERROR.matcher(content);
 			var total = 0;
 			var fixable = 0;
-			while (matcher.find()) {
+			while (errorMatcher.find()) {
+				final var element = errorMatcher.group();
 				++total;
-				if (fixableNames.contains(matcher.group(1)))
+
+				// the fixer only fixes error-severity violations, skip warnings
+				final var severityMatcher = XML_ATTR_SEVERITY.matcher(element);
+				if (severityMatcher.find() && !"error".equals(severityMatcher.group(1)))
+					continue;
+
+				final var sourceMatcher = XML_ATTR_SOURCE.matcher(element);
+				if (sourceMatcher.find() && fixableNames.contains(sourceMatcher.group(1)))
 					++fixable;
+				else {
+					final var messageMatcher = XML_ATTR_MESSAGE.matcher(element);
+					if (messageMatcher.find() && fixableMessages.contains(messageMatcher.group(1)))
+						++fixable;
+				}
 			}
 			return new int[]{total, fixable};
 		}
@@ -175,9 +198,10 @@ public class CheckstylePlugin implements Plugin<Project> {
 					task.mustRunAfter("checkstyleMain", "checkstyleTest");
 					task.getOutputs().upToDateWhen(t -> false);
 					task.doLast(t -> {
+						final var fixableMessages = FixableCheckNames.FIXABLE_MESSAGES;
 						final var fixableNames = FixableCheckNames.all();
-						final var mainCounts = countViolations(new File(reportsDir, "main.xml"), fixableNames);
-						final var testCounts = countViolations(new File(reportsDir, "test.xml"), fixableNames);
+						final var mainCounts = countViolations(new File(reportsDir, "main.xml"), fixableNames, fixableMessages);
+						final var testCounts = countViolations(new File(reportsDir, "test.xml"), fixableNames, fixableMessages);
 						final var fixable = mainCounts[1] + testCounts[1];
 						final var total = mainCounts[0] + testCounts[0];
 						if (fixable <= 0)

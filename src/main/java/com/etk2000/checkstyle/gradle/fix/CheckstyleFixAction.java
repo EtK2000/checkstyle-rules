@@ -64,6 +64,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 	}
 
 	private static final int TAB_WIDTH = 8;
+	private static final String ALLOWED_METHODS = "findViewById,findViewWithTag,getArgument,getSystemService,requireViewById";
 	private static final String BLANK_LINE_AFTER_BREAK_ID = "BlankLineAfterBreak";
 	private static final String BLANK_LINE_AFTER_CLASS_BRACE_ID = "NoBlankLineAfterClassBrace";
 	private static final String BLANK_LINE_BEFORE_CLOSING_BRACE_ID = "NoBlankLineBeforeClosingBrace";
@@ -183,6 +184,8 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			if (checkName.equals(PreferMathMethodCheck.class.getName())
 					|| checkName.equals(PreferSpecificApiCheck.class.getName()))
 				checkConfig.addProperty("minSdk", minSdk);
+			if (checkName.equals(PreferVarCheck.class.getName()))
+				checkConfig.addProperty("allowedMethods", ALLOWED_METHODS);
 			treeWalkerConfig.addChild(checkConfig);
 		}
 
@@ -304,6 +307,16 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		final var names = new HashSet<>(FIXERS.keySet());
 		names.addAll(MODULE_ID_FIXERS.keySet());
 		return names;
+	}
+
+	/**
+	 * Returns the {@code allowedMethods} value used by the fixer for PreferVarCheck.
+	 * Used by tests to verify consistency with {@code checkstyle.xml}.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	public static String fixerAllowedMethods() {
+		return ALLOWED_METHODS;
 	}
 
 	/**

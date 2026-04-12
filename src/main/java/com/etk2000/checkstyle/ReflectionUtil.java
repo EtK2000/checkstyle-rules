@@ -222,6 +222,20 @@ class ReflectionUtil {
 	}
 
 	/**
+	 * Checks whether the given class is or extends {@link CharSequence}
+	 * but is NOT {@link String}. {@code CharSequence.isEmpty()} is a
+	 * default method added in Java 15 (Android API 35), while
+	 * {@code String.isEmpty()} has been available since Java 6 (API 1).
+	 */
+	@CheckReturnValue
+	static boolean isCharSequenceNotString(@Nonnull String fqcn) {
+		if ("java.lang.String".equals(fqcn))
+			return false;
+		final var clazz = loadClass(fqcn);
+		return clazz != null && CharSequence.class.isAssignableFrom(clazz);
+	}
+
+	/**
 	 * Checks whether the given class is a functional interface
 	 * (an interface with exactly one abstract method, excluding
 	 * methods inherited from {@link Object}).

@@ -1368,6 +1368,34 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferSpecificApiLengthIsEmpty() throws Exception {
+		final var file = tempDir.resolve("LenEmpty.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean run(String s) {\n\t\treturn s.length() == 0;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean run(String s) {\n\t\treturn s.isEmpty();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiLengthIsEmptyNegated() throws Exception {
+		final var file = tempDir.resolve("LenNotEmpty.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid run(String s) {\n\t\tif (s.length() > 0)\n\t\t\treturn;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid run(String s) {\n\t\tif (!s.isEmpty())\n\t\t\treturn;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testPreferSpecificApiMapChain() throws Exception {
 		final var file = tempDir.resolve("MapChain.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.Map;\nclass T {\n\tvoid run(Map<String, String> map) {\n\t\tif (map.keySet().contains(\"k\"))\n\t\t\treturn;\n\t}\n}");
@@ -1415,6 +1443,34 @@ public class CheckstyleFixIntegrationTest {
 		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tString run(String s) {\n\t\treturn s.replace(\"foo\", \"bar\");\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiSizeIsEmpty() throws Exception {
+		final var file = tempDir.resolve("SizeEmpty.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tboolean run(List<String> list) {\n\t\treturn list.size() == 0;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tboolean run(List<String> list) {\n\t\treturn list.isEmpty();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiSizeIsEmptyReversed() throws Exception {
+		final var file = tempDir.resolve("SizeEmptyRev.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tif (0 < list.size())\n\t\t\treturn;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tif (!list.isEmpty())\n\t\t\treturn;\n\t}\n}",
 				output.content()
 		);
 		assertEquals(1, output.result().fixCount());

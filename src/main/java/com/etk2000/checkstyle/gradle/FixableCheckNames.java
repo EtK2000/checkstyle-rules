@@ -12,6 +12,20 @@ import javax.annotation.Nonnull;
  * loaded on the buildscript classpath without requiring checkstyle.
  */
 final class FixableCheckNames {
+	/**
+	 * Messages from fixable regexp-based checks (RegexpMultiline/RegexpSingleline).
+	 * The XML report's {@code source} attribute for these is the generic regexp class
+	 * name, not the module ID, so matching by message is the only way to identify them.
+	 */
+	static final Set<String> FIXABLE_MESSAGES = Set.of(
+			"Add a blank line after break; before the next case/default.",
+			"File must not end with a trailing newline.",
+			"No blank line at start of a class/interface/enum/record.",
+			"No blank line before closing brace.",
+			"No double blank lines.",
+			"No trailing whitespace."
+	);
+
 	static final Set<String> MODULE_IDS = Set.of(
 			"BlankLineAfterBreak",
 			"NoBlankLineAfterClassBrace",

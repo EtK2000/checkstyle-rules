@@ -3,13 +3,18 @@ package com.etk2000.checkstyle.inputs.specificapi;
 import java.util.List;
 
 class InputSpecificApiIsEmptyViolation {
-	void lengthEqualsZero(StringBuilder sb) {
-		if (sb.length() == 0) // violation: use isEmpty()
+	void charSequenceLengthEqualsZero(CharSequence cs) {
+		if (cs.length() == 0) // violation: Use '.isEmpty()' instead of '.length() == 0'.
 			System.out.println("empty");
 	}
 
-	void lengthGreaterThanZero(StringBuilder sb) {
-		if (sb.length() > 0) // violation: use !isEmpty()
+	void lengthEqualsZero(String s) {
+		if (s.length() == 0) // violation: Use '.isEmpty()' instead of '.length() == 0'.
+			System.out.println("empty");
+	}
+
+	void lengthGreaterThanZero(String s) {
+		if (s.length() > 0) // violation: Use '.!isEmpty()' instead of '.length() > 0'.
 			System.out.println("not empty");
 	}
 
@@ -65,6 +70,11 @@ class InputSpecificApiIsEmptyViolation {
 
 	void zeroLessThanSize(List<String> list) {
 		if (0 < list.size()) // violation: use !isEmpty()
+			System.out.println("not empty");
+	}
+
+	void zeroNotEqualsSize(List<String> list) {
+		if (0 != list.size()) // violation: Use '.!isEmpty()' instead of '0 != .size()'.
 			System.out.println("not empty");
 	}
 }
