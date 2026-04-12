@@ -1032,7 +1032,7 @@ public class CheckstyleFixIntegrationTest {
 				"import java.util.ArrayList;\nimport java.util.HashMap;\nimport java.util.List;\nimport java.util.Map;\nclass T {\n\tvoid f(List<String> a, Map<String, Integer> b) {}\n}",
 				output.content()
 		);
-		assertEquals(4, output.result().fixCount());
+		assertEquals(2, output.result().fixCount());
 		assertTrue(output.result().needsSecondPass());
 	}
 
@@ -1046,7 +1046,7 @@ public class CheckstyleFixIntegrationTest {
 				"import java.util.HashSet;\nimport java.util.Set;\nclass T {\n\tvoid f(Set<String> s) {}\n}",
 				output.content()
 		);
-		assertEquals(2, output.result().fixCount());
+		assertEquals(1, output.result().fixCount());
 		assertTrue(output.result().needsSecondPass());
 	}
 
@@ -1060,7 +1060,7 @@ public class CheckstyleFixIntegrationTest {
 				"import java.util.ArrayList;\nimport java.util.List;\nclass T {\n\tList<String> f() {\n\t\treturn new ArrayList<>();\n\t}\n}",
 				output.content()
 		);
-		assertEquals(2, output.result().fixCount());
+		assertEquals(1, output.result().fixCount());
 		assertTrue(output.result().needsSecondPass());
 	}
 
@@ -1169,7 +1169,7 @@ public class CheckstyleFixIntegrationTest {
 				"import static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nimport static org.junit.jupiter.api.Assertions.assertNull;\nimport static org.junit.jupiter.api.Assertions.assertTrue;\nclass T {\n\tvoid run() {\n\t\tassertTrue(1 == 1);\n\t\tassertNull(new Object());\n\t\tassertNull(\"msg\", new Object());\n\t\tassertTrue(\"msg\", 1 == 1);\n\t}\n}",
 				output.content()
 		);
-		assertEquals(6, output.result().fixCount());
+		assertEquals(4, output.result().fixCount());
 		assertTrue(output.result().needsSecondPass());
 	}
 
@@ -1183,7 +1183,7 @@ public class CheckstyleFixIntegrationTest {
 				"import static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nimport static org.junit.jupiter.api.Assertions.assertNull;\nimport static org.junit.jupiter.api.Assertions.assertTrue;\nclass T {\n\tvoid run() {\n\t\tassertTrue(1 == 1);\n\t\tassertNull(new Object());\n\t\tassertNull(new Object(), \"msg\");\n\t\tassertTrue(1 == 1, \"msg\");\n\t}\n}",
 				output.content()
 		);
-		assertEquals(6, output.result().fixCount());
+		assertEquals(4, output.result().fixCount());
 		assertTrue(output.result().needsSecondPass());
 	}
 
@@ -1209,7 +1209,7 @@ public class CheckstyleFixIntegrationTest {
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 		assertEquals("import java.util.Collections;\nimport java.util.List;\nclass T {\n\tObject run() {\n\t\treturn List.of();\n\t}\n}", String.join("\n", lines));
-		assertEquals(2, result.fixCount());
+		assertEquals(1, result.fixCount());
 		assertTrue(result.needsSecondPass());
 	}
 
@@ -1235,7 +1235,7 @@ public class CheckstyleFixIntegrationTest {
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 		assertEquals("import java.util.Collections;\nimport java.util.List;\n\nimport javax.annotation.Nonnull;\nclass T {\n\t@Nonnull\n\tObject run() {\n\t\treturn List.of();\n\t}\n}", String.join("\n", lines));
-		assertEquals(2, result.fixCount());
+		assertEquals(1, result.fixCount());
 		assertTrue(result.needsSecondPass());
 	}
 
@@ -1248,7 +1248,7 @@ public class CheckstyleFixIntegrationTest {
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 		assertEquals("import java.util.Collections;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Set;\nclass T {\n\tObject a() {\n\t\treturn List.of();\n\t}\n\tObject b() {\n\t\treturn Map.of();\n\t}\n\tObject c() {\n\t\treturn Set.of();\n\t}\n}", String.join("\n", lines));
-		assertEquals(6, result.fixCount());
+		assertEquals(3, result.fixCount());
 		assertTrue(result.needsSecondPass());
 	}
 
@@ -1261,7 +1261,7 @@ public class CheckstyleFixIntegrationTest {
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 		assertEquals("import java.util.Collections;\nimport java.util.List;\nimport java.util.Set;\n\nimport javax.annotation.Nonnull;\nclass T {\n\t@Nonnull\n\tObject a() {\n\t\treturn List.of();\n\t}\n\t@Nonnull\n\tObject b() {\n\t\treturn Set.of();\n\t}\n}", String.join("\n", lines));
-		assertEquals(4, result.fixCount());
+		assertEquals(2, result.fixCount());
 		assertTrue(result.needsSecondPass());
 	}
 
@@ -1273,7 +1273,7 @@ public class CheckstyleFixIntegrationTest {
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
-		assertEquals(2, result.fixCount());
+		assertEquals(1, result.fixCount());
 		assertTrue(result.needsSecondPass());
 	}
 
@@ -1286,7 +1286,7 @@ public class CheckstyleFixIntegrationTest {
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 		assertEquals("import java.util.Collections;\nimport java.util.List;\nimport java.util.Set;\nclass T {\n\tList<String> a() {\n\t\treturn List.of();\n\t}\n\tObject b() {\n\t\treturn Set.of();\n\t}\n}", String.join("\n", lines));
-		assertEquals(3, result.fixCount());
+		assertEquals(2, result.fixCount());
 		assertTrue(result.needsSecondPass());
 	}
 
@@ -1600,7 +1600,7 @@ public class CheckstyleFixIntegrationTest {
 				"import java.nio.charset.StandardCharsets;\nclass T {\n\tbyte[] run(String s) throws Exception {\n\t\treturn s.getBytes(StandardCharsets.UTF_8);\n\t}\n}",
 				output.content()
 		);
-		assertEquals(2, output.result().fixCount());
+		assertEquals(1, output.result().fixCount());
 		assertTrue(output.result().needsSecondPass());
 	}
 
@@ -1614,7 +1614,7 @@ public class CheckstyleFixIntegrationTest {
 				"import java.nio.charset.StandardCharsets;\n\nclass T {\n\tbyte[] run(String s) throws Exception {\n\t\treturn s.getBytes(StandardCharsets.UTF_8);\n\t}\n}",
 				output.content()
 		);
-		assertEquals(3, output.result().fixCount());
+		assertEquals(2, output.result().fixCount());
 		assertTrue(output.result().needsSecondPass());
 	}
 

@@ -165,11 +165,8 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		}
 
 		var needsSecondPass = false;
-		if (!importsToAdd.isEmpty()) {
-			final var added = insertMissingImports(lines, importsToAdd);
-			fixed += added;
-			needsSecondPass = added > 0;
-		}
+		if (!importsToAdd.isEmpty())
+			needsSecondPass = insertMissingImports(lines, importsToAdd) > 0;
 
 		return new ApplyFixesResult(fixed, needsSecondPass);
 	}
@@ -296,7 +293,8 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			totalSkipped += totalViolations - result.fixCount();
 		}
 
-		System.out.println("Fixed " + totalFixed + " violations in " + filesFixed + " files (" + totalSkipped + " skipped)");
+		if (totalFixed > 0 || totalSkipped > 0)
+			System.out.println("Fixed " + totalFixed + " violations in " + filesFixed + " files (" + totalSkipped + " skipped)");
 		return needsSecondPass;
 	}
 
