@@ -98,7 +98,8 @@ the next branch and its tests, then the fixer and its tests.
 These steps produce the test matrix. No code is written until the matrix is complete and reviewed.
 
 1. List every AST token type the check will visit and every expression/body type it will classify
-2. If the check has categories (tiers, modes, severity levels), build the full NxN permutation matrix
+2. If the check has categories (tiers, modes, severity levels), build the full NxN permutation
+   matrix
    (see "Permutation matrix" below). Write out every cell explicitly
 3. For each category/token type, list: clean example, violation example, boundary example (nearby
    value that should NOT fire). Be specific - write actual code snippets, not descriptions
@@ -119,7 +120,8 @@ These steps produce the test matrix. No code is written until the matrix is comp
    that branch. Immediately write the check test assertions. Run `./gradlew check`. Only then write
    the next branch
 10. After completing ALL check branches: write the fixer. For each `return null`, immediately write
-    the fixer unit test. For each `return new FixResult(...)`, immediately write the fixer unit test.
+    the fixer unit test. For each `return new FixResult(...)`, immediately write the fixer unit
+    test.
     For each fix type, immediately write the integration test. Run `./gradlew check` after each test
 11. Write direct AST unit tests for any token types identified in step 6
 
@@ -142,16 +144,17 @@ formatted-as category. Every cell must be tested.
 Example: `ControlFlowBracesCheck` has 3 do-while tiers (tier 1 = all one line, tier 2 = body on do
 line + while split, tier 3 = body on own line). The matrix is:
 
-| Actual \ Written as | Tier 1        | Tier 2        | Tier 3        |
-|---------------------|---------------|---------------|---------------|
-| **Tier 1**          | Clean         | Violation     | Violation     |
-| **Tier 2**          | Violation     | Clean         | Violation     |
-| **Tier 3**          | Violation     | Violation     | Clean         |
+| Actual \ Written as | Tier 1    | Tier 2    | Tier 3    |
+|---------------------|-----------|-----------|-----------|
+| **Tier 1**          | Clean     | Violation | Violation |
+| **Tier 2**          | Violation | Clean     | Violation |
+| **Tier 3**          | Violation | Violation | Clean     |
 
 The diagonal is clean (correct format). Every off-diagonal cell is a violation. **Every cell needs
 three layers of coverage:**
 
-1. **Check test**: clean file for diagonal, violation file for off-diagonal, with exact line/severity/
+1. **Check test**: clean file for diagonal, violation file for off-diagonal, with exact
+   line/severity/
    message assertions
 2. **Fixer unit test**: for every off-diagonal cell, a unit test that inputs the wrong format and
    asserts the fixer produces the correct format
@@ -189,10 +192,11 @@ After all code and tests are written, run this audit before declaring done. Do n
 
 **Step 1: Branch trace.** For every `if`, `switch case`, `else`, and early `return` in the source,
 write down:
+
 - The condition
 - The test exercising the TRUE path (file:line or test method name)
 - The test exercising the FALSE path
-Mark MISSING if either path lacks a test. Fix before proceeding.
+  Mark MISSING if either path lacks a test. Fix before proceeding.
 
 **Step 2: Token type trace.** For every token type in a `switch` or `if` chain, verify there is a
 dedicated test (either in test resources or direct AST unit test). Do not rely on shared case arms
@@ -316,6 +320,35 @@ syntactic form that can appear in that position. Common forms:
 
 If the check behaves differently based on the expression form (e.g. literal vs non-literal), each
 form needs a test in the appropriate category (clean, violation, or warning).
+
+### Annotation placement coverage
+
+When a check inspects types, fields, parameters, or declarations, test every position where
+annotations can appear in the AST. Annotations are syntactically valid in many positions but land
+in different AST nodes depending on placement:
+
+- **Declaration annotations** (`@Nonnull String field`): on MODIFIERS, not TYPE. The TYPE node is
+  unchanged. Test that the check produces the same result with and without the annotation.
+- **Type-use annotations in generics** (`List<@Ann String>`): inside TYPE_ARGUMENTS > TYPE_ARGUMENT
+  > ANNOTATIONS. Test with annotations on some/all type arguments.
+- **Annotation asymmetry**: when comparing field types to parameter types, annotations on one side
+  but not the other should not affect type matching (annotations are on MODIFIERS, not TYPE).
+
+For any check that reads TYPE nodes, the annotation permutation matrix is:
+
+| Field annotation | Param annotation | Generic type-arg annotation |
+|------------------|------------------|-----------------------------|
+| None             | None             | None                        |
+| Yes              | Yes              | -                           |
+| Yes              | None             | -                           |
+| None             | Yes              | -                           |
+| -                | -                | Yes (on some args)          |
+| -                | -                | Yes (on all args)           |
+
+For declaration annotations (fields, parameters), use `@Deprecated` or `@SuppressWarnings("unused")`
+which are built-in and need no imports. For type-use positions (`List<@Ann String>`), these don't
+work since they lack `@Target(TYPE_USE)`. Define a `@interface Ann {}` only when you need type-use
+annotations. A plain `@interface` with no `@Target` can be used in any position.
 
 ### Severity coverage
 

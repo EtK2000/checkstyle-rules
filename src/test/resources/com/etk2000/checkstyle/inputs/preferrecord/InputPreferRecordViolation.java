@@ -1,6 +1,10 @@
 package com.etk2000.checkstyle.inputs.preferrecord;
 
+import java.util.List;
+
 import javax.annotation.Nonnull;
+
+@interface Ann {}
 
 class InputPreferRecordViolation { // violation: class should be a record
 	final int x;
@@ -9,6 +13,23 @@ class InputPreferRecordViolation { // violation: class should be a record
 	InputPreferRecordViolation(int x, int y) {
 		this.x = x;
 		this.y = y;
+	}
+}
+
+class ArrayField { // violation: class should be a record
+	final int[] values;
+
+	ArrayField(int[] values) {
+		this.values = values;
+	}
+}
+
+class AnnotatedArrayField { // violation: class should be a record
+	@Nonnull
+	final int[] values;
+
+	AnnotatedArrayField(@Nonnull int[] values) {
+		this.values = values;
 	}
 }
 
@@ -23,7 +44,23 @@ class AnnotatedFields { // violation: class should be a record
 	}
 }
 
-/** Constructor has a local var, but field assignment is still simple. */
+class AnnotatedFieldOnly { // violation: class should be a record
+	@Nonnull
+	final String value;
+
+	AnnotatedFieldOnly(String value) {
+		this.value = value;
+	}
+}
+
+class AnnotatedParamOnly { // violation: class should be a record
+	final String value;
+
+	AnnotatedParamOnly(@Nonnull String value) {
+		this.value = value;
+	}
+}
+
 class ConstructorLocalAssignment { // violation: class should be a record
 	final int value;
 
@@ -33,7 +70,6 @@ class ConstructorLocalAssignment { // violation: class should be a record
 	}
 }
 
-/** Constructor has bare field assignment (no this. prefix), skipped by check. */
 class ConstructorBareAssignment { // violation: class should be a record
 	final int value;
 
@@ -43,21 +79,36 @@ class ConstructorBareAssignment { // violation: class should be a record
 	}
 }
 
-/** Constructor assigns to another object's field, skipped by check. */
-class ConstructorOtherAssignment { // violation: class should be a record
-	final int value;
-
-	ConstructorOtherAssignment(ConstructorOtherAssignment other, int value) {
-		other.value = value;
-		this.value = value;
-	}
-}
-
 class EmptyConstructor { // violation: class should be a record
 	final int value;
 
 	EmptyConstructor(int value) {
 		this.value = value;
+	}
+}
+
+class GenericAnnotatedTypeArg { // violation: class should be a record
+	final List<@Ann String> items;
+
+	GenericAnnotatedTypeArg(List<@Ann String> items) {
+		this.items = items;
+	}
+}
+
+class GenericClassAnnotated { // violation: class should be a record
+	@Nonnull
+	final List<String> items;
+
+	GenericClassAnnotated(@Nonnull List<String> items) {
+		this.items = items;
+	}
+}
+
+class GenericClassConcrete { // violation: class should be a record
+	final List<String> items;
+
+	GenericClassConcrete(List<String> items) {
+		this.items = items;
 	}
 }
 
@@ -78,7 +129,6 @@ class HasStaticAndInstanceFields { // violation: class should be a record
 	}
 }
 
-/** Constructor has side effects, but field assignments are simple. */
 class HasSideEffects { // violation: class should be a record
 	final int id;
 
@@ -88,7 +138,6 @@ class HasSideEffects { // violation: class should be a record
 	}
 }
 
-/** Constructor has validation, but field assignments are simple. */
 class HasValidation { // violation: class should be a record
 	final int value;
 
@@ -111,7 +160,6 @@ class MethodsPresent { // violation: class should be a record
 	}
 }
 
-/** At least one constructor has simple assignments (the canonical one). */
 class MultipleConstructors { // violation: class should be a record
 	final int value;
 
@@ -135,9 +183,6 @@ class MultipleFieldTypes { // violation: class should be a record
 	}
 }
 
-/**
- * equals without @Override: still eligible for record.
- */
 class NonOverrideEquals { // violation: class should be a record
 	final int id;
 
@@ -150,9 +195,6 @@ class NonOverrideEquals { // violation: class should be a record
 	}
 }
 
-/**
- * @Override on a non-record method: still eligible for record.
- */
 class OverrideNonRecordMethod { // violation: class should be a record
 	final int value;
 

@@ -21,6 +21,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
@@ -56,6 +57,46 @@ public class AstUtilTest {
 		throw new AssertionError("No numeric literal found in: " + literal);
 	}
 
+	static Stream<Arguments> canonicalTypeGenericProvider() {
+		return Stream.of(
+				Arguments.of("import java.util.List; class T { List<String> x; }", "List"),
+				Arguments.of("class T { java.util.List<String> x; }", "java.util.List"),
+				Arguments.of("class T { java.util.Map<String, Integer> x; }", "java.util.Map"),
+				Arguments.of("class T { java.util.List<String>[] x; }", "java.util.List[]"),
+				Arguments.of("class T { @Deprecated java.util.List<String> x; }", "java.util.List"),
+				Arguments.of("class T { @Deprecated java.util.Map<String, Integer> x; }", "java.util.Map"),
+				Arguments.of("class T { @Deprecated java.util.List<String>[] x; }", "java.util.List[]"),
+				Arguments.of("@interface A {} class T { java.util.List<@A String> x; }", "java.util.List"),
+				Arguments.of("@interface A {} class T { java.util.Map<@A String, @A Integer> x; }", "java.util.Map"),
+				Arguments.of("@interface A {} class T { java.util.List<@A String>[] x; }", "java.util.List[]")
+		);
+	}
+
+	static Stream<Arguments> collectInstanceFieldTypesProvider() {
+		return Stream.of(
+				Arguments.of("class T { void f() {} }", List.of()),
+				Arguments.of("class T { static int x; static String y; }", List.of()),
+				Arguments.of("class T { int x, y; }", List.of("int", "int")),
+				Arguments.of("class T { String b; int a; }", List.of("String", "int")),
+				Arguments.of("class T { static int s; int a; String b; }", List.of("String", "int")),
+				Arguments.of("class T { @Deprecated int a; @Deprecated String b; }", List.of("String", "int")),
+				Arguments.of("class T { @Deprecated int a; String b; }", List.of("String", "int")),
+				Arguments.of("class T { @Deprecated int[] a; @Deprecated String b; }", List.of("String", "int[]"))
+		);
+	}
+
+	static Stream<Arguments> collectParameterTypesProvider() {
+		return Stream.of(
+				Arguments.of("class T { T() {} }", TokenTypes.CTOR_DEF, List.of()),
+				Arguments.of("class T { T(int x) {} }", TokenTypes.CTOR_DEF, List.of("int")),
+				Arguments.of("class T { T(String a, int b) {} }", TokenTypes.CTOR_DEF, List.of("String", "int")),
+				Arguments.of("class T { void f(String a, int b) {} }", TokenTypes.METHOD_DEF, List.of("String", "int")),
+				Arguments.of("class T { T(@Deprecated String a, @Deprecated int b) {} }", TokenTypes.CTOR_DEF, List.of("String", "int")),
+				Arguments.of("class T { T(@Deprecated String a, int b) {} }", TokenTypes.CTOR_DEF, List.of("String", "int")),
+				Arguments.of("class T { void f(@Deprecated String a, @Deprecated int[] b) {} }", TokenTypes.METHOD_DEF, List.of("String", "int[]"))
+		);
+	}
+
 	static Stream<Arguments> displayTextBinaryProvider() {
 		return Stream.of(
 				Arguments.of("&", TokenTypes.BAND),
@@ -84,6 +125,20 @@ public class AstUtilTest {
 		return Stream.of(
 				Arguments.of("~", TokenTypes.BNOT),
 				Arguments.of("!", TokenTypes.LNOT)
+		);
+	}
+
+	static Stream<Arguments> dottedNameProvider() {
+		return Stream.of(
+				Arguments.of("class T { a.B x; }", "a.B"),
+				Arguments.of("class T { a.b.C x; }", "a.b.C"),
+				Arguments.of("class T { a.b.c.D x; }", "a.b.c.D"),
+				Arguments.of("class T { a.b.c.d.E x; }", "a.b.c.d.E"),
+				Arguments.of("class T { a.b.c.d.e.F x; }", "a.b.c.d.e.F"),
+				Arguments.of("class T { a.b.C<String> x; }", "a.b.C"),
+				Arguments.of("class T { a.b.C<@Deprecated String> x; }", "a.b.C"),
+				Arguments.of("class T { @Deprecated a.b.C x; }", "a.b.C"),
+				Arguments.of("class T { @Deprecated a.b.C<@Deprecated String> x; }", "a.b.C")
 		);
 	}
 
@@ -171,6 +226,42 @@ public class AstUtilTest {
 		assertEquals("Nonnull", AstUtil.annotationName(fieldAnnotation));
 	}
 
+	@ParameterizedTest
+	@ValueSource(strings = {"boolean", "byte", "char", "double", "float", "int", "int[]",
+			"int[][]", "java.util.List", "java.util.List[]", "long", "short", "String",
+			"String[]"})
+	void testCanonicalTypeAnnotatedField(String type) throws Exception {
+		final var ast = parseSource("class T { @Deprecated " + type + " x; }");
+		final var typeNode = findFirst(ast, TokenTypes.VARIABLE_DEF).findFirstToken(TokenTypes.TYPE);
+		assertEquals(type, AstUtil.canonicalType(typeNode));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"boolean", "byte", "char", "double", "float", "int", "int[]",
+			"int[][]", "java.util.List", "java.util.List[]", "long", "short", "String",
+			"String[]"})
+	void testCanonicalTypeField(String type) throws Exception {
+		final var ast = parseSource("class T { " + type + " x; }");
+		final var typeNode = findFirst(ast, TokenTypes.VARIABLE_DEF).findFirstToken(TokenTypes.TYPE);
+		assertEquals(type, AstUtil.canonicalType(typeNode));
+	}
+
+	@MethodSource("canonicalTypeGenericProvider")
+	@ParameterizedTest
+	void testCanonicalTypeGeneric(String source, String expected) throws Exception {
+		final var ast = parseSource(source);
+		final var typeNode = findFirst(ast, TokenTypes.VARIABLE_DEF).findFirstToken(TokenTypes.TYPE);
+		assertEquals(expected, AstUtil.canonicalType(typeNode));
+	}
+
+	@Test
+	public void testCanonicalTypeVoid() throws Exception {
+		final var ast = parseSource("class T { void f() {} }");
+		final var method = findFirst(ast, TokenTypes.METHOD_DEF);
+		final var type = method.findFirstToken(TokenTypes.TYPE);
+		assertEquals("void", AstUtil.canonicalType(type));
+	}
+
 	@Test
 	public void testCollectAnnotationsMultiple() throws Exception {
 		final var ast = parseSource("class T { void f(@Deprecated @Override String p) {} }");
@@ -184,6 +275,22 @@ public class AstUtilTest {
 		final var method = findMethod(root, "emptyBlock");
 		final var params = method.findFirstToken(TokenTypes.PARAMETERS);
 		assertTrue(AstUtil.collectAnnotations(params).isEmpty());
+	}
+
+	@MethodSource("collectInstanceFieldTypesProvider")
+	@ParameterizedTest
+	void testCollectInstanceFieldTypes(String source, List<String> expected) throws Exception {
+		final var ast = parseSource(source);
+		final var objBlock = findFirst(ast, TokenTypes.OBJBLOCK);
+		assertEquals(expected, AstUtil.collectInstanceFieldTypes(objBlock));
+	}
+
+	@MethodSource("collectParameterTypesProvider")
+	@ParameterizedTest
+	void testCollectParameterTypes(String source, int tokenType, List<String> expected) throws Exception {
+		final var ast = parseSource(source);
+		final var def = findFirst(ast, tokenType);
+		assertEquals(expected, AstUtil.collectParameterTypes(def));
 	}
 
 	@Test
@@ -297,6 +404,45 @@ public class AstUtilTest {
 	public void testDisplayTextUnaryPlus() throws Exception {
 		final var node = parseExprFirstChild("class T { void f(int a) { int b = +a; } }");
 		assertEquals("+a", AstUtil.displayText(node));
+	}
+
+	@MethodSource("dottedNameProvider")
+	@ParameterizedTest
+	void testDottedName(String source, String expected) throws Exception {
+		final var ast = parseSource(source);
+		final var dot = findFirst(ast, TokenTypes.DOT);
+		assertEquals(expected, AstUtil.dottedName(dot));
+	}
+
+	@Test
+	public void testDottedNameExpressionContext() throws Exception {
+		final var ast = parseSource("class T { Object a; void f() { var x = a.toString(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		final var dot = methodCall.getFirstChild();
+		assertEquals("a.toString", AstUtil.dottedName(dot));
+	}
+
+	@Test
+	public void testDottedNameExpressionIndexOp() throws Exception {
+		final var ast = parseSource("class T { Object[] a; void f() { var x = a[0].toString(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		final var dot = methodCall.getFirstChild();
+		assertEquals("[.toString", AstUtil.dottedName(dot));
+	}
+
+	@Test
+	public void testDottedNameExpressionLiteralThis() throws Exception {
+		final var ast = parseSource("class T { int a; void f() { var x = this.a; } }");
+		final var dot = findFirst(ast, TokenTypes.DOT);
+		assertEquals("this.a", AstUtil.dottedName(dot));
+	}
+
+	@Test
+	public void testDottedNameExpressionNestedChain() throws Exception {
+		final var ast = parseSource("class T { String a; void f() { var x = a.toString().length(); } }");
+		final var outerCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		final var outerDot = outerCall.getFirstChild();
+		assertEquals("(.length", AstUtil.dottedName(outerDot));
 	}
 
 	@Test

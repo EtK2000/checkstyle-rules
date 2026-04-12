@@ -163,19 +163,22 @@ public class PreferRecordCheck extends AbstractCheck {
 		if (hasOverriddenRecordMethod(objBlock))
 			return;
 
-		// at least one constructor must have only simple this.field = param
-		// assignments (to serve as the canonical record constructor).
-		// classes with no constructors are eligible (default constructor).
-		var hasConstructor = false;
-		var hasEligibleConstructor = false;
+		// a constructor must exist whose parameters match all instance
+		// fields exactly (same types as a multiset, order doesn't matter)
+		// and whose body has only simple this.field = param assignments
+		final var fieldTypes = AstUtil.collectInstanceFieldTypes(objBlock);
+		var hasMatchingConstructor = false;
 		for (var child = objBlock.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() != TokenTypes.CTOR_DEF)
 				continue;
-			hasConstructor = true;
-			if (hasOnlySimpleFieldAssignments(child))
-				hasEligibleConstructor = true;
+			if (!hasOnlySimpleFieldAssignments(child))
+				continue;
+			if (AstUtil.collectParameterTypes(child).equals(fieldTypes)) {
+				hasMatchingConstructor = true;
+				break;
+			}
 		}
-		if (hasConstructor && !hasEligibleConstructor)
+		if (!hasMatchingConstructor)
 			return;
 
 		final var ident = ast.findFirstToken(TokenTypes.IDENT);

@@ -1,8 +1,10 @@
 package com.etk2000.checkstyle.inputs.preferrecord;
 
+import java.util.List;
 import java.util.Map;
 
-/** Abstract class: records can't be abstract. */
+@interface Ann {}
+
 abstract class AbstractClass {
 	final int value;
 
@@ -11,7 +13,6 @@ abstract class AbstractClass {
 	}
 }
 
-/** All constructors have non-simple field assignments. */
 class AllConstructorsIneligible {
 	final int value;
 
@@ -24,9 +25,32 @@ class AllConstructorsIneligible {
 	}
 }
 
+class AllConstructorsWrongTypes {
+	final long value;
+
+	AllConstructorsWrongTypes(int v) {
+		this.value = v;
+	}
+
+	AllConstructorsWrongTypes(int a, int b) {
+		this.value = a;
+	}
+
+	AllConstructorsWrongTypes(String s) {
+		this.value = s.length();
+	}
+}
+
 record AlreadyRecord(int x, int y) {}
 
-/** Class extending another class: records implicitly extend Record. */
+class ArrayFieldWrongType {
+	final int[] values;
+
+	ArrayFieldWrongType(int values) {
+		this.values = values;
+	}
+}
+
 class ChildClass extends AbstractClass {
 	final String name;
 
@@ -36,7 +60,31 @@ class ChildClass extends AbstractClass {
 	}
 }
 
-/** Constructor RHS is not a simple identifier (expression). */
+class GenericAnnotatedTypeArgWrongType {
+	final List<@Ann String> items;
+
+	GenericAnnotatedTypeArgWrongType(Map<@Ann String, @Ann String> items) {
+		this.items = items;
+	}
+}
+
+class GenericFieldWrongType {
+	final List<String> items;
+
+	GenericFieldWrongType(Map<String, String> items) {
+		this.items = items;
+	}
+}
+
+class ConstructorOtherAssignment {
+	final int value;
+
+	ConstructorOtherAssignment(ConstructorOtherAssignment other, int value) {
+		other.value = value;
+		this.value = value;
+	}
+}
+
 class ConstructorWithExpression {
 	final int end;
 	final int start;
@@ -86,13 +134,21 @@ class CustomToString {
 	}
 }
 
-/** Fields initialized inline: can't be record components. */
 class InlineInitializedFields {
 	final int x = 1;
 	final int y = 2;
 }
 
-/** Instance initializer present. */
+class FewerParamsThanFields {
+	final int a;
+	final int b;
+
+	FewerParamsThanFields(int value) {
+		this.a = value;
+		this.b = value;
+	}
+}
+
 class EmptyInstanceInit {
 	final int value;
 
@@ -142,11 +198,18 @@ class NonFinalField {
 	}
 }
 
-/** Constructor creates a new object on RHS (not a simple parameter). */
 class RhsNotSimple {
 	final Object data;
 
 	RhsNotSimple() {
 		this.data = new Object();
+	}
+}
+
+class WrongParamType {
+	final long value;
+
+	WrongParamType(int value) {
+		this.value = value;
 	}
 }

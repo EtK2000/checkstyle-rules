@@ -31,6 +31,33 @@ class AstUtil {
 		return "";
 	}
 
+	/**
+	 * Returns a canonical string for a TYPE AST node, including primitives,
+	 * reference types, qualified names, and arrays.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static String canonicalType(@Nonnull DetailAST typeNode) {
+		final var sb = new StringBuilder();
+		for (var child = typeNode.getFirstChild(); child != null; child = child.getNextSibling()) {
+			switch (child.getType()) {
+				case TokenTypes.ARRAY_DECLARATOR -> sb.append("[]");
+				case TokenTypes.DOT -> sb.append(dottedName(child));
+				case TokenTypes.IDENT -> sb.append(child.getText());
+				case TokenTypes.LITERAL_BOOLEAN -> sb.append("boolean");
+				case TokenTypes.LITERAL_BYTE -> sb.append("byte");
+				case TokenTypes.LITERAL_CHAR -> sb.append("char");
+				case TokenTypes.LITERAL_DOUBLE -> sb.append("double");
+				case TokenTypes.LITERAL_FLOAT -> sb.append("float");
+				case TokenTypes.LITERAL_INT -> sb.append("int");
+				case TokenTypes.LITERAL_LONG -> sb.append("long");
+				case TokenTypes.LITERAL_SHORT -> sb.append("short");
+				case TokenTypes.LITERAL_VOID -> sb.append("void");
+			}
+		}
+		return sb.toString();
+	}
+
 	@CheckReturnValue
 	@Nonnull
 	static List<DetailAST> collectAnnotations(@Nonnull DetailAST modifiersOrAnnotations) {
@@ -40,6 +67,50 @@ class AstUtil {
 				annotations.add(child);
 		}
 		return annotations;
+	}
+
+	/**
+	 * Collects the canonical type strings of all instance (non-static)
+	 * fields in the given OBJBLOCK, returned sorted for multiset comparison.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static List<String> collectInstanceFieldTypes(@Nonnull DetailAST objBlock) {
+		final var types = new ArrayList<String>();
+		for (var child = objBlock.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() != TokenTypes.VARIABLE_DEF)
+				continue;
+			final var modifiers = child.findFirstToken(TokenTypes.MODIFIERS);
+			if (modifiers != null && modifiers.findFirstToken(TokenTypes.LITERAL_STATIC) != null)
+				continue;
+			final var type = child.findFirstToken(TokenTypes.TYPE);
+			if (type != null)
+				types.add(canonicalType(type));
+		}
+		types.sort(null);
+		return types;
+	}
+
+	/**
+	 * Collects the canonical type strings of all parameters in the given
+	 * constructor or method definition, returned sorted for multiset comparison.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static List<String> collectParameterTypes(@Nonnull DetailAST defNode) {
+		final var types = new ArrayList<String>();
+		final var params = defNode.findFirstToken(TokenTypes.PARAMETERS);
+		if (params != null) {
+			for (var child = params.getFirstChild(); child != null; child = child.getNextSibling()) {
+				if (child.getType() != TokenTypes.PARAMETER_DEF)
+					continue;
+				final var type = child.findFirstToken(TokenTypes.TYPE);
+				if (type != null)
+					types.add(canonicalType(type));
+			}
+		}
+		types.sort(null);
+		return types;
 	}
 
 	@CheckReturnValue
@@ -101,6 +172,24 @@ class AstUtil {
 			case TokenTypes.UNARY_PLUS -> "+" + displayText(ast.getFirstChild());
 			default -> ast.getText();
 		};
+	}
+
+	/**
+	 * Returns the dotted name from a DOT AST node (e.g. "java.util.List"),
+	 * without consuming sibling nodes like ARRAY_DECLARATOR or TYPE_ARGUMENTS.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static String dottedName(@Nonnull DetailAST dot) {
+		final var first = dot.getFirstChild();
+		if (first == null)
+			return "";
+		final var second = first.getNextSibling();
+		if (second == null)
+			return first.getText();
+		if (first.getType() == TokenTypes.DOT)
+			return dottedName(first) + "." + second.getText();
+		return first.getText() + "." + second.getText();
 	}
 
 	@CheckReturnValue
