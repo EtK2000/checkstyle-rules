@@ -21,6 +21,7 @@ public class DeleteLineFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.replacement().isEmpty());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -31,6 +32,7 @@ public class DeleteLineFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertTrue(result.replacement().isEmpty());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -41,6 +43,7 @@ public class DeleteLineFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertTrue(result.replacement().isEmpty());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test

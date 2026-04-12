@@ -21,6 +21,7 @@ public class DoubleBlankLineFixerTest {
 		assertEquals(2, result.startLine());
 		assertEquals(2, result.endLine());
 		assertTrue(result.replacement().isEmpty());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -31,6 +32,7 @@ public class DoubleBlankLineFixerTest {
 		assertEquals(2, result.startLine());
 		assertEquals(3, result.endLine());
 		assertTrue(result.replacement().isEmpty());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -59,5 +61,6 @@ public class DoubleBlankLineFixerTest {
 		assertEquals(2, result.startLine());
 		assertEquals(2, result.endLine());
 		assertTrue(result.replacement().isEmpty());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 }

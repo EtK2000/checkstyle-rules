@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +18,9 @@ public class TrailingWhitespaceFixerTest {
 		final var lines = new ArrayList<>(List.of("   "));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("", result.replacement().getFirst());
 	}
 
@@ -25,6 +29,9 @@ public class TrailingWhitespaceFixerTest {
 		final var lines = new ArrayList<>(List.of("\t"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("", result.replacement().getFirst());
 	}
 
@@ -39,6 +46,9 @@ public class TrailingWhitespaceFixerTest {
 		final var lines = new ArrayList<>(List.of("\tint x = 5;   "));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tint x = 5;", result.replacement().getFirst());
 	}
 
@@ -47,6 +57,9 @@ public class TrailingWhitespaceFixerTest {
 		final var lines = new ArrayList<>(List.of("\tint x = 5;\t"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tint x = 5;", result.replacement().getFirst());
 	}
 }

@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,6 +33,9 @@ public class PreferMathMethodFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn " + ternary + ";"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn " + expected + ";", result.replacement().getFirst());
 	}
 
@@ -40,6 +44,9 @@ public class PreferMathMethodFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.max(lo, Math.min(hi, value));"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn Math.clamp(value, lo, hi);", result.replacement().getFirst());
 	}
 
@@ -48,6 +55,9 @@ public class PreferMathMethodFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.max(lo, Math.min(hi, foo(a, b)));"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn Math.clamp(foo(a, b), lo, hi);", result.replacement().getFirst());
 	}
 
@@ -56,6 +66,9 @@ public class PreferMathMethodFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.max(bar(x, y), Math.min(hi, value));"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn Math.clamp(value, bar(x, y), hi);", result.replacement().getFirst());
 	}
 
@@ -64,6 +77,9 @@ public class PreferMathMethodFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.max(Math.min(hi, value), lo);"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn Math.clamp(value, lo, hi);", result.replacement().getFirst());
 	}
 
@@ -72,6 +88,9 @@ public class PreferMathMethodFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.max(Math.min(hi, foo(a, b)), lo);"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn Math.clamp(foo(a, b), lo, hi);", result.replacement().getFirst());
 	}
 
@@ -80,6 +99,9 @@ public class PreferMathMethodFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.min(hi, Math.max(lo, value));"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn Math.clamp(value, lo, hi);", result.replacement().getFirst());
 	}
 
@@ -88,6 +110,9 @@ public class PreferMathMethodFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.min(hi, Math.max(lo, foo(a, b)));"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn Math.clamp(foo(a, b), lo, hi);", result.replacement().getFirst());
 	}
 
@@ -96,6 +121,9 @@ public class PreferMathMethodFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.min(Math.max(lo, value), hi);"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn Math.clamp(value, lo, hi);", result.replacement().getFirst());
 	}
 
@@ -104,6 +132,9 @@ public class PreferMathMethodFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.min(Math.max(lo, foo(a, b)), hi);"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn Math.clamp(foo(a, b), lo, hi);", result.replacement().getFirst());
 	}
 
@@ -122,6 +153,9 @@ public class PreferMathMethodFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn " + ternary + ";"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn " + expected + ";", result.replacement().getFirst());
 	}
 
@@ -130,6 +164,9 @@ public class PreferMathMethodFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn --a > b ? a : b;"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn Math.max(--a, b);", result.replacement().getFirst());
 	}
 
@@ -138,6 +175,9 @@ public class PreferMathMethodFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn ++a > b ? a : b;"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn Math.max(++a, b);", result.replacement().getFirst());
 	}
 

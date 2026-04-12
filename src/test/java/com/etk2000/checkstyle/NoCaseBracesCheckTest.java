@@ -3,6 +3,7 @@ package com.etk2000.checkstyle;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import org.junit.jupiter.api.Test;
 
 public class NoCaseBracesCheckTest {
@@ -18,8 +19,10 @@ public class NoCaseBracesCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoCaseBracesCheck.class, DIR + "InputCaseBracesMissingViolation.java");
 		assertEquals(2, violations.size());
 		assertEquals(7, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("Case block defines a variable, add braces to limit scope.", violations.get(0).getMessage());
 		assertEquals(12, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("Case block defines a variable, add braces to limit scope.", violations.get(1).getMessage());
 	}
 
@@ -29,8 +32,10 @@ public class NoCaseBracesCheckTest {
 		final var msg = "Unnecessary braces in case block, only use braces when a variable is defined in the case's scope.";
 		assertEquals(2, violations.size());
 		assertEquals(6, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals(msg, violations.get(0).getMessage());
 		assertEquals(10, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals(msg, violations.get(1).getMessage());
 	}
 }

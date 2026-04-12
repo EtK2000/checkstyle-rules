@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -24,6 +25,7 @@ public class AnnotationOwnLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t@A(v = (1 + 2))", "\t@B", "\tvoid f() {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -32,6 +34,7 @@ public class AnnotationOwnLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t@Override", "\t@SuppressWarnings(\"unchecked\")", "\tvoid f() {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -42,6 +45,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(2, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -52,6 +56,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(2, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -62,6 +67,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(2, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -72,6 +78,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(4, result.startLine());
 		assertEquals(4, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -82,6 +89,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(6, result.startLine());
 		assertEquals(6, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -92,6 +100,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -102,6 +111,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -112,6 +122,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -122,6 +133,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -132,6 +144,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -142,6 +155,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(3, result.startLine());
 		assertEquals(3, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -152,6 +166,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -162,6 +177,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t@A", "\t@B"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -170,6 +186,7 @@ public class AnnotationOwnLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t@A(\"he said \\\"hi\\\"\")", "\t@B", "\tvoid f() {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -180,6 +197,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -188,6 +206,7 @@ public class AnnotationOwnLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t@A", "\t@B", "\tvoid f() {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -203,6 +222,7 @@ public class AnnotationOwnLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t@javax.annotation.Nonnull", "\t@Override", "\tvoid f() {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -213,6 +233,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t@A", "\t@B"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -223,6 +244,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t@A", "\t@B"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -233,6 +255,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t@A", "\t@B", "\t@C"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -247,6 +270,7 @@ public class AnnotationOwnLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t@A", "\tvoid f() {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -255,6 +279,7 @@ public class AnnotationOwnLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t@A", "\t@B", "\t@C", "\tvoid f() {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -265,6 +290,7 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(List.of("\t@Override", "\tvoid foo() {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -273,6 +299,7 @@ public class AnnotationOwnLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t@A", "\t@B", "\tvoid foo() {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -281,6 +308,7 @@ public class AnnotationOwnLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t@A", "\t@B"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -289,5 +317,6 @@ public class AnnotationOwnLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t\t@A", "\t\t@B"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 }

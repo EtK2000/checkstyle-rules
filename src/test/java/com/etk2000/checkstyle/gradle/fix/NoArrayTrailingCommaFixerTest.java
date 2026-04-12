@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +19,9 @@ public class NoArrayTrailingCommaFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("}", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -26,6 +30,9 @@ public class NoArrayTrailingCommaFixerTest {
 		final var result = fixer.fix(lines, 0, 16);
 		assertNotNull(result);
 		assertEquals("\tint[] a = {1, 2}", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -54,6 +61,7 @@ public class NoArrayTrailingCommaFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals("int[] a = {1, 2};", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -62,6 +70,9 @@ public class NoArrayTrailingCommaFixerTest {
 		final var result = fixer.fix(lines, 0, 3);
 		assertNotNull(result);
 		assertEquals("\t\t2", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -70,6 +81,9 @@ public class NoArrayTrailingCommaFixerTest {
 		final var result = fixer.fix(lines, 0, 3);
 		assertNotNull(result);
 		assertEquals("\t1", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -78,6 +92,9 @@ public class NoArrayTrailingCommaFixerTest {
 		final var result = fixer.fix(lines, 0, 2);
 		assertNotNull(result);
 		assertEquals("\t1", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -86,5 +103,8 @@ public class NoArrayTrailingCommaFixerTest {
 		final var result = fixer.fix(lines, 0, 12);
 		assertNotNull(result);
 		assertEquals("int[] a = {1};", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 }

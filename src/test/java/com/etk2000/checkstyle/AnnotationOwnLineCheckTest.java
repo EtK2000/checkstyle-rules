@@ -99,14 +99,18 @@ public class AnnotationOwnLineCheckTest {
 		assertEquals(4, violations.size());
 
 		assertEquals(9, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("Annotation 'A' must appear before 'B' (alphabetical order).", violations.get(0).getMessage());
 
 		assertEquals(13, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("Annotation 'A' must appear before 'C' (alphabetical order).", violations.get(1).getMessage());
 
 		assertEquals(18, violations.get(2).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(2).getSeverityLevel());
 		assertEquals("Annotation 'B' must appear before 'C' (alphabetical order).", violations.get(2).getMessage());
 		assertEquals(19, violations.get(3).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(3).getSeverityLevel());
 		assertEquals("Annotation 'A' must appear before 'B' (alphabetical order).", violations.get(3).getMessage());
 	}
 
@@ -120,6 +124,7 @@ public class AnnotationOwnLineCheckTest {
 		final var violations = BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, DIR + "InputAnnotationOwnLinePackageViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(1, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
 		assertEquals("Annotation 'Deprecated' must be on its own line.", violations.getFirst().getMessage());
 	}
 
@@ -146,7 +151,9 @@ public class AnnotationOwnLineCheckTest {
 		assertEquals(43, violations.get(15).getLine());
 		assertEquals(46, violations.get(16).getLine());
 
-		for (var violation : violations)
+		for (var violation : violations) {
+			assertEquals(SeverityLevel.ERROR, violation.getSeverityLevel());
 			assertEquals("Annotation 'A' must be on its own line.", violation.getMessage());
+		}
 	}
 }

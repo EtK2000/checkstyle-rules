@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -23,6 +24,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tint x = 0, y;"));
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tint x, y;", result.replacement().getFirst());
 	}
 
@@ -133,6 +137,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tint x = 0b0;"));
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tint x;", result.replacement().getFirst());
 	}
 
@@ -141,6 +148,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tint x = 0B0;"));
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tint x;", result.replacement().getFirst());
 	}
 
@@ -149,6 +159,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tboolean b = false;"));
 		final var result = fixer.fix(lines, 0, 9);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tboolean b;", result.replacement().getFirst());
 	}
 
@@ -157,6 +170,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tchar c = '\\0';"));
 		final var result = fixer.fix(lines, 0, 6);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tchar c;", result.replacement().getFirst());
 	}
 
@@ -165,6 +181,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tchar c = '\\u0000';"));
 		final var result = fixer.fix(lines, 0, 6);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tchar c;", result.replacement().getFirst());
 	}
 
@@ -173,6 +192,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tdouble d = 0.0;"));
 		final var result = fixer.fix(lines, 0, 8);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tdouble d;", result.replacement().getFirst());
 	}
 
@@ -181,6 +203,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tdouble d = 0.0e0;"));
 		final var result = fixer.fix(lines, 0, 8);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tdouble d;", result.replacement().getFirst());
 	}
 
@@ -189,6 +214,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tdouble d = 0.0e-0;"));
 		final var result = fixer.fix(lines, 0, 8);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tdouble d;", result.replacement().getFirst());
 	}
 
@@ -197,6 +225,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tdouble d = 0.0e+0;"));
 		final var result = fixer.fix(lines, 0, 8);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tdouble d;", result.replacement().getFirst());
 	}
 
@@ -205,6 +236,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tdouble d = .0;"));
 		final var result = fixer.fix(lines, 0, 8);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tdouble d;", result.replacement().getFirst());
 	}
 
@@ -213,6 +247,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tdouble d = 0.000;"));
 		final var result = fixer.fix(lines, 0, 8);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tdouble d;", result.replacement().getFirst());
 	}
 
@@ -221,6 +258,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tdouble d = 0.0E0;"));
 		final var result = fixer.fix(lines, 0, 8);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tdouble d;", result.replacement().getFirst());
 	}
 
@@ -229,6 +269,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tdouble d = 0.0d;"));
 		final var result = fixer.fix(lines, 0, 8);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tdouble d;", result.replacement().getFirst());
 	}
 
@@ -237,6 +280,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tfloat f = 0.0f;"));
 		final var result = fixer.fix(lines, 0, 7);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tfloat f;", result.replacement().getFirst());
 	}
 
@@ -245,6 +291,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tfloat f = 0F;"));
 		final var result = fixer.fix(lines, 0, 7);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tfloat f;", result.replacement().getFirst());
 	}
 
@@ -253,6 +302,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tfloat f = 0_0.0_0f;"));
 		final var result = fixer.fix(lines, 0, 7);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tfloat f;", result.replacement().getFirst());
 	}
 
@@ -261,6 +313,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tint x = 0x0;"));
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tint x;", result.replacement().getFirst());
 	}
 
@@ -269,6 +324,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tint x = 0X0;"));
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tint x;", result.replacement().getFirst());
 	}
 
@@ -277,6 +335,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tlong x = 0x0L;"));
 		final var result = fixer.fix(lines, 0, 6);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tlong x;", result.replacement().getFirst());
 	}
 
@@ -285,6 +346,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tfloat f = 0x0.0p0f;"));
 		final var result = fixer.fix(lines, 0, 7);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tfloat f;", result.replacement().getFirst());
 	}
 
@@ -293,6 +357,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tint x = 0;"));
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tint x;", result.replacement().getFirst());
 	}
 
@@ -301,6 +368,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tlong x = 0L;"));
 		final var result = fixer.fix(lines, 0, 6);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tlong x;", result.replacement().getFirst());
 	}
 
@@ -309,6 +379,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tlong x = 0l;"));
 		final var result = fixer.fix(lines, 0, 6);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tlong x;", result.replacement().getFirst());
 	}
 
@@ -317,6 +390,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tObject o = null;"));
 		final var result = fixer.fix(lines, 0, 8);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tObject o;", result.replacement().getFirst());
 	}
 
@@ -325,6 +401,9 @@ public class ExplicitInitializationFixerTest {
 		final var lines = new ArrayList<>(List.of("\tint x = 00;"));
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tint x;", result.replacement().getFirst());
 	}
 

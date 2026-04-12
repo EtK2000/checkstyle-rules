@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +18,9 @@ public class RedundantNumericSuffixFixerTest {
 		final var lines = new ArrayList<>(List.of("long x = 0b1010L;"));
 		final var result = fixer.fix(lines, 0, 9);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("long x = 0b1010;", result.replacement().getFirst());
 	}
 
@@ -31,6 +35,9 @@ public class RedundantNumericSuffixFixerTest {
 		final var lines = new ArrayList<>(List.of("long x = 0xFFL;"));
 		final var result = fixer.fix(lines, 0, 9);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("long x = 0xFF;", result.replacement().getFirst());
 	}
 
@@ -51,6 +58,9 @@ public class RedundantNumericSuffixFixerTest {
 		final var lines = new ArrayList<>(List.of("\tint x = 10L + 5;"));
 		final var result = fixer.fix(lines, 0, 9);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tint x = 10 + 5;", result.replacement().getFirst());
 	}
 
@@ -71,6 +81,9 @@ public class RedundantNumericSuffixFixerTest {
 		final var lines = new ArrayList<>(List.of("double x = 1.0d;"));
 		final var result = fixer.fix(lines, 0, 11);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("double x = 1.0;", result.replacement().getFirst());
 	}
 
@@ -79,6 +92,9 @@ public class RedundantNumericSuffixFixerTest {
 		final var lines = new ArrayList<>(List.of("float x = 1f;"));
 		final var result = fixer.fix(lines, 0, 10);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("float x = 1;", result.replacement().getFirst());
 	}
 
@@ -87,6 +103,9 @@ public class RedundantNumericSuffixFixerTest {
 		final var lines = new ArrayList<>(List.of("long x = 100L;"));
 		final var result = fixer.fix(lines, 0, 9);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("long x = 100;", result.replacement().getFirst());
 	}
 
@@ -95,6 +114,9 @@ public class RedundantNumericSuffixFixerTest {
 		final var lines = new ArrayList<>(List.of("long x = 100l;"));
 		final var result = fixer.fix(lines, 0, 9);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("long x = 100;", result.replacement().getFirst());
 	}
 
@@ -103,6 +125,9 @@ public class RedundantNumericSuffixFixerTest {
 		final var lines = new ArrayList<>(List.of("double x = 2.5D;"));
 		final var result = fixer.fix(lines, 0, 11);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("double x = 2.5;", result.replacement().getFirst());
 	}
 
@@ -111,6 +136,9 @@ public class RedundantNumericSuffixFixerTest {
 		final var lines = new ArrayList<>(List.of("float x = 3F;"));
 		final var result = fixer.fix(lines, 0, 10);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("float x = 3;", result.replacement().getFirst());
 	}
 
@@ -119,6 +147,9 @@ public class RedundantNumericSuffixFixerTest {
 		final var lines = new ArrayList<>(List.of("double x = 1e10d;"));
 		final var result = fixer.fix(lines, 0, 11);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("double x = 1e10;", result.replacement().getFirst());
 	}
 
@@ -127,6 +158,9 @@ public class RedundantNumericSuffixFixerTest {
 		final var lines = new ArrayList<>(List.of("long x = 1_000L;"));
 		final var result = fixer.fix(lines, 0, 9);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("long x = 1_000;", result.replacement().getFirst());
 	}
 
@@ -135,6 +169,9 @@ public class RedundantNumericSuffixFixerTest {
 		final var lines = new ArrayList<>(List.of("long x = 0L;"));
 		final var result = fixer.fix(lines, 0, 9);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("long x = 0;", result.replacement().getFirst());
 	}
 }

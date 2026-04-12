@@ -36,6 +36,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\tabstract void method();"));
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tvoid method();", result.replacement().getFirst());
 	}
 
@@ -44,6 +47,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("int abstract"));
 		final var result = fixer.fix(lines, 0, 4);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("int ", result.replacement().getFirst());
 	}
 
@@ -52,6 +58,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\tpublic static final int X = 1;"));
 		final var result = fixer.fix(lines, 0, 15);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tpublic static int X = 1;", result.replacement().getFirst());
 	}
 
@@ -60,6 +69,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\tcatch (final Exception e) {"));
 		final var result = fixer.fix(lines, 0, 9);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\tcatch (Exception e) {", result.replacement().getFirst());
 	}
 
@@ -68,6 +80,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\tcatch (final RuntimeException | Error e) {"));
 		final var result = fixer.fix(lines, 0, 9);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\tcatch (RuntimeException | Error e) {", result.replacement().getFirst());
 	}
 
@@ -76,6 +91,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\tT(final int x) {}"));
 		final var result = fixer.fix(lines, 0, 3);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tT(int x) {}", result.replacement().getFirst());
 	}
 
@@ -84,6 +102,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\tfor (final var item : list)"));
 		final var result = fixer.fix(lines, 0, 7);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\tfor (var item : list)", result.replacement().getFirst());
 	}
 
@@ -92,6 +113,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\tfor (@SuppressWarnings(\"unused\") final var item : list)"));
 		final var result = fixer.fix(lines, 0, 35);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\tfor (@SuppressWarnings(\"unused\") var item : list)", result.replacement().getFirst());
 	}
 
@@ -100,6 +124,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\tfor (final var size = list.size(); size > 0;)"));
 		final var result = fixer.fix(lines, 0, 7);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\tfor (var size = list.size(); size > 0;)", result.replacement().getFirst());
 	}
 
@@ -108,6 +135,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\tfor (final int i = 0, size = 10; i < size;)"));
 		final var result = fixer.fix(lines, 0, 7);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\tfor (int i = 0, size = 10; i < size;)", result.replacement().getFirst());
 	}
 
@@ -116,6 +146,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\tlist.sort((final String a, final String b) -> a.compareTo(b));"));
 		final var result = fixer.fix(lines, 0, 13);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\tlist.sort((String a, final String b) -> a.compareTo(b));", result.replacement().getFirst());
 	}
 
@@ -124,6 +157,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\tvoid method(final @SuppressWarnings(\"unused\") int x) {}"));
 		final var result = fixer.fix(lines, 0, 13);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tvoid method(@SuppressWarnings(\"unused\") int x) {}", result.replacement().getFirst());
 	}
 
@@ -132,6 +168,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\tvoid method(@SuppressWarnings(\"unused\") final String s) {}"));
 		final var result = fixer.fix(lines, 0, 41);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tvoid method(@SuppressWarnings(\"unused\") String s) {}", result.replacement().getFirst());
 	}
 
@@ -140,6 +179,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\tvoid method(final int x, String y) {}"));
 		final var result = fixer.fix(lines, 0, 13);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tvoid method(int x, String y) {}", result.replacement().getFirst());
 	}
 
@@ -148,6 +190,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\tvoid method(int x, final String y) {}"));
 		final var result = fixer.fix(lines, 0, 20);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tvoid method(int x, String y) {}", result.replacement().getFirst());
 	}
 
@@ -156,6 +201,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\tvoid method(final int x) {}"));
 		final var result = fixer.fix(lines, 0, 13);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tvoid method(int x) {}", result.replacement().getFirst());
 	}
 
@@ -164,6 +212,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\tvoid method(final String... args) {}"));
 		final var result = fixer.fix(lines, 0, 13);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tvoid method(String... args) {}", result.replacement().getFirst());
 	}
 
@@ -172,6 +223,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\tpublic void method();"));
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tvoid method();", result.replacement().getFirst());
 	}
 
@@ -180,6 +234,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("\tstatic final int X = 1;"));
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tfinal int X = 1;", result.replacement().getFirst());
 	}
 
@@ -188,6 +245,9 @@ public class RedundantModifierFixerTest {
 		final var lines = new ArrayList<>(List.of("public"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertTrue(result.replacement().isEmpty());
 	}
 }

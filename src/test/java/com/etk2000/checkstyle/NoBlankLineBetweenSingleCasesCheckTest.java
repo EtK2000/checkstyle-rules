@@ -3,6 +3,7 @@ package com.etk2000.checkstyle;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import org.junit.jupiter.api.Test;
 
 public class NoBlankLineBetweenSingleCasesCheckTest {
@@ -18,8 +19,10 @@ public class NoBlankLineBetweenSingleCasesCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoBlankLineBetweenSingleCasesCheck.class, DIR + "InputBracedCaseBlankLineViolation.java");
 		assertEquals(2, violations.size());
 		assertEquals(11, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("No blank line after braced case, the closing brace provides separation.", violations.get(0).getMessage());
 		assertEquals(16, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("No blank line after braced case, the closing brace provides separation.", violations.get(1).getMessage());
 	}
 
@@ -28,6 +31,7 @@ public class NoBlankLineBetweenSingleCasesCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoBlankLineBetweenSingleCasesCheck.class, DIR + "InputSingleCaseViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(9, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
 		assertEquals("No blank line between single-line switch cases.", violations.getFirst().getMessage());
 	}
 
@@ -36,6 +40,7 @@ public class NoBlankLineBetweenSingleCasesCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoBlankLineBetweenSingleCasesCheck.class, DIR + "InputSingleCaseThrowViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(9, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
 		assertEquals("No blank line between single-line switch cases.", violations.getFirst().getMessage());
 	}
 
@@ -44,6 +49,7 @@ public class NoBlankLineBetweenSingleCasesCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoBlankLineBetweenSingleCasesCheck.class, DIR + "InputSingleCaseYieldViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(9, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
 		assertEquals("No blank line between single-line switch cases.", violations.getFirst().getMessage());
 	}
 

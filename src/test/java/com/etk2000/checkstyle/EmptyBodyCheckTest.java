@@ -21,25 +21,35 @@ public class EmptyBodyCheckTest {
 		assertEquals(10, violations.size());
 
 		assertEquals(7, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("Empty else body, remove it.", violations.get(0).getMessage());
 		assertEquals(14, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("Empty if body, remove it (preserve any side effects in the condition).", violations.get(1).getMessage());
 		assertEquals(21, violations.get(2).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(2).getSeverityLevel());
 		assertEquals("Empty if body, remove it (preserve any side effects in the condition).", violations.get(2).getMessage());
 		assertEquals(27, violations.get(3).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(3).getSeverityLevel());
 		assertEquals("Empty if body, remove it (preserve any side effects in the condition).", violations.get(3).getMessage());
 		assertEquals(34, violations.get(4).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(4).getSeverityLevel());
 		assertEquals("Empty else body, remove it.", violations.get(4).getMessage());
 		assertEquals(40, violations.get(5).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(5).getSeverityLevel());
 		assertEquals("Empty else body, remove it.", violations.get(5).getMessage());
 
 		assertEquals(45, violations.get(6).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(6).getSeverityLevel());
 		assertEquals("Empty if body, remove it (preserve any side effects in the condition).", violations.get(6).getMessage());
 		assertEquals(50, violations.get(7).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(7).getSeverityLevel());
 		assertEquals("Empty if body, remove it (preserve any side effects in the condition).", violations.get(7).getMessage());
 		assertEquals(54, violations.get(8).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(8).getSeverityLevel());
 		assertEquals("Empty if body, remove it (preserve any side effects in the condition).", violations.get(8).getMessage());
 		assertEquals(59, violations.get(9).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(9).getSeverityLevel());
 		assertEquals("Empty if body, remove it (preserve any side effects in the condition).", violations.get(9).getMessage());
 	}
 

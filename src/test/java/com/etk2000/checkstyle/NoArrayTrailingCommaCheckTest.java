@@ -3,6 +3,7 @@ package com.etk2000.checkstyle;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import org.junit.jupiter.api.Test;
 
 public class NoArrayTrailingCommaCheckTest {
@@ -18,10 +19,13 @@ public class NoArrayTrailingCommaCheckTest {
 		final var violations = BaseCheckTest.runCheck(NoArrayTrailingCommaCheck.class, DIR + "InputArrayCommaViolation.java");
 		assertEquals(3, violations.size());
 		assertEquals(4, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("No trailing comma in array initializer.", violations.get(0).getMessage());
 		assertEquals(5, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("No trailing comma in array initializer.", violations.get(1).getMessage());
 		assertEquals(7, violations.get(2).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(2).getSeverityLevel());
 		assertEquals("No trailing comma in array initializer.", violations.get(2).getMessage());
 	}
 }

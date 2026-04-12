@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +33,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
 		assertEquals("for (@Nonnull var i : l)", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -40,6 +44,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
 		assertEquals("for (@Nonnull @Deprecated var i : l)", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -48,6 +55,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
 		assertEquals("for (@Nonnull final var i : l)", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -56,6 +66,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\t@SuppressWarnings(\"x\") var s = \"\";", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -64,6 +77,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tvar a = new String[5];", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -91,6 +107,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tvar c = ',';", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -99,6 +118,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tvar x = m(a, b);", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -107,6 +129,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tvar x = \"a,b\";", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -123,6 +148,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tfinal List<String>[] a = {list};", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -131,6 +159,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tfinal int[][] m = {{1}};", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -139,6 +170,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tfinal String[] a = {\"a\"};", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -147,6 +181,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tfinal int[] a = {1, 2};", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -155,6 +192,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tfinal String[] a = {\"a\"};", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -163,6 +203,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tfinal var x = 5;", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -171,6 +214,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 7);
 		assertNotNull(result);
 		assertEquals("\tfinal var x = 5;", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -179,6 +225,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
 		assertEquals("for (var item : list)", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -187,6 +236,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
 		assertEquals("for (final var i : l)", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -195,6 +247,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
 		assertEquals("for (var i = 0; i < 10; ++i)", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -203,6 +258,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tvar l = List.of();", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -211,6 +269,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tvar m = new int[3][3];", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -231,6 +292,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tvar m = Map.of();", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -239,6 +303,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tvar l = x;", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -247,6 +314,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tvar x = 5;", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -255,6 +325,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tvar s = \"hi\";", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -263,6 +336,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
 		assertEquals("try (var in = x)", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -271,6 +347,9 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 2);
 		assertNotNull(result);
 		assertEquals("\t\tvar x = 5;", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -279,5 +358,8 @@ public class PreferVarFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals("\tvar l = List.of();", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 }

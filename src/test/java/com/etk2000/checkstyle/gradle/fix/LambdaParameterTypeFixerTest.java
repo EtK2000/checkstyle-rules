@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -55,6 +56,9 @@ public class LambdaParameterTypeFixerTest {
 		final var result = fixer.fix(lines, 0, 15);
 		assertNotNull(result);
 		assertEquals("\t\tlist.forEach(x -> System.out.println(x));", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -63,6 +67,9 @@ public class LambdaParameterTypeFixerTest {
 		final var result = fixer.fix(lines, 0, 12);
 		assertNotNull(result);
 		assertEquals("\t\tlist.sort((x, y) -> x.compareTo(y));", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -71,6 +78,9 @@ public class LambdaParameterTypeFixerTest {
 		final var result = fixer.fix(lines, 0, 16);
 		assertNotNull(result);
 		assertEquals("\t\tlist.forEach(x -> System.out.println(x));", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -79,6 +89,9 @@ public class LambdaParameterTypeFixerTest {
 		final var result = fixer.fix(lines, 0, 16);
 		assertNotNull(result);
 		assertEquals("\t\tlist.forEach(x -> System.out.println(x));", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -87,6 +100,9 @@ public class LambdaParameterTypeFixerTest {
 		final var result = fixer.fix(lines, 0, 16);
 		assertNotNull(result);
 		assertEquals("\t\tlist.forEach((@A var x) -> System.out.println(x));", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -95,6 +111,9 @@ public class LambdaParameterTypeFixerTest {
 		final var result = fixer.fix(lines, 0, 12);
 		assertNotNull(result);
 		assertEquals("\t\tlist.sort((@A var x, var y) -> x.compareTo(y));", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -103,6 +122,9 @@ public class LambdaParameterTypeFixerTest {
 		final var result = fixer.fix(lines, 0, 12);
 		assertNotNull(result);
 		assertEquals("\t\tlist.sort((@A var x, @B var y) -> x.compareTo(y));", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -111,6 +133,9 @@ public class LambdaParameterTypeFixerTest {
 		final var result = fixer.fix(lines, 0, 16);
 		assertNotNull(result);
 		assertEquals("\t\tlist.forEach((@A @B var x) -> System.out.println(x));", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -119,5 +144,8 @@ public class LambdaParameterTypeFixerTest {
 		final var result = fixer.fix(lines, 0, 12);
 		assertNotNull(result);
 		assertEquals("\t\tlist.sort((var x, @A var y) -> x.compareTo(y));", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 }

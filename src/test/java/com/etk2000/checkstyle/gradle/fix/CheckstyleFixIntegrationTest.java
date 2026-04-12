@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.etk2000.checkstyle.gradle.fix.CheckstyleFixAction.ApplyFixesResult;
 import com.puppycrawl.tools.checkstyle.Checker;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.TreeWalker;
@@ -23,6 +24,8 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 
 public class CheckstyleFixIntegrationTest {
+	record FixOutput(@Nonnull String content, @Nonnull ApplyFixesResult result) {}
+
 	@TempDir
 	Path tempDir;
 
@@ -114,11 +117,11 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Nonnull
-	private String runFixAndGetResult(@Nonnull File file) throws Exception {
+	private FixOutput runFixAndGetResult(@Nonnull File file) throws Exception {
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
-		return String.join("\n", lines);
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		return new FixOutput(String.join("\n", lines), result);
 	}
 
 	@Nonnull
@@ -133,10 +136,11 @@ public class CheckstyleFixIntegrationTest {
 		return String.join("\n", lines);
 	}
 
-	private int runFixPipeline(@Nonnull File file) throws Exception {
+	@Nonnull
+	private ApplyFixesResult runFixPipeline(@Nonnull File file) throws Exception {
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		return CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS).fixCount();
+		return CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 	}
 
 	@Test
@@ -144,10 +148,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnBlank.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@Deprecated\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -155,10 +162,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnBlankBlock.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\t/* block */\n\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@Deprecated\n\t/* block */\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -166,10 +176,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnBlankJavadoc.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\t/** Javadoc. */\n\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@Deprecated\n\t/** Javadoc. */\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -177,10 +190,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnBlankComment.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\t// comment\n\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@Deprecated\n\t// comment\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -188,10 +204,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnBlankMultiBlock.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\t/*\n\t * comment\n\t */\n\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@Deprecated\n\t/*\n\t * comment\n\t */\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -199,10 +218,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnBlankAfterMultiBlockInternal.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\t/*\n\t * comment\n\t *\n\t * more\n\t */\n\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@Deprecated\n\t/*\n\t * comment\n\t *\n\t * more\n\t */\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -210,10 +232,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnBlankBeforeBlock.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\n\t/* block */\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@Deprecated\n\t/* block */\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -221,10 +246,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnBlankBeforeJavadoc.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\n\t/** Javadoc. */\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@Deprecated\n\t/** Javadoc. */\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -232,10 +260,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnBlankBeforeLine.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\n\t// comment\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@Deprecated\n\t// comment\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -243,10 +274,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnBlankBeforeMultiBlock.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\n\t/*\n\t * comment\n\t */\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@Deprecated\n\t/*\n\t * comment\n\t */\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -254,10 +288,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnBlankMulti.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@SuppressWarnings({\n\t\t\"unchecked\",\n\t\t\"rawtypes\"\n\t})\n\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@SuppressWarnings({\n\t\t\"unchecked\",\n\t\t\"rawtypes\"\n\t})\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -265,10 +302,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnReorder.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Override\n\t@Deprecated\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@Deprecated\n\t@Override\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -276,10 +316,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnOwn.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Override @Deprecated void method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@Deprecated\n\t@Override\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -287,10 +330,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnReord.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid method(@Override @Deprecated String param) {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid method(@Deprecated @Override String param) {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -298,10 +344,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnSame.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid method(\n\t\t\t@Deprecated\n\t\t\tString param\n\t) {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid method(\n\t\t\t@Deprecated String param\n\t) {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -309,10 +358,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnSynEmpty.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Deprecated()\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@Deprecated\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -320,10 +372,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AnnSynValue.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@SuppressWarnings(value = \"unchecked\")\n\tvoid method() {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\t@SuppressWarnings(\"unchecked\")\n\tvoid method() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -344,7 +399,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Arr.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1, 2,};\n}");
 
-		assertEquals("class T {\n\tint[] a = {1, 2};\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint[] a = {1, 2};\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -353,10 +411,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\t\tdoSomething();\n\t\t\t\tbreak;\n\t\t\tcase 2:\n\t\t\t\tbreak;\n\t\t\tdefault:\n\t\t\t\tbreak;\n\t\t}\n\t}\n\tvoid doSomething() {}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\t\tdoSomething();\n\t\t\t\tbreak;\n\n\t\t\tcase 2:\n\t\t\t\tbreak;\n\n\t\t\tdefault:\n\t\t\t\tbreak;\n\t\t}\n\t}\n\tvoid doSomething() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -366,10 +427,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\tcase 2:\n\t\t\t\tdoSomething();\n\t\t\t\tbreak;\n\t\t\tcase 3:\n\t\t\t\tbreak;\n\t\t}\n\t}\n\tvoid doSomething() {}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\tcase 2:\n\t\t\t\tdoSomething();\n\t\t\t\tbreak;\n\n\t\t\tcase 3:\n\t\t\t\tbreak;\n\t\t}\n\t}\n\tvoid doSomething() {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -377,7 +441,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("ClassBrace.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\n\tint x;\n}");
 
-		assertEquals("class T {\n\tint x;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint x;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -385,7 +452,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("ClassBraceBoth.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\n\tint x;\n\n}");
 
-		assertEquals("class T {\n\tint x;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint x;\n}", output.content());
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -393,7 +463,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("ClassBraceMulti.java").toFile();
 		Files.writeString(file.toPath(), "class T\n\t\textends Base {\n\n\tint x;\n}");
 
-		assertEquals("class T\n\t\textends Base {\n\tint x;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T\n\t\textends Base {\n\tint x;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -401,7 +474,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("CloseBrace.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint x;\n\n}");
 
-		assertEquals("class T {\n\tint x;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint x;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -410,10 +486,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\t\treturn;\n\n\t\t\tcase 2:\n\t\t\t\treturn;\n\t\t}\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\t\treturn;\n\t\t\tcase 2:\n\t\t\t\treturn;\n\t\t}\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -422,10 +501,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\t\treturn;\n\n\n\n\t\t\tcase 2:\n\t\t\t\treturn;\n\t\t}\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\t\treturn;\n\t\t\tcase 2:\n\t\t\t\treturn;\n\t\t}\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -433,7 +515,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Dbl.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint x;\n\n\n\tint y;\n}");
 
-		assertEquals("class T {\n\tint x;\n\n\tint y;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint x;\n\n\tint y;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -441,7 +526,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Dbl3.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint x;\n\n\n\n\tint y;\n}");
 
-		assertEquals("class T {\n\tint x;\n\n\tint y;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint x;\n\n\tint y;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -450,10 +538,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo {\n\t\t\t--x;\n\t\t} while (x > 0);\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(int x) {\n\t\tdo --x; while (x > 0);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -462,10 +553,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo {\n\t\t\tSystem.out.println(x);\n\t\t} while (x > 0);\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(int x) {\n\t\tdo System.out.println(x);\n\t\twhile (x > 0);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -474,10 +568,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(java.util.List<String> list) {\n\t\tdo {\n\t\t\tlist.subList(0, 1).clear();\n\t\t} while (!list.isEmpty());\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(java.util.List<String> list) {\n\t\tdo\n\t\t\tlist.subList(0, 1).clear();\n\t\twhile (!list.isEmpty());\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -486,10 +583,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(int x, int y) {\n\t\tdo {\n\t\t\tx += 5 * y;\n\t\t} while (x < 100);\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(int x, int y) {\n\t\tdo\n\t\t\tx += 5 * y;\n\t\twhile (x < 100);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -498,10 +598,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo\n\t\t\tif (x > 0)\n\t\t\t\t--x;\n\t\twhile (x > 0);\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(int x) {\n\t\tdo {\n\t\t\tif (x > 0)\n\t\t\t\t--x;\n\t\t} while (x > 0);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -510,10 +613,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo\n\t\t\t--x;\n\t\twhile (x > 0);\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(int x) {\n\t\tdo --x; while (x > 0);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -522,10 +628,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo\n\t\t\tSystem.out.println(x);\n\t\twhile (x > 0);\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(int x) {\n\t\tdo System.out.println(x);\n\t\twhile (x > 0);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -534,10 +643,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo --x;\n\t\twhile (x > 0);\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(int x) {\n\t\tdo --x; while (x > 0);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -546,10 +658,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo System.out.println(x); while (x > 0);\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(int x) {\n\t\tdo System.out.println(x);\n\t\twhile (x > 0);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -558,10 +673,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(java.util.List<String> list) {\n\t\tdo list.subList(0, 1).clear();\n\t\twhile (!list.isEmpty());\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(java.util.List<String> list) {\n\t\tdo\n\t\t\tlist.subList(0, 1).clear();\n\t\twhile (!list.isEmpty());\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -570,10 +688,13 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class T {\n\tvoid f(java.util.List<String> list) {\n\t\tdo list.subList(0, 1).clear(); while (!list.isEmpty());\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(java.util.List<String> list) {\n\t\tdo\n\t\t\tlist.subList(0, 1).clear();\n\t\twhile (!list.isEmpty());\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -581,7 +702,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Color.java").toFile();
 		Files.writeString(file.toPath(), "enum Color {\n\tRED,\n\tGREEN,\n}");
 
-		assertEquals("enum Color {\n\tRED,\n\tGREEN\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum Color {\n\tRED,\n\tGREEN\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -589,7 +713,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Init.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint x = 0;\n\tObject o = null;\n\tboolean b = false;\n}");
 
-		assertEquals("class T {\n\tint x;\n\tObject o;\n\tboolean b;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint x;\n\tObject o;\n\tboolean b;\n}", output.content());
+		assertEquals(3, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -597,7 +724,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("InitMulti.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint a = 0, b;\n}");
 
-		assertEquals("class T {\n\tint a, b;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint a, b;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -605,10 +735,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Final.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tint x = 5;\n\t\tvar y = \"hello\";\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f() {\n\t\tfinal var x = 5;\n\t\tfinal var y = \"hello\";\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(3, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -616,10 +749,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("FinalTab.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tif (true) {\n\t\t\tint x = 5;\n\t\t}\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f() {\n\t\tif (true) {\n\t\t\tfinal var x = 5;\n\t\t}\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -640,10 +776,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("LamParen.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.forEach((x) -> System.out.println(x));\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.List;\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.forEach(x -> System.out.println(x));\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -651,10 +790,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("LamType.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.forEach((String x) -> System.out.println(x));\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.List;\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.forEach(x -> System.out.println(x));\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -662,10 +804,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("LamVar.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\n@interface A {}\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.forEach((@A String x) -> System.out.println(x));\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.List;\n@interface A {}\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.forEach((@A var x) -> System.out.println(x));\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -673,10 +818,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("LamVarMulti.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\n@interface A {}\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.sort((@A String x, String y) -> x.compareTo(y));\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.List;\n@interface A {}\nclass T {\n\tvoid f(List<String> list) {\n\t\tlist.sort((@A var x, var y) -> x.compareTo(y));\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -697,7 +845,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Multi2.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1,};\n\tlong x = 100L;\n}");
 
-		assertEquals("class T {\n\tint[] a = {1};\n\tlong x = 100;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint[] a = {1};\n\tlong x = 100;\n}", output.content());
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -705,10 +856,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("CatchFinal.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\ttry {\n\t\t\tSystem.out.println();\n\t\t}\n\t\tcatch (final Exception e) {\n\t\t\tSystem.out.println(e);\n\t\t}\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f() {\n\t\ttry {\n\t\t\tSystem.out.println();\n\t\t}\n\t\tcatch (Exception e) {\n\t\t\tSystem.out.println(e);\n\t\t}\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -716,7 +870,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("CtorFinal.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tT(final int x) {}\n}");
 
-		assertEquals("class T {\n\tT(int x) {}\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tT(int x) {}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -724,10 +881,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("ForEachFinal.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f(List<String> list) {\n\t\tfor (final var item : list)\n\t\t\tSystem.out.println(item);\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.List;\nclass T {\n\tvoid f(List<String> list) {\n\t\tfor (var item : list)\n\t\t\tSystem.out.println(item);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -735,7 +895,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("ParamFinal.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f(final int x, final String y) {}\n}");
 
-		assertEquals("class T {\n\tvoid f(int x, String y) {}\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tvoid f(int x, String y) {}\n}", output.content());
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -743,7 +906,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("SecondFinal.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f(int x, final String y) {}\n}");
 
-		assertEquals("class T {\n\tvoid f(int x, String y) {}\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tvoid f(int x, String y) {}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -752,7 +918,9 @@ public class CheckstyleFixIntegrationTest {
 		final var input = "class Clean {\n\tint[] a = {1, 2};\n\tint x = 100;\n}";
 		Files.writeString(file.toPath(), input);
 
-		assertEquals(0, runFixPipeline(file));
+		final var result = runFixPipeline(file);
+		assertEquals(0, result.fixCount());
+		assertFalse(result.needsSecondPass());
 	}
 
 	@Test
@@ -760,10 +928,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Decr.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid run() {\n\t\tint i = 5;\n\t\ti--;\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid run() {\n\t\tvar i = 5;\n\t\t--i;\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -771,10 +942,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Incr.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid run() {\n\t\tint i = 0;\n\t\ti++;\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid run() {\n\t\tvar i = 0;\n\t\t++i;\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -782,10 +956,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("IncrFor.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid run() {\n\t\tfor (var i = 0; i < 10; i++)\n\t\t\tSystem.out.println(i);\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid run() {\n\t\tfor (var i = 0; i < 10; ++i)\n\t\t\tSystem.out.println(i);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -793,10 +970,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("ColMulti.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.ArrayList;\nimport java.util.HashMap;\nclass T {\n\tvoid f(ArrayList<String> a, HashMap<String, Integer> b) {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.ArrayList;\nimport java.util.HashMap;\nclass T {\n\tvoid f(List<String> a, Map<String, Integer> b) {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -804,10 +984,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("ColParam.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.HashSet;\nclass T {\n\tvoid f(HashSet<String> s) {}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.HashSet;\nclass T {\n\tvoid f(Set<String> s) {}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -815,10 +998,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("ColReturn.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.ArrayList;\nclass T {\n\tArrayList<String> f() {\n\t\treturn new ArrayList<>();\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.ArrayList;\nclass T {\n\tList<String> f() {\n\t\treturn new ArrayList<>();\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -826,10 +1012,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("MathAbs.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint f(int a) {\n\t\treturn a < 0 ? -a : a;\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tint f(int a) {\n\t\treturn Math.abs(a);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -837,10 +1026,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("MathClamp.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint f(int v, int lo, int hi) {\n\t\treturn Math.max(lo, Math.min(hi, v));\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tint f(int v, int lo, int hi) {\n\t\treturn Math.clamp(v, lo, hi);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -848,10 +1040,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("MathMax.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint f(int a, int b) {\n\t\treturn a > b ? a : b;\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tint f(int a, int b) {\n\t\treturn Math.max(a, b);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -859,10 +1054,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("MathMaxDec.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint f(int a, int b) {\n\t\treturn --a > b ? a : b;\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tint f(int a, int b) {\n\t\treturn Math.max(--a, b);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -870,10 +1068,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("MathMin.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint f(int a, int b) {\n\t\treturn a < b ? a : b;\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tint f(int a, int b) {\n\t\treturn Math.min(a, b);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -881,10 +1082,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AssertJ4.java").toFile();
 		Files.writeString(file.toPath(), "import static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nclass T {\n\tvoid run() {\n\t\tassertEquals(true, 1 == 1);\n\t\tassertEquals(new Object(), null);\n\t\tassertEquals(\"msg\", null, new Object());\n\t\tassertNotEquals(\"msg\", false, 1 == 1);\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nclass T {\n\tvoid run() {\n\t\tassertTrue(1 == 1);\n\t\tassertNull(new Object());\n\t\tassertNull(\"msg\", new Object());\n\t\tassertTrue(\"msg\", 1 == 1);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(4, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -892,10 +1096,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("AssertJ5.java").toFile();
 		Files.writeString(file.toPath(), "import static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nclass T {\n\tvoid run() {\n\t\tassertEquals(true, 1 == 1);\n\t\tassertEquals(new Object(), null);\n\t\tassertEquals(null, new Object(), \"msg\");\n\t\tassertNotEquals(false, 1 == 1, \"msg\");\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nclass T {\n\tvoid run() {\n\t\tassertTrue(1 == 1);\n\t\tassertNull(new Object());\n\t\tassertNull(new Object(), \"msg\");\n\t\tassertTrue(1 == 1, \"msg\");\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(4, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1028,10 +1235,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("EqEmpty.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid run(String s) {\n\t\tif (s.equals(\"\"))\n\t\t\treturn;\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid run(String s) {\n\t\tif (s.isEmpty())\n\t\t\treturn;\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1039,10 +1249,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("MapChain.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.Map;\nclass T {\n\tvoid run(Map<String, String> map) {\n\t\tif (map.keySet().contains(\"k\"))\n\t\t\treturn;\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.Map;\nclass T {\n\tvoid run(Map<String, String> map) {\n\t\tif (map.containsKey(\"k\"))\n\t\t\treturn;\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1062,10 +1275,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("ReplAll.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tString run(String s) {\n\t\treturn s.replaceAll(\"foo\", \"bar\");\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tString run(String s) {\n\t\treturn s.replace(\"foo\", \"bar\");\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1073,10 +1289,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("StreamCnt.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tlong run(List<String> list) {\n\t\treturn list.stream().count();\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.List;\nclass T {\n\tlong run(List<String> list) {\n\t\treturn list.size();\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1084,10 +1303,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("StreamFE.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.stream().forEach(System.out::println);\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.forEach(System.out::println);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1095,10 +1317,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("VarArr.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tfinal var a = new String[]{\"a\"};\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f() {\n\t\tfinal String[] a = {\"a\"};\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1106,10 +1331,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("VarFinal.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tint x = 5;\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f() {\n\t\tfinal var x = 5;\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1117,10 +1345,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("VarFE.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f() {\n\t\tfor (String item : List.of(\"a\"))\n\t\t\tSystem.out.println(item);\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.List;\nclass T {\n\tvoid f() {\n\t\tfor (var item : List.of(\"a\"))\n\t\t\tSystem.out.println(item);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1128,10 +1359,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("VarFor.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tfor (int i = 0; i < 10; ++i)\n\t\t\tSystem.out.println(i);\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f() {\n\t\tfor (var i = 0; i < 10; ++i)\n\t\t\tSystem.out.println(i);\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1139,10 +1373,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("VarGen.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f() {\n\t\tfinal List<String> l = List.of();\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.List;\nclass T {\n\tvoid f() {\n\t\tfinal var l = List.of();\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1150,10 +1387,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("VarStr.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tfinal String s = \"hi\";\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f() {\n\t\tfinal var s = \"hi\";\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1161,10 +1401,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("VarInt.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tfinal int x = 5;\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f() {\n\t\tfinal var x = 5;\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1172,10 +1415,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("VarTab.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\t\tfinal int x = 5;\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f() {\n\t\t\tfinal var x = 5;\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1183,10 +1429,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("VarTry.java").toFile();
 		Files.writeString(file.toPath(), "import java.io.ByteArrayInputStream;\nclass T {\n\tvoid f() throws Exception {\n\t\ttry (ByteArrayInputStream in = new ByteArrayInputStream(new byte[0])) {\n\t\t\tin.read();\n\t\t}\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.io.ByteArrayInputStream;\nclass T {\n\tvoid f() throws Exception {\n\t\ttry (var in = new ByteArrayInputStream(new byte[0])) {\n\t\t\tin.read();\n\t\t}\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1196,10 +1445,13 @@ public class CheckstyleFixIntegrationTest {
 		Files.writeString(file.toPath(), "class T {\n\tvoid f(int a, int b) {\n\t\tfinal float x = a + b;\n\t}\n}");
 
 		// WARNING should not be fixed — line stays unchanged
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid f(int a, int b) {\n\t\tfinal float x = a + b;\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(0, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1209,7 +1461,10 @@ public class CheckstyleFixIntegrationTest {
 
 		// both RedundantImport and UnusedImports fire on java.lang.String, so
 		// the import line is deleted twice — the second delete removes the blank line
-		assertEquals("class T {\n\tString s;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tString s;\n}", output.content());
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1217,7 +1472,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Iface.java").toFile();
 		Files.writeString(file.toPath(), "interface T {\n\tpublic void method();\n}");
 
-		assertEquals("interface T {\n\tvoid method();\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("interface T {\n\tvoid method();\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1225,7 +1483,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("EnumCtor.java").toFile();
 		Files.writeString(file.toPath(), "enum Color {\n\tRED(1);\n\n\tprivate Color(int code) {\n\t}\n}");
 
-		assertEquals("enum Color {\n\tRED(1);\n\n\tColor(int code) {\n\t}\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum Color {\n\tRED(1);\n\n\tColor(int code) {\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1233,7 +1494,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("IfaceField.java").toFile();
 		Files.writeString(file.toPath(), "interface T {\n\tstatic int VALUE = 5;\n}");
 
-		assertEquals("interface T {\n\tint VALUE = 5;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("interface T {\n\tint VALUE = 5;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1241,7 +1505,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Suffix.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tlong x = 100L;\n\tdouble d = 1.0d;\n}");
 
-		assertEquals("class T {\n\tlong x = 100;\n\tdouble d = 1.0;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tlong x = 100;\n\tdouble d = 1.0;\n}", output.content());
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1249,7 +1516,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("SuffixHex.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tlong a = 0xFFL;\n\tfloat b = 100F;\n\tlong c = 0b1010L;\n}");
 
-		assertEquals("class T {\n\tlong a = 0xFF;\n\tfloat b = 100;\n\tlong c = 0b1010;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tlong a = 0xFF;\n\tfloat b = 100;\n\tlong c = 0b1010;\n}", output.content());
+		assertEquals(3, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1257,7 +1527,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Child.java").toFile();
 		Files.writeString(file.toPath(), "class Child extends Object {\n\tChild() {\n\t\tsuper();\n\t}\n}");
 
-		assertEquals("class Child extends Object {\n\tChild() {\n\t}\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class Child extends Object {\n\tChild() {\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1265,7 +1538,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("ChildTab.java").toFile();
 		Files.writeString(file.toPath(), "class Outer {\n\tclass Inner extends Object {\n\t\tInner() {\n\t\t\tsuper();\n\t\t}\n\t}\n}");
 
-		assertEquals("class Outer {\n\tclass Inner extends Object {\n\t\tInner() {\n\t\t}\n\t}\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class Outer {\n\tclass Inner extends Object {\n\t\tInner() {\n\t\t}\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1301,7 +1577,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("TrailNl.java").toFile();
 		Files.writeString(file.toPath(), "class T {}\n");
 
-		assertEquals("class T {}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {}", output.content());
+		assertEquals(0, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1309,7 +1588,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("TrailNl2.java").toFile();
 		Files.writeString(file.toPath(), "class T {}\n\n");
 
-		assertEquals("class T {}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1317,7 +1599,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Trail.java").toFile();
 		Files.writeString(file.toPath(), "class T {   \n\tint x;\t\n}");
 
-		assertEquals("class T {\n\tint x;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint x;\n}", output.content());
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1325,7 +1610,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("TrailTab.java").toFile();
 		Files.writeString(file.toPath(), "class T {\t\t\n\tint x;\n}");
 
-		assertEquals("class T {\n\tint x;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint x;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1333,10 +1621,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("This.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint value;\n\tint get() {\n\t\treturn this.value;\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tint value;\n\tint get() {\n\t\treturn value;\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1344,10 +1635,13 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("ThisChain.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tString value;\n\tint get() {\n\t\treturn this.value.length();\n\t}\n}");
 
+		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tString value;\n\tint get() {\n\t\treturn value.length();\n\t}\n}",
-				runFixAndGetResult(file)
+				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1355,7 +1649,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Unused.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\n\nclass T {\n}");
 
-		assertEquals("\nclass T {\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("\nclass T {\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1364,7 +1661,10 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Ell.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tlong x = 3000000000l;\n}");
 
-		assertEquals("class T {\n\tlong x = 3000000000L;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tlong x = 3000000000L;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1373,6 +1673,9 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("EllHex.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tlong x = 0xB00000000l;\n}");
 
-		assertEquals("class T {\n\tlong x = 0xB00000000L;\n}", runFixAndGetResult(file));
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tlong x = 0xB00000000L;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 }

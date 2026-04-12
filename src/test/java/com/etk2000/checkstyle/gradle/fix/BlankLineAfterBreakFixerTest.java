@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +28,7 @@ public class BlankLineAfterBreakFixerTest {
 		assertEquals(0, result.endLine());
 		assertEquals(1, result.replacement().size());
 		assertEquals("", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -38,6 +40,7 @@ public class BlankLineAfterBreakFixerTest {
 		assertEquals(0, result.endLine());
 		assertEquals(1, result.replacement().size());
 		assertEquals("", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test

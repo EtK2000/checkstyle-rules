@@ -16,9 +16,11 @@ public class FieldSortingCheckTest {
 		assertEquals(2, violations.size());
 		// anon class field after regular field in same chunk
 		assertEquals(8, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("Field 'action' with anonymous class initializer must appear before 'data'.", violations.get(0).getMessage());
 		// lambda referencing another field is still a dependency (not skipped like anon class bodies)
 		assertEquals(24, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("Field 'action' references 'name' which should be declared before it.", violations.get(1).getMessage());
 	}
 
@@ -27,12 +29,16 @@ public class FieldSortingCheckTest {
 		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingArrayViolation.java");
 		assertEquals(4, violations.size());
 		assertEquals(6, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("Field 'plain' (type 'int') must appear before 'name' (type 'String').", violations.get(0).getMessage());
 		assertEquals(11, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("Field 'vector' (type 'int[]') must appear before 'matrix' (type 'int[][]').", violations.get(1).getMessage());
 		assertEquals(12, violations.get(2).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(2).getSeverityLevel());
 		assertEquals("Field 'scalar' (type 'int') must appear before 'vector' (type 'int[]').", violations.get(2).getMessage());
 		assertEquals(17, violations.get(3).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(3).getSeverityLevel());
 		assertEquals("Field 'letter' (type 'char') must appear before 'values' (type 'double[]').", violations.get(3).getMessage());
 	}
 
@@ -41,8 +47,10 @@ public class FieldSortingCheckTest {
 		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingChunkViolation.java");
 		assertEquals(2, violations.size());
 		assertEquals(5, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("Field 'finalNoValue' (final without inline value) must appear before non-final fields.", violations.get(0).getMessage());
 		assertEquals(6, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("Field 'finalWithValue' (final with inline value) must appear before final without inline value fields.", violations.get(1).getMessage());
 	}
 
@@ -57,9 +65,11 @@ public class FieldSortingCheckTest {
 		assertEquals(2, violations.size());
 		// ALPHA should come before DERIVED (normal name violation, no dependency)
 		assertEquals(7, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("Field 'ALPHA' must appear before 'DERIVED' (alphabetical order, same type).", violations.get(0).getMessage());
 		// beta references alpha via this.alpha, but alpha is declared after beta
 		assertEquals(12, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("Field 'beta' references 'alpha' which should be declared before it.", violations.get(1).getMessage());
 	}
 
@@ -128,6 +138,7 @@ public class FieldSortingCheckTest {
 		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingNameViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(5, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
 		assertEquals("Field 'alpha' must appear before 'zebra' (alphabetical order, same type).", violations.getFirst().getMessage());
 	}
 
@@ -136,6 +147,7 @@ public class FieldSortingCheckTest {
 		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingTypeViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(5, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
 		assertEquals("Field 'count' (type 'int') must appear before 'name' (type 'String').", violations.getFirst().getMessage());
 	}
 }

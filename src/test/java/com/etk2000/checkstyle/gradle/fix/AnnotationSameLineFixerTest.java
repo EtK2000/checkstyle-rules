@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -21,6 +22,7 @@ public class AnnotationSameLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t\t@SuppressWarnings(\"unchecked\") String param"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -35,6 +37,7 @@ public class AnnotationSameLineFixerTest {
 		final var result = fixer.fix(lines, 0, 13);
 		assertNotNull(result);
 		assertEquals(List.of("\tvoid foo(@A @B @C String param) {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -44,6 +47,7 @@ public class AnnotationSameLineFixerTest {
 		final var result = fixer.fix(lines, 0, 13);
 		assertNotNull(result);
 		assertEquals(List.of("\tvoid foo(@A @B String param) {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -64,6 +68,7 @@ public class AnnotationSameLineFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\t@A @B String param"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -77,6 +82,7 @@ public class AnnotationSameLineFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\t@A String param"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -92,6 +98,7 @@ public class AnnotationSameLineFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(3, result.endLine());
 		assertEquals(List.of("\t\t@A @B @C String param"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -122,6 +129,7 @@ public class AnnotationSameLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t\t\t@A String param"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -135,6 +143,7 @@ public class AnnotationSameLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t\t@A @B @C String param"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -146,5 +155,6 @@ public class AnnotationSameLineFixerTest {
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals(List.of("\t\t@A @B String param"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 }

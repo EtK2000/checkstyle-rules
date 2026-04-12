@@ -3,6 +3,7 @@ package com.etk2000.checkstyle;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import org.junit.jupiter.api.Test;
 
 public class ClassStructureOrderCheckTest {
@@ -18,6 +19,7 @@ public class ClassStructureOrderCheckTest {
 		final var violations = BaseCheckTest.runCheck(ClassStructureOrderCheck.class, DIR + "InputClassStructureConstructorThenStatic.java");
 		assertEquals(1, violations.size());
 		assertEquals(6, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
 		assertEquals("'staticMethod' (static method) must appear before constructor/instance initializer section.", violations.getFirst().getMessage());
 	}
 
@@ -26,6 +28,7 @@ public class ClassStructureOrderCheckTest {
 		final var violations = BaseCheckTest.runCheck(ClassStructureOrderCheck.class, DIR + "InputClassStructureEnum.java");
 		assertEquals(1, violations.size());
 		assertEquals(9, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
 		assertEquals("'staticMethod' (static method) must appear before instance method section.", violations.getFirst().getMessage());
 	}
 
@@ -34,6 +37,7 @@ public class ClassStructureOrderCheckTest {
 		final var violations = BaseCheckTest.runCheck(ClassStructureOrderCheck.class, DIR + "InputClassStructureFieldAfterMethod.java");
 		assertEquals(1, violations.size());
 		assertEquals(6, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
 		assertEquals("'field' (instance field) must appear before instance method section.", violations.getFirst().getMessage());
 	}
 
@@ -42,6 +46,7 @@ public class ClassStructureOrderCheckTest {
 		final var violations = BaseCheckTest.runCheck(ClassStructureOrderCheck.class, DIR + "InputClassStructureInnerTypeAfterMethod.java");
 		assertEquals(1, violations.size());
 		assertEquals(6, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
 		assertEquals("'Inner' (inner type) must appear before instance method section.", violations.getFirst().getMessage());
 	}
 
@@ -50,6 +55,7 @@ public class ClassStructureOrderCheckTest {
 		final var violations = BaseCheckTest.runCheck(ClassStructureOrderCheck.class, DIR + "InputClassStructureInstanceInitViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(6, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
 		assertEquals("'<instance init>' (constructor/instance initializer) must appear before instance method section.", violations.getFirst().getMessage());
 	}
 
@@ -58,8 +64,10 @@ public class ClassStructureOrderCheckTest {
 		final var violations = BaseCheckTest.runCheck(ClassStructureOrderCheck.class, DIR + "InputClassStructureMultipleViolations.java");
 		assertEquals(2, violations.size());
 		assertEquals(6, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("'static1' (static method) must appear before instance method section.", violations.get(0).getMessage());
 		assertEquals(10, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("'static2' (static method) must appear before instance method section.", violations.get(1).getMessage());
 	}
 
@@ -68,8 +76,10 @@ public class ClassStructureOrderCheckTest {
 		final var violations = BaseCheckTest.runCheck(ClassStructureOrderCheck.class, DIR + "InputClassStructureNestedScopes.java");
 		assertEquals(2, violations.size());
 		assertEquals(6, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals("'Inner' (inner type) must appear before instance method section.", violations.get(0).getMessage());
 		assertEquals(12, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("'outerStatic' (static method) must appear before instance method section.", violations.get(1).getMessage());
 	}
 
@@ -88,6 +98,7 @@ public class ClassStructureOrderCheckTest {
 		final var violations = BaseCheckTest.runCheck(ClassStructureOrderCheck.class, DIR + "InputClassStructureViolation.java");
 		assertEquals(1, violations.size());
 		assertEquals(6, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
 		assertEquals("'staticMethod' (static method) must appear before instance method section.", violations.getFirst().getMessage());
 	}
 }

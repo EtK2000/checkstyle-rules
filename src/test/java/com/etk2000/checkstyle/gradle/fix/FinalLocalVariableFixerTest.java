@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +18,9 @@ public class FinalLocalVariableFixerTest {
 		final var lines = new ArrayList<>(List.of("\tint x = 5;"));
 		final var result = fixer.fix(lines, 0, 5);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\tfinal int x = 5;", result.replacement().getFirst());
 	}
 
@@ -25,6 +29,9 @@ public class FinalLocalVariableFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\tvar x = getSomething();"));
 		final var result = fixer.fix(lines, 0, 10);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\tfinal var x = getSomething();", result.replacement().getFirst());
 	}
 
@@ -33,6 +40,9 @@ public class FinalLocalVariableFixerTest {
 		final var lines = new ArrayList<>(List.of("String s = \"hello\";"));
 		final var result = fixer.fix(lines, 0, 7);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("final String s = \"hello\";", result.replacement().getFirst());
 	}
 
@@ -53,6 +63,9 @@ public class FinalLocalVariableFixerTest {
 		final var lines = new ArrayList<>(List.of("    int x = 5;"));
 		final var result = fixer.fix(lines, 0, 8);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("    final int x = 5;", result.replacement().getFirst());
 	}
 }

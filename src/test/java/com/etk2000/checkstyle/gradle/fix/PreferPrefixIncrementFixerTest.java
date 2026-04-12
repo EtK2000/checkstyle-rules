@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +30,9 @@ public class PreferPrefixIncrementFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\ti--;"));
 		final var result = fixer.fix(lines, 0, 3);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\t--i;", result.replacement().getFirst());
 	}
 
@@ -37,6 +41,9 @@ public class PreferPrefixIncrementFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\ti++;"));
 		final var result = fixer.fix(lines, 0, 3);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\t++i;", result.replacement().getFirst());
 	}
 
@@ -45,6 +52,9 @@ public class PreferPrefixIncrementFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\tcount--;"));
 		final var result = fixer.fix(lines, 0, 7);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\t--count;", result.replacement().getFirst());
 	}
 
@@ -59,6 +69,9 @@ public class PreferPrefixIncrementFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\tcount++;"));
 		final var result = fixer.fix(lines, 0, 2);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\t++count;", result.replacement().getFirst());
 	}
 
@@ -79,6 +92,9 @@ public class PreferPrefixIncrementFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\ti++"));
 		final var result = fixer.fix(lines, 0, 2);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\t++i", result.replacement().getFirst());
 	}
 
@@ -93,6 +109,9 @@ public class PreferPrefixIncrementFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\ti--;"));
 		final var result = fixer.fix(lines, 0, 2);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\t--i;", result.replacement().getFirst());
 	}
 
@@ -101,6 +120,9 @@ public class PreferPrefixIncrementFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\ti++;"));
 		final var result = fixer.fix(lines, 0, 2);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\t++i;", result.replacement().getFirst());
 	}
 
@@ -109,6 +131,9 @@ public class PreferPrefixIncrementFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\tmy_var++;"));
 		final var result = fixer.fix(lines, 0, 2);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\t++my_var;", result.replacement().getFirst());
 	}
 }

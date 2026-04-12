@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -23,6 +24,7 @@ public class NoBlankLineBetweenSingleCasesFixerTest {
 		assertNotNull(result);
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -45,6 +47,7 @@ public class NoBlankLineBetweenSingleCasesFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(3, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -70,6 +73,7 @@ public class NoBlankLineBetweenSingleCasesFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(3, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -84,5 +88,6 @@ public class NoBlankLineBetweenSingleCasesFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 }

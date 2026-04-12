@@ -54,27 +54,35 @@ public class AnnotationSameLineCheckTest {
 		assertEquals(8, violations.size());
 
 		assertEquals(11, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
 		assertEquals(MSG_ORDER, violations.get(0).getMessage());
 
 		assertEquals(13, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals(MSG_ORDER, violations.get(1).getMessage());
 
 		assertEquals(19, violations.get(2).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(2).getSeverityLevel());
 		assertEquals(MSG_ORDER, violations.get(2).getMessage());
 
 		assertEquals(25, violations.get(3).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(3).getSeverityLevel());
 		assertEquals(MSG_ORDER, violations.get(3).getMessage());
 
 		assertEquals(30, violations.get(4).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(4).getSeverityLevel());
 		assertEquals(MSG_ORDER, violations.get(4).getMessage());
 
 		assertEquals(35, violations.get(5).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(5).getSeverityLevel());
 		assertEquals(MSG_ORDER, violations.get(5).getMessage());
 
 		assertEquals(38, violations.get(6).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(6).getSeverityLevel());
 		assertEquals(MSG_ORDER, violations.get(6).getMessage());
 
 		assertEquals(41, violations.get(7).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(7).getSeverityLevel());
 		assertEquals("Annotation 'A' must appear before 'C' (alphabetical order).", violations.get(7).getMessage());
 	}
 
@@ -93,8 +101,10 @@ public class AnnotationSameLineCheckTest {
 		assertEquals(65, violations.get(7).getLine());
 		assertEquals(70, violations.get(8).getLine());
 
-		for (var i = 0; i < 9; ++i)
+		for (var i = 0; i < 9; ++i) {
+			assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 			assertEquals(MSG_PLACEMENT, violations.get(i).getMessage());
+		}
 
 		// placement wrong AND order wrong: only placement reported (early return)
 		assertEquals(76, violations.get(9).getLine());

@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +19,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals(List.of("\t@Override"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -26,6 +28,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals(List.of("\t@Override void f() {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -34,6 +37,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals(List.of("\t@javax.annotation.Nonnull"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -42,6 +46,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals(List.of("\t@A(\"x\")"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -50,6 +55,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals(List.of("\t@A({\"x\", \"y\"})"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -58,6 +64,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals(List.of("\t@A(@B)"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -66,6 +73,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals(List.of("\t@A(\"x\")"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -74,6 +82,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		final var result = fixer.fix(lines, 0, 1);
 		assertNotNull(result);
 		assertEquals(List.of("\t@com.example.A(\"x\")"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -84,6 +93,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t@B"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -94,6 +104,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t@B"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -104,6 +115,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t@B // comment"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -114,6 +126,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\t\"x\""), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -124,6 +137,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		assertEquals(2, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\t\"x\""), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -134,6 +148,7 @@ public class RedundantAnnotationSyntaxFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\t\"x\""), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test

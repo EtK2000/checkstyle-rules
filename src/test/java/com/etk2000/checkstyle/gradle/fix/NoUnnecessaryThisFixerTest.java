@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -41,6 +42,9 @@ public class NoUnnecessaryThisFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\treturn this.field;"));
 		final var result = fixer.fix(lines, 0, 13);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\treturn field;", result.replacement().getFirst());
 	}
 
@@ -49,6 +53,9 @@ public class NoUnnecessaryThisFixerTest {
 		final var lines = new ArrayList<>(List.of("this.method();"));
 		final var result = fixer.fix(lines, 0, 4);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("method();", result.replacement().getFirst());
 	}
 
@@ -57,6 +64,9 @@ public class NoUnnecessaryThisFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\tint x = this.value + 1;"));
 		final var result = fixer.fix(lines, 0, 14);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\tint x = value + 1;", result.replacement().getFirst());
 	}
 
@@ -65,6 +75,9 @@ public class NoUnnecessaryThisFixerTest {
 		final var lines = new ArrayList<>(List.of("\t\tthis.doSomething();"));
 		final var result = fixer.fix(lines, 0, 6);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("\t\tdoSomething();", result.replacement().getFirst());
 	}
 
@@ -73,6 +86,9 @@ public class NoUnnecessaryThisFixerTest {
 		final var lines = new ArrayList<>(List.of("foo(this.bar);"));
 		final var result = fixer.fix(lines, 0, 8);
 		assertNotNull(result);
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 		assertEquals("foo(bar);", result.replacement().getFirst());
 	}
 }
