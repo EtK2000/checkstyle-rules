@@ -12,6 +12,7 @@ import com.etk2000.checkstyle.PreferCollectionInterfaceCheck;
 import com.etk2000.checkstyle.PreferMathMethodCheck;
 import com.etk2000.checkstyle.PreferPrefixIncrementCheck;
 import com.etk2000.checkstyle.PreferSpecificApiCheck;
+import com.etk2000.checkstyle.PreferStandardCharsetsCheck;
 import com.etk2000.checkstyle.PreferVarCheck;
 import com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck;
 import com.etk2000.checkstyle.RedundantNumericSuffixCheck;
@@ -106,6 +107,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				Map.entry(PreferMathMethodCheck.class.getName(), new PreferMathMethodFixer()),
 				Map.entry(PreferPrefixIncrementCheck.class.getName(), new PreferPrefixIncrementFixer()),
 				Map.entry(PreferSpecificApiCheck.class.getName(), new PreferSpecificApiFixer()),
+				Map.entry(PreferStandardCharsetsCheck.class.getName(), new PreferStandardCharsetsFixer()),
 				Map.entry(PreferVarCheck.class.getName(), new PreferVarFixer()),
 				Map.entry(RedundantAnnotationSyntaxCheck.class.getName(), new RedundantAnnotationSyntaxFixer()),
 				Map.entry(RedundantImportCheck.class.getName(), deleteLineFixer),
@@ -182,7 +184,8 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			if (checkName.equals(FinalLocalVariableCheck.class.getName()))
 				checkConfig.addProperty("validateEnhancedForLoopVariable", "false");
 			if (checkName.equals(PreferMathMethodCheck.class.getName())
-					|| checkName.equals(PreferSpecificApiCheck.class.getName()))
+					|| checkName.equals(PreferSpecificApiCheck.class.getName())
+					|| checkName.equals(PreferStandardCharsetsCheck.class.getName()))
 				checkConfig.addProperty("minSdk", minSdk);
 			if (checkName.equals(PreferVarCheck.class.getName()))
 				checkConfig.addProperty("allowedMethods", ALLOWED_METHODS);

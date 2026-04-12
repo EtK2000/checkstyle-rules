@@ -43,7 +43,8 @@ public class CheckstyleFixIntegrationTest {
 			if (checkName.endsWith("FinalLocalVariableCheck"))
 				checkConfig.addProperty("validateEnhancedForLoopVariable", "false");
 			if (checkName.endsWith("PreferMathMethodCheck")
-					|| checkName.endsWith("PreferSpecificApiCheck"))
+					|| checkName.endsWith("PreferSpecificApiCheck")
+					|| checkName.endsWith("PreferStandardCharsetsCheck"))
 				checkConfig.addProperty("minSdk", minSdk);
 			treeWalkerConfig.addChild(checkConfig);
 		}
@@ -1587,6 +1588,34 @@ public class CheckstyleFixIntegrationTest {
 		);
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferStandardCharsets() throws Exception {
+		final var file = tempDir.resolve("StdCharset.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tbyte[] run(String s) throws Exception {\n\t\treturn s.getBytes(\"UTF-8\");\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.nio.charset.StandardCharsets;\nclass T {\n\tbyte[] run(String s) throws Exception {\n\t\treturn s.getBytes(StandardCharsets.UTF_8);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(2, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferStandardCharsetsImportAlreadyPresent() throws Exception {
+		final var file = tempDir.resolve("StdCharsetImp.java").toFile();
+		Files.writeString(file.toPath(), "import java.nio.charset.StandardCharsets;\n\nclass T {\n\tbyte[] run(String s) throws Exception {\n\t\treturn s.getBytes(\"UTF-8\");\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.nio.charset.StandardCharsets;\n\nclass T {\n\tbyte[] run(String s) throws Exception {\n\t\treturn s.getBytes(StandardCharsets.UTF_8);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(3, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
 	}
 
 	@Test
