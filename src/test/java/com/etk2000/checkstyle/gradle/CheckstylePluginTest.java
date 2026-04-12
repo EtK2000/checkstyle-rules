@@ -1,10 +1,11 @@
 package com.etk2000.checkstyle.gradle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.etk2000.checkstyle.gradle.fix.CheckstyleFixTask;
+import com.etk2000.checkstyle.gradle.fix.CheckstyleFixAction;
 
 import org.gradle.api.plugins.quality.CheckstyleExtension;
 import org.gradle.testfixtures.ProjectBuilder;
@@ -23,7 +24,23 @@ public class CheckstylePluginTest {
 
 	@Test
 	public void fixableCheckNamesSyncWithFixers() {
-		assertEquals(FixableCheckNames.all(), CheckstyleFixTask.fixableSourceNames());
+		assertEquals(FixableCheckNames.all(), CheckstyleFixAction.fixableSourceNames());
+	}
+
+	/**
+	 * CheckstyleFixTask must have zero checkstyle imports so Gradle can
+	 * decorate it on the buildscript classpath (which lacks checkstyle).
+	 * All checkstyle-dependent logic lives in CheckstyleFixAction, which
+	 * runs inside an isolated classloader via the Worker API.
+	 */
+	@Test
+	public void fixTaskHasNoCheckstyleImports() throws Exception {
+		final var source = Path.of("src/main/java/com/etk2000/checkstyle/gradle/fix/CheckstyleFixTask.java");
+		final var content = Files.readString(source);
+		assertFalse(
+				content.contains("import com.puppycrawl"),
+				"CheckstyleFixTask must not import checkstyle classes"
+		);
 	}
 
 	@Test

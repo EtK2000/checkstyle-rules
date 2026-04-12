@@ -125,13 +125,18 @@ public class CheckstylePlugin implements Plugin<Project> {
 		return null;
 	}
 
-	private static void registerTasks(@Nonnull Project project, @Nonnull String extractTaskName) {
+	private static void registerTasks(
+			@Nonnull Project project,
+			@Nonnull String extractTaskName,
+			@Nonnull Configuration checkstyleConfig
+	) {
 		project.getTasks().register(
 				"checkstyleFix",
 				CheckstyleFixTask.class,
 				task -> {
 					task.setDescription("Auto-fix simple checkstyle violations in main sources.");
 					task.setGroup("verification");
+					task.getCheckstyleClasspath().from(checkstyleConfig);
 					task.getSource().set(project.file("src/main/java"));
 				}
 		);
@@ -153,6 +158,7 @@ public class CheckstylePlugin implements Plugin<Project> {
 				task -> {
 					task.setDescription("Auto-fix simple checkstyle violations in test sources.");
 					task.setGroup("verification");
+					task.getCheckstyleClasspath().from(checkstyleConfig);
 					task.onlyIf(t -> testDir.exists());
 					task.getSource().set(testDir);
 				}
@@ -272,6 +278,6 @@ public class CheckstylePlugin implements Plugin<Project> {
 			}
 		});
 
-		registerTasks(project, extractTask.getName());
+		registerTasks(project, extractTask.getName(), checkstyleConfig);
 	}
 }

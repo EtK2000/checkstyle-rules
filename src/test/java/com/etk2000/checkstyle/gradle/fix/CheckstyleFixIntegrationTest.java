@@ -28,7 +28,7 @@ public class CheckstyleFixIntegrationTest {
 	@Nonnull
 	private List<AuditEvent> runChecks(@Nonnull File file) throws Exception {
 		final var treeWalkerConfig = new DefaultConfiguration(TreeWalker.class.getName());
-		for (var checkName : CheckstyleFixTask.FIXERS.keySet()) {
+		for (var checkName : CheckstyleFixAction.FIXERS.keySet()) {
 			final var checkConfig = new DefaultConfiguration(checkName);
 			if (checkName.endsWith("FinalLocalVariableCheck"))
 				checkConfig.addProperty("validateEnhancedForLoopVariable", "false");
@@ -116,14 +116,14 @@ public class CheckstyleFixIntegrationTest {
 	private String runFixAndGetResult(@Nonnull File file) throws Exception {
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		CheckstyleFixTask.applyFixes(lines, violations, CheckstyleFixTask.FIXERS, CheckstyleFixTask.MODULE_ID_FIXERS);
+		CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 		return String.join("\n", lines);
 	}
 
 	private int runFixPipeline(@Nonnull File file) throws Exception {
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		return CheckstyleFixTask.applyFixes(lines, violations, CheckstyleFixTask.FIXERS, CheckstyleFixTask.MODULE_ID_FIXERS);
+		return CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 	}
 
 	@Test
@@ -322,7 +322,7 @@ public class CheckstyleFixIntegrationTest {
 		assertFalse(violations.isEmpty());
 
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		final var fixed = CheckstyleFixTask.applyFixes(lines, violations, Map.of(), Map.of());
+		final var fixed = CheckstyleFixAction.applyFixes(lines, violations, Map.of(), Map.of());
 		assertEquals(0, fixed);
 	}
 
@@ -616,7 +616,7 @@ public class CheckstyleFixIntegrationTest {
 
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		final var fixed = CheckstyleFixTask.applyFixes(lines, violations, CheckstyleFixTask.FIXERS, CheckstyleFixTask.MODULE_ID_FIXERS);
+		final var fixed = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 
 		assertEquals("class T {\n\tvoid f() {\n\t\tfinal int x, y;\n\t}\n}", String.join("\n", lines));
 		assertEquals(1, fixed);
@@ -673,7 +673,7 @@ public class CheckstyleFixIntegrationTest {
 
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		final var fixed = CheckstyleFixTask.applyFixes(lines, violations, CheckstyleFixTask.FIXERS);
+		final var fixed = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS);
 
 		assertEquals("class T {\n\tint[] a = {1};\n\tint[] b = {2};\n\tint[] c = {3};\n}", String.join("\n", lines));
 		assertEquals(3, fixed);
@@ -1131,30 +1131,30 @@ public class CheckstyleFixIntegrationTest {
 
 	@Test
 	public void testTabColumnConversion() {
-		assertEquals(0, CheckstyleFixTask.tabColumnToCharIndex("hello", 0));
-		assertEquals(5, CheckstyleFixTask.tabColumnToCharIndex("hello", 5));
-		assertEquals(1, CheckstyleFixTask.tabColumnToCharIndex("\thello", 8));
-		assertEquals(2, CheckstyleFixTask.tabColumnToCharIndex("\t\thello", 16));
-		assertEquals(6, CheckstyleFixTask.tabColumnToCharIndex("\thello world", 13));
+		assertEquals(0, CheckstyleFixAction.tabColumnToCharIndex("hello", 0));
+		assertEquals(5, CheckstyleFixAction.tabColumnToCharIndex("hello", 5));
+		assertEquals(1, CheckstyleFixAction.tabColumnToCharIndex("\thello", 8));
+		assertEquals(2, CheckstyleFixAction.tabColumnToCharIndex("\t\thello", 16));
+		assertEquals(6, CheckstyleFixAction.tabColumnToCharIndex("\thello world", 13));
 	}
 
 	@Test
 	public void testTabColumnConversionBeyondLine() {
-		assertEquals(5, CheckstyleFixTask.tabColumnToCharIndex("hello", 10));
+		assertEquals(5, CheckstyleFixAction.tabColumnToCharIndex("hello", 10));
 	}
 
 	@Test
 	public void testTabColumnConversionMidLineTab() {
 		// "ab\tcd" - a=0, b=1, \t=2 (expands from col 2 to col 8), c=3 at col 8, d=4 at col 9
-		assertEquals(3, CheckstyleFixTask.tabColumnToCharIndex("ab\tcd", 8));
-		assertEquals(4, CheckstyleFixTask.tabColumnToCharIndex("ab\tcd", 9));
+		assertEquals(3, CheckstyleFixAction.tabColumnToCharIndex("ab\tcd", 8));
+		assertEquals(4, CheckstyleFixAction.tabColumnToCharIndex("ab\tcd", 9));
 	}
 
 	@Test
 	public void testTabColumnConversionNoTabs() {
-		assertEquals(0, CheckstyleFixTask.tabColumnToCharIndex("abcdef", 0));
-		assertEquals(3, CheckstyleFixTask.tabColumnToCharIndex("abcdef", 3));
-		assertEquals(6, CheckstyleFixTask.tabColumnToCharIndex("abcdef", 6));
+		assertEquals(0, CheckstyleFixAction.tabColumnToCharIndex("abcdef", 0));
+		assertEquals(3, CheckstyleFixAction.tabColumnToCharIndex("abcdef", 3));
+		assertEquals(6, CheckstyleFixAction.tabColumnToCharIndex("abcdef", 6));
 	}
 
 	@Test
