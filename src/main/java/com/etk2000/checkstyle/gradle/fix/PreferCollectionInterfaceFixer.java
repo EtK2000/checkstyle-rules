@@ -47,7 +47,7 @@ class PreferCollectionInterfaceFixer implements CheckstyleFixer {
 	}
 
 	@CheckReturnValue
-	@Nullable
+	@Nonnull
 	private static String resolveFromImports(@Nonnull List<String> lines, @Nonnull String typeName) {
 		for (var line : lines) {
 			if (line.startsWith("import ") && line.endsWith("." + typeName + ";"))
@@ -77,7 +77,7 @@ class PreferCollectionInterfaceFixer implements CheckstyleFixer {
 				return null;
 
 			final var fixed = line.substring(0, column) + iface + line.substring(end);
-			return new FixResult(lineIndex, lineIndex, List.of(fixed));
+			return new FixResult(lineIndex, lineIndex, List.of(fixed), Set.of("java.util." + iface));
 		}
 		catch (ClassNotFoundException | NoClassDefFoundError e) {
 			return null;

@@ -2,10 +2,10 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +19,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(List<@SuppressWarnings(\"unused\") String> items) {}"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -29,7 +29,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(List<@SuppressWarnings(\"unused\") List<String>> items) {}"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -39,7 +39,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(Deque<String> items) {}"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.Deque"), result.importsToAdd());
 	}
 
 	@Test
@@ -49,7 +49,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tstatic List<String> getItems() {"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -59,7 +59,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tstatic <T extends Comparable<T>> List<T> sorted(List<T> items) {"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -75,7 +75,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tstatic <T extends ArrayList<String>> List<T> f(List<T> items) {"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -85,7 +85,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tFoo(List<String> items) {"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -95,7 +95,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tstatic java.util.List<String> getItems() {"), result.replacement());
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -105,7 +105,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(Map<String, Integer> items) {}"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.Map"), result.importsToAdd());
 	}
 
 	@Test
@@ -115,7 +115,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(Set<String> items) {}"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.Set"), result.importsToAdd());
 	}
 
 	@Test
@@ -125,7 +125,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tstatic <T extends Comparable<T> & java.io.Serializable> List<T> f(List<T> items) {"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -135,7 +135,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(Map<K, V> items) {}"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.Map"), result.importsToAdd());
 	}
 
 	@Test
@@ -145,7 +145,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(Set<String> items) {}"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.Set"), result.importsToAdd());
 	}
 
 	@Test
@@ -161,7 +161,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tMap<String, Map<Integer, List<String>>> f() {"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -171,7 +171,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(List<String> a, HashMap<String, Integer> b) {}"), result.replacement());
 		assertEquals(2, result.startLine());
 		assertEquals(2, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -181,7 +181,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(List<String> a, Map<String, Integer> b) {}"), result.replacement());
 		assertEquals(2, result.startLine());
 		assertEquals(2, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.Map"), result.importsToAdd());
 	}
 
 	@Test
@@ -191,7 +191,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(Map<String, List<Integer>> items) {}"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -201,7 +201,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tMap<String, List<Integer>> f() {"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -217,7 +217,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(Queue<String> items) {}"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.Queue"), result.importsToAdd());
 	}
 
 	@Test
@@ -227,7 +227,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tList getItems() {"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -237,13 +237,13 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tList<String> f(HashSet<Integer> items) {"), resultReturn.replacement());
 		assertEquals(2, resultReturn.startLine());
 		assertEquals(2, resultReturn.endLine());
-		assertTrue(resultReturn.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), resultReturn.importsToAdd());
 
 		final var resultParam = FIXER.fix(lines, 2, 21);
 		assertEquals(List.of("\tArrayList<String> f(Set<Integer> items) {"), resultParam.replacement());
 		assertEquals(2, resultParam.startLine());
 		assertEquals(2, resultParam.endLine());
-		assertTrue(resultParam.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.Set"), resultParam.importsToAdd());
 	}
 
 	@Test
@@ -253,7 +253,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tstatic Map<K, V> getItems() {"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.Map"), result.importsToAdd());
 	}
 
 	@Test
@@ -263,7 +263,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(Set<String> items) {}"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.Set"), result.importsToAdd());
 	}
 
 	@Test
@@ -273,7 +273,7 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(List<? extends List<String>> items) {}"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
 	}
 
 	@Test
@@ -283,6 +283,6 @@ class PreferCollectionInterfaceFixerTest {
 		assertEquals(List.of("\tvoid f(Set<? super Set<Integer>> items) {}"), result.replacement());
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(Set.of("java.util.Set"), result.importsToAdd());
 	}
 }

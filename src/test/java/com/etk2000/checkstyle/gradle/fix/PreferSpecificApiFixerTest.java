@@ -33,9 +33,45 @@ public class PreferSpecificApiFixerTest {
 	}
 
 	@Test
+	public void testAssertEqualsFalseAddsStaticImport() {
+		final var lines = new ArrayList<>(List.of(
+				"import static org.junit.Assert.assertEquals;",
+				"\t\tassertEquals(false, result);"
+		));
+		final var result = fixer.fix(lines, 1, 0);
+		assertNotNull(result);
+		assertEquals("\t\tassertFalse(result);", result.replacement().getFirst());
+		assertEquals(Set.of("static org.junit.Assert.assertFalse"), result.importsToAdd());
+	}
+
+	@Test
 	public void testAssertEqualsFalseLiteralFirst() {
 		final var lines = new ArrayList<>(List.of("\t\tassertEquals(false, result);"));
 		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tassertFalse(result);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testAssertEqualsFalseLiteralFirstJunit5Import() {
+		final var lines = new ArrayList<>(List.of(
+				"import static org.junit.jupiter.api.Assertions.assertEquals;",
+				"\t\tassertEquals(false, result);"
+		));
+		final var result = fixer.fix(lines, 1, 0);
+		assertNotNull(result);
+		assertEquals("\t\tassertFalse(result);", result.replacement().getFirst());
+		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertFalse"), result.importsToAdd());
+	}
+
+	@Test
+	public void testAssertEqualsFalseLiteralFirstNoImportWithWildcard() {
+		final var lines = new ArrayList<>(List.of(
+				"import static org.junit.Assert.*;",
+				"\t\tassertEquals(false, result);"
+		));
+		final var result = fixer.fix(lines, 1, 0);
 		assertNotNull(result);
 		assertEquals("\t\tassertFalse(result);", result.replacement().getFirst());
 		assertTrue(result.importsToAdd().isEmpty());

@@ -54,7 +54,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAction.Params> {
-	record ApplyFixesResult(int fixCount, boolean needsSecondPass) {}
+	record ApplyFixesResult(int fixCount, boolean needsSecondPass) {
+	}
 
 	interface Params extends WorkParameters {
 		Property<String> getMinSdk();
@@ -310,27 +311,85 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 	 * Returns the number of imports added.
 	 */
 	static int insertMissingImports(@Nonnull List<String> lines, @Nonnull Set<String> fqns) {
-		final var toAdd = new TreeSet<>(fqns);
+		// separate static and regular imports
+		final var regularToAdd = new TreeSet<String>();
+		final var staticToAdd = new TreeSet<String>();
+		for (var fqn : fqns) {
+			if (fqn.startsWith("static "))
+				staticToAdd.add(fqn.substring(7));
+			else
+				regularToAdd.add(fqn);
+		}
 
-		// remove already-present imports
+		// remove already-present imports (exact matches and wildcard coverage)
 		var lastImportIdx = -1;
+		var lastStaticImportIdx = -1;
 		var packageIdx = -1;
 		for (var i = 0; i < lines.size(); ++i) {
 			final var line = lines.get(i);
 			if (line.startsWith("package "))
 				packageIdx = i;
-			else if (line.startsWith("import ") && !line.startsWith("import static ")) {
+			else if (line.startsWith("import static ")) {
+				lastStaticImportIdx = i;
+				if (line.endsWith(";")) {
+					final var fqn = line.substring(14, line.length() - 1);
+					staticToAdd.remove(fqn);
+					if (fqn.endsWith(".*"))
+						staticToAdd.removeIf(s -> s.startsWith(fqn.substring(0, fqn.length() - 1)));
+				}
+			}
+			else if (line.startsWith("import ")) {
 				lastImportIdx = i;
-				if (line.endsWith(";"))
-					toAdd.remove(line.substring(7, line.length() - 1));
+				if (line.endsWith(";")) {
+					final var fqn = line.substring(7, line.length() - 1);
+					regularToAdd.remove(fqn);
+					if (fqn.endsWith(".*"))
+						regularToAdd.removeIf(s -> s.startsWith(fqn.substring(0, fqn.length() - 1)));
+				}
 			}
 		}
 
-		if (toAdd.isEmpty())
-			return 0;
+		var addedStatic = 0;
+
+		// insert static imports
+		if (!staticToAdd.isEmpty()) {
+			if (lastStaticImportIdx >= 0) {
+				for (var fqn : staticToAdd) {
+					final var importLine = "import static " + fqn + ";";
+					var insertIdx = lastStaticImportIdx + 1;
+					for (var i = 0; i <= lastStaticImportIdx; ++i) {
+						if (lines.get(i).startsWith("import static ") && lines.get(i).compareTo(importLine) > 0) {
+							insertIdx = i;
+							break;
+						}
+					}
+					lines.add(insertIdx, importLine);
+					++lastStaticImportIdx;
+					if (lastImportIdx >= insertIdx)
+						++lastImportIdx;
+					++addedStatic;
+				}
+			}
+			else if (packageIdx >= 0) {
+				var insertIdx = packageIdx + 1;
+				if (insertIdx < lines.size() && lines.get(insertIdx).isEmpty())
+					++insertIdx;
+				else
+					lines.add(insertIdx++, "");
+				for (var fqn : staticToAdd) {
+					lines.add(insertIdx++, "import static " + fqn + ";");
+					++addedStatic;
+				}
+				if (lastImportIdx >= 0)
+					lastImportIdx += addedStatic + (insertIdx - packageIdx - 1 - addedStatic);
+			}
+		}
+
+		if (regularToAdd.isEmpty())
+			return addedStatic;
 
 		if (lastImportIdx >= 0) {
-			for (var fqn : toAdd) {
+			for (var fqn : regularToAdd) {
 				final var importLine = "import " + fqn + ";";
 				final var targetPrefix = "import " + fqn.substring(0, fqn.lastIndexOf('.') + 1);
 
@@ -380,17 +439,17 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				++insertIdx;
 			else
 				lines.add(insertIdx++, "");
-			for (var fqn : toAdd)
+			for (var fqn : regularToAdd)
 				lines.add(insertIdx++, "import " + fqn + ";");
 		}
 		else {
 			// no package, no imports
 			var insertIdx = 0;
-			for (var fqn : toAdd)
+			for (var fqn : regularToAdd)
 				lines.add(insertIdx++, "import " + fqn + ";");
 		}
 
-		return toAdd.size();
+		return addedStatic + regularToAdd.size();
 	}
 
 	@CheckReturnValue

@@ -173,6 +173,48 @@ public class InsertMissingImportsTest {
 	}
 
 	@Test
+	public void testRegularImportCoveredByWildcard() {
+		final var lines = new ArrayList<>(List.of("import java.util.*;", "class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("java.util.List"));
+		assertEquals(0, count);
+		assertEquals(List.of("import java.util.*;", "class T {}"), lines);
+	}
+
+	@Test
+	public void testRegularImportPartialWildcardNoMatch() {
+		final var lines = new ArrayList<>(List.of("import java.io.*;", "class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("java.util.List"));
+		assertEquals(1, count);
+		assertEquals(List.of("import java.io.*;", "import java.util.List;", "class T {}"), lines);
+	}
+
+	@Test
+	public void testStaticImportAddedInSortedPosition() {
+		final var lines = new ArrayList<>(List.of(
+				"import static org.junit.Assert.assertEquals;",
+				"import static org.junit.Assert.assertNull;",
+				"class T {}"
+		));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("static org.junit.Assert.assertTrue"));
+		assertEquals(1, count);
+		final var expected = List.of(
+				"import static org.junit.Assert.assertEquals;",
+				"import static org.junit.Assert.assertNull;",
+				"import static org.junit.Assert.assertTrue;",
+				"class T {}"
+		);
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticImportCoveredByWildcard() {
+		final var lines = new ArrayList<>(List.of("import static org.junit.Assert.*;", "class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("static org.junit.Assert.assertTrue"));
+		assertEquals(0, count);
+		assertEquals(List.of("import static org.junit.Assert.*;", "class T {}"), lines);
+	}
+
+	@Test
 	public void testStaticImportsNotConfused() {
 		final var lines = new ArrayList<>(List.of("import static org.junit.Assert.assertEquals;", "import java.util.Collections;", "class T {}"));
 		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("java.util.List"));

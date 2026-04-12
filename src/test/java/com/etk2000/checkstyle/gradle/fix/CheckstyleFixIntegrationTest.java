@@ -1028,11 +1028,11 @@ public class CheckstyleFixIntegrationTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"import java.util.ArrayList;\nimport java.util.HashMap;\nclass T {\n\tvoid f(List<String> a, Map<String, Integer> b) {}\n}",
+				"import java.util.ArrayList;\nimport java.util.HashMap;\nimport java.util.List;\nimport java.util.Map;\nclass T {\n\tvoid f(List<String> a, Map<String, Integer> b) {}\n}",
 				output.content()
 		);
-		assertEquals(2, output.result().fixCount());
-		assertFalse(output.result().needsSecondPass());
+		assertEquals(4, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1042,11 +1042,11 @@ public class CheckstyleFixIntegrationTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"import java.util.HashSet;\nclass T {\n\tvoid f(Set<String> s) {}\n}",
+				"import java.util.HashSet;\nimport java.util.Set;\nclass T {\n\tvoid f(Set<String> s) {}\n}",
 				output.content()
 		);
-		assertEquals(1, output.result().fixCount());
-		assertFalse(output.result().needsSecondPass());
+		assertEquals(2, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1056,11 +1056,22 @@ public class CheckstyleFixIntegrationTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"import java.util.ArrayList;\nclass T {\n\tList<String> f() {\n\t\treturn new ArrayList<>();\n\t}\n}",
+				"import java.util.ArrayList;\nimport java.util.List;\nclass T {\n\tList<String> f() {\n\t\treturn new ArrayList<>();\n\t}\n}",
 				output.content()
 		);
-		assertEquals(1, output.result().fixCount());
-		assertFalse(output.result().needsSecondPass());
+		assertEquals(2, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferCollectionInterfaceReturnImportAlreadyPresent() throws Exception {
+		final var file = tempDir.resolve("ColReturnImp.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.ArrayList;\nimport java.util.List;\nclass T {\n\tArrayList<String> f() {\n\t\treturn new ArrayList<>();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		// type replaced, List import already exists so no duplicate
+		assertTrue(output.content().contains("List<String> f()"));
+		assertFalse(output.content().contains("import java.util.List;\nimport java.util.List;"));
 	}
 
 	@Test
@@ -1154,11 +1165,11 @@ public class CheckstyleFixIntegrationTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"import static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nclass T {\n\tvoid run() {\n\t\tassertTrue(1 == 1);\n\t\tassertNull(new Object());\n\t\tassertNull(\"msg\", new Object());\n\t\tassertTrue(\"msg\", 1 == 1);\n\t}\n}",
+				"import static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nimport static org.junit.jupiter.api.Assertions.assertNull;\nimport static org.junit.jupiter.api.Assertions.assertTrue;\nclass T {\n\tvoid run() {\n\t\tassertTrue(1 == 1);\n\t\tassertNull(new Object());\n\t\tassertNull(\"msg\", new Object());\n\t\tassertTrue(\"msg\", 1 == 1);\n\t}\n}",
 				output.content()
 		);
-		assertEquals(4, output.result().fixCount());
-		assertFalse(output.result().needsSecondPass());
+		assertEquals(6, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1168,11 +1179,11 @@ public class CheckstyleFixIntegrationTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"import static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nclass T {\n\tvoid run() {\n\t\tassertTrue(1 == 1);\n\t\tassertNull(new Object());\n\t\tassertNull(new Object(), \"msg\");\n\t\tassertTrue(1 == 1, \"msg\");\n\t}\n}",
+				"import static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nimport static org.junit.jupiter.api.Assertions.assertNull;\nimport static org.junit.jupiter.api.Assertions.assertTrue;\nclass T {\n\tvoid run() {\n\t\tassertTrue(1 == 1);\n\t\tassertNull(new Object());\n\t\tassertNull(new Object(), \"msg\");\n\t\tassertTrue(1 == 1, \"msg\");\n\t}\n}",
 				output.content()
 		);
-		assertEquals(4, output.result().fixCount());
-		assertFalse(output.result().needsSecondPass());
+		assertEquals(6, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
 	}
 
 	@Test

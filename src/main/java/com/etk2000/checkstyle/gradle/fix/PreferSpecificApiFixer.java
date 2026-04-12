@@ -22,6 +22,36 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	};
 
 	/**
+	 * Finds the assertion class prefix from existing static imports
+	 * (e.g. {@code org.junit.Assert} or {@code org.junit.jupiter.api.Assertions})
+	 * and adds a static import for the replacement method. Skips if a wildcard
+	 * import already covers the class.
+	 */
+	private static void addAssertImport(
+			@Nonnull List<String> lines,
+			@Nonnull String replacementMethod,
+			@Nonnull Set<String> imports
+	) {
+		for (var existing : lines) {
+			if (!existing.startsWith("import static "))
+				continue;
+			final var fqn = existing.substring(14, existing.length() - 1);
+
+			if (fqn.endsWith(".*"))
+				return;
+
+			final var lastDot = fqn.lastIndexOf('.');
+			if (lastDot < 0)
+				continue;
+			final var methodName = fqn.substring(lastDot + 1);
+			if (methodName.startsWith("assert") || methodName.startsWith("fail")) {
+				imports.add("static " + fqn.substring(0, lastDot) + "." + replacementMethod);
+				return;
+			}
+		}
+	}
+
+	/**
 	 * Scans backwards from {@code dotIdx} to find the start of a simple receiver
 	 * expression (identifiers and dots). Returns -1 if the receiver contains
 	 * complex syntax (parens, brackets, etc.) that would make insertion unsafe.
@@ -61,24 +91,32 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 * Simplifies assertion calls with literal arguments.
 	 * Handles both literal-first ({@code assertEquals(true, x)})
 	 * and literal-last ({@code assertEquals(x, true)}) 2-arg forms.
+	 * Adds the static import for the replacement method if the original
+	 * uses specific (non-wildcard) static imports.
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixAssertion(@Nonnull String line) {
+	private static String fixAssertion(@Nonnull List<String> lines, @Nonnull String line, @Nonnull Set<String> imports) {
 		for (var rule : ASSERT_RULES) {
 			final var result = fixAssertionLiteralFirst(line, rule[0], rule[1], rule[2]);
-			if (result != null)
+			if (result != null) {
+				addAssertImport(lines, rule[2], imports);
 				return result;
+			}
 		}
 		for (var rule : ASSERT_RULES) {
 			final var result = fixAssertionLiteralLast(line, rule[0], rule[1], rule[2]);
-			if (result != null)
+			if (result != null) {
+				addAssertImport(lines, rule[2], imports);
 				return result;
+			}
 		}
 		for (var rule : ASSERT_RULES) {
 			final var result = fixAssertionLiteralMiddle(line, rule[0], rule[1], rule[2]);
-			if (result != null)
+			if (result != null) {
+				addAssertImport(lines, rule[2], imports);
 				return result;
+			}
 		}
 		return null;
 	}
@@ -574,7 +612,7 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 		final var imports = new TreeSet<String>();
 
 		// try each fixable pattern in turn
-		var result = fixAssertion(line);
+		var result = fixAssertion(lines, line, imports);
 		if (result == null)
 			result = fixCollectionsFactory(line, imports);
 		if (result == null)
