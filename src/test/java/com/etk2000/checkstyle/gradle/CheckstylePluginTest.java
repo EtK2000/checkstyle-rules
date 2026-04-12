@@ -1,7 +1,10 @@
 package com.etk2000.checkstyle.gradle;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.etk2000.checkstyle.gradle.fix.CheckstyleFixTask;
 
 import org.gradle.api.plugins.quality.CheckstyleExtension;
 import org.gradle.testfixtures.ProjectBuilder;
@@ -17,6 +20,11 @@ import java.util.Properties;
 public class CheckstylePluginTest {
 	@TempDir
 	Path tempDir;
+
+	@Test
+	public void fixableCheckNamesSyncWithFixers() {
+		assertEquals(FixableCheckNames.all(), CheckstyleFixTask.fixableSourceNames());
+	}
 
 	@Test
 	public void testApplyConfiguresProject() throws Exception {

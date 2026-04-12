@@ -167,7 +167,7 @@ public class CheckstylePlugin implements Plugin<Project> {
 					task.mustRunAfter("checkstyleMain", "checkstyleTest");
 					task.getOutputs().upToDateWhen(t -> false);
 					task.doLast(t -> {
-						final var fixableNames = CheckstyleFixTask.fixableSourceNames();
+						final var fixableNames = FixableCheckNames.all();
 						final var mainCounts = countViolations(new File(reportsDir, "main.xml"), fixableNames);
 						final var testCounts = countViolations(new File(reportsDir, "test.xml"), fixableNames);
 						final var fixable = mainCounts[1] + testCounts[1];

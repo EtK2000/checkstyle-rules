@@ -150,8 +150,7 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 
 	/**
 	 * Returns the set of check source names and module IDs that have fixers.
-	 * Used by the plugin to determine which violations in a Checkstyle XML
-	 * report are auto-fixable.
+	 * Used by tests to verify consistency with {@code FixableCheckNames}.
 	 */
 	@CheckReturnValue
 	@Nonnull
