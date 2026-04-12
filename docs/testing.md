@@ -462,6 +462,91 @@ returns false and that `isZeroLiteral(child NUM token)` returns true.
 **Boundary pairs**: for every zero form, test a non-zero value with the same notation (e.g. `0x0`
 is zero, `0x1` is non-zero; `0.0e0` is zero, `0.0e1` is non-zero).
 
+### Negation insertion in fixers
+
+When a fixer needs to negate a result (e.g. `.stream().findFirst().isPresent()` -> `!receiver
+.isEmpty()`), the fixer must scan backwards to find the receiver start and insert `!` before it.
+This uses `findReceiverStart()` which only handles simple receivers (identifiers and dotted names)
+and returns -1 for complex receivers (method calls, casts, array access).
+
+**Critical edge case**: if the expression is ALREADY negated (`!list.stream().findFirst()
+.isPresent()`), the fixer must detect the existing `!` at `receiverStart - 1` and REMOVE it
+instead of adding another. Otherwise the output is `!!list.isEmpty()` (double negation). Check
+the character before `receiverStart` before inserting `!`.
+
+This applies to any fixer that inserts `!`: trim length comparisons (`!= 0`, `> 0`), reversed
+negated forms (`0 != ...`), and `stream().findFirst().isPresent()`.
+
+### Three-layer fixer coverage
+
+Every fixable pattern needs three layers of tests:
+
+1. **Fixer unit test** (`PreferSpecificApiFixerTest`): test the `fix()` method directly with
+   crafted input lines. Cover success cases, return-null guards, boundary rejections, and edge
+   cases (nested parens, escaped quotes, complex receivers).
+2. **Integration test** (`CheckstyleFixIntegrationTest`): run the full pipeline (Checkstyle
+   detection -> column conversion -> fixer application -> output verification). Assert exact full
+   output, `fixCount`, and `needsSecondPass`.
+3. **Violation/clean test resources**: the check must have violation test cases for every pattern
+   the fixer handles, and clean cases for every pattern it should NOT handle.
+
+When adding a new fixer, also check existing integration tests. A new fixer may change the
+behavior of tests that previously relied on the pattern being unfixable (e.g. adding a
+`Collections.sort` fixer broke `testPreferSpecificApiCollectionsFactoryRetainsUsedImport` because
+the sort call was the reason the `Collections` import was retained).
+
+### Comparison operator coverage
+
+When a check detects comparisons (e.g. `.size() == 0`, `.trim().length() != 0`), there are 6
+comparison operators (EQUAL, GE, GT, LE, LT, NOT_EQUAL) and each has 2 operand orders
+(normal and reversed). That's 12 branches total. Test ALL of them, not just the common ones.
+
+The operator determines the semantics (positive vs negated), and the operand order determines
+which side has the method call vs the literal. Missing even one branch means that specific
+comparison form goes untested. Use a violation file that covers every branch with a dedicated
+method.
+
+For fixers handling these comparisons: group them into positive forms (simple replacement) and
+negated forms (needs `!` insertion). Test each group separately. For reversed forms (`0 != expr`
+vs `expr != 0`), the fixer logic differs (reversed forms extract the receiver from between the
+literal and the method suffix, while normal forms scan backwards from the method).
+
+### Single-arg vs multi-arg dispatch
+
+When a check/fixer handles method calls that can have different argument counts (e.g.
+`String.format(x)` vs `String.format("fmt", args)`), the behavior may differ by arg count:
+- Single-arg: strip the call entirely (`String.format(x)` -> `x`)
+- Multi-arg with literal first arg: rewrite (`String.format("fmt", a)` -> `"fmt".formatted(a)`)
+- Multi-arg with non-literal first arg: skip (can't safely rewrite)
+
+Test ALL combinations of arg count and arg type. For single-arg, test with literals, variables,
+method calls (`obj.toString()`), cast expressions (`(String) obj`), and other complex expressions
+to verify the paren-balanced parser handles nested structures correctly.
+
+### Cross-check impact of new checks
+
+When registering a new check or extending an existing one in `checkstyle.xml`, it immediately
+fires on ALL source files AND test resources via `checkstyleTestResources`. Before running
+`./gradlew check`:
+
+1. Search existing test resources for patterns your check would flag (e.g. `grep -r
+   "Arrays.asList"` for a new Arrays.asList check)
+2. Add cross-check suppressions in `suppressions-test-resources.xml` for test directories where
+   the pattern appears legitimately
+3. Check if your new detection overlaps with an existing detection on the same code pattern
+   (e.g. `Arrays.asList` inside `Collections.unmodifiableList` is caught by both the copyOf check
+   and the Arrays.asList check, need parent-chain exclusion to prevent double-firing)
+
+### File formatting in test resources
+
+New test resource files must comply with the project's formatting rules:
+- No trailing newline at end of file (use `perl -pi -e 'chomp if eof'` after creating)
+- Methods alphabetically ordered
+- TAB indentation, no spaces
+- LF line endings
+- No unused imports
+- Inner classes at top of class body (per ClassStructureOrderCheck)
+
 ## Common mistakes
 
 ### Hardcoded value sets instead of parsing

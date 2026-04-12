@@ -24,7 +24,8 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 
 public class CheckstyleFixIntegrationTest {
-	record FixOutput(@Nonnull String content, @Nonnull ApplyFixesResult result) {}
+	record FixOutput(@Nonnull String content, @Nonnull ApplyFixesResult result) {
+	}
 
 	@TempDir
 	Path tempDir;
@@ -1078,6 +1079,20 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferSpecificApiArraysAsList() throws Exception {
+		final var file = tempDir.resolve("AsList.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Arrays;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn Arrays.asList(\"a\", \"b\");\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Arrays;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn List.of(\"a\", \"b\");\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testPreferSpecificApiAssertJunit4() throws Exception {
 		final var file = tempDir.resolve("AssertJ4.java").toFile();
 		Files.writeString(file.toPath(), "import static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.Assert.assertNotEquals;\nclass T {\n\tvoid run() {\n\t\tassertEquals(true, 1 == 1);\n\t\tassertEquals(new Object(), null);\n\t\tassertEquals(\"msg\", null, new Object());\n\t\tassertNotEquals(\"msg\", false, 1 == 1);\n\t}\n}");
@@ -1225,9 +1240,37 @@ public class CheckstyleFixIntegrationTest {
 		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> a() {\n\t\treturn Collections.singletonList(\"a\");\n\t}\n\tvoid b(List<String> list) {\n\t\tCollections.sort(list);\n\t}\n}");
 
 		assertEquals(
-				"import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> a() {\n\t\treturn List.of(\"a\");\n\t}\n\tvoid b(List<String> list) {\n\t\tCollections.sort(list);\n\t}\n}",
+				"import java.util.List;\nclass T {\n\tList<String> a() {\n\t\treturn List.of(\"a\");\n\t}\n\tvoid b(List<String> list) {\n\t\tlist.sort(null);\n\t}\n}",
 				runFixMultiPass(file)
 		);
+	}
+
+	@Test
+	public void testPreferSpecificApiCollectionsSortNoComparator() throws Exception {
+		final var file = tempDir.resolve("CollSort.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tCollections.sort(list);\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Collections;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.sort(null);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiCollectionsSortWithComparator() throws Exception {
+		final var file = tempDir.resolve("CollSortCmp.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.Comparator;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tCollections.sort(list, Comparator.naturalOrder());\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Collections;\nimport java.util.Comparator;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.sort(Comparator.naturalOrder());\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1238,6 +1281,20 @@ public class CheckstyleFixIntegrationTest {
 		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tvoid run(String s) {\n\t\tif (s.isEmpty())\n\t\t\treturn;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiGetFirst() throws Exception {
+		final var file = tempDir.resolve("GetFirst.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tString run(List<String> list) {\n\t\treturn list.get(0);\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tString run(List<String> list) {\n\t\treturn list.getFirst();\n\t}\n}",
 				output.content()
 		);
 		assertEquals(1, output.result().fixCount());
@@ -1271,6 +1328,20 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferSpecificApiRemoveFirst() throws Exception {
+		final var file = tempDir.resolve("RemFirst.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.remove(0);\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.removeFirst();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testPreferSpecificApiReplaceAll() throws Exception {
 		final var file = tempDir.resolve("ReplAll.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tString run(String s) {\n\t\treturn s.replaceAll(\"foo\", \"bar\");\n\t}\n}");
@@ -1299,6 +1370,20 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferSpecificApiStreamFindFirstIsPresent() throws Exception {
+		final var file = tempDir.resolve("StreamFFIP.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tboolean run(List<String> list) {\n\t\treturn list.stream().findFirst().isPresent();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tboolean run(List<String> list) {\n\t\treturn !list.isEmpty();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testPreferSpecificApiStreamForEach() throws Exception {
 		final var file = tempDir.resolve("StreamFE.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.stream().forEach(System.out::println);\n\t}\n}");
@@ -1306,6 +1391,76 @@ public class CheckstyleFixIntegrationTest {
 		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.forEach(System.out::println);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiStringFormat() throws Exception {
+		final var file = tempDir.resolve("StrFmt.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tString run(String name) {\n\t\treturn String.format(\"Hello %s\", name);\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tString run(String name) {\n\t\treturn \"Hello %s\".formatted(name);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiStringFormatSingleArg() throws Exception {
+		final var file = tempDir.resolve("StrFmt1.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tString run() {\n\t\treturn String.format(\"literal\");\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tString run() {\n\t\treturn \"literal\";\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiToArrayNewZero() throws Exception {
+		final var file = tempDir.resolve("ToArr.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tString[] run(List<String> list) {\n\t\treturn list.toArray(new String[0]);\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tString[] run(List<String> list) {\n\t\treturn list.toArray(String[]::new);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiTrimIsBlank() throws Exception {
+		final var file = tempDir.resolve("TrimBlank.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean run(String s) {\n\t\treturn s.trim().isEmpty();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean run(String s) {\n\t\treturn s.isBlank();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiTrimIsBlankNegated() throws Exception {
+		final var file = tempDir.resolve("TrimNotBlank.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean run(String s) {\n\t\treturn s.trim().length() != 0;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean run(String s) {\n\t\treturn !s.isBlank();\n\t}\n}",
 				output.content()
 		);
 		assertEquals(1, output.result().fixCount());

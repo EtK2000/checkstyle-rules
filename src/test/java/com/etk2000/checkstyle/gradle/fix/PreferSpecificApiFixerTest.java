@@ -15,6 +15,24 @@ public class PreferSpecificApiFixerTest {
 	private final CheckstyleFixer fixer = new PreferSpecificApiFixer();
 
 	@Test
+	public void testArraysAsList() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var list = Arrays.asList(\"a\", \"b\");"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tfinal var list = List.of(\"a\", \"b\");", result.replacement().getFirst());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
+	}
+
+	@Test
+	public void testArraysAsListNoArgs() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var list = Arrays.asList();"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tfinal var list = List.of();", result.replacement().getFirst());
+		assertEquals(Set.of("java.util.List"), result.importsToAdd());
+	}
+
+	@Test
 	public void testAssertEqualsFalseLiteralFirst() {
 		final var lines = new ArrayList<>(List.of("\t\tassertEquals(false, result);"));
 		final var result = fixer.fix(lines, 0, 0);
@@ -177,6 +195,42 @@ public class PreferSpecificApiFixerTest {
 	}
 
 	@Test
+	public void testCollectionsSortNoComparator() {
+		final var lines = new ArrayList<>(List.of("\t\tCollections.sort(list);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tlist.sort(null);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCollectionsSortNoComparatorNestedArg() {
+		final var lines = new ArrayList<>(List.of("\t\tCollections.sort(getList());"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tgetList().sort(null);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCollectionsSortWithComparator() {
+		final var lines = new ArrayList<>(List.of("\t\tCollections.sort(list, Comparator.naturalOrder());"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tlist.sort(Comparator.naturalOrder());", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCollectionsSortWithLambdaComparator() {
+		final var lines = new ArrayList<>(List.of("\t\tCollections.sort(list, (a, b) -> a.compareTo(b));"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tlist.sort((a, b) -> a.compareTo(b));", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
 	public void testCollectionsUnmodifiableList() {
 		final var lines = new ArrayList<>(List.of("\t\tList<String> result = Collections.unmodifiableList(list);"));
 		final var result = fixer.fix(lines, 0, 0);
@@ -240,6 +294,15 @@ public class PreferSpecificApiFixerTest {
 	}
 
 	@Test
+	public void testGetFirst() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var first = list.get(0);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tfinal var first = list.getFirst();", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
 	public void testKeySetContains() {
 		final var lines = new ArrayList<>(List.of("\t\tif (map.keySet().contains(\"key\"))"));
 		final var result = fixer.fix(lines, 0, 0);
@@ -252,6 +315,15 @@ public class PreferSpecificApiFixerTest {
 	public void testNoMatch() {
 		final var lines = new ArrayList<>(List.of("\t\tSystem.out.println(\"hello\");"));
 		assertNull(fixer.fix(lines, 0, 0));
+	}
+
+	@Test
+	public void testRemoveFirst() {
+		final var lines = new ArrayList<>(List.of("\t\tlist.remove(0);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tlist.removeFirst();", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -273,11 +345,253 @@ public class PreferSpecificApiFixerTest {
 	}
 
 	@Test
+	public void testStreamFindFirstIsPresent() {
+		final var lines = new ArrayList<>(List.of("\t\tif (list.stream().findFirst().isPresent())"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (!list.isEmpty())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStreamFindFirstIsPresentAlreadyNegated() {
+		final var lines = new ArrayList<>(List.of("\t\tif (!list.stream().findFirst().isPresent())"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (list.isEmpty())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStreamFindFirstIsPresentDottedReceiver() {
+		final var lines = new ArrayList<>(List.of("\t\tif (obj.list.stream().findFirst().isPresent())"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (!obj.list.isEmpty())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStreamFindFirstIsPresentMethodReceiverReturnsNull() {
+		final var lines = new ArrayList<>(List.of("\t\tif (getList().stream().findFirst().isPresent())"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNull(result);
+	}
+
+	@Test
 	public void testStreamForEach() {
 		final var lines = new ArrayList<>(List.of("\t\tlist.stream().forEach(System.out::println);"));
 		final var result = fixer.fix(lines, 0, 0);
 		assertNotNull(result);
 		assertEquals("\t\tlist.forEach(System.out::println);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStringFormatCharLiteralInArgs() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var s = String.format(\"%c\", ')');"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tfinal var s = \"%c\".formatted(')');", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStringFormatEscapedQuotes() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var s = String.format(\"Say \\\"hi\\\"\", name);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tfinal var s = \"Say \\\"hi\\\"\".formatted(name);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStringFormatMultipleArgs() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var s = String.format(\"Hello %s, age %d\", name, age);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tfinal var s = \"Hello %s, age %d\".formatted(name, age);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStringFormatNestedParens() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var s = String.format(\"Hello %s\", getName());"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tfinal var s = \"Hello %s\".formatted(getName());", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStringFormatNonLiteralMultiArgReturnsNull() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var s = String.format(fmt, name);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNull(result);
+	}
+
+	@Test
+	public void testStringFormatOneArg() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var s = String.format(\"Hello %s\", name);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tfinal var s = \"Hello %s\".formatted(name);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStringFormatSingleArgCastExpression() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var s = String.format((String) arr[0]);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tfinal var s = (String) arr[0];", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStringFormatSingleArgLiteral() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var s = String.format(\"literal\");"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tfinal var s = \"literal\";", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStringFormatSingleArgMethodCall() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var s = String.format(a.toString());"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tfinal var s = a.toString();", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStringFormatSingleArgVariable() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var s = String.format(fmt);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tfinal var s = fmt;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testToArrayMultiDimensionalReturnsNull() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var arr = list.toArray(new String[0][]);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNull(result);
+	}
+
+	@Test
+	public void testToArrayNewZero() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var arr = list.toArray(new String[0]);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tfinal var arr = list.toArray(String[]::new);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testToArrayNonZeroReturnsNull() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var arr = list.toArray(new String[10]);"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNull(result);
+	}
+
+	@Test
+	public void testTrimIsBlank() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.trim().isEmpty())"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthEqualsZero() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.trim().length() == 0)"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthEqualsZeroReversed() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 == s.trim().length())"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthGreaterEqualOne() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.trim().length() >= 1)"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (!s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthGreaterThanZero() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.trim().length() > 0)"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (!s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthGreaterThanZeroDottedReceiver() {
+		final var lines = new ArrayList<>(List.of("\t\tif (obj.name.trim().length() > 0)"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (!obj.name.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthGreaterThanZeroMethodReceiverReturnsNull() {
+		final var lines = new ArrayList<>(List.of("\t\tif (getText().trim().length() > 0)"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNull(result);
+	}
+
+	@Test
+	public void testTrimLengthLessEqualZero() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.trim().length() <= 0)"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthNotEqualsZero() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.trim().length() != 0)"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (!s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthReversedNegated() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 != s.trim().length())"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (!s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthReversedPositive() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 >= s.trim().length())"));
+		final var result = fixer.fix(lines, 0, 0);
+		assertNotNull(result);
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
 		assertTrue(result.importsToAdd().isEmpty());
 	}
 

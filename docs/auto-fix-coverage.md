@@ -65,58 +65,81 @@ The fixer uses regex for ternary patterns and paren-balanced parsing for clamp p
 
 ## PreferSpecificApiCheck sub-rules
 
-This check has 17 detection paths grouped by minSdk gate. The fixer handles them via line-text
-pattern matching, returning null (skipping) for patterns that require structural changes.
+Detection paths grouped by minSdk gate. The fixer handles them via line-text pattern matching,
+returning null (skipping) for patterns that require structural changes.
 
 ### No minSdk gate
 
-| Pattern                                          | Replacement                                | Auto-fix   |
-|--------------------------------------------------|--------------------------------------------|------------|
-| `assertEquals(true/false/null, x)`               | `assertTrue`/`assertFalse`/`assertNull(x)` | 2-arg only |
-| `assertNotEquals(true/false/null, x)`            | Inverted assertion                         | 2-arg only |
-| `assertSame(null, x)` / `assertNotSame(null, x)` | `assertNull`/`assertNotNull(x)`            | 2-arg only |
-| `.collect(Collectors.toList())`                  | `.toList()`                                | Yes        |
-| `.collect(Collectors.toUnmodifiableList())`      | `.toList()`                                | Yes        |
-| `.equals("")`                                    | `.isEmpty()`                               | Yes        |
-| `.get(0)`                                        | `.getFirst()` (API 35+)                    | No         |
-| `.get(size() - 1)`                               | `.getLast()` (API 35+)                     | No         |
-| `.indexOf(str) != -1` / `>= 0` etc.              | `.contains(str)`                           | No         |
-| `.keySet().contains(k)`                          | `.containsKey(k)`                          | Yes        |
-| `.remove(0)`                                     | `.removeFirst()` (API 35+)                 | No         |
-| `.remove(size() - 1)`                            | `.removeLast()` (API 35+)                  | No         |
-| `.replaceAll("literal", x)`                      | `.replace("literal", x)`                   | Yes        |
-| `.size() == 0` / `.length() == 0` etc.           | `.isEmpty()`                               | No         |
-| `.stream().count()`                              | `.size()`                                  | Yes        |
-| `.stream().findFirst().isPresent()`              | `!.isEmpty()`                              | No         |
-| `.values().contains(v)`                          | `.containsValue(v)`                        | Yes        |
+| Pattern                                          | Replacement                                | Auto-fix                    |
+|--------------------------------------------------|--------------------------------------------|-----------------------------|
+| `assertEquals(true/false/null, x)`               | `assertTrue`/`assertFalse`/`assertNull(x)` | Yes (2-arg and 3-arg forms) |
+| `assertNotEquals(true/false/null, x)`            | Inverted assertion                         | Yes (2-arg and 3-arg forms) |
+| `assertSame(null, x)` / `assertNotSame(null, x)` | `assertNull`/`assertNotNull(x)`            | Yes (2-arg and 3-arg forms) |
+| `.collect(Collectors.toList())`                  | `.toList()`                                | Yes                         |
+| `.collect(Collectors.toUnmodifiableList())`      | `.toList()`                                | Yes                         |
+| `.equals("")`                                    | `.isEmpty()`                               | Yes                         |
+| `.indexOf(str) != -1` / `>= 0` etc.              | `.contains(str)` / `!.contains(str)`       | No                          |
+| `.keySet().contains(k)`                          | `.containsKey(k)`                          | Yes                         |
+| `.replaceAll("literal", x)`                      | `.replace("literal", x)`                   | Yes                         |
+| `.size() == 0` / `.length() == 0` etc.           | `.isEmpty()` / `!.isEmpty()`               | No                          |
+| `.stream().count()`                              | `.size()`                                  | Yes                         |
+| `.stream().findFirst().isPresent()`              | `!receiver.isEmpty()`                      | Simple receivers only       |
+| `.values().contains(v)`                          | `.containsValue(v)`                        | Yes                         |
 
 ### API 24+ (MIN_SDK_FOR_EACH)
 
-| Pattern                       | Replacement       | Auto-fix |
-|-------------------------------|-------------------|----------|
-| `Collections.sort(list)`      | `list.sort(null)` | No       |
-| `Collections.sort(list, cmp)` | `list.sort(cmp)`  | No       |
-| `.stream().forEach(...)`      | `.forEach(...)`   | Yes      |
+| Pattern                       | Replacement       | Auto-fix                            |
+|-------------------------------|-------------------|-------------------------------------|
+| `Collections.sort(list)`      | `list.sort(null)` | Yes (paren-balanced arg extraction) |
+| `Collections.sort(list, cmp)` | `list.sort(cmp)`  | Yes (paren-balanced arg extraction) |
+| `.stream().forEach(...)`      | `.forEach(...)`   | Yes                                 |
 
 ### API 30+ (MIN_SDK_COLLECTION_FACTORY)
 
-| Pattern                          | Replacement    | Auto-fix |
-|----------------------------------|----------------|----------|
-| `Collections.emptyList()`        | `List.of()`    | Yes      |
-| `Collections.emptySet()`         | `Set.of()`     | Yes      |
-| `Collections.emptyMap()`         | `Map.of()`     | Yes      |
-| `Collections.singletonList(x)`   | `List.of(x)`   | Yes      |
-| `Collections.singleton(x)`       | `Set.of(x)`    | Yes      |
-| `Collections.singletonMap(k, v)` | `Map.of(k, v)` | Yes      |
+| Pattern                          | Replacement    | Auto-fix          |
+|----------------------------------|----------------|-------------------|
+| `Arrays.asList(...)`             | `List.of(...)` | Yes (adds import) |
+| `Collections.emptyList()`        | `List.of()`    | Yes (adds import) |
+| `Collections.emptyMap()`         | `Map.of()`     | Yes (adds import) |
+| `Collections.emptySet()`         | `Set.of()`     | Yes (adds import) |
+| `Collections.singleton(x)`       | `Set.of(x)`    | Yes (adds import) |
+| `Collections.singletonList(x)`   | `List.of(x)`   | Yes (adds import) |
+| `Collections.singletonMap(k, v)` | `Map.of(k, v)` | Yes (adds import) |
 
 ### API 31+ (MIN_SDK_COPY_OF)
 
 | Pattern                                            | Replacement      | Auto-fix                      |
 |----------------------------------------------------|------------------|-------------------------------|
-| `Collections.unmodifiableList(x)`                  | `List.copyOf(x)` | Yes                           |
-| `Collections.unmodifiableSet(x)`                   | `Set.copyOf(x)`  | Yes                           |
-| `Collections.unmodifiableMap(x)`                   | `Map.copyOf(x)`  | Yes                           |
+| `Collections.unmodifiableList(x)`                  | `List.copyOf(x)` | Yes (adds import)             |
 | `Collections.unmodifiableList(Arrays.asList(...))` | `List.of(...)`   | Partial (gives `List.copyOf`) |
+| `Collections.unmodifiableMap(x)`                   | `Map.copyOf(x)`  | Yes (adds import)             |
+| `Collections.unmodifiableSet(x)`                   | `Set.copyOf(x)`  | Yes (adds import)             |
+
+### API 33+ (MIN_SDK_IS_BLANK / MIN_SDK_TO_ARRAY_GENERATOR)
+
+| Pattern                          | Replacement             | Auto-fix                                                     |
+|----------------------------------|-------------------------|--------------------------------------------------------------|
+| `.toArray(new Type[0])`          | `.toArray(Type[]::new)` | Yes (skips multi-dimensional and annotated types)            |
+| `.trim().isEmpty()`              | `.isBlank()`            | Yes                                                          |
+| `.trim().length() == 0`          | `.isBlank()`            | Yes (including reversed `0 == ...` form)                     |
+| `.trim().length() <= 0`          | `.isBlank()`            | Yes                                                          |
+| `.trim().length() != 0` / `> 0`  | `!receiver.isBlank()`   | Simple receivers only (identifiers, dotted names)            |
+| Reversed forms (`0 != ...` etc.) | `.isBlank()` or negated | Yes (positive reversed); simple receivers (negated reversed) |
+
+### API 34+ (MIN_SDK_FORMATTED)
+
+| Pattern                          | Replacement                 | Auto-fix                            |
+|----------------------------------|-----------------------------|-------------------------------------|
+| `String.format("literal", args)` | `"literal".formatted(args)` | Yes (paren-balanced arg extraction) |
+
+### API 35+ (MIN_SDK_GET_FIRST_LAST)
+
+| Pattern               | Replacement      | Auto-fix                            |
+|-----------------------|------------------|-------------------------------------|
+| `.get(0)`             | `.getFirst()`    | Yes                                 |
+| `.get(size() - 1)`    | `.getLast()`     | No (requires receiver match verify) |
+| `.remove(0)`          | `.removeFirst()` | Yes                                 |
+| `.remove(size() - 1)` | `.removeLast()`  | No (requires receiver match verify) |
 
 ## LambdaParameterTypeCheck sub-rules
 

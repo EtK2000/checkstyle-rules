@@ -156,6 +156,15 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testCollectionsCopyOfNoDoubleFireWithArraysAsList() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiCopyOfViolation.java");
+		// must be exactly 4 copyOf violations, no extra Arrays.asList violation
+		for (var v : violations)
+			assertEquals(SeverityLevel.ERROR, v.getSeverityLevel());
+		assertEquals(4, violations.size());
+	}
+
+	@Test
 	public void testCollectionsCopyOfViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiCopyOfViolation.java");
 		assertEquals(4, violations.size());
@@ -346,6 +355,14 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testMinSdkAllowsArraysAsList() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiArraysAsListViolation.java", "minSdk", "30"
+		);
+		assertEquals(3, violations.size());
+	}
+
+	@Test
 	public void testMinSdkAllowsCollectionsCopyOf() throws Exception {
 		final var violations = BaseCheckTest.runCheck(
 				PreferSpecificApiCheck.class, DIR + "InputSpecificApiCopyOfViolation.java", "minSdk", "31"
@@ -411,6 +428,71 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testMinSdkAllowsFormatted() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiStringFormatViolation.java", "minSdk", "34"
+		);
+		assertEquals(6, violations.size());
+	}
+
+	@Test
+	public void testMinSdkAllowsGeneratorToArray() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiToArrayViolation.java", "minSdk", "33"
+		);
+		assertEquals(3, violations.size());
+	}
+
+	@Test
+	public void testMinSdkAllowsIsBlank() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiTrimIsBlankViolation.java", "minSdk", "33"
+		);
+		assertEquals(13, violations.size());
+
+		var i = 0;
+		assertEquals(5, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '1 > .trim().length()'.", violations.get(i++).getMessage());
+		assertEquals(10, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '!.isBlank()' instead of '1 <= .trim().length()'.", violations.get(i++).getMessage());
+		assertEquals(15, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '.trim().isEmpty()'.", violations.get(i++).getMessage());
+		assertEquals(20, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '.trim().length() == 0'.", violations.get(i++).getMessage());
+		assertEquals(25, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '!.isBlank()' instead of '.trim().length() >= 1'.", violations.get(i++).getMessage());
+		assertEquals(30, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '!.isBlank()' instead of '.trim().length() > 0'.", violations.get(i++).getMessage());
+		assertEquals(35, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '.trim().length() <= 0'.", violations.get(i++).getMessage());
+		assertEquals(40, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '.trim().length() < 1'.", violations.get(i++).getMessage());
+		assertEquals(45, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '!.isBlank()' instead of '.trim().length() != 0'.", violations.get(i++).getMessage());
+		assertEquals(50, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '0 == .trim().length()'.", violations.get(i++).getMessage());
+		assertEquals(55, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '0 >= .trim().length()'.", violations.get(i++).getMessage());
+		assertEquals(60, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '!.isBlank()' instead of '0 < .trim().length()'.", violations.get(i++).getMessage());
+		assertEquals(65, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '!.isBlank()' instead of '0 != .trim().length()'.", violations.get(i++).getMessage());
+	}
+
+	@Test
 	public void testMinSdkAllowsStreamForEach() throws Exception {
 		final var violations = BaseCheckTest.runCheck(
 				PreferSpecificApiCheck.class, DIR + "InputSpecificApiStreamViolation.java", "minSdk", "24"
@@ -426,6 +508,14 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(16, violations.get(2).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(2).getSeverityLevel());
 		assertEquals("Use '.forEach(...)' instead of '.stream().forEach(...)'.", violations.get(2).getMessage());
+	}
+
+	@Test
+	public void testMinSdkSuppressesArraysAsList() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiArraysAsListViolation.java", "minSdk", "29"
+		);
+		assertTrue(violations.isEmpty());
 	}
 
 	@Test
@@ -456,6 +546,30 @@ public class PreferSpecificApiCheckTest {
 	public void testMinSdkSuppressesCollectionsSort() throws Exception {
 		final var violations = BaseCheckTest.runCheck(
 				PreferSpecificApiCheck.class, DIR + "InputSpecificApiCollectionsSortViolation.java", "minSdk", "23"
+		);
+		assertTrue(violations.isEmpty());
+	}
+
+	@Test
+	public void testMinSdkSuppressesFormatted() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiStringFormatViolation.java", "minSdk", "33"
+		);
+		assertTrue(violations.isEmpty());
+	}
+
+	@Test
+	public void testMinSdkSuppressesGeneratorToArray() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiToArrayViolation.java", "minSdk", "32"
+		);
+		assertTrue(violations.isEmpty());
+	}
+
+	@Test
+	public void testMinSdkSuppressesIsBlank() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiTrimIsBlankViolation.java", "minSdk", "32"
 		);
 		assertTrue(violations.isEmpty());
 	}
@@ -533,6 +647,23 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testStandaloneArraysAsListViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiArraysAsListViolation.java");
+		assertEquals(3, violations.size());
+
+		var i = 0;
+		assertEquals(7, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'List.of(...)' instead of 'Arrays.asList(...)'.", violations.get(i++).getMessage());
+		assertEquals(11, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'List.of()' instead of 'Arrays.asList()'.", violations.get(i++).getMessage());
+		assertEquals(15, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'List.of(...)' instead of 'Arrays.asList(...)'.", violations.get(i++).getMessage());
+	}
+
+	@Test
 	public void testStreamViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiStreamViolation.java");
 		assertEquals(3, violations.size());
@@ -549,6 +680,32 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testStringFormatViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiStringFormatViolation.java");
+		assertEquals(6, violations.size());
+
+		var i = 0;
+		assertEquals(5, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.formatted(...)' instead of 'String.format(...)'.", violations.get(i++).getMessage());
+		assertEquals(9, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'the value directly' instead of 'String.format(value)'.", violations.get(i++).getMessage());
+		assertEquals(13, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'the value directly' instead of 'String.format(value)'.", violations.get(i++).getMessage());
+		assertEquals(17, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'the value directly' instead of 'String.format(value)'.", violations.get(i++).getMessage());
+		assertEquals(21, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'the value directly' instead of 'String.format(value)'.", violations.get(i++).getMessage());
+		assertEquals(25, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.formatted(...)' instead of 'String.format(...)'.", violations.get(i++).getMessage());
+	}
+
+	@Test
 	public void testStringMethodViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiStringMethodViolation.java");
 		assertEquals(2, violations.size());
@@ -559,5 +716,22 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(10, violations.get(1).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("Use '.replace(...)' instead of '.replaceAll(...)'.", violations.get(1).getMessage());
+	}
+
+	@Test
+	public void testToArrayNewZeroViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiToArrayViolation.java");
+		assertEquals(3, violations.size());
+
+		var i = 0;
+		assertEquals(9, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'Integer[]::new' instead of 'new Integer[0]'.", violations.get(i++).getMessage());
+		assertEquals(13, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'String[]::new' instead of 'new String[0]'.", violations.get(i++).getMessage());
+		assertEquals(17, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'String[]::new' instead of 'new String[0]'.", violations.get(i++).getMessage());
 	}
 }

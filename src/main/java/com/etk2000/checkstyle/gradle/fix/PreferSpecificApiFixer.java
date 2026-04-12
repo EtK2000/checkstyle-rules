@@ -22,6 +22,42 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	};
 
 	/**
+	 * Scans backwards from {@code dotIdx} to find the start of a simple receiver
+	 * expression (identifiers and dots). Returns -1 if the receiver contains
+	 * complex syntax (parens, brackets, etc.) that would make insertion unsafe.
+	 */
+	@CheckReturnValue
+	private static int findReceiverStart(@Nonnull String line, int dotIdx) {
+		var pos = dotIdx - 1;
+		while (pos >= 0) {
+			final var ch = line.charAt(pos);
+			if (Character.isJavaIdentifierPart(ch) || ch == '.')
+				--pos;
+			else
+				break;
+		}
+		final var start = pos + 1;
+		if (start >= dotIdx || line.charAt(start) == '.')
+			return -1;
+		return start;
+	}
+
+	/**
+	 * {@code Arrays.asList(...)} -> {@code List.of(...)}.
+	 * Adds the {@code java.util.List} import.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixArraysAsList(@Nonnull String line, @Nonnull Set<String> imports) {
+		final var pattern = "Arrays.asList(";
+		final var idx = line.indexOf(pattern);
+		if (idx < 0)
+			return null;
+		imports.add("java.util.List");
+		return line.substring(0, idx) + "List.of(" + line.substring(idx + pattern.length());
+	}
+
+	/**
 	 * Simplifies assertion calls with literal arguments.
 	 * Handles both literal-first ({@code assertEquals(true, x)})
 	 * and literal-last ({@code assertEquals(x, true)}) 2-arg forms.
@@ -148,6 +184,63 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	}
 
 	/**
+	 * {@code Collections.sort(list)} -> {@code list.sort(null)},
+	 * {@code Collections.sort(list, cmp)} -> {@code list.sort(cmp)}.
+	 * Uses paren-balanced parsing to extract the first argument.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixCollectionsSort(@Nonnull String line) {
+		final var pattern = "Collections.sort(";
+		final var idx = line.indexOf(pattern);
+		if (idx < 0)
+			return null;
+
+		final var argsStart = idx + pattern.length();
+
+		// find the comma separating args (at depth 0) or the closing paren
+		var depth = 1;
+		var pos = argsStart;
+		var commaIdx = -1;
+		while (pos < line.length() && depth > 0) {
+			final var ch = line.charAt(pos);
+			if (ch == '(')
+				++depth;
+			else if (ch == ')') {
+				--depth;
+				if (depth == 0)
+					break;
+			}
+			else if (ch == ',' && depth == 1 && commaIdx < 0)
+				commaIdx = pos;
+			else if (ch == '"') {
+				++pos;
+				while (pos < line.length() && line.charAt(pos) != '"') {
+					if (line.charAt(pos) == '\\')
+						++pos;
+					++pos;
+				}
+			}
+			++pos;
+		}
+		if (depth != 0)
+			return null;
+
+		final var closeParen = pos;
+		if (commaIdx >= 0) {
+			// 2-arg form: Collections.sort(list, cmp) -> list.sort(cmp)
+			final var listArg = line.substring(argsStart, commaIdx).strip();
+			final var cmpArg = line.substring(commaIdx + 1, closeParen).strip();
+			return line.substring(0, idx) + listArg + ".sort(" + cmpArg + ")"
+					+ line.substring(closeParen + 1);
+		}
+
+		// 1-arg form: Collections.sort(list) -> list.sort(null)
+		final var listArg = line.substring(argsStart, closeParen).strip();
+		return line.substring(0, idx) + listArg + ".sort(null)" + line.substring(closeParen + 1);
+	}
+
+	/**
 	 * {@code .collect(Collectors.toList())} -> {@code .toList()}, and
 	 * {@code .collect(Collectors.toUnmodifiableList())} -> {@code .toList()}.
 	 */
@@ -175,6 +268,25 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 		if (idx < 0)
 			return null;
 		return line.substring(0, idx) + ".isEmpty()" + line.substring(idx + pattern.length());
+	}
+
+	/**
+	 * {@code .get(0)} -> {@code .getFirst()},
+	 * {@code .remove(0)} -> {@code .removeFirst()}.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixGetOrRemoveFirst(@Nonnull String line) {
+		final String[][] replacements = {
+				{".get(0)", ".getFirst()"},
+				{".remove(0)", ".removeFirst()"}
+		};
+		for (var r : replacements) {
+			final var idx = line.indexOf(r[0]);
+			if (idx >= 0)
+				return line.substring(0, idx) + r[1] + line.substring(idx + r[0].length());
+		}
+		return null;
 	}
 
 	/**
@@ -223,6 +335,32 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	}
 
 	/**
+	 * {@code .stream().findFirst().isPresent()} -> {@code !receiver.isEmpty()}.
+	 * If already negated ({@code !receiver.stream()...}), removes the existing
+	 * {@code !} to produce {@code receiver.isEmpty()} instead of {@code !!receiver.isEmpty()}.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixStreamFindFirstIsPresent(@Nonnull String line) {
+		final var pattern = ".stream().findFirst().isPresent()";
+		final var idx = line.indexOf(pattern);
+		if (idx < 0)
+			return null;
+
+		final var receiverStart = findReceiverStart(line, idx);
+		if (receiverStart < 0)
+			return null;
+
+		// if already negated, remove the ! instead of adding another
+		if (receiverStart > 0 && line.charAt(receiverStart - 1) == '!') {
+			return line.substring(0, receiverStart - 1) + line.substring(receiverStart, idx)
+					+ ".isEmpty()" + line.substring(idx + pattern.length());
+		}
+		return line.substring(0, receiverStart) + "!" + line.substring(receiverStart, idx)
+				+ ".isEmpty()" + line.substring(idx + pattern.length());
+	}
+
+	/**
 	 * {@code .stream().forEach(} -> {@code .forEach(}.
 	 */
 	@CheckReturnValue
@@ -233,6 +371,199 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 		if (idx < 0)
 			return null;
 		return line.substring(0, idx) + ".forEach(" + line.substring(idx + pattern.length());
+	}
+
+	/**
+	 * {@code String.format("literal", args)} -> {@code "literal".formatted(args)},
+	 * {@code String.format(singleArg)} -> {@code singleArg} (strip the call).
+	 * Uses paren-balanced parsing to extract arguments.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixStringFormat(@Nonnull String line) {
+		final var pattern = "String.format(";
+		final var idx = line.indexOf(pattern);
+		if (idx < 0)
+			return null;
+
+		final var argsStart = idx + pattern.length();
+
+		// find the matching closing paren using depth tracking
+		var depth = 1;
+		var closeParen = argsStart;
+		var commaAtDepthOne = -1;
+		while (closeParen < line.length() && depth > 0) {
+			final var ch = line.charAt(closeParen);
+			if (ch == '(')
+				++depth;
+			else if (ch == ')') {
+				--depth;
+				if (depth == 0)
+					break;
+			}
+			else if (ch == ',' && depth == 1 && commaAtDepthOne < 0)
+				commaAtDepthOne = closeParen;
+			else if (ch == '"') {
+				++closeParen;
+				while (closeParen < line.length()) {
+					if (line.charAt(closeParen) == '\\')
+						++closeParen;
+					else if (line.charAt(closeParen) == '"')
+						break;
+					++closeParen;
+				}
+			}
+			else if (ch == '\'') {
+				++closeParen;
+				if (closeParen < line.length() && line.charAt(closeParen) == '\\')
+					++closeParen;
+				if (closeParen < line.length())
+					++closeParen;
+			}
+			if (depth > 0)
+				++closeParen;
+		}
+		if (depth != 0)
+			return null;
+
+		// single-arg: String.format(expr) -> expr
+		if (commaAtDepthOne < 0) {
+			final var singleArg = line.substring(argsStart, closeParen).strip();
+			return line.substring(0, idx) + singleArg + line.substring(closeParen + 1);
+		}
+
+		// multi-arg: first arg must be a string literal for .formatted() rewrite
+		if (line.charAt(argsStart) != '"')
+			return null;
+
+		// find end of string literal
+		var literalEnd = argsStart + 1;
+		while (literalEnd < line.length()) {
+			final var ch = line.charAt(literalEnd);
+			if (ch == '\\')
+				++literalEnd;
+			else if (ch == '"')
+				break;
+			++literalEnd;
+		}
+		if (literalEnd >= line.length())
+			return null;
+
+		final var literal = line.substring(argsStart, literalEnd + 1);
+		final var remainingArgs = line.substring(commaAtDepthOne + 1, closeParen).strip();
+		return line.substring(0, idx) + literal + ".formatted(" + remainingArgs + ")"
+				+ line.substring(closeParen + 1);
+	}
+
+	/**
+	 * {@code .toArray(new Type[0])} -> {@code .toArray(Type[]::new)}.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixToArrayNewZero(@Nonnull String line) {
+		final var prefix = ".toArray(new ";
+		final var idx = line.indexOf(prefix);
+		if (idx < 0)
+			return null;
+
+		final var typeStart = idx + prefix.length();
+		final var bracketIdx = line.indexOf('[', typeStart);
+		if (bracketIdx < 0)
+			return null;
+
+		final var typeName = line.substring(typeStart, bracketIdx);
+		final var expectedEnd = "[0])";
+		if (!line.startsWith(expectedEnd, bracketIdx))
+			return null;
+
+		return line.substring(0, idx) + ".toArray(" + typeName + "[]::new)"
+				+ line.substring(bracketIdx + expectedEnd.length());
+	}
+
+	/**
+	 * {@code .trim().isEmpty()} -> {@code .isBlank()},
+	 * {@code .trim().length() == 0} -> {@code .isBlank()},
+	 * {@code 0 == .trim().length()} -> {@code .isBlank()},
+	 * {@code .trim().length() != 0} -> {@code !receiver.isBlank()}.
+	 * Negated forms scan backwards from {@code .trim()} to find the receiver
+	 * start (identifiers and dotted names only). Returns null for complex
+	 * receivers (method calls, array access, casts).
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixTrimIsBlank(@Nonnull String line) {
+		var pattern = ".trim().isEmpty()";
+		var idx = line.indexOf(pattern);
+		if (idx >= 0)
+			return line.substring(0, idx) + ".isBlank()" + line.substring(idx + pattern.length());
+
+		// .trim().length() == 0 -> .isBlank()
+		pattern = ".trim().length() == 0";
+		idx = line.indexOf(pattern);
+		if (idx >= 0)
+			return line.substring(0, idx) + ".isBlank()" + line.substring(idx + pattern.length());
+
+		// reversed positive forms: 0 == expr.trim().length(), 0 >= ..., 1 > ...
+		final var trimSuffix = ".trim().length()";
+		final String[][] reversedPositive = {
+				{"0 == ", trimSuffix},
+				{"0 >= ", trimSuffix},
+				{"1 > ", trimSuffix}
+		};
+		for (var rev : reversedPositive) {
+			idx = line.indexOf(rev[0]);
+			if (idx >= 0) {
+				final var trimIdx = line.indexOf(rev[1], idx + rev[0].length());
+				if (trimIdx >= 0) {
+					return line.substring(0, idx) + line.substring(idx + rev[0].length(), trimIdx)
+							+ ".isBlank()" + line.substring(trimIdx + rev[1].length());
+				}
+			}
+		}
+
+		// positive forms that need simple replacement: .trim().length() <= 0
+		pattern = ".trim().length() <= 0";
+		idx = line.indexOf(pattern);
+		if (idx >= 0)
+			return line.substring(0, idx) + ".isBlank()" + line.substring(idx + pattern.length());
+
+		// negated non-reversed forms: .trim().length() != 0, > 0, >= 1
+		final String[] negPatterns = {
+				".trim().length() != 0",
+				".trim().length() > 0",
+				".trim().length() >= 1"
+		};
+		for (var neg : negPatterns) {
+			idx = line.indexOf(neg);
+			if (idx >= 0) {
+				final var receiverStart = findReceiverStart(line, idx);
+				if (receiverStart < 0)
+					return null;
+				return line.substring(0, receiverStart) + "!" + line.substring(receiverStart, idx)
+						+ ".isBlank()" + line.substring(idx + neg.length());
+			}
+		}
+
+		// reversed negated forms: 0 != expr.trim().length(), 0 < ..., 1 <= ...
+		final String[][] reversedNegated = {
+				{"0 != ", trimSuffix},
+				{"0 < ", trimSuffix},
+				{"1 <= ", trimSuffix}
+		};
+		for (var rev : reversedNegated) {
+			idx = line.indexOf(rev[0]);
+			if (idx >= 0) {
+				final var trimIdx = line.indexOf(rev[1], idx + rev[0].length());
+				if (trimIdx >= 0) {
+					final var receiverStart = idx + rev[0].length();
+					final var receiver = line.substring(receiverStart, trimIdx);
+					return line.substring(0, idx) + "!" + receiver
+							+ ".isBlank()" + line.substring(trimIdx + rev[1].length());
+				}
+			}
+		}
+
+		return null;
 	}
 
 	@CheckReturnValue
@@ -247,9 +578,15 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 		if (result == null)
 			result = fixCollectionsFactory(line, imports);
 		if (result == null)
+			result = fixCollectionsSort(line);
+		if (result == null)
+			result = fixArraysAsList(line, imports);
+		if (result == null)
 			result = fixCollectToList(line);
 		if (result == null)
 			result = fixEqualsEmpty(line);
+		if (result == null)
+			result = fixGetOrRemoveFirst(line);
 		if (result == null)
 			result = fixMapChain(line);
 		if (result == null)
@@ -257,7 +594,15 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 		if (result == null)
 			result = fixStreamCount(line);
 		if (result == null)
+			result = fixStreamFindFirstIsPresent(line);
+		if (result == null)
 			result = fixStreamForEach(line);
+		if (result == null)
+			result = fixStringFormat(line);
+		if (result == null)
+			result = fixToArrayNewZero(line);
+		if (result == null)
+			result = fixTrimIsBlank(line);
 
 		if (result == null)
 			return null;

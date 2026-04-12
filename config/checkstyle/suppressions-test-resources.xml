@@ -114,6 +114,7 @@
 	<suppress checks="PreferVarCheck" files="inputs[\\/]redundantsuffix[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]standardcharsets[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]instanceofbeforecast[\\/]" />
+	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]multilinecall[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="RedundantCastCheck" files="inputs[\\/]literalsuffix[\\/]" />
 	<suppress checks="RedundantCastCheck" files="inputs[\\/]redundantsuffix[\\/]" />

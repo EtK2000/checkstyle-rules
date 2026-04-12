@@ -210,6 +210,10 @@ class InputSpecificApiClean {
 		list.sort(Comparator.naturalOrder());
 	}
 
+	void listSortNull(List<String> list) {
+		list.sort(null);
+	}
+
 	void mapRemoveZero(Map<Integer, String> map) {
 		map.remove(0);
 	}
@@ -286,9 +290,66 @@ class InputSpecificApiClean {
 		list.stream().filter(s -> !s.isEmpty()).forEach(System.out::println);
 	}
 
+	void stringFormatMethodCallWithArgs(Object obj, String name) {
+		final var s = String.format(obj.toString(), name);
+	}
+
+	void stringFormatNonLiteral(String fmt, String name) {
+		final var s = String.format(fmt, name);
+	}
+
+	void stringIsEmptyWithoutTrim(String s) {
+		if (s.isEmpty())
+			System.out.println("empty without trim");
+	}
+
+	void stripIsEmpty(String s) {
+		if (s.strip().isEmpty())
+			System.out.println("strip empty");
+	}
+
+	void toArrayAlreadyCorrect(List<String> list) {
+		final var arr = list.toArray(String[]::new);
+	}
+
+	void toArrayMultiDimensional(List<String[]> list) {
+		final var arr = list.toArray(new String[0][]);
+	}
+
+	void toArrayNoArg(List<String> list) {
+		final var arr = list.toArray();
+	}
+
+	void toArrayNonZeroSize(List<String> list) {
+		final var arr = list.toArray(new String[10]);
+	}
+
+	void toArraySizedAllocation(List<String> list) {
+		final var arr = list.toArray(new String[list.size()]);
+	}
+
 	void toListDirect(List<String> list) {
 		final var result = list.stream()
 				.filter(s -> !s.isEmpty())
 				.toList();
+	}
+
+	void trimAlone(String s) {
+		final var trimmed = s.trim();
+	}
+
+	void trimEqualsNotEmpty(String s) {
+		if (s.trim().equals("x"))
+			System.out.println("equals x");
+	}
+
+	void trimIsBlankAlready(String s) {
+		if (s.isBlank())
+			System.out.println("already using isBlank");
+	}
+
+	void trimLengthEqualsOne(String s) {
+		if (s.trim().length() == 1)
+			System.out.println("single char");
 	}
 }

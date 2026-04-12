@@ -48,8 +48,13 @@ import javax.annotation.Nullable;
  *     <li>{@code .stream().count()} -> use {@code .size()}</li>
  *     <li>{@code .stream().findFirst().isPresent()} -> use {@code !.isEmpty()}</li>
  *     <li>{@code .stream().forEach(...)} -> use {@code .forEach(...)} (API 24+)</li>
+ *     <li>{@code .toArray(new Type[0])} -> use {@code .toArray(Type[]::new)} (API 33+)</li>
+ *     <li>{@code .trim().isEmpty()} -> use {@code .isBlank()} (API 33+)</li>
+ *     <li>{@code .trim().length() == 0} -> use {@code .isBlank()} (API 33+)</li>
  *     <li>{@code .values().contains(v)} -> use {@code .containsValue(v)}</li>
  *     <li>{@code Collections.unmodifiableList(Arrays.asList(...))} -> use {@code List.of(...)}</li>
+ *     <li>{@code Arrays.asList(...)} -> use {@code List.of(...)} (API 30+)</li>
+ *     <li>{@code String.format("...", args)} -> use {@code "...".formatted(args)} (API 34+)</li>
  * </ul>
  * Suppresses {@code .get(0)} when the same receiver also calls
  * {@code .get(N)} with other indices in the same method scope
@@ -62,7 +67,10 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 	private static final int MIN_SDK_COLLECTION_FACTORY = 30;
 	private static final int MIN_SDK_COPY_OF = 31;
 	private static final int MIN_SDK_FOR_EACH = 24;
+	private static final int MIN_SDK_FORMATTED = 34;
 	private static final int MIN_SDK_GET_FIRST_LAST = 35;
+	private static final int MIN_SDK_IS_BLANK = 33;
+	private static final int MIN_SDK_TO_ARRAY_GENERATOR = 33;
 	private static final String MSG_ASSERT = "prefer.api.assert";
 	private static final String MSG_METHOD = "prefer.api.method";
 
@@ -318,6 +326,13 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			collectSizeEmptyComparisons(child, results);
 	}
 
+	private static void collectStandaloneArraysAsListCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
+		if (ast.getType() == TokenTypes.METHOD_CALL && isStandaloneArraysAsListCall(ast))
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectStandaloneArraysAsListCalls(child, results);
+	}
+
 	private static void collectStreamCountCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isStreamCountCall(ast))
 			results.add(ast);
@@ -337,6 +352,33 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectStreamForEachCalls(child, results);
+	}
+
+	private static void collectStringFormatCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
+		if (ast.getType() == TokenTypes.METHOD_CALL && isStringFormatCall(ast))
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectStringFormatCalls(child, results);
+	}
+
+	private static void collectToArrayNewZeroCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
+		if (ast.getType() == TokenTypes.METHOD_CALL && toArrayNewZeroType(ast) != null)
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectToArrayNewZeroCalls(child, results);
+	}
+
+	/**
+	 * Collects both {@code .trim().isEmpty()} METHOD_CALL nodes and
+	 * comparison nodes (EQUAL, NOT_EQUAL, etc.) matching {@code .trim().length() == 0}.
+	 */
+	private static void collectTrimIsBlankCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
+		if (ast.getType() == TokenTypes.METHOD_CALL && isTrimIsEmptyCall(ast))
+			results.add(ast);
+		else if (trimLengthZeroReplacement(ast) != null)
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectTrimIsBlankCalls(child, results);
 	}
 
 	/**
@@ -735,7 +777,16 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 
 		// must have no arguments
 		final var elist = inner.findFirstToken(TokenTypes.ELIST);
-		return elist == null || elist.getChildCount() == 0;
+		if (elist != null && elist.getChildCount() > 0)
+			return false;
+
+		// skip .trim().length() — handled by isBlank detection
+		if ("length".equals(last.getText())) {
+			final var receiver = dot.getFirstChild();
+			if (receiver != null && receiver.getType() == TokenTypes.METHOD_CALL && isTrimCall(receiver))
+				return false;
+		}
+		return true;
 	}
 
 	@CheckReturnValue
@@ -772,6 +823,49 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		final var getReceiver = receiverText(dot);
 		final var sizeReceiver = receiverText(sizeDot);
 		return !getReceiver.isEmpty() && getReceiver.equals(sizeReceiver);
+	}
+
+	/**
+	 * Checks whether the METHOD_CALL is a standalone {@code Arrays.asList(...)} call
+	 * that is NOT nested inside {@code Collections.unmodifiableList()} (which is
+	 * already handled by the copyOf detection).
+	 */
+	@CheckReturnValue
+	private static boolean isStandaloneArraysAsListCall(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return false;
+
+		final var receiver = dot.getFirstChild();
+		final var method = receiver != null ? receiver.getNextSibling() : null;
+		if (receiver == null || method == null)
+			return false;
+
+		if (receiver.getType() != TokenTypes.IDENT || !"Arrays".equals(receiver.getText()))
+			return false;
+		if (method.getType() != TokenTypes.IDENT || !"asList".equals(method.getText()))
+			return false;
+
+		// exclude if nested inside Collections.unmodifiableList() — already caught by copyOf detection
+		final var parent = methodCall.getParent();
+		if (parent != null && parent.getType() == TokenTypes.EXPR) {
+			final var grandparent = parent.getParent();
+			if (grandparent != null && grandparent.getType() == TokenTypes.ELIST) {
+				final var outerCall = grandparent.getParent();
+				if (outerCall != null && outerCall.getType() == TokenTypes.METHOD_CALL) {
+					final var outerDot = outerCall.findFirstToken(TokenTypes.DOT);
+					if (outerDot != null) {
+						final var outerReceiver = outerDot.getFirstChild();
+						final var outerMethod = outerReceiver != null ? outerReceiver.getNextSibling() : null;
+						if (outerReceiver != null && outerMethod != null
+								&& "Collections".equals(outerReceiver.getText())
+								&& "unmodifiableList".equals(outerMethod.getText()))
+							return false;
+					}
+				}
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -863,6 +957,119 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		return streamElist == null || streamElist.getChildCount() == 0;
 	}
 
+	/**
+	 * Detects {@code String.format(...)} calls that can be simplified:
+	 * single-arg calls (any arg type) and multi-arg calls where the first
+	 * arg is a string literal.
+	 */
+	@CheckReturnValue
+	private static boolean isStringFormatCall(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return false;
+
+		final var receiver = dot.getFirstChild();
+		final var method = receiver != null ? receiver.getNextSibling() : null;
+		if (receiver == null || method == null)
+			return false;
+
+		if (receiver.getType() != TokenTypes.IDENT || !"String".equals(receiver.getText()))
+			return false;
+		if (method.getType() != TokenTypes.IDENT || !"format".equals(method.getText()))
+			return false;
+
+		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
+		if (elist == null || elist.getChildCount() == 0)
+			return false;
+
+		// count arguments
+		var argCount = 0;
+		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() != TokenTypes.COMMA)
+				++argCount;
+		}
+
+		// single-arg: always simplifiable (just the value itself)
+		if (argCount == 1)
+			return true;
+
+		// multi-arg: first argument must be a string literal for .formatted() rewrite
+		final var firstArg = elist.getFirstChild();
+		final var inner = firstArg.getType() == TokenTypes.EXPR ? firstArg.getFirstChild() : firstArg;
+		return inner != null && inner.getType() == TokenTypes.STRING_LITERAL;
+	}
+
+	/**
+	 * Checks whether the METHOD_CALL is a {@code .trim()} call with no arguments.
+	 */
+	@CheckReturnValue
+	private static boolean isTrimCall(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return false;
+
+		var last = dot.getFirstChild();
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		if (!"trim".equals(last.getText()))
+			return false;
+
+		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
+		return elist == null || elist.getChildCount() == 0;
+	}
+
+	/**
+	 * Checks whether the METHOD_CALL is {@code receiver.trim().isEmpty()},
+	 * i.e. an {@code isEmpty()} call whose receiver is a {@code .trim()} call.
+	 */
+	@CheckReturnValue
+	private static boolean isTrimIsEmptyCall(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return false;
+
+		var last = dot.getFirstChild();
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		if (!"isEmpty".equals(last.getText()))
+			return false;
+
+		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
+		if (elist != null && elist.getChildCount() > 0)
+			return false;
+
+		final var receiver = dot.getFirstChild();
+		return receiver != null && receiver.getType() == TokenTypes.METHOD_CALL && isTrimCall(receiver);
+	}
+
+	/**
+	 * Like {@link #isSizeCall(DetailAST)} but checks for {@code .trim().length()}
+	 * specifically. Used by the isBlank detection.
+	 */
+	@CheckReturnValue
+	private static boolean isTrimLengthCall(@Nonnull DetailAST ast) {
+		final var inner = ast.getType() == TokenTypes.EXPR ? ast.getFirstChild() : ast;
+		if (inner == null || inner.getType() != TokenTypes.METHOD_CALL)
+			return false;
+
+		final var dot = inner.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return false;
+
+		var last = dot.getFirstChild();
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		if (!"length".equals(last.getText()))
+			return false;
+
+		final var elist = inner.findFirstToken(TokenTypes.ELIST);
+		if (elist != null && elist.getChildCount() > 0)
+			return false;
+
+		final var receiver = dot.getFirstChild();
+		return receiver != null && receiver.getType() == TokenTypes.METHOD_CALL && isTrimCall(receiver);
+	}
+
 	@CheckReturnValue
 	@Nullable
 	private static String mapChainReplacement(@Nonnull DetailAST methodCall) {
@@ -899,7 +1106,6 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 	@CheckReturnValue
 	@Nonnull
 	private static String receiverText(@Nonnull DetailAST dot) {
-		// the receiver is everything in the DOT except the last child (the method name)
 		final var sb = new StringBuilder();
 		for (var child = dot.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getNextSibling() == null)
@@ -923,6 +1129,132 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		if (left != null && isSizeCall(left))
 			return left.getType() == TokenTypes.EXPR ? left.getFirstChild() : left;
 		return right != null && right.getType() == TokenTypes.EXPR ? right.getFirstChild() : right;
+	}
+
+	/**
+	 * Returns the array element type name from a {@code .toArray(new Type[0])} call,
+	 * or {@code null} if the METHOD_CALL is not a matching toArray call.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String toArrayNewZeroType(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return null;
+
+		var last = dot.getFirstChild();
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		if (!"toArray".equals(last.getText()))
+			return null;
+
+		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
+		if (elist == null || elist.getChildCount() != 1)
+			return null;
+
+		final var arg = elist.getFirstChild();
+		final var inner = arg.getType() == TokenTypes.EXPR ? arg.getFirstChild() : arg;
+		if (inner == null || inner.getType() != TokenTypes.LITERAL_NEW)
+			return null;
+
+		// extract the type name: simple (IDENT) or qualified (DOT, e.g. Map.Entry)
+		final String typeName;
+		final var typeDot = inner.findFirstToken(TokenTypes.DOT);
+		if (typeDot != null)
+			typeName = FullIdent.createFullIdent(typeDot).getText();
+		else {
+			final var typeIdent = inner.findFirstToken(TokenTypes.IDENT);
+			if (typeIdent == null)
+				return null;
+			typeName = typeIdent.getText();
+		}
+
+		// skip multi-dimensional arrays (e.g. new String[0][])
+		var arrayDeclCount = 0;
+		for (var child = inner.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.ARRAY_DECLARATOR)
+				++arrayDeclCount;
+		}
+		if (arrayDeclCount != 1)
+			return null;
+
+		// find ARRAY_DECLARATOR with zero size
+		final var arrayDecl = inner.findFirstToken(TokenTypes.ARRAY_DECLARATOR);
+		if (arrayDecl == null)
+			return null;
+
+		// the size expression should be literal 0
+		final var sizeExpr = arrayDecl.findFirstToken(TokenTypes.EXPR);
+		if (sizeExpr == null)
+			return null;
+
+		final var sizeNum = sizeExpr.getFirstChild();
+		if (sizeNum == null || sizeNum.getType() != TokenTypes.NUM_INT || !"0".equals(sizeNum.getText()))
+			return null;
+
+		// skip if annotations are present on the type (e.g. new @NonNull String[0])
+		if (inner.findFirstToken(TokenTypes.ANNOTATIONS) != null)
+			return null;
+
+		return typeName;
+	}
+
+	/**
+	 * Detects comparisons equivalent to isBlank/!isBlank using trim().length()
+	 * and returns {@code ".isBlank()"} or {@code "!.isBlank()"} accordingly,
+	 * or {@code null} if the AST is not a trim().length() comparison.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String trimLengthZeroReplacement(@Nonnull DetailAST ast) {
+		final var left = ast.getFirstChild();
+		final var right = left != null ? left.getNextSibling() : null;
+		if (left == null || right == null)
+			return null;
+
+		return switch (ast.getType()) {
+			case TokenTypes.EQUAL -> {
+				if ((isTrimLengthCall(left) && isLiteralZero(right))
+						|| (isLiteralZero(left) && isTrimLengthCall(right)))
+					yield ".isBlank()";
+				yield null;
+			}
+			case TokenTypes.GE -> {
+				if (isTrimLengthCall(left) && isLiteralOne(right))
+					yield "!.isBlank()";
+				if (isLiteralZero(left) && isTrimLengthCall(right))
+					yield ".isBlank()";
+				yield null;
+			}
+			case TokenTypes.GT -> {
+				if (isTrimLengthCall(left) && isLiteralZero(right))
+					yield "!.isBlank()";
+				if (isLiteralOne(left) && isTrimLengthCall(right))
+					yield ".isBlank()";
+				yield null;
+			}
+			case TokenTypes.LE -> {
+				if (isTrimLengthCall(left) && isLiteralZero(right))
+					yield ".isBlank()";
+				if (isLiteralOne(left) && isTrimLengthCall(right))
+					yield "!.isBlank()";
+				yield null;
+			}
+			case TokenTypes.LT -> {
+				if (isTrimLengthCall(left) && isLiteralOne(right))
+					yield ".isBlank()";
+				if (isLiteralZero(left) && isTrimLengthCall(right))
+					yield "!.isBlank()";
+				yield null;
+			}
+			case TokenTypes.NOT_EQUAL -> {
+				if ((isTrimLengthCall(left) && isLiteralZero(right))
+						|| (isLiteralZero(left) && isTrimLengthCall(right)))
+					yield "!.isBlank()";
+				yield null;
+			}
+			default -> null;
+		};
 	}
 
 	private final Set<String> imports = new HashSet<>();
@@ -990,6 +1322,17 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 	@SuppressWarnings("unused")
 	public void setMinSdk(int minSdk) {
 		this.minSdk = minSdk;
+	}
+
+	private void visitArraysAsList(@Nonnull DetailAST ast) {
+		final var calls = new ArrayList<DetailAST>();
+		collectStandaloneArraysAsListCalls(ast, calls);
+		for (var call : calls) {
+			final var elist = call.findFirstToken(TokenTypes.ELIST);
+			final var hasArgs = elist != null && elist.getChildCount() > 0;
+			final var argText = hasArgs ? "(...)" : "()";
+			log(call, MSG_METHOD, "List.of" + argText, "Arrays.asList" + argText);
+		}
 	}
 
 	private void visitAssertions(@Nonnull DetailAST ast) {
@@ -1117,11 +1460,22 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			visitStreamForEach(ast);
 		}
 
-		if (minSdk >= MIN_SDK_COLLECTION_FACTORY)
+		if (minSdk >= MIN_SDK_COLLECTION_FACTORY) {
+			visitArraysAsList(ast);
 			visitCollectionsFactory(ast);
+		}
 
 		if (minSdk >= MIN_SDK_COPY_OF)
 			visitCollectionsCopyOf(ast);
+
+		if (minSdk >= MIN_SDK_IS_BLANK)
+			visitTrimIsBlank(ast);
+
+		if (minSdk >= MIN_SDK_TO_ARRAY_GENERATOR)
+			visitToArrayNewZero(ast);
+
+		if (minSdk >= MIN_SDK_FORMATTED)
+			visitStringFormat(ast);
 
 		if (minSdk < MIN_SDK_GET_FIRST_LAST)
 			return;
@@ -1277,6 +1631,32 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			log(call, MSG_METHOD, ".forEach(...)", ".stream().forEach(...)");
 	}
 
+	private void visitStringFormat(@Nonnull DetailAST ast) {
+		final var calls = new ArrayList<DetailAST>();
+		collectStringFormatCalls(ast, calls);
+		for (var call : calls) {
+			final var elist = call.findFirstToken(TokenTypes.ELIST);
+			var argCount = 0;
+			for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
+				if (child.getType() != TokenTypes.COMMA)
+					++argCount;
+			}
+			if (argCount == 1)
+				log(call, MSG_METHOD, "the value directly", "String.format(value)");
+			else
+				log(call, MSG_METHOD, ".formatted(...)", "String.format(...)");
+		}
+	}
+
+	private void visitToArrayNewZero(@Nonnull DetailAST ast) {
+		final var calls = new ArrayList<DetailAST>();
+		collectToArrayNewZeroCalls(ast, calls);
+		for (var call : calls) {
+			final var typeName = toArrayNewZeroType(call);
+			log(call, MSG_METHOD, typeName + "[]::new", "new " + typeName + "[0]");
+		}
+	}
+
 	@Override
 	public void visitToken(@Nonnull DetailAST ast) {
 		switch (ast.getType()) {
@@ -1286,6 +1666,36 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 				packageName = FullIdent.createFullIdent(ident).getText();
 			}
 			default -> visitMethodScope(ast);
+		}
+	}
+
+	private void visitTrimIsBlank(@Nonnull DetailAST ast) {
+		final var calls = new ArrayList<DetailAST>();
+		collectTrimIsBlankCalls(ast, calls);
+		for (var node : calls) {
+			if (node.getType() == TokenTypes.METHOD_CALL)
+				log(node, MSG_METHOD, ".isBlank()", ".trim().isEmpty()");
+			else {
+				final var replacement = trimLengthZeroReplacement(node);
+				final var left = node.getFirstChild();
+				final var right = left.getNextSibling();
+				final var op = switch (node.getType()) {
+					case TokenTypes.EQUAL -> "==";
+					case TokenTypes.GE -> ">=";
+					case TokenTypes.GT -> ">";
+					case TokenTypes.LE -> "<=";
+					case TokenTypes.LT -> "<";
+					case TokenTypes.NOT_EQUAL -> "!=";
+					default -> "?";
+				};
+				final var trimLengthOnLeft = isTrimLengthCall(left);
+				final var literalSide = trimLengthOnLeft ? right : left;
+				final var literalText = childText(literalSide);
+				final var actual = trimLengthOnLeft
+						? ".trim().length() " + op + " " + literalText
+						: literalText + " " + op + " " + ".trim().length()";
+				log(node, MSG_METHOD, replacement, actual);
+			}
 		}
 	}
 }
