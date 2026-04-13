@@ -49,6 +49,7 @@ final class FixableCheckNames {
 			"com.etk2000.checkstyle.PreferPrefixIncrementCheck",
 			"com.etk2000.checkstyle.PreferSpecificApiCheck",
 			"com.etk2000.checkstyle.PreferStandardCharsetsCheck",
+			"com.etk2000.checkstyle.PreferStaticImportCheck",
 			"com.etk2000.checkstyle.PreferVarCheck",
 			"com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck",
 			"com.etk2000.checkstyle.RedundantNumericSuffixCheck",

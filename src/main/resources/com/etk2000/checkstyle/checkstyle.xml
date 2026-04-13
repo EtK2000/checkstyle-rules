@@ -152,6 +152,11 @@
 			<property name="minSdk" value="${minSdk}" />
 		</module>
 
+		<!-- Custom: Prefer static imports for well-known utility methods -->
+		<module name="com.etk2000.checkstyle.PreferStaticImportCheck">
+			<property name="minSdk" value="${minSdk}" />
+		</module>
+
 		<!-- Custom: Prefer specific API methods over generic ones -->
 		<module name="com.etk2000.checkstyle.PreferSpecificApiCheck">
 			<property name="minSdk" value="${minSdk}" />

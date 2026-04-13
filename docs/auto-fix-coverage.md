@@ -4,29 +4,33 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 
 ## TreeWalker checks (FIXERS map)
 
-| Check                                    | Fixer                              | Notes                                                                            |
-|------------------------------------------|------------------------------------|----------------------------------------------------------------------------------|
-| AvoidNoArgumentSuperConstructorCallCheck | AvoidNoArgumentSuperCallFixer      | Removes `super()` call                                                           |
-| ControlFlowBracesCheck                   | ControlFlowBracesFixer             | Do-while only: removes unnecessary braces, fixes one-liners, adds missing braces |
-| ExplicitInitializationCheck              | ExplicitInitializationFixer        | Removes `= 0`/`= null`/`= false` etc.                                            |
-| FinalLocalVariableCheck                  | FinalLocalVariableFixer            | Adds `final` keyword                                                             |
-| LambdaParameterTypeCheck                 | LambdaParameterTypeFixer           | See sub-rules below                                                              |
-| NoArrayTrailingCommaCheck                | NoArrayTrailingCommaFixer          | Removes trailing comma                                                           |
-| NoBlankLineBetweenSingleCasesCheck       | NoBlankLineBetweenSingleCasesFixer | Removes blank line                                                               |
-| NoEnumTrailingCommaCheck                 | NoArrayTrailingCommaFixer          | Same fixer as array trailing comma                                               |
-| NoFinalParametersCheck                   | RedundantModifierFixer             | Removes `final` keyword from parameter                                           |
-| NoUnnecessaryThisCheck                   | NoUnnecessaryThisFixer             | Removes `this.` prefix                                                           |
-| PreferCollectionInterfaceCheck           | PreferCollectionInterfaceFixer     | Replaces concrete collection type with interface (e.g. `ArrayList` to `List`)    |
-| PreferMathMethodCheck                    | PreferMathMethodFixer              | See sub-rules below                                                              |
-| PreferPrefixIncrementCheck               | PreferPrefixIncrementFixer         | Moves `++`/`--` to prefix position                                               |
-| PreferSpecificApiCheck                   | PreferSpecificApiFixer             | See sub-rules below                                                              |
-| PreferVarCheck                           | PreferVarFixer                     | Replaces type with `var`; converts explicit array init to implicit               |
-| RedundantAnnotationSyntaxCheck           | RedundantAnnotationSyntaxFixer     | Removes `()` or `value =`                                                        |
-| RedundantImportCheck                     | DeleteLineFixer                    | Deletes import line                                                              |
-| RedundantModifierCheck                   | RedundantModifierFixer             | Removes redundant modifier keyword                                               |
-| RedundantNumericSuffixCheck              | RedundantNumericSuffixFixer        | Removes redundant `L`/`f`/`d` suffix                                             |
-| UnusedImportsCheck                       | DeleteLineFixer                    | Deletes import line                                                              |
-| UpperEllCheck                            | UpperEllFixer                      | Changes `l` to `L`                                                               |
+| Check                                    | Fixer                              | Notes                                                                                     |
+|------------------------------------------|------------------------------------|-------------------------------------------------------------------------------------------|
+| AnnotationOwnLineCheck                   | AnnotationOwnLineFixer             | Splits stacked annotations to own lines, removes blank lines, sorts alphabetically        |
+| AnnotationSameLineCheck                  | AnnotationSameLineFixer            | Joins annotations onto declaration line, sorts inline annotations alphabetically          |
+| AvoidNoArgumentSuperConstructorCallCheck | AvoidNoArgumentSuperCallFixer      | Removes `super()` call                                                                    |
+| ControlFlowBracesCheck                   | ControlFlowBracesFixer             | Do-while only: removes unnecessary braces, fixes one-liners, adds missing braces          |
+| ExplicitInitializationCheck              | ExplicitInitializationFixer        | Removes `= 0`/`= null`/`= false` etc.                                                     |
+| FinalLocalVariableCheck                  | FinalLocalVariableFixer            | Adds `final` keyword                                                                      |
+| LambdaParameterTypeCheck                 | LambdaParameterTypeFixer           | See sub-rules below                                                                       |
+| NoArrayTrailingCommaCheck                | NoArrayTrailingCommaFixer          | Removes trailing comma                                                                    |
+| NoBlankLineBetweenSingleCasesCheck       | NoBlankLineBetweenSingleCasesFixer | Removes blank line                                                                        |
+| NoEnumTrailingCommaCheck                 | NoArrayTrailingCommaFixer          | Same fixer as array trailing comma                                                        |
+| NoFinalParametersCheck                   | RedundantModifierFixer             | Removes `final` keyword from parameter                                                    |
+| NoUnnecessaryThisCheck                   | NoUnnecessaryThisFixer             | Removes `this.` prefix                                                                    |
+| PreferCollectionInterfaceCheck           | PreferCollectionInterfaceFixer     | Replaces concrete collection type with interface (e.g. `ArrayList` to `List`)             |
+| PreferMathMethodCheck                    | PreferMathMethodFixer              | See sub-rules below                                                                       |
+| PreferPrefixIncrementCheck               | PreferPrefixIncrementFixer         | Moves `++`/`--` to prefix position                                                        |
+| PreferSpecificApiCheck                   | PreferSpecificApiFixer             | See sub-rules below                                                                       |
+| PreferStandardCharsetsCheck              | PreferStandardCharsetsFixer        | Replaces charset string literal with `StandardCharsets.X` constant (adds import)          |
+| PreferStaticImportCheck                  | PreferStaticImportFixer            | Strips `Class.` prefix from a qualified call and adds an `import static <fqcn>.<method>;` |
+| PreferVarCheck                           | PreferVarFixer                     | Replaces type with `var`; converts explicit array init to implicit                        |
+| RedundantAnnotationSyntaxCheck           | RedundantAnnotationSyntaxFixer     | Removes `()` or `value =`                                                                 |
+| RedundantImportCheck                     | DeleteLineFixer                    | Deletes import line                                                                       |
+| RedundantModifierCheck                   | RedundantModifierFixer             | Removes redundant modifier keyword                                                        |
+| RedundantNumericSuffixCheck              | RedundantNumericSuffixFixer        | Removes redundant `L`/`f`/`d` suffix                                                      |
+| UnusedImportsCheck                       | DeleteLineFixer                    | Deletes import line                                                                       |
+| UpperEllCheck                            | UpperEllFixer                      | Changes `l` to `L`                                                                        |
 
 ## Regex checks (MODULE_ID_FIXERS map)
 
@@ -70,21 +74,21 @@ returning null (skipping) for patterns that require structural changes.
 
 ### No minSdk gate
 
-| Pattern                                          | Replacement                                | Auto-fix                    |
-|--------------------------------------------------|--------------------------------------------|-----------------------------|
-| `assertEquals(true/false/null, x)`               | `assertTrue`/`assertFalse`/`assertNull(x)` | Yes (2-arg and 3-arg forms) |
-| `assertNotEquals(true/false/null, x)`            | Inverted assertion                         | Yes (2-arg and 3-arg forms) |
-| `assertSame(null, x)` / `assertNotSame(null, x)` | `assertNull`/`assertNotNull(x)`            | Yes (2-arg and 3-arg forms) |
-| `.collect(Collectors.toList())`                  | `.toList()`                                | Yes                         |
-| `.collect(Collectors.toUnmodifiableList())`      | `.toList()`                                | Yes                         |
-| `.equals("")`                                    | `.isEmpty()`                               | Yes                         |
-| `.indexOf(str) != -1` / `>= 0` etc.              | `.contains(str)` / `!.contains(str)`       | No                          |
-| `.keySet().contains(k)`                          | `.containsKey(k)`                          | Yes                         |
-| `.replaceAll("literal", x)`                      | `.replace("literal", x)`                   | Yes                         |
-| `.size() == 0` / `.length() == 0` etc.           | `.isEmpty()` / `!.isEmpty()`               | No                          |
-| `.stream().count()`                              | `.size()`                                  | Yes                         |
-| `.stream().findFirst().isPresent()`              | `!receiver.isEmpty()`                      | Simple receivers only       |
-| `.values().contains(v)`                          | `.containsValue(v)`                        | Yes                         |
+| Pattern                                          | Replacement                                | Auto-fix                            |
+|--------------------------------------------------|--------------------------------------------|-------------------------------------|
+| `assertEquals(true/false/null, x)`               | `assertTrue`/`assertFalse`/`assertNull(x)` | Yes (2-arg and 3-arg forms)         |
+| `assertNotEquals(true/false/null, x)`            | Inverted assertion                         | Yes (2-arg and 3-arg forms)         |
+| `assertSame(null, x)` / `assertNotSame(null, x)` | `assertNull`/`assertNotNull(x)`            | Yes (2-arg and 3-arg forms)         |
+| `.collect(Collectors.toList())`                  | `.toList()`                                | Yes                                 |
+| `.collect(Collectors.toUnmodifiableList())`      | `.toList()`                                | Yes                                 |
+| `.equals("")`                                    | `.isEmpty()`                               | Yes                                 |
+| `.indexOf(str) != -1` / `>= 0` etc.              | `.contains(str)` / `!.contains(str)`       | No                                  |
+| `.keySet().contains(k)`                          | `.containsKey(k)`                          | Yes                                 |
+| `.replaceAll("literal", x)`                      | `.replace("literal", x)`                   | Yes                                 |
+| `.size() == 0` / `.length() == 0` etc.           | `.isEmpty()` / `!.isEmpty()`               | Yes (negated needs simple receiver) |
+| `.stream().count()`                              | `.size()`                                  | Yes                                 |
+| `.stream().findFirst().isPresent()`              | `!receiver.isEmpty()`                      | Simple receivers only               |
+| `.values().contains(v)`                          | `.containsValue(v)`                        | Yes                                 |
 
 ### API 24+ (MIN_SDK_FOR_EACH)
 
@@ -164,22 +168,38 @@ fixer goes straight to naked form (removing both type and parens).
 
 ## Checks without fixers
 
-Checks intentionally left without auto-fix support because the transformation is too complex.
+Custom checks without auto-fix support and why.
 
-| Check             | Reason                                                                                                         |
-|-------------------|----------------------------------------------------------------------------------------------------------------|
-| FieldSortingCheck | Reordering fields/enum constants requires moving multi-line blocks with dependency analysis                    |
-| PreferRecordCheck | Multi-line structural transformation: must rewrite class header, remove fields/constructor, adjust annotations |
+| Check                                | Reason                                                                                                         |
+|--------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| ClassStructureOrderCheck             | Reordering class members requires moving multi-line blocks with dependency analysis                            |
+| ConstructorAssignmentOrderCheck      | Reordering assignments requires dependency analysis between fields                                             |
+| EmptyBodyCheck                       | Ambiguous: removing the statement may discard intentional no-ops; adding a body requires context               |
+| EmptySwitchCheck                     | Same as EmptyBodyCheck                                                                                         |
+| FieldConsolidationCheck              | Merging field declarations onto one line requires verifying no inline initializers or annotations conflict     |
+| FieldSortingCheck                    | Reordering fields/enum constants requires moving multi-line blocks with dependency analysis                    |
+| InfiniteEmptyLoopCheck               | Flags bugs (infinite empty loops), not a stylistic issue with a deterministic fix                              |
+| InstanceofBeforeCastCheck            | Reordering sub-expressions in compound boolean conditions while preserving short-circuit semantics             |
+| MethodAlphabeticalOrderCheck         | Reordering methods requires moving multi-line blocks                                                           |
+| MultilineCallFormattingCheck         | Reformatting argument layout across lines with context-dependent indent and grouping rules                     |
+| NoCaseBracesCheck                    | Removing braces requires scope analysis to verify no variable declarations leak                                |
+| OverloadMethodOrderCheck             | Reordering method overloads requires moving multi-line blocks                                                  |
+| PreferImportCheck                    | Replacing FQN with short name and adding import; must verify no name conflicts                                 |
+| PreferLambdaCheck                    | Structural transformation: anonymous class to lambda, must handle `this` references and field shadowing        |
+| PreferLiteralSuffixCheck             | Replacing widening cast with literal suffix requires expression context analysis                               |
+| PreferPatternMatchingInstanceofCheck | Restructuring instanceof + subsequent cast into pattern matching across multiple statements                    |
+| PreferRecordCheck                    | Multi-line structural transformation: must rewrite class header, remove fields/constructor, adjust annotations |
+| RedundantCastCheck                   | Removing a cast may change method overload resolution or widen the expression type                             |
+| SwitchCaseOrderCheck                 | Reordering switch cases requires moving multi-line blocks with fall-through analysis                           |
+| ThreadAnnotationCheck                | Cannot determine which thread annotation (`@MainThread`, `@AnyThread`, etc.) to add                            |
 
 ## Future fix opportunities
 
 Patterns not currently auto-fixable, with what would be needed to support them.
 
-| Pattern                             | Blocker                                                                                          | Possible approach                                                                                                                              |
-|-------------------------------------|--------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
-| 3-arg assertions                    | Comma inside string args makes boundary detection unreliable                                     | Pass the violation message to the fixer (contains the literal), or use a regex to find the literal token rather than splitting on commas       |
-| `.indexOf(...) != -1`               | Need to restructure `expr op literal` into `receiver.contains(arg)` or `!receiver.contains(arg)` | Extract receiver + arg from the indexOf call text, rebuild as contains, handle negation                                                        |
-| `.stream().findFirst().isPresent()` | `!` must go before the receiver, not at the `.`                                                  | Find the start of the chain (scan backwards for the receiver), insert `!` there, replace `.stream().findFirst().isPresent()` with `.isEmpty()` |
-| `Collections.sort(list)`            | First arg becomes the receiver                                                                   | Find arg text between `(` and `)` or `,`, reconstruct as `arg.sort(null)` or `arg.sort(cmpArg)`                                                |
-| `.get(0)` / `.remove(0)`            | Simple case is trivial but shares detection with `get(size()-1)`                                 | Split: fix `.get(0)` → `.getFirst()` and `.remove(0)` → `.removeFirst()` via text match, skip `size()-1` variants                              |
-| `.size() == 0` etc.                 | Need to restructure comparison into method call                                                  | Extract receiver from size/length call, rebuild as `receiver.isEmpty()` or `!receiver.isEmpty()`, remove comparison operator and literal       |
+| Pattern                                                   | Blocker                                                                                                       | Possible approach                                                                       |
+|-----------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| `.indexOf(...) != -1`                                     | Need to restructure `expr op literal` into `receiver.contains(arg)` or `!receiver.contains(arg)`              | Extract receiver + arg from the indexOf call text, rebuild as contains, handle negation |
+| `.get(size() - 1)` / `.remove(size() - 1)`                | Must verify the `size()` receiver matches the `.get()`/`.remove()` receiver                                   | Parse both receivers and compare, or pass violation metadata to the fixer               |
+| `.stream().findFirst().isPresent()` (complex receivers)   | Simple receivers (identifiers, dotted names) are already fixed; method calls, casts, and array access are not | Extend `findReceiverStart()` to handle parenthesized expressions and method calls       |
+| `.size() != 0` / `.length() > 0` etc. (complex receivers) | Positive forms (`== 0`) are fully fixed; negated forms need `!` insertion which requires simple receiver scan | Extend `findReceiverStart()` to handle complex receivers                                |

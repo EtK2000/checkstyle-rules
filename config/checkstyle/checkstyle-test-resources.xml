@@ -116,6 +116,9 @@
 		<module name="com.etk2000.checkstyle.PreferStandardCharsetsCheck">
 			<property name="minSdk" value="${minSdk}" />
 		</module>
+		<module name="com.etk2000.checkstyle.PreferStaticImportCheck">
+			<property name="minSdk" value="${minSdk}" />
+		</module>
 		<module name="com.etk2000.checkstyle.PreferVarCheck" />
 		<module name="com.etk2000.checkstyle.RedundantCastCheck" />
 		<module name="com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck" />

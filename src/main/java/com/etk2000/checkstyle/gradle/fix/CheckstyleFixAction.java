@@ -13,6 +13,7 @@ import com.etk2000.checkstyle.PreferMathMethodCheck;
 import com.etk2000.checkstyle.PreferPrefixIncrementCheck;
 import com.etk2000.checkstyle.PreferSpecificApiCheck;
 import com.etk2000.checkstyle.PreferStandardCharsetsCheck;
+import com.etk2000.checkstyle.PreferStaticImportCheck;
 import com.etk2000.checkstyle.PreferVarCheck;
 import com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck;
 import com.etk2000.checkstyle.RedundantNumericSuffixCheck;
@@ -108,6 +109,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				Map.entry(PreferPrefixIncrementCheck.class.getName(), new PreferPrefixIncrementFixer()),
 				Map.entry(PreferSpecificApiCheck.class.getName(), new PreferSpecificApiFixer()),
 				Map.entry(PreferStandardCharsetsCheck.class.getName(), new PreferStandardCharsetsFixer()),
+				Map.entry(PreferStaticImportCheck.class.getName(), new PreferStaticImportFixer()),
 				Map.entry(PreferVarCheck.class.getName(), new PreferVarFixer()),
 				Map.entry(RedundantAnnotationSyntaxCheck.class.getName(), new RedundantAnnotationSyntaxFixer()),
 				Map.entry(RedundantImportCheck.class.getName(), deleteLineFixer),
@@ -182,7 +184,8 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				checkConfig.addProperty("validateEnhancedForLoopVariable", "false");
 			if (checkName.equals(PreferMathMethodCheck.class.getName())
 					|| checkName.equals(PreferSpecificApiCheck.class.getName())
-					|| checkName.equals(PreferStandardCharsetsCheck.class.getName()))
+					|| checkName.equals(PreferStandardCharsetsCheck.class.getName())
+					|| checkName.equals(PreferStaticImportCheck.class.getName()))
 				checkConfig.addProperty("minSdk", minSdk);
 			if (checkName.equals(PreferVarCheck.class.getName()))
 				checkConfig.addProperty("allowedMethods", ALLOWED_METHODS);
@@ -396,6 +399,16 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				}
 				if (lastImportIdx >= 0)
 					lastImportIdx += addedStatic + (insertIdx - packageIdx - 1 - addedStatic);
+			}
+			else {
+				// no package and no existing static imports: insert at top
+				var insertIdx = 0;
+				for (var fqn : staticToAdd) {
+					lines.add(insertIdx++, "import static " + fqn + ";");
+					++addedStatic;
+				}
+				if (lastImportIdx >= 0)
+					lastImportIdx += addedStatic;
 			}
 		}
 

@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle;
 
+import static java.util.Objects.requireNonNull;
+
 import com.puppycrawl.tools.checkstyle.Checker;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.TreeWalker;
@@ -11,7 +13,6 @@ import java.io.File;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import javax.annotation.Nonnull;
 
@@ -70,7 +71,7 @@ class BaseCheckTest {
 		});
 
 		final var url = BaseCheckTest.class.getResource("/com/etk2000/checkstyle/inputs/" + inputPath);
-		Objects.requireNonNull(url, "Test input file not found: " + inputPath);
+		requireNonNull(url, "Test input file not found: " + inputPath);
 
 		checker.process(List.of(new File(url.toURI())));
 		checker.destroy();
@@ -84,7 +85,7 @@ class BaseCheckTest {
 			@Nonnull String inputPath
 	) throws Exception {
 		final var url = BaseCheckTest.class.getResource("/com/etk2000/checkstyle/inputs/" + inputPath);
-		Objects.requireNonNull(url, "Test input file not found: " + inputPath);
+		requireNonNull(url, "Test input file not found: " + inputPath);
 		return runRegexCheckOnFile(moduleName, format, new File(url.toURI()));
 	}
 

@@ -41,6 +41,7 @@
 	<suppress checks="PreferRecordCheck" files="inputs[\\/]preferrecord[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]specificapi[\\/]" />
 	<suppress checks="PreferStandardCharsetsCheck" files="inputs[\\/]standardcharsets[\\/]" />
+	<suppress checks="PreferStaticImportCheck" files="inputs[\\/]preferstaticimport[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]annotationsyntax[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="RedundantCastCheck" files="inputs[\\/]redundantcast[\\/]" />
@@ -115,6 +116,7 @@
 	<suppress checks="PreferVarCheck" files="inputs[\\/]standardcharsets[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]instanceofbeforecast[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]multilinecall[\\/]" />
+	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]preferstaticimport[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="RedundantCastCheck" files="inputs[\\/]literalsuffix[\\/]" />
 	<suppress checks="RedundantCastCheck" files="inputs[\\/]redundantsuffix[\\/]" />

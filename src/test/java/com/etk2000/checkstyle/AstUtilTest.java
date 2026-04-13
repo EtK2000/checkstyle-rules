@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -22,7 +23,6 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
@@ -182,7 +182,7 @@ public class AstUtilTest {
 	@Nonnull
 	private static DetailAST parse(@Nonnull String inputPath) throws Exception {
 		final var url = AstUtilTest.class.getResource("/com/etk2000/checkstyle/inputs/" + inputPath);
-		Objects.requireNonNull(url, "Test input file not found: " + inputPath);
+		requireNonNull(url, "Test input file not found: " + inputPath);
 		return JavaParser.parseFile(new File(url.toURI()), JavaParser.Options.WITH_COMMENTS);
 	}
 
@@ -190,9 +190,9 @@ public class AstUtilTest {
 	private static DetailAST parseExprFirstChild(@Nonnull String source) throws Exception {
 		final var ast = parseSource(source);
 		final var assign = findFirst(ast, TokenTypes.ASSIGN);
-		Objects.requireNonNull(assign, "No ASSIGN found");
+		requireNonNull(assign, "No ASSIGN found");
 		final var expr = assign.getFirstChild();
-		Objects.requireNonNull(expr, "No child of ASSIGN");
+		requireNonNull(expr, "No child of ASSIGN");
 		return expr.getType() == TokenTypes.EXPR ? expr.getFirstChild() : expr;
 	}
 

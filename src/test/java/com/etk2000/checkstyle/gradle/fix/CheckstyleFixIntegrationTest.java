@@ -44,7 +44,8 @@ public class CheckstyleFixIntegrationTest {
 				checkConfig.addProperty("validateEnhancedForLoopVariable", "false");
 			if (checkName.endsWith("PreferMathMethodCheck")
 					|| checkName.endsWith("PreferSpecificApiCheck")
-					|| checkName.endsWith("PreferStandardCharsetsCheck"))
+					|| checkName.endsWith("PreferStandardCharsetsCheck")
+					|| checkName.endsWith("PreferStaticImportCheck"))
 				checkConfig.addProperty("minSdk", minSdk);
 			treeWalkerConfig.addChild(checkConfig);
 		}
@@ -1612,6 +1613,75 @@ public class CheckstyleFixIntegrationTest {
 		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.nio.charset.StandardCharsets;\n\nclass T {\n\tbyte[] run(String s) throws Exception {\n\t\treturn s.getBytes(StandardCharsets.UTF_8);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(2, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferStaticImportChainedCalls() throws Exception {
+		// 4 violations on a single line (`Predicate.not(Objects.requireNonNull(...))` x2);
+		// fixer must strip both `Predicate.` and `Objects.` correctly via column-descending order.
+		final var file = tempDir.resolve("StaticImpChained.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nimport java.util.Objects;\nimport java.util.function.Predicate;\n\nclass T {\n\tList<String> f(List<String> list, String p, String s) {\n\t\treturn list.stream().filter(Predicate.not(Objects.requireNonNull(p)::startsWith)).filter(Predicate.not(Objects.requireNonNull(s)::endsWith)).toList();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import static java.util.Objects.requireNonNull;\nimport static java.util.function.Predicate.not;\nimport java.util.List;\nimport java.util.Objects;\nimport java.util.function.Predicate;\n\nclass T {\n\tList<String> f(List<String> list, String p, String s) {\n\t\treturn list.stream().filter(not(requireNonNull(p)::startsWith)).filter(not(requireNonNull(s)::endsWith)).toList();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(4, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferStaticImportCollectorsToSet() throws Exception {
+		final var file = tempDir.resolve("StaticImpCollectors.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Set;\nimport java.util.stream.Collectors;\nimport java.util.stream.Stream;\n\nclass T {\n\tSet<String> a(Stream<String> s) {\n\t\treturn s.collect(Collectors.toSet());\n\t}\n\tSet<String> b(Stream<String> s) {\n\t\treturn s.collect(Collectors.toSet());\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import static java.util.stream.Collectors.toSet;\nimport java.util.Set;\nimport java.util.stream.Collectors;\nimport java.util.stream.Stream;\n\nclass T {\n\tSet<String> a(Stream<String> s) {\n\t\treturn s.collect(toSet());\n\t}\n\tSet<String> b(Stream<String> s) {\n\t\treturn s.collect(toSet());\n\t}\n}",
+				output.content()
+		);
+		assertEquals(2, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferStaticImportObjectsRequireNonNull() throws Exception {
+		final var file = tempDir.resolve("StaticImpObjects.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Objects;\n\nclass T {\n\tObject f(Object a, Object b) {\n\t\tfinal var x = Objects.requireNonNull(a);\n\t\tfinal var y = Objects.requireNonNull(b);\n\t\treturn x.toString() + y.toString();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import static java.util.Objects.requireNonNull;\nimport java.util.Objects;\n\nclass T {\n\tObject f(Object a, Object b) {\n\t\tfinal var x = requireNonNull(a);\n\t\tfinal var y = requireNonNull(b);\n\t\treturn x.toString() + y.toString();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(2, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferStaticImportObjectsRequireNonNullRemovesUnusedImport() throws Exception {
+		final var file = tempDir.resolve("StaticImpObjUnused.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Objects;\n\nclass T {\n\tObject f(Object a, Object b) {\n\t\tfinal var x = Objects.requireNonNull(a);\n\t\tfinal var y = Objects.requireNonNull(b);\n\t\treturn x.toString() + y.toString();\n\t}\n}");
+
+		assertEquals(
+				"import static java.util.Objects.requireNonNull;\n\nclass T {\n\tObject f(Object a, Object b) {\n\t\tfinal var x = requireNonNull(a);\n\t\tfinal var y = requireNonNull(b);\n\t\treturn x.toString() + y.toString();\n\t}\n}",
+				runFixMultiPass(file)
+		);
+	}
+
+	@Test
+	public void testPreferStaticImportPredicateNot() throws Exception {
+		final var file = tempDir.resolve("StaticImpPredicate.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nimport java.util.function.Predicate;\n\nclass T {\n\tList<String> f(List<String> list) {\n\t\treturn list.stream().filter(Predicate.not(String::isEmpty)).filter(Predicate.not(String::isBlank)).toList();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import static java.util.function.Predicate.not;\nimport java.util.List;\nimport java.util.function.Predicate;\n\nclass T {\n\tList<String> f(List<String> list) {\n\t\treturn list.stream().filter(not(String::isEmpty)).filter(not(String::isBlank)).toList();\n\t}\n}",
 				output.content()
 		);
 		assertEquals(2, output.result().fixCount());
