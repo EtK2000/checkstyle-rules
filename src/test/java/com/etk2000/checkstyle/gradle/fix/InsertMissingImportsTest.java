@@ -123,6 +123,44 @@ public class InsertMissingImportsTest {
 	}
 
 	@Test
+	public void testMultipleStaticImportsAddedToExistingGroup() {
+		final var lines = new ArrayList<>(List.of(
+				"import static org.junit.Assert.assertEquals;",
+				"class T {}"
+		));
+		final var count = CheckstyleFixAction.insertMissingImports(
+				lines, Set.of("static org.junit.Assert.assertNotNull", "static org.junit.Assert.assertTrue")
+		);
+		assertEquals(2, count);
+		final var expected = List.of(
+				"import static org.junit.Assert.assertEquals;",
+				"import static org.junit.Assert.assertNotNull;",
+				"import static org.junit.Assert.assertTrue;",
+				"class T {}"
+		);
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testMultipleStaticImportsAddedToNewGroup() {
+		final var lines = new ArrayList<>(List.of("package com.example;", "", "import java.util.Map;", "class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(
+				lines, Set.of("static java.util.Objects.requireNonNull", "static java.util.function.Predicate.not")
+		);
+		assertEquals(2, count);
+		final var expected = List.of(
+				"package com.example;",
+				"",
+				"import static java.util.Objects.requireNonNull;",
+				"import static java.util.function.Predicate.not;",
+				"",
+				"import java.util.Map;",
+				"class T {}"
+		);
+		assertEquals(expected, lines);
+	}
+
+	@Test
 	public void testNoImportsWithPackage() {
 		final var lines = new ArrayList<>(List.of("package com.example;", "class T {}"));
 		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("java.util.List"));
@@ -151,7 +189,21 @@ public class InsertMissingImportsTest {
 		final var lines = new ArrayList<>(List.of("import static org.junit.Assert.assertEquals;", "class T {}"));
 		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("java.util.List"));
 		assertEquals(1, count);
-		assertEquals(List.of("import java.util.List;", "import static org.junit.Assert.assertEquals;", "class T {}"), lines);
+		assertEquals(
+				List.of("import static org.junit.Assert.assertEquals;", "", "import java.util.List;", "class T {}"),
+				lines
+		);
+	}
+
+	@Test
+	public void testOnlyStaticImportsWithBlankAfterNoPackage() {
+		final var lines = new ArrayList<>(List.of("import static org.junit.Assert.assertEquals;", "", "class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("java.util.List"));
+		assertEquals(1, count);
+		assertEquals(
+				List.of("import static org.junit.Assert.assertEquals;", "", "import java.util.List;", "class T {}"),
+				lines
+		);
 	}
 
 	@Test
@@ -159,7 +211,9 @@ public class InsertMissingImportsTest {
 		final var lines = new ArrayList<>(List.of("package com.example;", "import static org.junit.Assert.assertEquals;", "class T {}"));
 		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("java.util.List"));
 		assertEquals(1, count);
-		final var expected = List.of("package com.example;", "", "import java.util.List;", "import static org.junit.Assert.assertEquals;", "class T {}");
+		final var expected = List.of(
+				"package com.example;", "import static org.junit.Assert.assertEquals;", "", "import java.util.List;", "class T {}"
+		);
 		assertEquals(expected, lines);
 	}
 
@@ -189,6 +243,136 @@ public class InsertMissingImportsTest {
 	}
 
 	@Test
+	public void testStaticAndRegularAddedTogetherNoExistingImports() {
+		final var lines = new ArrayList<>(List.of("package com.example;", "class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(
+				lines, Set.of("static java.util.Objects.requireNonNull", "java.util.List")
+		);
+		assertEquals(2, count);
+		final var expected = List.of(
+				"package com.example;",
+				"",
+				"import static java.util.Objects.requireNonNull;",
+				"",
+				"import java.util.List;",
+				"class T {}"
+		);
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticAndRegularAddedTogetherNoExistingStaticGroup() {
+		final var lines = new ArrayList<>(List.of("package com.example;", "", "import java.util.Map;", "class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("static java.util.Objects.requireNonNull", "java.util.Set"));
+		assertEquals(2, count);
+		final var expected = List.of(
+				"package com.example;",
+				"",
+				"import static java.util.Objects.requireNonNull;",
+				"",
+				"import java.util.Map;",
+				"import java.util.Set;",
+				"class T {}"
+		);
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticAndRegularAddedTogetherNoPackageNoExistingImports() {
+		final var lines = new ArrayList<>(List.of("class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(
+				lines, Set.of("static java.util.Objects.requireNonNull", "java.util.List")
+		);
+		assertEquals(2, count);
+		final var expected = List.of(
+				"import static java.util.Objects.requireNonNull;",
+				"",
+				"import java.util.List;",
+				"class T {}"
+		);
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticImportAddedBeforeExistingStatics() {
+		final var lines = new ArrayList<>(List.of(
+				"import static org.junit.Assert.assertNull;",
+				"import static org.junit.Assert.assertTrue;",
+				"class T {}"
+		));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("static org.junit.Assert.assertEquals"));
+		assertEquals(1, count);
+		final var expected = List.of(
+				"import static org.junit.Assert.assertEquals;",
+				"import static org.junit.Assert.assertNull;",
+				"import static org.junit.Assert.assertTrue;",
+				"class T {}"
+		);
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticImportAddedBeforeExistingStaticsWithRegulars() {
+		final var lines = new ArrayList<>(List.of(
+				"import static org.junit.Assert.assertTrue;",
+				"",
+				"import java.util.List;",
+				"class T {}"
+		));
+		final var count = CheckstyleFixAction.insertMissingImports(
+				lines, Set.of("static org.junit.Assert.assertEquals", "java.util.Map")
+		);
+		assertEquals(2, count);
+		final var expected = List.of(
+				"import static org.junit.Assert.assertEquals;",
+				"import static org.junit.Assert.assertTrue;",
+				"",
+				"import java.util.List;",
+				"import java.util.Map;",
+				"class T {}"
+		);
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticImportAddedBetweenExistingStatics() {
+		final var lines = new ArrayList<>(List.of(
+				"import static org.junit.Assert.assertEquals;",
+				"import static org.junit.Assert.assertTrue;",
+				"class T {}"
+		));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("static org.junit.Assert.assertNotNull"));
+		assertEquals(1, count);
+		final var expected = List.of(
+				"import static org.junit.Assert.assertEquals;",
+				"import static org.junit.Assert.assertNotNull;",
+				"import static org.junit.Assert.assertTrue;",
+				"class T {}"
+		);
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticImportAddedInExistingGroupWithRegularsBelow() {
+		final var lines = new ArrayList<>(List.of(
+				"import static org.junit.Assert.assertTrue;",
+				"",
+				"import java.util.List;",
+				"class T {}"
+		));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("static org.junit.Assert.assertEquals"));
+		assertEquals(1, count);
+		final var expected = List.of(
+				"import static org.junit.Assert.assertEquals;",
+				"import static org.junit.Assert.assertTrue;",
+				"",
+				"import java.util.List;",
+				"class T {}"
+		);
+		assertEquals(expected, lines);
+	}
+
+	@Test
 	public void testStaticImportAddedInSortedPosition() {
 		final var lines = new ArrayList<>(List.of(
 				"import static org.junit.Assert.assertEquals;",
@@ -203,6 +387,76 @@ public class InsertMissingImportsTest {
 				"import static org.junit.Assert.assertTrue;",
 				"class T {}"
 		);
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticImportAddedNoExistingGroupPackageNoBlank() {
+		final var lines = new ArrayList<>(List.of("package com.example;", "class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("static java.util.Objects.requireNonNull"));
+		assertEquals(1, count);
+		final var expected = List.of("package com.example;", "", "import static java.util.Objects.requireNonNull;", "", "class T {}");
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticImportAddedNoExistingGroupPackageOnly() {
+		final var lines = new ArrayList<>(List.of("package com.example;"));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("static java.util.Objects.requireNonNull"));
+		assertEquals(1, count);
+		final var expected = List.of("package com.example;", "", "import static java.util.Objects.requireNonNull;", "");
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticImportAddedNoExistingGroupPackageWithBlank() {
+		final var lines = new ArrayList<>(List.of("package com.example;", "", "class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("static java.util.Objects.requireNonNull"));
+		assertEquals(1, count);
+		final var expected = List.of("package com.example;", "", "import static java.util.Objects.requireNonNull;", "", "class T {}");
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticImportAddedNoExistingGroupWithRegulars() {
+		final var lines = new ArrayList<>(List.of("package com.example;", "", "import java.util.Map;", "class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("static java.util.Objects.requireNonNull"));
+		assertEquals(1, count);
+		final var expected = List.of(
+				"package com.example;",
+				"",
+				"import static java.util.Objects.requireNonNull;",
+				"",
+				"import java.util.Map;",
+				"class T {}"
+		);
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticImportAddedNoPackageLeadingBlankNoDuplicateBlank() {
+		final var lines = new ArrayList<>(List.of("", "class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("static java.util.Objects.requireNonNull"));
+		assertEquals(1, count);
+		final var expected = List.of("import static java.util.Objects.requireNonNull;", "", "class T {}");
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticImportAddedNoPackageNoExistingStatic() {
+		final var lines = new ArrayList<>(List.of("class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("static java.util.Objects.requireNonNull"));
+		assertEquals(1, count);
+		final var expected = List.of("import static java.util.Objects.requireNonNull;", "", "class T {}");
+		assertEquals(expected, lines);
+	}
+
+	@Test
+	public void testStaticImportAddedNoPackageRegularImportsOnly() {
+		final var lines = new ArrayList<>(List.of("import java.util.Map;", "class T {}"));
+		final var count = CheckstyleFixAction.insertMissingImports(lines, Set.of("static java.util.Objects.requireNonNull"));
+		assertEquals(1, count);
+		final var expected = List.of("import static java.util.Objects.requireNonNull;", "", "import java.util.Map;", "class T {}");
 		assertEquals(expected, lines);
 	}
 

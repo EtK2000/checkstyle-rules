@@ -148,6 +148,8 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 
 		final var importsToAdd = new TreeSet<String>();
 		var fixed = 0;
+		var suppressedLine = -1;
+		var passedThrough = false;
 		for (var event : violations) {
 			final var fixer = resolveFixer(event, fixers, moduleIdFixers);
 			if (fixer == null)
@@ -155,6 +157,22 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			if (event.getSeverityLevel() != SeverityLevel.ERROR)
 				continue;
 			final var lineIndex = event.getLine() - 1;
+			if (lineIndex == suppressedLine) {
+				// after a prior delete, a blank line may shift into this position;
+				// allow deletion only once and only for DeleteLineFixer (e.g.
+				// RedundantImport + UnusedImports double-fire: first removes
+				// import, second removes leftover blank)
+				if (!passedThrough && lineIndex >= 0 && lineIndex < lines.size()
+						&& lines.get(lineIndex).isEmpty()
+						&& fixer instanceof DeleteLineFixer)
+					passedThrough = true;
+				else
+					continue;
+			}
+			else
+				passedThrough = false;
+			if (lineIndex < 0 || lineIndex >= lines.size())
+				continue;
 			final var charColumn = tabColumnToCharIndex(lines.get(lineIndex), event.getColumn() - 1);
 			final var result = fixer.fix(lines, lineIndex, charColumn);
 			if (result == null)
@@ -163,6 +181,10 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				lines.subList(result.startLine(), result.endLine() + 1).clear();
 			lines.addAll(result.startLine(), result.replacement());
 			importsToAdd.addAll(result.importsToAdd());
+			// suppress next same-line violation when this fix removed content,
+			// since the line that shifted into this position is unrelated
+			suppressedLine = result.replacement().size() < result.endLine() - result.startLine() + 1
+					? lineIndex : -1;
 			++fixed;
 		}
 
@@ -371,6 +393,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		// insert static imports
 		if (!staticToAdd.isEmpty()) {
 			if (lastStaticImportIdx >= 0) {
+				// existing static group: insert within it (blank-line separator already present)
 				for (var fqn : staticToAdd) {
 					final var importLine = "import static " + fqn + ";";
 					var insertIdx = lastStaticImportIdx + 1;
@@ -387,28 +410,43 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 					++addedStatic;
 				}
 			}
-			else if (packageIdx >= 0) {
-				var insertIdx = packageIdx + 1;
-				if (insertIdx < lines.size() && lines.get(insertIdx).isEmpty())
-					++insertIdx;
-				else
-					lines.add(insertIdx++, "");
-				for (var fqn : staticToAdd) {
-					lines.add(insertIdx++, "import static " + fqn + ";");
-					++addedStatic;
-				}
-				if (lastImportIdx >= 0)
-					lastImportIdx += addedStatic + (insertIdx - packageIdx - 1 - addedStatic);
-			}
 			else {
-				// no package and no existing static imports: insert at top
-				var insertIdx = 0;
+				// no existing static group: insert a new block with a trailing blank line
+				var insertIdx = packageIdx + 1;
+				if (packageIdx >= 0) {
+					if (insertIdx >= lines.size() || !lines.get(insertIdx).isEmpty()) {
+						lines.add(insertIdx, "");
+						if (lastImportIdx >= insertIdx)
+							++lastImportIdx;
+					}
+					++insertIdx;
+				}
 				for (var fqn : staticToAdd) {
-					lines.add(insertIdx++, "import static " + fqn + ";");
+					lines.add(insertIdx, "import static " + fqn + ";");
+					if (lastImportIdx >= insertIdx)
+						++lastImportIdx;
+					++insertIdx;
 					++addedStatic;
 				}
-				if (lastImportIdx >= 0)
-					lastImportIdx += addedStatic;
+				// ensure blank line after the new static group
+				if (insertIdx >= lines.size() || !lines.get(insertIdx).isEmpty()) {
+					lines.add(insertIdx, "");
+					if (lastImportIdx >= insertIdx)
+						++lastImportIdx;
+				}
+			}
+		}
+
+		// if statics exist but no regular imports yet, position lastImportIdx
+		// after the static group (with blank separator) so regulars go below statics
+		if (!regularToAdd.isEmpty() && lastImportIdx < 0) {
+			for (var i = lines.size() - 1; i >= 0; --i) {
+				if (lines.get(i).startsWith("import static ")) {
+					if (i + 1 >= lines.size() || !lines.get(i + 1).isEmpty())
+						lines.add(i + 1, "");
+					lastImportIdx = i + 1;
+					break;
+				}
 			}
 		}
 

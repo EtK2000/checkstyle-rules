@@ -1606,6 +1606,25 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferStandardCharsetsAddsRegularAfterExistingStatic() throws Exception {
+		final var file = tempDir.resolve("StdCharsetStatic.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"import static java.util.Objects.requireNonNull;\n\nclass T {\n\tbyte[] run(String s) throws Exception {\n\t\treturn requireNonNull(s).getBytes(\"UTF-8\");\n\t}\n}"
+		);
+
+		// fixer adds java.nio.charset.StandardCharsets (regular) to a file with
+		// only static imports; the regular should go after the static group
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import static java.util.Objects.requireNonNull;\n\nimport java.nio.charset.StandardCharsets;\nclass T {\n\tbyte[] run(String s) throws Exception {\n\t\treturn requireNonNull(s).getBytes(StandardCharsets.UTF_8);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testPreferStandardCharsetsImportAlreadyPresent() throws Exception {
 		final var file = tempDir.resolve("StdCharsetImp.java").toFile();
 		Files.writeString(file.toPath(), "import java.nio.charset.StandardCharsets;\n\nclass T {\n\tbyte[] run(String s) throws Exception {\n\t\treturn s.getBytes(\"UTF-8\");\n\t}\n}");
@@ -1628,7 +1647,7 @@ public class CheckstyleFixIntegrationTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"import static java.util.Objects.requireNonNull;\nimport static java.util.function.Predicate.not;\nimport java.util.List;\nimport java.util.Objects;\nimport java.util.function.Predicate;\n\nclass T {\n\tList<String> f(List<String> list, String p, String s) {\n\t\treturn list.stream().filter(not(requireNonNull(p)::startsWith)).filter(not(requireNonNull(s)::endsWith)).toList();\n\t}\n}",
+				"import static java.util.Objects.requireNonNull;\nimport static java.util.function.Predicate.not;\n\nimport java.util.List;\nimport java.util.Objects;\nimport java.util.function.Predicate;\n\nclass T {\n\tList<String> f(List<String> list, String p, String s) {\n\t\treturn list.stream().filter(not(requireNonNull(p)::startsWith)).filter(not(requireNonNull(s)::endsWith)).toList();\n\t}\n}",
 				output.content()
 		);
 		assertEquals(4, output.result().fixCount());
@@ -1642,7 +1661,7 @@ public class CheckstyleFixIntegrationTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"import static java.util.stream.Collectors.toSet;\nimport java.util.Set;\nimport java.util.stream.Collectors;\nimport java.util.stream.Stream;\n\nclass T {\n\tSet<String> a(Stream<String> s) {\n\t\treturn s.collect(toSet());\n\t}\n\tSet<String> b(Stream<String> s) {\n\t\treturn s.collect(toSet());\n\t}\n}",
+				"import static java.util.stream.Collectors.toSet;\n\nimport java.util.Set;\nimport java.util.stream.Collectors;\nimport java.util.stream.Stream;\n\nclass T {\n\tSet<String> a(Stream<String> s) {\n\t\treturn s.collect(toSet());\n\t}\n\tSet<String> b(Stream<String> s) {\n\t\treturn s.collect(toSet());\n\t}\n}",
 				output.content()
 		);
 		assertEquals(2, output.result().fixCount());
@@ -1656,7 +1675,7 @@ public class CheckstyleFixIntegrationTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"import static java.util.Objects.requireNonNull;\nimport java.util.Objects;\n\nclass T {\n\tObject f(Object a, Object b) {\n\t\tfinal var x = requireNonNull(a);\n\t\tfinal var y = requireNonNull(b);\n\t\treturn x.toString() + y.toString();\n\t}\n}",
+				"import static java.util.Objects.requireNonNull;\n\nimport java.util.Objects;\n\nclass T {\n\tObject f(Object a, Object b) {\n\t\tfinal var x = requireNonNull(a);\n\t\tfinal var y = requireNonNull(b);\n\t\treturn x.toString() + y.toString();\n\t}\n}",
 				output.content()
 		);
 		assertEquals(2, output.result().fixCount());
@@ -1681,7 +1700,7 @@ public class CheckstyleFixIntegrationTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"import static java.util.function.Predicate.not;\nimport java.util.List;\nimport java.util.function.Predicate;\n\nclass T {\n\tList<String> f(List<String> list) {\n\t\treturn list.stream().filter(not(String::isEmpty)).filter(not(String::isBlank)).toList();\n\t}\n}",
+				"import static java.util.function.Predicate.not;\n\nimport java.util.List;\nimport java.util.function.Predicate;\n\nclass T {\n\tList<String> f(List<String> list) {\n\t\treturn list.stream().filter(not(String::isEmpty)).filter(not(String::isBlank)).toList();\n\t}\n}",
 				output.content()
 		);
 		assertEquals(2, output.result().fixCount());
@@ -1840,6 +1859,38 @@ public class CheckstyleFixIntegrationTest {
 		final var output = runFixAndGetResult(file);
 		assertEquals("class T {\n\tString s;\n}", output.content());
 		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRedundantImportContiguousSuppressesDuplicate() throws Exception {
+		final var file = tempDir.resolve("RedImpContig.java").toFile();
+		Files.writeString(file.toPath(), "import java.lang.String;\nimport java.util.List;\n\nclass T {\n\tList<String> s;\n}");
+
+		// both RedundantImport and UnusedImports fire on java.lang.String;
+		// the second same-line violation is suppressed so import java.util.List is preserved
+		final var output = runFixAndGetResult(file);
+		assertEquals("import java.util.List;\n\nclass T {\n\tList<String> s;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRedundantImportOrphanedSuppressesDuplicate() throws Exception {
+		final var file = tempDir.resolve("RedImpOrphan.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"import java.io.File;\n\nimport java.lang.String;\n\nimport javax.annotation.Nonnull;\n\nclass T {\n\t@Nonnull\n\tFile f;\n\tString s;\n}"
+		);
+
+		// both RedundantImport and UnusedImports fire on java.lang.String;
+		// first delete collapses the blank below, second is suppressed
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.io.File;\n\nimport javax.annotation.Nonnull;\n\nclass T {\n\t@Nonnull\n\tFile f;\n\tString s;\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
 
@@ -2027,6 +2078,34 @@ public class CheckstyleFixIntegrationTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals("\nclass T {\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testUnusedImportOrphanedInGroupRemovesBlankLine() throws Exception {
+		final var file = tempDir.resolve("UnusedOrphan.java").toFile();
+		Files.writeString(file.toPath(), "package p;\n\nimport java.util.List;\n\nclass T {\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("package p;\n\nclass T {\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testUnusedImportOrphanedMiddleGroupRemovesBlankLine() throws Exception {
+		final var file = tempDir.resolve("UnusedMiddle.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"import java.io.File;\n\nimport java.util.List;\n\nimport javax.annotation.Nonnull;\n\nclass T {\n\t@Nonnull\n\tFile f;\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.io.File;\n\nimport javax.annotation.Nonnull;\n\nclass T {\n\t@Nonnull\n\tFile f;\n}",
+				output.content()
+		);
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
