@@ -5,6 +5,7 @@
 <suppressions>
 	<!-- Suppress each check in the directory whose test inputs intentionally violate it -->
 	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]annotationownline[\\/]" />
+	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
 	<suppress checks="AnnotationSameLineCheck" files="inputs[\\/]annotationsameline[\\/]" />
 	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]classstructure[\\/]" />
 	<suppress checks="ConstructorAssignmentOrderCheck" files="inputs[\\/]constructorassign[\\/]" />
@@ -25,12 +26,14 @@
 	<suppress checks="NoBlankLineBetweenSingleCasesCheck" files="inputs[\\/]singlecase[\\/]" />
 	<suppress checks="NoCaseBracesCheck" files="inputs[\\/]casebraces[\\/]" />
 	<suppress checks="LambdaParameterTypeCheck" files="inputs[\\/]nofinalparameters[\\/]" />
+	<suppress checks="LambdaParameterTypeCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
 	<suppress checks="NoFinalParametersCheck" files="inputs[\\/]nofinalparameters[\\/]" />
 	<suppress checks="NoFinalParametersCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="NoFinalParametersCheck" files="inputs[\\/]regex[\\/]" />
 	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]unnecessarythis[\\/]" />
 	<suppress checks="OverloadMethodOrderCheck" files="inputs[\\/]overload[\\/]" />
+	<suppress checks="PreferBulkOperationCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
 	<suppress checks="PreferCollectionInterfaceCheck" files="inputs[\\/]collectioninterface[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]preferimport[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]preferlambda[\\/]" />
@@ -115,6 +118,7 @@
 	<suppress checks="PreferVarCheck" files="inputs[\\/]redundantsuffix[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]standardcharsets[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]instanceofbeforecast[\\/]" />
+	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]multilinecall[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]preferstaticimport[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]prefervar[\\/]" />

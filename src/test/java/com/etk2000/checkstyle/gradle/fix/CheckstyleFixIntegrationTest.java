@@ -1024,6 +1024,311 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferBulkOperationAddAll() throws Exception {
+		final var file = tempDir.resolve("BulkAdd.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f(List<String> target, List<String> source) {\n\t\tfor (var item : source)\n\t\t\ttarget.add(item);\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid f(List<String> target, List<String> source) {\n\t\ttarget.addAll(source);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationArrayFill() throws Exception {
+		final var file = tempDir.resolve("BulkFill.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int[] arr) {\n\t\tfor (var i = 0; i < arr.length; ++i)\n\t\t\tarr[i] = 0;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Arrays;\nclass T {\n\tvoid f(int[] arr) {\n\t\tArrays.fill(arr, 0);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationArrayFillBraced() throws Exception {
+		final var file = tempDir.resolve("BulkFillBraced.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int[] arr) {\n\t\tfor (var i = 0; i < arr.length; ++i) {\n\t\t\tarr[i] = 0;\n\t\t}\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Arrays;\nclass T {\n\tvoid f(int[] arr) {\n\t\tArrays.fill(arr, 0);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationArrayFillSourceNameStartsWithLength() throws Exception {
+		// End-to-end: source array named `lengthValues`. The `.length` substring matcher
+		// must not match inside the identifier `lengthValues`.
+		final var file = tempDir.resolve("BulkFillLengthName.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int[] lengthValues) {\n\t\tfor (var i = 0; i < lengthValues.length; ++i)\n\t\t\tlengthValues[i] = 0;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Arrays;\nclass T {\n\tvoid f(int[] lengthValues) {\n\t\tArrays.fill(lengthValues, 0);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationArrayFillUnaryPlusValueContainsBracket() throws Exception {
+		// End-to-end: UNARY_PLUS wrapping an INDEX_OP is a pure expression, but the top
+		// token isn't INDEX_OP so the fill branch runs. Fixer dispatch must route to fill.
+		final var file = tempDir.resolve("BulkFillUnaryPlusBracket.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int[] arr, int[] other) {\n\t\tfor (var i = 0; i < arr.length; ++i)\n\t\t\tarr[i] = +other[0];\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Arrays;\nclass T {\n\tvoid f(int[] arr, int[] other) {\n\t\tArrays.fill(arr, +other[0]);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationArrayFillValueContainsBracket() throws Exception {
+		// End-to-end guard: a fill value containing `[` must NOT be misdispatched to
+		// `fixArrayCopy` (which would produce a no-op self-copy). Regression for the
+		// dispatch bug exposed by `arrayFillDeeplyNestedConstant`.
+		final var file = tempDir.resolve("BulkFillBracket.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int[] arr, int[] a, int[] b) {\n\t\tfor (var i = 0; i < arr.length; ++i)\n\t\t\tarr[i] = -a[b[0]];\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Arrays;\nclass T {\n\tvoid f(int[] arr, int[] a, int[] b) {\n\t\tArrays.fill(arr, -a[b[0]]);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationEntrySetPutAll() throws Exception {
+		final var file = tempDir.resolve("BulkEntrySet.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Map;\nclass T {\n\tvoid f(Map<String, String> target, Map<String, String> source) {\n\t\tfor (var entry : source.entrySet())\n\t\t\ttarget.put(entry.getKey(), entry.getValue());\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Map;\nclass T {\n\tvoid f(Map<String, String> target, Map<String, String> source) {\n\t\ttarget.putAll(source);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationEntrySetPutAllBraced() throws Exception {
+		final var file = tempDir.resolve("BulkEntrySetBraced.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Map;\nclass T {\n\tvoid f(Map<String, String> target, Map<String, String> source) {\n\t\tfor (var entry : source.entrySet()) {\n\t\t\ttarget.put(entry.getKey(), entry.getValue());\n\t\t}\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Map;\nclass T {\n\tvoid f(Map<String, String> target, Map<String, String> source) {\n\t\ttarget.putAll(source);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationForEachLambdaAddAll() throws Exception {
+		final var file = tempDir.resolve("BulkLambdaAdd.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f(List<String> list, List<String> other) {\n\t\tlist.forEach(item -> other.add(item));\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid f(List<String> list, List<String> other) {\n\t\tother.addAll(list);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationForEachLambdaBlockBodyAddAll() throws Exception {
+		final var file = tempDir.resolve("BulkBlockAdd.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f(List<String> list, List<String> other) {\n\t\tlist.forEach(item -> {\n\t\t\tother.add(item);\n\t\t});\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid f(List<String> list, List<String> other) {\n\t\tother.addAll(list);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationForEachLambdaBlockBodyBlockCommentWrongTarget() throws Exception {
+		// End-to-end guard for Gap #10: a multi-line block comment containing a
+		// misleading `.put(` on a different target must not confuse the fixer. The
+		// real body uses `real.put`; the comment mentions `target.put`. Output must
+		// be `real.putAll(source);`.
+		final var file = tempDir.resolve("BulkBlockCommentWrongTarget.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Map;\nclass T {\n\tvoid f(Map<String, String> source, Map<String, String> real) {\n\t\tsource.forEach((k, v) -> {\n\t\t\t/* future cleanup:\n\t\t\t   target.put(k, v);\n\t\t\t*/\n\t\t\treal.put(k, v);\n\t\t});\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Map;\nclass T {\n\tvoid f(Map<String, String> source, Map<String, String> real) {\n\t\treal.putAll(source);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationForEachLambdaBlockBodyPutAll() throws Exception {
+		final var file = tempDir.resolve("BulkBlockPut.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Map;\nclass T {\n\tvoid f(Map<String, String> source, Map<String, String> target) {\n\t\tsource.forEach((k, v) -> {\n\t\t\ttarget.put(k, v);\n\t\t});\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Map;\nclass T {\n\tvoid f(Map<String, String> source, Map<String, String> target) {\n\t\ttarget.putAll(source);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationForEachLambdaPreservesLeadingIfStatement() throws Exception {
+		final var file = tempDir.resolve("BulkLeadingIf.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Map;\nclass T {\n\tvoid f(boolean flag, Map<String, String> source, Map<String, String> target) {\n\t\tif (flag) source.forEach((k, v) -> target.put(k, v));\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Map;\nclass T {\n\tvoid f(boolean flag, Map<String, String> source, Map<String, String> target) {\n\t\tif (flag) target.putAll(source);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationForEachLambdaPutAll() throws Exception {
+		final var file = tempDir.resolve("BulkPut.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Map;\nclass T {\n\tvoid f(Map<String, String> source, Map<String, String> target) {\n\t\tsource.forEach((k, v) -> target.put(k, v));\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Map;\nclass T {\n\tvoid f(Map<String, String> source, Map<String, String> target) {\n\t\ttarget.putAll(source);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationForEachMethodRefAdd() throws Exception {
+		final var file = tempDir.resolve("BulkRefAdd.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f(List<String> list, List<String> other) {\n\t\tlist.forEach(other::add);\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid f(List<String> list, List<String> other) {\n\t\tother.addAll(list);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationForEachMethodRefMultiLine() throws Exception {
+		final var file = tempDir.resolve("BulkRefMulti.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f(List<String> list, List<String> other) {\n\t\tlist.forEach(\n\t\t\t\tother::add\n\t\t);\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid f(List<String> list, List<String> other) {\n\t\tother.addAll(list);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationForEachMethodRefPut() throws Exception {
+		final var file = tempDir.resolve("BulkRefPut.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Map;\nclass T {\n\tvoid f(Map<String, String> source, Map<String, String> target) {\n\t\tsource.forEach(target::put);\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Map;\nclass T {\n\tvoid f(Map<String, String> source, Map<String, String> target) {\n\t\ttarget.putAll(source);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationIndexedAddAll() throws Exception {
+		final var file = tempDir.resolve("BulkIdxAdd.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f(List<String> target, List<String> source) {\n\t\tfor (var i = 0; i < source.size(); ++i)\n\t\t\ttarget.add(source.get(i));\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid f(List<String> target, List<String> source) {\n\t\ttarget.addAll(source);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationIndexedAddAllBraced() throws Exception {
+		final var file = tempDir.resolve("BulkIdxAddBraced.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid f(List<String> target, List<String> source) {\n\t\tfor (var i = 0; i < source.size(); ++i) {\n\t\t\ttarget.add(source.get(i));\n\t\t}\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid f(List<String> target, List<String> source) {\n\t\ttarget.addAll(source);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationSystemArraycopy() throws Exception {
+		final var file = tempDir.resolve("BulkCopy.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int[] dst, int[] src) {\n\t\tfor (var i = 0; i < src.length; ++i)\n\t\t\tdst[i] = src[i];\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid f(int[] dst, int[] src) {\n\t\tSystem.arraycopy(src, 0, dst, 0, src.length);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferBulkOperationSystemArraycopyBraced() throws Exception {
+		final var file = tempDir.resolve("BulkCopyBraced.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int[] dst, int[] src) {\n\t\tfor (var i = 0; i < src.length; ++i) {\n\t\t\tdst[i] = src[i];\n\t\t}\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid f(int[] dst, int[] src) {\n\t\tSystem.arraycopy(src, 0, dst, 0, src.length);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testPreferCollectionInterfaceMultiSameLine() throws Exception {
 		final var file = tempDir.resolve("ColMulti.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.ArrayList;\nimport java.util.HashMap;\nclass T {\n\tvoid f(ArrayList<String> a, HashMap<String, Integer> b) {}\n}");

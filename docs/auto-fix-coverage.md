@@ -18,6 +18,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | NoEnumTrailingCommaCheck                 | NoArrayTrailingCommaFixer          | Same fixer as array trailing comma                                                        |
 | NoFinalParametersCheck                   | RedundantModifierFixer             | Removes `final` keyword from parameter                                                    |
 | NoUnnecessaryThisCheck                   | NoUnnecessaryThisFixer             | Removes `this.` prefix                                                                    |
+| PreferBulkOperationCheck                 | PreferBulkOperationFixer           | See sub-rules below                                                                       |
 | PreferCollectionInterfaceCheck           | PreferCollectionInterfaceFixer     | Replaces concrete collection type with interface (e.g. `ArrayList` to `List`)             |
 | PreferMathMethodCheck                    | PreferMathMethodFixer              | See sub-rules below                                                                       |
 | PreferPrefixIncrementCheck               | PreferPrefixIncrementFixer         | Moves `++`/`--` to prefix position                                                        |
@@ -42,6 +43,27 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | NoDoubleBlankLines            | DoubleBlankLineFixer             | Removes extra blank line                                       |
 | NoTrailingNewline             | TrailingNewlineFixer             | Removes trailing blank lines at EOF                            |
 | NoTrailingWhitespace          | TrailingWhitespaceFixer          | Trims trailing whitespace                                      |
+
+## PreferBulkOperationCheck sub-rules
+
+The fixer delegates multi-line paren balancing, comment stripping, and receiver extraction to
+`LambdaCallParser` (shared across fixers). It preserves any non-nested prefix on the line (e.g.
+`if (flag) source.forEach(...)` becomes `if (flag) target.putAll(source);`), and bails on truly
+nested cases (unclosed parens or a `->` in the prefix).
+
+| Pattern                                                                | Replacement                                    | Auto-fix |
+|------------------------------------------------------------------------|------------------------------------------------|----------|
+| `for (var x : source) target.add(x)`                                   | `target.addAll(source)`                        | Yes      |
+| `for (var i = 0; i < source.size(); ++i) target.add(source.get(i))`    | `target.addAll(source)`                        | Yes      |
+| `for (var e : source.entrySet()) target.put(e.getKey(), e.getValue())` | `target.putAll(source)`                        | Yes      |
+| `source.forEach((k, v) -> target.put(k, v))`                           | `target.putAll(source)`                        | Yes      |
+| `source.forEach(target::put)`                                          | `target.putAll(source)`                        | Yes      |
+| `list.forEach(item -> other.add(item))`                                | `other.addAll(list)`                           | Yes      |
+| `list.forEach(other::add)`                                             | `other.addAll(list)`                           | Yes      |
+| `for (var i = 0; i < src.length; ++i) dst[i] = src[i]`                 | `System.arraycopy(src, 0, dst, 0, src.length)` | Yes      |
+| `for (var i = 0; i < arr.length; ++i) arr[i] = value`                  | `Arrays.fill(arr, value)`                      | Yes      |
+| Single-line block-body lambda (e.g. `-> { target.put(k, v); }`)        | `target.putAll(source)`                        | Yes      |
+| Multi-line block-body lambda (`-> {` line + body + `});` line)         | `target.putAll(source)`                        | Yes      |
 
 ## PreferMathMethodCheck sub-rules
 

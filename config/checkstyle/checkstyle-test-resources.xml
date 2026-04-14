@@ -108,6 +108,7 @@
 			<property name="minSdk" value="${minSdk}" />
 		</module>
 		<module name="com.etk2000.checkstyle.PreferPatternMatchingInstanceofCheck" />
+		<module name="com.etk2000.checkstyle.PreferBulkOperationCheck" />
 		<module name="com.etk2000.checkstyle.PreferPrefixIncrementCheck" />
 		<module name="com.etk2000.checkstyle.PreferRecordCheck" />
 		<module name="com.etk2000.checkstyle.PreferSpecificApiCheck">

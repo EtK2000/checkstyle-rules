@@ -149,8 +149,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 
 		final var result = new ArrayList<String>();
 		result.add(indent + "do");
-		for (var bodyLine : bodyLines)
-			result.add(bodyLine);
+		result.addAll(bodyLines);
 		result.add(indent + whileClause);
 		return new FixResult(lineIndex, closeBraceLine, result);
 	}

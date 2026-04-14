@@ -44,6 +44,7 @@ final class FixableCheckNames {
 			"com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck",
 			"com.etk2000.checkstyle.NoFinalParametersCheck",
 			"com.etk2000.checkstyle.NoUnnecessaryThisCheck",
+			"com.etk2000.checkstyle.PreferBulkOperationCheck",
 			"com.etk2000.checkstyle.PreferCollectionInterfaceCheck",
 			"com.etk2000.checkstyle.PreferMathMethodCheck",
 			"com.etk2000.checkstyle.PreferPrefixIncrementCheck",

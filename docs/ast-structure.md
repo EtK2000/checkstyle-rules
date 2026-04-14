@@ -153,6 +153,69 @@ Static calls have the same structure: `Math.max(a, b)` has `DOT{IDENT[Math], IDE
 
 Bare calls (no receiver): `foo()` has `IDENT[foo]` as the first child instead of `DOT`.
 
+## FOR_EACH_CLAUSE
+
+```
+for (var item : source) body;
+```
+
+```
+LITERAL_FOR
+  LPAREN
+  FOR_EACH_CLAUSE
+    VARIABLE_DEF
+      MODIFIERS
+      TYPE{IDENT[var]}
+      IDENT[item]
+    EXPR              (the iterable -- NOT a second VARIABLE_DEF)
+      IDENT[source]
+  RPAREN
+  body (EXPR or SLIST)
+```
+
+The iterable is an EXPR child of `FOR_EACH_CLAUSE`, not of `LITERAL_FOR`. To get it, iterate
+`FOR_EACH_CLAUSE` children and find the `EXPR` (skip `VARIABLE_DEF`).
+
+## LAMBDA
+
+```
+(k, v) -> target.put(k, v)
+```
+
+```
+LAMBDA
+  LPAREN
+  PARAMETERS
+    PARAMETER_DEF{MODIFIERS, TYPE, IDENT[k]}
+    COMMA
+    PARAMETER_DEF{MODIFIERS, TYPE, IDENT[v]}
+  RPAREN
+  EXPR              (expression body)
+    METHOD_CALL{...}
+```
+
+Even inferred-type parameters `(k, v)` have `PARAMETERS` with `PARAMETER_DEF` children (each with
+empty `MODIFIERS` and `TYPE`). The body is either `EXPR` (expression lambda) or `SLIST` (block
+lambda `{ ... }`).
+
+**Important:** When a lambda appears as an argument in a METHOD_CALL's ELIST, it may be a direct
+child of ELIST (not wrapped in EXPR). Always check for both `LAMBDA` and `EXPR{LAMBDA}` children.
+
+## SLIST semicolons
+
+Expression statements inside an SLIST (`{ stmt; }`) may or may not have a SEMI token between the
+EXPR and the RCURLY:
+
+```
+SLIST
+  EXPR{METHOD_CALL{...}}
+  SEMI              (optional -- present in some AST configurations)
+  RCURLY
+```
+
+When checking for a single-statement SLIST, skip an optional SEMI between the first EXPR and RCURLY
+rather than relying on `getChildCount() == 2`.
+
 ## VARIABLE_DEF
 
 ```
