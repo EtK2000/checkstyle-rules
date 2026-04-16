@@ -23,6 +23,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
@@ -465,6 +466,167 @@ public class AstUtilTest {
 	}
 
 	@Test
+	public void testGetReceiverTypeNameBareCall() throws Exception {
+		final var ast = parseSource("class T { void foo() {} void f() { foo(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertNull(AstUtil.getReceiverTypeName(methodCall));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameChainedCall() throws Exception {
+		final var ast = parseSource("class T { String foo() { return \"\"; } void f() { foo().trim(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertNull(AstUtil.getReceiverTypeName(methodCall));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameFieldReceiver() throws Exception {
+		final var ast = parseSource("class T { String str = \"hello\"; void f() { str.length(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertEquals("String", AstUtil.getReceiverTypeName(methodCall));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameFullyQualifiedStatic() throws Exception {
+		final var ast = parseSource("class T { void f() { java.lang.Math.max(1, 2); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertNull(AstUtil.getReceiverTypeName(methodCall));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameLocalVariable() throws Exception {
+		final var ast = parseSource("class T { void f() { String str = \"hello\"; str.length(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertEquals("String", AstUtil.getReceiverTypeName(methodCall));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameNewExpressionReceiver() throws Exception {
+		final var ast = parseSource("class T { void f() { new String(\"x\").trim(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertNull(AstUtil.getReceiverTypeName(methodCall));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameStaticCall() throws Exception {
+		final var ast = parseSource("class T { void f() { String.valueOf(0); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertEquals("String", AstUtil.getReceiverTypeName(methodCall));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameSuperCall() throws Exception {
+		final var ast = parseSource("class T { void f() { super.toString(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertNull(AstUtil.getReceiverTypeName(methodCall));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameThisCall() throws Exception {
+		final var ast = parseSource("class T { void foo() {} void f() { this.foo(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertNull(AstUtil.getReceiverTypeName(methodCall));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameUnknownVariable() throws Exception {
+		final var ast = parseSource("class T { void f() { unknown.foo(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertNull(AstUtil.getReceiverTypeName(methodCall));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameUppercaseVariable() throws Exception {
+		final var ast = parseSource("class T { void f() { Object Foo = new Object(); Foo.toString(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertEquals("Foo", AstUtil.getReceiverTypeName(methodCall));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameVariable() throws Exception {
+		final var ast = parseSource("import java.util.List; class T { void f(List list) { list.size(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertEquals("List", AstUtil.getReceiverTypeName(methodCall));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameVarReceiver() throws Exception {
+		final var ast = parseSource("class T { void f() { var sb = new StringBuilder(); sb.append(\"x\"); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertEquals("StringBuilder", AstUtil.getReceiverTypeName(methodCall));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameWithImportsBareCall() throws Exception {
+		final var ast = parseSource("class T { void foo() {} void f() { foo(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertNull(AstUtil.getReceiverTypeName(methodCall, null, Set.of()));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameWithImportsBareInnerCall() throws Exception {
+		final var ast = parseSource("class T { Object requireView() { return null; } void f() { requireView().toString(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertNull(AstUtil.getReceiverTypeName(methodCall, null, Set.of()));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameWithImportsChainMethodNotFound() throws Exception {
+		final var ast = parseSource("class T { void f() { String str = \"hello\"; str.fakeMethod().other(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertNull(AstUtil.getReceiverTypeName(methodCall, null, Set.of()));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameWithImportsChainResolved() throws Exception {
+		final var ast = parseSource("class T { void f() { String str = \"hello\"; var x = str.trim().length(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertEquals("java.lang.String", AstUtil.getReceiverTypeName(methodCall, null, Set.of()));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameWithImportsChainUsesImports() throws Exception {
+		final var ast = parseSource("class T { void f() { ArrayList list = null; list.stream().count(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertEquals("java.util.stream.Stream", AstUtil.getReceiverTypeName(methodCall, null, Set.of("java.util.ArrayList")));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameWithImportsDeepChain() throws Exception {
+		final var ast = parseSource("class T { void f() { String str = \"hello\"; var x = str.trim().substring(0).length(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertEquals("java.lang.String", AstUtil.getReceiverTypeName(methodCall, null, Set.of()));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameWithImportsDelegatesToSimple() throws Exception {
+		final var ast = parseSource("class T { void f() { String.valueOf(0); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertEquals("String", AstUtil.getReceiverTypeName(methodCall, null, Set.of()));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameWithImportsNonMethodReceiver() throws Exception {
+		final var ast = parseSource("class T { void f(Object[] arr) { arr[0].toString(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertNull(AstUtil.getReceiverTypeName(methodCall, null, Set.of()));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameWithImportsPackageResolution() throws Exception {
+		final var ast = parseSource("class T { void f() { ArrayList list = null; list.iterator().next(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertEquals("java.util.Iterator", AstUtil.getReceiverTypeName(methodCall, "java.util", Set.of()));
+	}
+
+	@Test
+	public void testGetReceiverTypeNameWithImportsUnresolvableType() throws Exception {
+		final var ast = parseSource("class T { void f() { Xyz custom = null; custom.method().other(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertNull(AstUtil.getReceiverTypeName(methodCall, null, Set.of()));
+	}
+
+	@Test
 	public void testIsEmptyBodyBlock() {
 		final var method = findMethod(root, "emptyBlock");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
@@ -727,6 +889,45 @@ public class AstUtilTest {
 		final var method = findMethod(root, "varLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
 		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarAnonymousClass() {
+		final var method = findMethod(root, "varAnonymousClassLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewArray() {
+		final var method = findMethod(root, "varNewArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewArrayInitializer() {
+		// `var x = new int[]{...}` also produces an ARRAY_DECLARATOR child; the guard
+		// must bail on this form too, not just `new X[N]`.
+		final var method = findMethod(root, "varNewArrayInitializerLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewGeneric() {
+		// Qualified constructors use a DOT subtree rather than a bare IDENT child,
+		// so the simple-name inference bails. Documented limitation.
+		final var method = findMethod(root, "varNewGenericLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewSimple() {
+		final var method = findMethod(root, "varNewLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("StringBuilder", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
 	@Test

@@ -4,6 +4,7 @@ import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -115,18 +116,21 @@ class AstUtil {
 
 	@CheckReturnValue
 	static boolean containsCastTo(@Nonnull DetailAST ast, @Nonnull String typeName, @Nonnull String exprText) {
-		if (ast.getType() == TokenTypes.TYPECAST) {
-			final var castType = ast.findFirstToken(TokenTypes.TYPE);
-			final var rparen = ast.findFirstToken(TokenTypes.RPAREN);
-			final var castExpr = rparen != null ? rparen.getNextSibling() : null;
-			if (castType != null && castExpr != null
-					&& typeName.equals(typeText(castType))
-					&& exprText.equals(exprText(castExpr)))
-				return true;
-		}
-		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (containsCastTo(child, typeName, exprText))
-				return true;
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(ast);
+		while (!stack.isEmpty()) {
+			final var node = stack.pop();
+			if (node.getType() == TokenTypes.TYPECAST) {
+				final var castType = node.findFirstToken(TokenTypes.TYPE);
+				final var rparen = node.findFirstToken(TokenTypes.RPAREN);
+				final var castExpr = rparen != null ? rparen.getNextSibling() : null;
+				if (castType != null && castExpr != null
+						&& typeName.equals(typeText(castType))
+						&& exprText.equals(exprText(castExpr)))
+					return true;
+			}
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+				stack.push(child);
 		}
 		return false;
 	}
@@ -135,43 +139,173 @@ class AstUtil {
 	 * Builds human-readable text for an expression AST.
 	 * Unlike {@link #exprText} which is designed for equality comparison,
 	 * this includes operators, dots, and brackets for display in messages.
+	 * Uses an iterative stack to avoid StackOverflowError on deeply nested
+	 * expressions.
 	 */
 	@CheckReturnValue
 	@Nonnull
 	static String displayText(@Nonnull DetailAST ast) {
-		return switch (ast.getType()) {
-			case TokenTypes.BAND -> displayText(ast.getFirstChild()) + " & " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.BNOT -> "~" + displayText(ast.getFirstChild());
-			case TokenTypes.BOR -> displayText(ast.getFirstChild()) + " | " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.BSR -> displayText(ast.getFirstChild()) + " >>> " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.BXOR -> displayText(ast.getFirstChild()) + " ^ " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.DEC -> "--" + displayText(ast.getFirstChild());
-			case TokenTypes.DIV -> displayText(ast.getFirstChild()) + " / " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.DOT -> displayText(ast.getFirstChild()) + "." + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.EQUAL -> displayText(ast.getFirstChild()) + " == " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.EXPR -> ast.getChildCount() == 1 ? displayText(ast.getFirstChild()) : exprText(ast);
-			case TokenTypes.GE -> displayText(ast.getFirstChild()) + " >= " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.GT -> displayText(ast.getFirstChild()) + " > " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.INC -> "++" + displayText(ast.getFirstChild());
-			case TokenTypes.INDEX_OP -> displayText(ast.getFirstChild()) + "[" + displayText(ast.getFirstChild().getNextSibling()) + "]";
-			case TokenTypes.LAND -> displayText(ast.getFirstChild()) + " && " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.LE -> displayText(ast.getFirstChild()) + " <= " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.LNOT -> "!" + displayText(ast.getFirstChild());
-			case TokenTypes.LOR -> displayText(ast.getFirstChild()) + " || " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.LT -> displayText(ast.getFirstChild()) + " < " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.MINUS -> displayText(ast.getFirstChild()) + " - " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.MOD -> displayText(ast.getFirstChild()) + " % " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.NOT_EQUAL -> displayText(ast.getFirstChild()) + " != " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.PLUS -> displayText(ast.getFirstChild()) + " + " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.POST_DEC -> displayText(ast.getFirstChild()) + "--";
-			case TokenTypes.POST_INC -> displayText(ast.getFirstChild()) + "++";
-			case TokenTypes.SL -> displayText(ast.getFirstChild()) + " << " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.SR -> displayText(ast.getFirstChild()) + " >> " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.STAR -> displayText(ast.getFirstChild()) + " * " + displayText(ast.getFirstChild().getNextSibling());
-			case TokenTypes.UNARY_MINUS -> "-" + displayText(ast.getFirstChild());
-			case TokenTypes.UNARY_PLUS -> "+" + displayText(ast.getFirstChild());
-			default -> ast.getText();
-		};
+		final var sb = new StringBuilder();
+		final var stack = new ArrayDeque<Object>();
+		stack.push(ast);
+		while (!stack.isEmpty()) {
+			final var task = stack.pop();
+			if (task instanceof String text) {
+				sb.append(text);
+				continue;
+			}
+			final var node = (DetailAST) task;
+			final var first = node.getFirstChild();
+			final var second = first != null ? first.getNextSibling() : null;
+			switch (node.getType()) {
+				case TokenTypes.BAND -> {
+					stack.push(second);
+					stack.push(" & ");
+					stack.push(first);
+				}
+				case TokenTypes.BNOT -> {
+					stack.push(first);
+					stack.push("~");
+				}
+				case TokenTypes.BOR -> {
+					stack.push(second);
+					stack.push(" | ");
+					stack.push(first);
+				}
+				case TokenTypes.BSR -> {
+					stack.push(second);
+					stack.push(" >>> ");
+					stack.push(first);
+				}
+				case TokenTypes.BXOR -> {
+					stack.push(second);
+					stack.push(" ^ ");
+					stack.push(first);
+				}
+				case TokenTypes.DEC -> {
+					stack.push(first);
+					stack.push("--");
+				}
+				case TokenTypes.DIV -> {
+					stack.push(second);
+					stack.push(" / ");
+					stack.push(first);
+				}
+				case TokenTypes.DOT -> {
+					stack.push(second);
+					stack.push(".");
+					stack.push(first);
+				}
+				case TokenTypes.EQUAL -> {
+					stack.push(second);
+					stack.push(" == ");
+					stack.push(first);
+				}
+				case TokenTypes.EXPR -> {
+					if (node.getChildCount() == 1)
+						stack.push(first);
+					else
+						sb.append(exprText(node));
+				}
+				case TokenTypes.GE -> {
+					stack.push(second);
+					stack.push(" >= ");
+					stack.push(first);
+				}
+				case TokenTypes.GT -> {
+					stack.push(second);
+					stack.push(" > ");
+					stack.push(first);
+				}
+				case TokenTypes.INC -> {
+					stack.push(first);
+					stack.push("++");
+				}
+				case TokenTypes.INDEX_OP -> {
+					stack.push("]");
+					stack.push(second);
+					stack.push("[");
+					stack.push(first);
+				}
+				case TokenTypes.LAND -> {
+					stack.push(second);
+					stack.push(" && ");
+					stack.push(first);
+				}
+				case TokenTypes.LE -> {
+					stack.push(second);
+					stack.push(" <= ");
+					stack.push(first);
+				}
+				case TokenTypes.LNOT -> {
+					stack.push(first);
+					stack.push("!");
+				}
+				case TokenTypes.LOR -> {
+					stack.push(second);
+					stack.push(" || ");
+					stack.push(first);
+				}
+				case TokenTypes.LT -> {
+					stack.push(second);
+					stack.push(" < ");
+					stack.push(first);
+				}
+				case TokenTypes.MINUS -> {
+					stack.push(second);
+					stack.push(" - ");
+					stack.push(first);
+				}
+				case TokenTypes.MOD -> {
+					stack.push(second);
+					stack.push(" % ");
+					stack.push(first);
+				}
+				case TokenTypes.NOT_EQUAL -> {
+					stack.push(second);
+					stack.push(" != ");
+					stack.push(first);
+				}
+				case TokenTypes.PLUS -> {
+					stack.push(second);
+					stack.push(" + ");
+					stack.push(first);
+				}
+				case TokenTypes.POST_DEC -> {
+					stack.push("--");
+					stack.push(first);
+				}
+				case TokenTypes.POST_INC -> {
+					stack.push("++");
+					stack.push(first);
+				}
+				case TokenTypes.SL -> {
+					stack.push(second);
+					stack.push(" << ");
+					stack.push(first);
+				}
+				case TokenTypes.SR -> {
+					stack.push(second);
+					stack.push(" >> ");
+					stack.push(first);
+				}
+				case TokenTypes.STAR -> {
+					stack.push(second);
+					stack.push(" * ");
+					stack.push(first);
+				}
+				case TokenTypes.UNARY_MINUS -> {
+					stack.push(first);
+					stack.push("-");
+				}
+				case TokenTypes.UNARY_PLUS -> {
+					stack.push(first);
+					stack.push("+");
+				}
+				default -> sb.append(node.getText());
+			}
+		}
+		return sb.toString();
 	}
 
 	/**
@@ -181,17 +315,30 @@ class AstUtil {
 	@CheckReturnValue
 	@Nonnull
 	static String dottedName(@Nonnull DetailAST dot) {
-		final var first = dot.getFirstChild();
-		if (first == null)
-			return "";
-		final var second = first.getNextSibling();
-		if (second == null)
-			return first.getText();
-		if (first.getType() == TokenTypes.DOT)
-			return dottedName(first) + "." + second.getText();
-		return first.getText() + "." + second.getText();
+		// Walk left-child DOT chain iteratively to collect segments.
+		final var segments = new ArrayList<String>();
+		var current = dot;
+		while (current.getType() == TokenTypes.DOT) {
+			final var first = current.getFirstChild();
+			if (first == null)
+				break;
+			final var second = first.getNextSibling();
+			if (second != null)
+				segments.add(second.getText());
+			current = first;
+		}
+		segments.add(current.getText());
+		// Segments were collected right-to-left; reverse for dotted order.
+		final var sb = new StringBuilder(segments.getLast());
+		for (var i = segments.size() - 2; i >= 0; --i)
+			sb.append('.').append(segments.get(i));
+		return sb.toString();
 	}
 
+	/**
+	 * Returns the concatenated leaf text of an AST subtree. Uses an iterative
+	 * stack to avoid StackOverflowError on deeply nested expressions.
+	 */
 	@CheckReturnValue
 	@Nonnull
 	static String exprText(@Nonnull DetailAST ast) {
@@ -199,8 +346,21 @@ class AstUtil {
 			return ast.getText();
 
 		final var sb = new StringBuilder();
-		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
-			sb.append(exprText(child));
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(ast);
+		while (!stack.isEmpty()) {
+			final var node = stack.pop();
+			if (node.getChildCount() == 0) {
+				sb.append(node.getText());
+				continue;
+			}
+			// Collect children, then push in reverse so left-to-right order is preserved.
+			final var children = new ArrayList<DetailAST>();
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+				children.add(child);
+			for (var i = children.size() - 1; i >= 0; --i)
+				stack.push(children.get(i));
+		}
 		return sb.toString();
 	}
 
@@ -392,24 +552,29 @@ class AstUtil {
 	 * Pure: identifiers, field accesses, literals, array accesses,
 	 * unary plus/minus.
 	 * Not pure: method calls, constructors, increment/decrement, assignments.
+	 * Uses an iterative stack to avoid StackOverflowError on deeply nested
+	 * expressions.
 	 */
 	@CheckReturnValue
 	static boolean isPureExpression(@Nonnull DetailAST ast) {
-		return switch (ast.getType()) {
-			case TokenTypes.CHAR_LITERAL, TokenTypes.IDENT, TokenTypes.LITERAL_FALSE,
-			     TokenTypes.LITERAL_NULL, TokenTypes.LITERAL_THIS, TokenTypes.LITERAL_TRUE, TokenTypes.NUM_DOUBLE,
-			     TokenTypes.NUM_FLOAT, TokenTypes.NUM_INT, TokenTypes.NUM_LONG,
-			     TokenTypes.RBRACK, TokenTypes.STRING_LITERAL -> true;
-			case TokenTypes.DOT, TokenTypes.EXPR, TokenTypes.INDEX_OP,
-			     TokenTypes.UNARY_MINUS, TokenTypes.UNARY_PLUS -> {
-				for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
-					if (!isPureExpression(child))
-						yield false;
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(ast);
+		while (!stack.isEmpty()) {
+			final var node = stack.pop();
+			switch (node.getType()) {
+				case TokenTypes.CHAR_LITERAL, TokenTypes.IDENT, TokenTypes.LITERAL_FALSE,
+				     TokenTypes.LITERAL_NULL, TokenTypes.LITERAL_THIS, TokenTypes.LITERAL_TRUE, TokenTypes.NUM_DOUBLE,
+				     TokenTypes.NUM_FLOAT, TokenTypes.NUM_INT, TokenTypes.NUM_LONG,
+				     TokenTypes.RBRACK, TokenTypes.STRING_LITERAL -> {}
+				case TokenTypes.DOT, TokenTypes.EXPR, TokenTypes.INDEX_OP,
+				     TokenTypes.UNARY_MINUS, TokenTypes.UNARY_PLUS -> {
+					for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+						stack.push(child);
 				}
-				yield true;
+				default -> { return false; }
 			}
-			default -> false;
-		};
+		}
+		return true;
 	}
 
 	/**
@@ -429,10 +594,15 @@ class AstUtil {
 	@CheckReturnValue
 	static int lastLine(@Nonnull DetailAST ast) {
 		var last = ast.getLineNo();
-		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
-			final var childLast = lastLine(child);
-			if (childLast > last)
-				last = childLast;
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(ast);
+		while (!stack.isEmpty()) {
+			final var node = stack.pop();
+			final var line = node.getLineNo();
+			if (line > last)
+				last = line;
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+				stack.push(child);
 		}
 		return last;
 	}
@@ -491,6 +661,31 @@ class AstUtil {
 		if (type == null)
 			return null;
 
-		return getTypeName(type);
+		final var typeName = getTypeName(type);
+		if (typeName != null)
+			return typeName;
+
+		// `var` type: infer from `new X(...)` initializer so checks can resolve
+		// the real type instead of giving up. Bails for array constructors
+		// (`new X[...]`) and anonymous classes (`new X() { ... }`), since the
+		// runtime type for those is not the simple class name `X`.
+		if (node.getType() == TokenTypes.VARIABLE_DEF) {
+			final var assign = node.findFirstToken(TokenTypes.ASSIGN);
+			if (assign == null)
+				return null;
+			final var assignChild = assign.getFirstChild();
+			if (assignChild == null)
+				return null;
+			final var init = assignChild.getType() == TokenTypes.EXPR ? assignChild.getFirstChild() : assignChild;
+			if (init == null || init.getType() != TokenTypes.LITERAL_NEW)
+				return null;
+			if (init.findFirstToken(TokenTypes.ARRAY_DECLARATOR) != null)
+				return null;
+			if (init.findFirstToken(TokenTypes.OBJBLOCK) != null)
+				return null;
+			final var newIdent = init.findFirstToken(TokenTypes.IDENT);
+			return newIdent == null ? null : newIdent.getText();
+		}
+		return null;
 	}
 }

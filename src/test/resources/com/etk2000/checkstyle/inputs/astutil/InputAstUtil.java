@@ -40,7 +40,31 @@ class InputAstUtil {
 		final int x = 1;
 	}
 
+	void varAnonymousClassLocal() {
+		// Thread has multiple methods, so this is not convertible to a lambda.
+		final var x = new Thread() {
+			@Override
+			public void run() {}
+		};
+	}
+
 	void varLocal() {
 		final var x = "hello";
+	}
+
+	void varNewArrayInitializerLocal() {
+		final var x = new int[]{1, 2, 3};
+	}
+
+	void varNewArrayLocal() {
+		final var x = new String[10];
+	}
+
+	void varNewGenericLocal() {
+		final var x = new java.util.HashMap<String, Integer>();
+	}
+
+	void varNewLocal() {
+		final var x = new StringBuilder();
 	}
 }
