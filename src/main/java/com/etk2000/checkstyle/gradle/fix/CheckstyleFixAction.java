@@ -7,6 +7,7 @@ import com.etk2000.checkstyle.FieldSortingCheck;
 import com.etk2000.checkstyle.LambdaParameterTypeCheck;
 import com.etk2000.checkstyle.NoArrayTrailingCommaCheck;
 import com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck;
+import com.etk2000.checkstyle.NoEnumTrailingSemicolonCheck;
 import com.etk2000.checkstyle.NoFinalParametersCheck;
 import com.etk2000.checkstyle.NoUnnecessaryThisCheck;
 import com.etk2000.checkstyle.PreferBulkOperationCheck;
@@ -111,6 +112,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				Map.entry(NoFinalParametersCheck.class.getName(), modifierFixer),
 				Map.entry(NoBlankLineBetweenSingleCasesCheck.class.getName(), new NoBlankLineBetweenSingleCasesFixer()),
 				Map.entry(NoEnumTrailingCommaCheck.class.getName(), commaFixer),
+				Map.entry(NoEnumTrailingSemicolonCheck.class.getName(), new NoEnumTrailingSemicolonFixer()),
 				Map.entry(NoUnnecessaryThisCheck.class.getName(), new NoUnnecessaryThisFixer()),
 				Map.entry(PreferCollectionInterfaceCheck.class.getName(), new PreferCollectionInterfaceFixer()),
 				Map.entry(PreferBulkOperationCheck.class.getName(), new PreferBulkOperationFixer()),
@@ -291,39 +293,44 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			@Nonnull List<File> files
 	) throws CheckstyleException, IOException {
 		final var checker = new Checker();
-		checker.setModuleClassLoader(NoArrayTrailingCommaCheck.class.getClassLoader());
-		checker.configure(checkerConfig);
-
 		final var violationsByFile = new HashMap<String, List<AuditEvent>>();
-		checker.addListener(new AuditListener() {
-			@Override
-			public void addError(@Nonnull AuditEvent event) {
-				violationsByFile.computeIfAbsent(event.getFileName(), k -> new ArrayList<>()).add(event);
-			}
+		try {
+			checker.setModuleClassLoader(NoArrayTrailingCommaCheck.class.getClassLoader());
+			checker.configure(checkerConfig);
 
-			@Override
-			public void addException(@Nonnull AuditEvent event, @Nonnull Throwable throwable) {
-			}
+			checker.addListener(new AuditListener() {
+				@Override
+				public void addError(@Nonnull AuditEvent event) {
+					violationsByFile.computeIfAbsent(event.getFileName(), k -> new ArrayList<>()).add(event);
+				}
 
-			@Override
-			public void auditFinished(@Nonnull AuditEvent event) {
-			}
+				@Override
+				public void addException(@Nonnull AuditEvent event, @Nonnull Throwable throwable) {
+					System.err.println("Checkstyle exception on " + event.getFileName() + ": " + throwable.getMessage());
+				}
 
-			@Override
-			public void auditStarted(@Nonnull AuditEvent event) {
-			}
+				@Override
+				public void auditFinished(@Nonnull AuditEvent event) {
+				}
 
-			@Override
-			public void fileFinished(@Nonnull AuditEvent event) {
-			}
+				@Override
+				public void auditStarted(@Nonnull AuditEvent event) {
+				}
 
-			@Override
-			public void fileStarted(@Nonnull AuditEvent event) {
-			}
-		});
+				@Override
+				public void fileFinished(@Nonnull AuditEvent event) {
+				}
 
-		checker.process(files);
-		checker.destroy();
+				@Override
+				public void fileStarted(@Nonnull AuditEvent event) {
+				}
+			});
+
+			checker.process(files);
+		}
+		finally {
+			checker.destroy();
+		}
 
 		var needsSecondPass = false;
 		var filesFixed = 0;

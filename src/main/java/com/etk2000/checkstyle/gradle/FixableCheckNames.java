@@ -43,6 +43,7 @@ final class FixableCheckNames {
 			"com.etk2000.checkstyle.LambdaParameterTypeCheck",
 			"com.etk2000.checkstyle.NoArrayTrailingCommaCheck",
 			"com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck",
+			"com.etk2000.checkstyle.NoEnumTrailingSemicolonCheck",
 			"com.etk2000.checkstyle.NoFinalParametersCheck",
 			"com.etk2000.checkstyle.NoUnnecessaryThisCheck",
 			"com.etk2000.checkstyle.PreferBulkOperationCheck",

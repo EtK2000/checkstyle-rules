@@ -144,6 +144,9 @@
 		<!-- Custom: No trailing comma in array initializers -->
 		<module name="com.etk2000.checkstyle.NoArrayTrailingCommaCheck" />
 
+		<!-- Custom: No trailing semicolon in enum without body declarations -->
+		<module name="com.etk2000.checkstyle.NoEnumTrailingSemicolonCheck" />
+
 		<!-- Prefer enhanced (arrow) switch syntax when possible -->
 		<module name="UseEnhancedSwitch" />
 

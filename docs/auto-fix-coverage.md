@@ -17,6 +17,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | NoArrayTrailingCommaCheck                | NoArrayTrailingCommaFixer          | Removes trailing comma                                                                    |
 | NoBlankLineBetweenSingleCasesCheck       | NoBlankLineBetweenSingleCasesFixer | Removes blank line                                                                        |
 | NoEnumTrailingCommaCheck                 | NoArrayTrailingCommaFixer          | Same fixer as array trailing comma                                                        |
+| NoEnumTrailingSemicolonCheck             | NoEnumTrailingSemicolonFixer       | Removes trailing semicolon; deletes line if semicolon was the only content                |
 | NoFinalParametersCheck                   | RedundantModifierFixer             | Removes `final` keyword from parameter                                                    |
 | NoUnnecessaryThisCheck                   | NoUnnecessaryThisFixer             | Removes `this.` prefix                                                                    |
 | PreferBulkOperationCheck                 | PreferBulkOperationFixer           | See sub-rules below                                                                       |

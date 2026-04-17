@@ -39,42 +39,46 @@ class BaseCheckTest {
 		checkerConfig.addChild(treeWalkerConfig);
 
 		final var checker = new Checker();
-		checker.setModuleClassLoader(checkClass.getClassLoader());
-		checker.configure(checkerConfig);
-
 		final var violations = new ArrayList<AuditEvent>();
-		checker.addListener(new AuditListener() {
-			@Override
-			public void addError(@Nonnull AuditEvent event) {
-				violations.add(event);
-			}
+		try {
+			checker.setModuleClassLoader(checkClass.getClassLoader());
+			checker.configure(checkerConfig);
 
-			@Override
-			public void addException(@Nonnull AuditEvent event, @Nonnull Throwable throwable) {
-			}
+			checker.addListener(new AuditListener() {
+				@Override
+				public void addError(@Nonnull AuditEvent event) {
+					violations.add(event);
+				}
 
-			@Override
-			public void auditFinished(@Nonnull AuditEvent event) {
-			}
+				@Override
+				public void addException(@Nonnull AuditEvent event, @Nonnull Throwable throwable) {
+				}
 
-			@Override
-			public void auditStarted(@Nonnull AuditEvent event) {
-			}
+				@Override
+				public void auditFinished(@Nonnull AuditEvent event) {
+				}
 
-			@Override
-			public void fileFinished(@Nonnull AuditEvent event) {
-			}
+				@Override
+				public void auditStarted(@Nonnull AuditEvent event) {
+				}
 
-			@Override
-			public void fileStarted(@Nonnull AuditEvent event) {
-			}
-		});
+				@Override
+				public void fileFinished(@Nonnull AuditEvent event) {
+				}
 
-		final var url = BaseCheckTest.class.getResource("/com/etk2000/checkstyle/inputs/" + inputPath);
-		requireNonNull(url, "Test input file not found: " + inputPath);
+				@Override
+				public void fileStarted(@Nonnull AuditEvent event) {
+				}
+			});
 
-		checker.process(List.of(new File(url.toURI())));
-		checker.destroy();
+			final var url = BaseCheckTest.class.getResource("/com/etk2000/checkstyle/inputs/" + inputPath);
+			requireNonNull(url, "Test input file not found: " + inputPath);
+
+			checker.process(List.of(new File(url.toURI())));
+		}
+		finally {
+			checker.destroy();
+		}
 		return violations;
 	}
 
@@ -119,39 +123,43 @@ class BaseCheckTest {
 		checkerConfig.addChild(moduleConfig);
 
 		final var checker = new Checker();
-		checker.setModuleClassLoader(Checker.class.getClassLoader());
-		checker.configure(checkerConfig);
-
 		final var violations = new ArrayList<AuditEvent>();
-		checker.addListener(new AuditListener() {
-			@Override
-			public void addError(@Nonnull AuditEvent event) {
-				violations.add(event);
-			}
+		try {
+			checker.setModuleClassLoader(Checker.class.getClassLoader());
+			checker.configure(checkerConfig);
 
-			@Override
-			public void addException(@Nonnull AuditEvent event, @Nonnull Throwable throwable) {
-			}
+			checker.addListener(new AuditListener() {
+				@Override
+				public void addError(@Nonnull AuditEvent event) {
+					violations.add(event);
+				}
 
-			@Override
-			public void auditFinished(@Nonnull AuditEvent event) {
-			}
+				@Override
+				public void addException(@Nonnull AuditEvent event, @Nonnull Throwable throwable) {
+				}
 
-			@Override
-			public void auditStarted(@Nonnull AuditEvent event) {
-			}
+				@Override
+				public void auditFinished(@Nonnull AuditEvent event) {
+				}
 
-			@Override
-			public void fileFinished(@Nonnull AuditEvent event) {
-			}
+				@Override
+				public void auditStarted(@Nonnull AuditEvent event) {
+				}
 
-			@Override
-			public void fileStarted(@Nonnull AuditEvent event) {
-			}
-		});
+				@Override
+				public void fileFinished(@Nonnull AuditEvent event) {
+				}
 
-		checker.process(List.of(file));
-		checker.destroy();
+				@Override
+				public void fileStarted(@Nonnull AuditEvent event) {
+				}
+			});
+
+			checker.process(List.of(file));
+		}
+		finally {
+			checker.destroy();
+		}
 		return violations;
 	}
 }

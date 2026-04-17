@@ -23,6 +23,7 @@
 	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]overload[\\/]" />
 	<suppress checks="MultilineCallFormattingCheck" files="inputs[\\/]multilinecall[\\/]" />
 	<suppress checks="NoArrayTrailingCommaCheck" files="inputs[\\/]arraycomma[\\/]" />
+	<suppress checks="NoEnumTrailingSemicolonCheck" files="inputs[\\/]enumsemicolon[\\/]" />
 	<suppress checks="NoBlankLineBetweenSingleCasesCheck" files="inputs[\\/]singlecase[\\/]" />
 	<suppress checks="NoCaseBracesCheck" files="inputs[\\/]casebraces[\\/]" />
 	<suppress checks="LambdaParameterTypeCheck" files="inputs[\\/]nofinalparameters[\\/]" />

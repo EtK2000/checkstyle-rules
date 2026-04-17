@@ -96,6 +96,7 @@
 			<property name="tokens" value="FOR_INIT" />
 		</module>
 		<module name="com.etk2000.checkstyle.NoArrayTrailingCommaCheck" />
+		<module name="com.etk2000.checkstyle.NoEnumTrailingSemicolonCheck" />
 		<module name="com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck" />
 		<module name="com.etk2000.checkstyle.NoCaseBracesCheck" />
 		<module name="com.etk2000.checkstyle.NoUnnecessaryThisCheck" />

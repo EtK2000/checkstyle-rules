@@ -107,39 +107,43 @@ public class CheckstyleFixIntegrationTest {
 		checkerConfig.addChild(trailingWsConfig);
 
 		final var checker = new Checker();
-		checker.setModuleClassLoader(getClass().getClassLoader());
-		checker.configure(checkerConfig);
-
 		final var violations = new ArrayList<AuditEvent>();
-		checker.addListener(new AuditListener() {
-			@Override
-			public void addError(@Nonnull AuditEvent event) {
-				violations.add(event);
-			}
+		try {
+			checker.setModuleClassLoader(getClass().getClassLoader());
+			checker.configure(checkerConfig);
 
-			@Override
-			public void addException(@Nonnull AuditEvent event, @Nonnull Throwable throwable) {
-			}
+			checker.addListener(new AuditListener() {
+				@Override
+				public void addError(@Nonnull AuditEvent event) {
+					violations.add(event);
+				}
 
-			@Override
-			public void auditFinished(@Nonnull AuditEvent event) {
-			}
+				@Override
+				public void addException(@Nonnull AuditEvent event, @Nonnull Throwable throwable) {
+				}
 
-			@Override
-			public void auditStarted(@Nonnull AuditEvent event) {
-			}
+				@Override
+				public void auditFinished(@Nonnull AuditEvent event) {
+				}
 
-			@Override
-			public void fileFinished(@Nonnull AuditEvent event) {
-			}
+				@Override
+				public void auditStarted(@Nonnull AuditEvent event) {
+				}
 
-			@Override
-			public void fileStarted(@Nonnull AuditEvent event) {
-			}
-		});
+				@Override
+				public void fileFinished(@Nonnull AuditEvent event) {
+				}
 
-		checker.process(List.of(file));
-		checker.destroy();
+				@Override
+				public void fileStarted(@Nonnull AuditEvent event) {
+				}
+			});
+
+			checker.process(List.of(file));
+		}
+		finally {
+			checker.destroy();
+		}
 		return violations;
 	}
 
@@ -776,6 +780,83 @@ public class CheckstyleFixIntegrationTest {
 		// FieldSortingFixer sorts GREEN before RED; trailing comma fixer removes the comma
 		assertEquals("enum Color {\n\tGREEN,\n\tRED\n}", output.content());
 		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testEnumTrailingSemicolon() throws Exception {
+		final var file = tempDir.resolve("Semi.java").toFile();
+		Files.writeString(file.toPath(), "enum Semi {\n\tA,\n\tB;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum Semi {\n\tA,\n\tB\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testEnumTrailingSemicolonConstantBody() throws Exception {
+		final var file = tempDir.resolve("SemiBody.java").toFile();
+		Files.writeString(file.toPath(), "enum SemiBody {\n\tX {\n\t\t@Override\n\t\tpublic String toString() {\n\t\t\treturn \"x\";\n\t\t}\n\t};\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum SemiBody {\n\tX {\n\t\t@Override\n\t\tpublic String toString() {\n\t\t\treturn \"x\";\n\t\t}\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testEnumTrailingSemicolonDeepTab() throws Exception {
+		final var file = tempDir.resolve("SemiTab.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tenum E {\n\t\tX;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tenum E {\n\t\tX\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testEnumTrailingSemicolonDeleteLine() throws Exception {
+		final var file = tempDir.resolve("SemiEmpty.java").toFile();
+		Files.writeString(file.toPath(), "enum SemiEmpty {\n\t;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum SemiEmpty {\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testEnumTrailingSemicolonDeleteOwnLine() throws Exception {
+		final var file = tempDir.resolve("SemiOwn.java").toFile();
+		Files.writeString(file.toPath(), "enum SemiOwn {\n\tX\n\t;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum SemiOwn {\n\tX\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testEnumTrailingSemicolonInline() throws Exception {
+		final var file = tempDir.resolve("SemiInline.java").toFile();
+		Files.writeString(file.toPath(), "enum SemiInline { X; }");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum SemiInline { X }", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testEnumTrailingSemicolonWithComment() throws Exception {
+		final var file = tempDir.resolve("SemiComment.java").toFile();
+		Files.writeString(file.toPath(), "enum SemiComment {\n\tX; // remark\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum SemiComment {\n\tX // remark\n}", output.content());
+		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
 
