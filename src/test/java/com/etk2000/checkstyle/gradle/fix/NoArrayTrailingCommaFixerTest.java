@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,8 +16,7 @@ public class NoArrayTrailingCommaFixerTest {
 	@Test
 	public void testCommaAtStartOfLine() {
 		final var lines = new ArrayList<>(List.of(",}"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals("}", result.replacement().getFirst());
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
@@ -27,8 +26,7 @@ public class NoArrayTrailingCommaFixerTest {
 	@Test
 	public void testCommaBeforeClosingBrace() {
 		final var lines = new ArrayList<>(List.of("\tint[] a = {1, 2,}"));
-		final var result = fixer.fix(lines, 0, 16);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 16));
 		assertEquals("\tint[] a = {1, 2}", result.replacement().getFirst());
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
@@ -56,8 +54,7 @@ public class NoArrayTrailingCommaFixerTest {
 	@Test
 	public void testRemoveTrailingCommaInline() {
 		final var lines = new ArrayList<>(List.of("int[] a = {1, 2,};"));
-		final var result = fixer.fix(lines, 0, 15);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 15));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals("int[] a = {1, 2};", result.replacement().getFirst());
@@ -67,8 +64,7 @@ public class NoArrayTrailingCommaFixerTest {
 	@Test
 	public void testRemoveTrailingCommaMultiline() {
 		final var lines = new ArrayList<>(List.of("\t\t2,"));
-		final var result = fixer.fix(lines, 0, 3);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 3));
 		assertEquals("\t\t2", result.replacement().getFirst());
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
@@ -78,8 +74,7 @@ public class NoArrayTrailingCommaFixerTest {
 	@Test
 	public void testRemoveTrailingCommaWithSpaceBefore() {
 		final var lines = new ArrayList<>(List.of("\t1 ,"));
-		final var result = fixer.fix(lines, 0, 3);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 3));
 		assertEquals("\t1", result.replacement().getFirst());
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
@@ -89,8 +84,7 @@ public class NoArrayTrailingCommaFixerTest {
 	@Test
 	public void testRemoveTrailingCommaWithTrailingWhitespace() {
 		final var lines = new ArrayList<>(List.of("\t1,  "));
-		final var result = fixer.fix(lines, 0, 2);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 2));
 		assertEquals("\t1", result.replacement().getFirst());
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
@@ -100,8 +94,7 @@ public class NoArrayTrailingCommaFixerTest {
 	@Test
 	public void testSingleElementArray() {
 		final var lines = new ArrayList<>(List.of("int[] a = {1,};"));
-		final var result = fixer.fix(lines, 0, 12);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 12));
 		assertEquals("int[] a = {1};", result.replacement().getFirst());
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());

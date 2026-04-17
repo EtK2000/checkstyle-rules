@@ -647,13 +647,13 @@ class FieldSortingFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		if (lineIndex < 0 || lineIndex >= lines.size())
 			return null;
 
 		final var enumOpenLine = findEnumOpen(lines, lineIndex);
 		if (enumOpenLine < 0)
-			return null;
+			return new SkipResult(SkipMessages.FIELD_SORT_SKIP);
 
 		final var result = parseBlock(lines, enumOpenLine + 1);
 		if (result == null || result.entries().size() < 2)

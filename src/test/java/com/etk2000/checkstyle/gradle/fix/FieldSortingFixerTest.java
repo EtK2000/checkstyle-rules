@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,12 +14,12 @@ public class FieldSortingFixerTest {
 	private final CheckstyleFixer fixer = new FieldSortingFixer();
 
 	private void assertFix(
-			FixResult result,
+			FixAttempt attempt,
 			int expectedStartLine,
 			int expectedEndLine,
 			List<String> expectedReplacement
 	) {
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, attempt);
 		assertEquals(expectedStartLine, result.startLine());
 		assertEquals(expectedEndLine, result.endLine());
 		assertEquals(expectedReplacement, result.replacement());
@@ -76,7 +76,9 @@ public class FieldSortingFixerTest {
 				"\tstatic final int A = 0;",
 				"}"
 		));
-		assertNull(fixer.fix(lines, 2, 1));
+		final var attempt = fixer.fix(lines, 2, 1);
+		assertInstanceOf(SkipResult.class, attempt);
+		assertEquals(SkipMessages.FIELD_SORT_SKIP, ((SkipResult) attempt).reason());
 	}
 
 	@Test
@@ -87,8 +89,7 @@ public class FieldSortingFixerTest {
 				"\tALPHA",
 				"}"
 		));
-		final var result1 = fixer.fix(lines, 2, 1);
-		assertNotNull(result1);
+		final var result1 = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 1));
 
 		// apply the fix
 		lines.subList(result1.startLine(), result1.endLine() + 1).clear();

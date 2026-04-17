@@ -7,5 +7,5 @@ import javax.annotation.Nullable;
 
 interface CheckstyleFixer {
 	@Nullable
-	FixResult fix(@Nonnull List<String> lines, int lineIndex, int column);
+	FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column);
 }

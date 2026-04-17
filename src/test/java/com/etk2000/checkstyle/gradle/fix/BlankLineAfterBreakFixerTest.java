@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,8 +22,7 @@ public class BlankLineAfterBreakFixerTest {
 	@Test
 	public void testInsertBlankBeforeCase() {
 		final var lines = new ArrayList<>(List.of("\t\tbreak;", "\t\tcase 2:"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(1, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(1, result.replacement().size());
@@ -34,8 +33,7 @@ public class BlankLineAfterBreakFixerTest {
 	@Test
 	public void testInsertBlankBeforeDefault() {
 		final var lines = new ArrayList<>(List.of("\t\tbreak;", "\t\tdefault:"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(1, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(1, result.replacement().size());

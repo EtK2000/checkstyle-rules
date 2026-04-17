@@ -8,7 +8,7 @@ import javax.annotation.Nullable;
 class NoUnnecessaryThisFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
 		final var thisStart = column - 4;
 		if (thisStart < 0 || column >= line.length())

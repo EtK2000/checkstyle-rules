@@ -8,7 +8,7 @@ import javax.annotation.Nullable;
 class FinalLocalVariableFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
 
 		// find end of leading whitespace (indentation)

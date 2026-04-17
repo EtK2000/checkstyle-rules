@@ -13,7 +13,7 @@ class RedundantAnnotationSyntaxFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		if (lineIndex < 0 || lineIndex >= lines.size())
 			return null;
 
@@ -63,6 +63,6 @@ class RedundantAnnotationSyntaxFixer implements CheckstyleFixer {
 				break;
 		}
 
-		return null;
+		return new SkipResult(SkipMessages.ANNOTATION_SYNTAX_SKIP);
 	}
 }

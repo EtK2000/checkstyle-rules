@@ -14,7 +14,7 @@ import javax.annotation.Nullable;
 class BlankLineAfterClassBraceFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		// find the line containing the opening brace
 		var braceLine = -1;
 		for (var i = lineIndex; i < lines.size(); ++i) {

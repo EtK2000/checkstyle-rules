@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,8 +16,7 @@ public class FinalLocalVariableFixerTest {
 	@Test
 	public void testAddFinalAfterSingleTab() {
 		final var lines = new ArrayList<>(List.of("\tint x = 5;"));
-		final var result = fixer.fix(lines, 0, 5);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 5));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -27,8 +26,7 @@ public class FinalLocalVariableFixerTest {
 	@Test
 	public void testAddFinalAfterTwoTabs() {
 		final var lines = new ArrayList<>(List.of("\t\tvar x = getSomething();"));
-		final var result = fixer.fix(lines, 0, 10);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 10));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -38,8 +36,7 @@ public class FinalLocalVariableFixerTest {
 	@Test
 	public void testAddFinalNoIndentation() {
 		final var lines = new ArrayList<>(List.of("String s = \"hello\";"));
-		final var result = fixer.fix(lines, 0, 7);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 7));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -61,8 +58,7 @@ public class FinalLocalVariableFixerTest {
 	@Test
 	public void testSpaceIndentation() {
 		final var lines = new ArrayList<>(List.of("    int x = 5;"));
-		final var result = fixer.fix(lines, 0, 8);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 8));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());

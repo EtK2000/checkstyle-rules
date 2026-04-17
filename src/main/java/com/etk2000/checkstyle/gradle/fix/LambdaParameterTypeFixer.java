@@ -157,7 +157,7 @@ class LambdaParameterTypeFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		if (lineIndex < 0 || lineIndex >= lines.size())
 			return null;
 		final var line = lines.get(lineIndex);
@@ -166,11 +166,11 @@ class LambdaParameterTypeFixer implements CheckstyleFixer {
 
 		final var arrowIdx = findArrow(line, column);
 		if (arrowIdx < 0)
-			return null;
+			return new SkipResult(SkipMessages.LAMBDA_PARAM_SKIP);
 
 		final var openParen = findLambdaOpenParen(line, arrowIdx);
 		if (openParen < 0)
-			return null;
+			return new SkipResult(SkipMessages.LAMBDA_PARAM_SKIP);
 
 		// find the closing paren
 		var closeParen = -1;

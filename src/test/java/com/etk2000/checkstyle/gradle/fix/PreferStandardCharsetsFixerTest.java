@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
@@ -34,8 +34,7 @@ public class PreferStandardCharsetsFixerTest {
 		final var input = "\t\tfinal var bytes = s.getBytes(\"" + charsetName + "\");";
 		final var lines = new ArrayList<>(List.of(input));
 		final var column = input.indexOf('"');
-		final var result = fixer.fix(lines, 0, column);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, column));
 		assertEquals(
 				"\t\tfinal var bytes = s.getBytes(StandardCharsets." + constant.strip() + ");",
 				result.replacement().getFirst()
@@ -50,9 +49,10 @@ public class PreferStandardCharsetsFixerTest {
 	}
 
 	@Test
-	public void testUnknownCharsetReturnsNull() {
+	public void testUnknownCharsetReturnsSkipResult() {
 		final var input = "\t\tfinal var bytes = s.getBytes(\"Windows-1252\");";
 		final var lines = new ArrayList<>(List.of(input));
-		assertNull(fixer.fix(lines, 0, input.indexOf('"')));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, input.indexOf('"')));
+		assertEquals(SkipMessages.PREFER_STANDARD_CHARSETS_SKIP, result.reason());
 	}
 }

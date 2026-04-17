@@ -52,7 +52,6 @@ public class CheckstylePlugin implements Plugin<Project> {
 			"android:minSdkVersion\\s*=\\s*\"(\\d+)\""
 	);
 	private static final Pattern XML_ATTR_MESSAGE = Pattern.compile("message=\"([^\"]+)\"");
-	private static final Pattern XML_ATTR_SEVERITY = Pattern.compile("severity=\"([^\"]+)\"");
 	private static final Pattern XML_ATTR_SOURCE = Pattern.compile("source=\"([^\"]+)\"");
 	private static final Pattern XML_ERROR = Pattern.compile("<error\\b[^>]*/>");
 	private static final String CHECKSTYLE_VERSION;
@@ -88,9 +87,11 @@ public class CheckstylePlugin implements Plugin<Project> {
 
 	/**
 	 * Counts total and fixable violations in a Checkstyle XML report file.
-	 * Returns {total, fixable}. TreeWalker violations are matched by source
-	 * name; regexp-based violations are matched by message (since their XML
-	 * source is the generic RegexpMultiline/RegexpSingleline class name).
+	 * Returns {total, fixable}. Fixable violations are counted regardless of
+	 * severity (the fix task treats all violations as errors). TreeWalker
+	 * violations are matched by source name; regexp-based violations are
+	 * matched by message (since their XML source is the generic
+	 * RegexpMultiline/RegexpSingleline class name).
 	 */
 	@Nonnull
 	@VisibleForTesting
@@ -109,11 +110,6 @@ public class CheckstylePlugin implements Plugin<Project> {
 			while (errorMatcher.find()) {
 				final var element = errorMatcher.group();
 				++total;
-
-				// the fixer only fixes error-severity violations, skip warnings
-				final var severityMatcher = XML_ATTR_SEVERITY.matcher(element);
-				if (severityMatcher.find() && !"error".equals(severityMatcher.group(1)))
-					continue;
 
 				final var sourceMatcher = XML_ATTR_SOURCE.matcher(element);
 				if (sourceMatcher.find() && fixableNames.contains(sourceMatcher.group(1)))

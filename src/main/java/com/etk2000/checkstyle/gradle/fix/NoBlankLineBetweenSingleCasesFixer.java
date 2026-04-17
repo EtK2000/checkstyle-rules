@@ -8,7 +8,7 @@ import javax.annotation.Nullable;
 class NoBlankLineBetweenSingleCasesFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		var firstBlank = lineIndex - 1;
 		while (firstBlank >= 0 && lines.get(firstBlank).isBlank())
 			--firstBlank;

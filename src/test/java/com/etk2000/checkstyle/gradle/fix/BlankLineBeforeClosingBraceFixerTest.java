@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,8 +16,7 @@ public class BlankLineBeforeClosingBraceFixerTest {
 	@Test
 	public void testDeleteMultipleBlanksBeforeCloseBrace() {
 		final var lines = new ArrayList<>(List.of("\tint x;", "", "", "}"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(1, result.startLine());
 		assertEquals(2, result.endLine());
 		assertTrue(result.replacement().isEmpty());
@@ -27,8 +26,7 @@ public class BlankLineBeforeClosingBraceFixerTest {
 	@Test
 	public void testDeleteSingleBlankBeforeCloseBrace() {
 		final var lines = new ArrayList<>(List.of("\tint x;", "", "}"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertTrue(result.replacement().isEmpty());
@@ -38,8 +36,7 @@ public class BlankLineBeforeClosingBraceFixerTest {
 	@Test
 	public void testDeleteWhitespaceOnlyBeforeCloseBrace() {
 		final var lines = new ArrayList<>(List.of("\tint x;", "\t", "}"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(1, result.startLine());
 		assertEquals(1, result.endLine());
 		assertTrue(result.replacement().isEmpty());

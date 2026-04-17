@@ -39,35 +39,52 @@ When checkstyle finds violations, a hint shows how many are auto-fixable:
 Run ./gradlew checkstyleFixAll to auto-fix 5 of 8 violations.
 ```
 
+The fix task reports what it fixed and what it skipped with reasons:
+
+```
+Fixed 3 violations in 2 files (5 skipped)
+Skipped violations:
+  FieldSortingCheck: field ordering unsupported, only enum constants (x3)
+  PreferMathMethodCheck: parenthesized or multiline ternary (x2)
+```
+
 Fixable checks:
 
-| Check                               | Fix applied                                                                                                                 |
-|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
-| AnnotationOwnLineCheck              | Splits, sorts, and removes blank lines between stacked annotations                                                          |
-| AnnotationSameLineCheck             | Joins stacked annotations onto the declaration line, sorts inline annotations                                               |
-| AvoidNoArgumentSuperConstructorCall | Removes the redundant `super()` line                                                                                        |
-| ExplicitInitialization              | Removes `= 0`/`= null`/`= false` etc.                                                                                       |
-| FieldSortingCheck (enum only)       | Sorts enum constants alphabetically and splits same-line constants onto separate lines                                      |
-| FinalLocalVariable                  | Adds `final` keyword to non-final locals                                                                                    |
-| LambdaParameterTypeCheck            | Removes explicit types, replaces with `var` when annotated, removes unnecessary parens                                      |
-| NoArrayTrailingCommaCheck           | Removes the trailing comma                                                                                                  |
-| NoBlankLineBetweenSingleCasesCheck  | Removes blank lines between single-line cases                                                                               |
-| NoFinalParametersCheck              | Removes the `final` keyword from the parameter or for-each variable                                                         |
-| NoDoubleBlankLines (regex)          | Collapses double blank lines to single                                                                                      |
-| NoEnumTrailingComma                 | Removes the trailing comma                                                                                                  |
-| NoTrailingWhitespace (regex)        | Strips trailing spaces/tabs                                                                                                 |
-| NoUnnecessaryThisCheck              | Removes the unnecessary `this.`                                                                                             |
-| PreferBulkOperationCheck            | Replaces element-by-element loops with `addAll`/`putAll`/`System.arraycopy`/`Arrays.fill`                                   |
-| PreferMathMethodCheck               | Replaces ternary max/min/abs with `Math.max`/`Math.min`/`Math.abs`; replaces nested `Math.max`/`Math.min` with `Math.clamp` |
-| PreferPrefixIncrementCheck          | Converts `i++`/`i--` to `++i`/`--i`                                                                                         |
-| PreferStaticImportCheck             | Strips `Class.` prefix from candidate calls and adds the corresponding `import static`                                      |
-| PreferVarCheck                      | Replaces explicit type with `var`; converts `new Type[]{...}` to `Type[] x = {...}`                                         |
-| RedundantAnnotationSyntaxCheck      | Removes empty `()` from annotations; removes redundant `value =` from single-element annotations                            |
-| RedundantImport                     | Deletes the redundant import line                                                                                           |
-| RedundantModifier                   | Removes the redundant modifier keyword                                                                                      |
-| RedundantNumericSuffixCheck         | Removes the redundant L/f/d suffix                                                                                          |
-| UnusedImports                       | Deletes the unused import line                                                                                              |
-| UpperEll                            | Replaces lowercase `l` with uppercase `L`                                                                                   |
+| Check                                 | Fix applied                                                                                                                 |
+|---------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| AnnotationOwnLineCheck                | Splits, sorts, and removes blank lines between stacked annotations                                                          |
+| AnnotationSameLineCheck               | Joins stacked annotations onto the declaration line, sorts inline annotations                                               |
+| AvoidNoArgumentSuperConstructorCall   | Removes the redundant `super()` line                                                                                        |
+| BlankLineAfterBreak (regex)           | Inserts blank line after `break;` before next `case`/`default`                                                              |
+| ControlFlowBracesCheck (do-while)     | Removes unnecessary braces, fixes one-liners, adds missing braces                                                           |
+| ExplicitInitialization                | Removes `= 0`/`= null`/`= false` etc.                                                                                       |
+| FieldSortingCheck (enum only)         | Sorts enum constants alphabetically and splits same-line constants onto separate lines                                      |
+| FinalLocalVariable                    | Adds `final` keyword to non-final locals                                                                                    |
+| LambdaParameterTypeCheck              | Removes explicit types, replaces with `var` when annotated, removes unnecessary parens                                      |
+| NoArrayTrailingCommaCheck             | Removes the trailing comma                                                                                                  |
+| NoBlankLineAfterClassBrace (regex)    | Removes blank lines after class/interface/enum/record opening brace                                                         |
+| NoBlankLineBeforeClosingBrace (regex) | Removes blank lines before closing brace                                                                                    |
+| NoBlankLineBetweenSingleCasesCheck    | Removes blank lines between single-line cases                                                                               |
+| NoDoubleBlankLines (regex)            | Collapses double blank lines to single                                                                                      |
+| NoEnumTrailingComma                   | Removes the trailing comma                                                                                                  |
+| NoFinalParametersCheck                | Removes the `final` keyword from the parameter or for-each variable                                                         |
+| NoTrailingNewline (regex)             | Removes trailing blank lines at end of file                                                                                 |
+| NoTrailingWhitespace (regex)          | Strips trailing spaces/tabs                                                                                                 |
+| NoUnnecessaryThisCheck                | Removes the unnecessary `this.`                                                                                             |
+| PreferBulkOperationCheck              | Replaces element-by-element loops with `addAll`/`putAll`/`System.arraycopy`/`Arrays.fill`                                   |
+| PreferCollectionInterfaceCheck        | Replaces concrete collection types with interface types in signatures                                                       |
+| PreferMathMethodCheck                 | Replaces ternary max/min/abs with `Math.max`/`Math.min`/`Math.abs`; replaces nested `Math.max`/`Math.min` with `Math.clamp` |
+| PreferPrefixIncrementCheck            | Converts `i++`/`i--` to `++i`/`--i`                                                                                         |
+| PreferSpecificApiCheck                | Replaces verbose API calls with specific alternatives (`.equals("")` to `.isEmpty()`, etc.)                                 |
+| PreferStandardCharsetsCheck           | Replaces charset string literals with `StandardCharsets` constants                                                          |
+| PreferStaticImportCheck               | Strips `Class.` prefix from candidate calls and adds the corresponding `import static`                                      |
+| PreferVarCheck                        | Replaces explicit type with `var`; converts `new Type[]{...}` to `Type[] x = {...}`                                         |
+| RedundantAnnotationSyntaxCheck        | Removes empty `()` from annotations; removes redundant `value =` from single-element annotations                            |
+| RedundantImport                       | Deletes the redundant import line                                                                                           |
+| RedundantModifier                     | Removes the redundant modifier keyword                                                                                      |
+| RedundantNumericSuffixCheck           | Removes the redundant L/f/d suffix                                                                                          |
+| UnusedImports                         | Deletes the unused import line                                                                                              |
+| UpperEll                              | Replaces lowercase `l` with uppercase `L`                                                                                   |
 
 User suppressions are not honored by the fix tasks. Review changes before committing.
 

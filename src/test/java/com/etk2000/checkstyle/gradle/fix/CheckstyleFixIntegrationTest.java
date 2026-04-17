@@ -10,6 +10,8 @@ import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.TreeWalker;
 import com.puppycrawl.tools.checkstyle.api.AuditEvent;
 import com.puppycrawl.tools.checkstyle.api.AuditListener;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+import com.puppycrawl.tools.checkstyle.api.Violation;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -22,9 +24,23 @@ import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class CheckstyleFixIntegrationTest {
 	record FixOutput(@Nonnull String content, @Nonnull ApplyFixesResult result) {
+	}
+
+	@Nonnull
+	private static AuditEvent createEvent(
+			int line,
+			@Nonnull SeverityLevel severity,
+			@Nullable String moduleId,
+			@Nonnull Class<?> sourceClass
+	) {
+		final var violation = new Violation(
+				line, 0, "", "", null, severity, moduleId, sourceClass, "test"
+		);
+		return new AuditEvent(new Object(), "Test.java", violation);
 	}
 
 	@TempDir
@@ -157,6 +173,29 @@ public class CheckstyleFixIntegrationTest {
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		return CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+	}
+
+	@Test
+	public void testAllFixedNoSkipReasons() throws Exception {
+		final var file = tempDir.resolve("AllFixed.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tlong x = 3000000000l;\n\tlong y = 4000000000l;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(2, output.result().fixCount());
+		assertTrue(output.result().skippedReasons().isEmpty());
+	}
+
+	@Test
+	public void testAllSkippedHasReasons() throws Exception {
+		final var file = tempDir.resolve("AllSkipped.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint b;\n\tint a;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(0, output.result().fixCount());
+		assertTrue(output.result().skippedReasons().containsKey("FieldSortingCheck"));
+		final var reasons = output.result().skippedReasons().get("FieldSortingCheck");
+		assertFalse(reasons.isEmpty());
+		assertEquals(SkipMessages.FIELD_SORT_SKIP, reasons.getFirst());
 	}
 
 	@Test
@@ -408,6 +447,11 @@ public class CheckstyleFixIntegrationTest {
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, Map.of(), Map.of());
 		assertEquals(0, result.fixCount());
+		assertFalse(result.skippedReasons().isEmpty());
+		assertTrue(
+				result.skippedReasons().values().stream()
+						.anyMatch(reasons -> reasons.contains(SkipMessages.FIX_NO_FIXER))
+		);
 	}
 
 	@Test
@@ -524,6 +568,16 @@ public class CheckstyleFixIntegrationTest {
 		);
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testCleanFileNoViolationsNoReasons() throws Exception {
+		final var file = tempDir.resolve("Clean.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid method() {}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(0, output.result().fixCount());
+		assertTrue(output.result().skippedReasons().isEmpty());
 	}
 
 	@Test
@@ -745,6 +799,33 @@ public class CheckstyleFixIntegrationTest {
 		assertEquals("class T {\n\tint a, b;\n}", output.content());
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testExtractCheckShortNameModuleIdPreferred() {
+		final var event = createEvent(1, SeverityLevel.ERROR, "NoDoubleBlankLines", Object.class);
+		final var lines = new ArrayList<>(List.of("line1"));
+		final CheckstyleFixer nullFixer = (l, i, c) -> null;
+		final var result = CheckstyleFixAction.applyFixes(
+				lines, new ArrayList<>(List.of(event)), Map.of(), Map.of("NoDoubleBlankLines", nullFixer)
+		);
+		assertTrue(result.skippedReasons().containsKey("NoDoubleBlankLines"));
+		assertTrue(result.skippedReasons().get("NoDoubleBlankLines").contains(SkipMessages.FIX_NOT_FIXABLE));
+	}
+
+	@Test
+	public void testExtractCheckShortNameSourceNameFallback() {
+		final var event = createEvent(1, SeverityLevel.ERROR, null, Object.class);
+		final var lines = new ArrayList<>(List.of("line1"));
+		final CheckstyleFixer nullFixer = (l, i, c) -> null;
+		final var result = CheckstyleFixAction.applyFixes(
+				lines,
+				new ArrayList<>(List.of(event)),
+				Map.of("java.lang.Object", nullFixer),
+				Map.of()
+		);
+		assertTrue(result.skippedReasons().containsKey("Object"));
+		assertTrue(result.skippedReasons().get("Object").contains(SkipMessages.FIX_NOT_FIXABLE));
 	}
 
 	@Test
@@ -1030,6 +1111,53 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testMixedFixAndSkipFromSameCheck() throws Exception {
+		final var file = tempDir.resolve("MixedSameCheck.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tenum E {\n\t\tB, A\n\t}\n\tint b;\n\tint a;\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertTrue(output.result().fixCount() > 0);
+		assertTrue(output.result().skippedReasons().containsKey("FieldSortingCheck"));
+	}
+
+	@Test
+	public void testMultipleChecksSkipReasons() throws Exception {
+		final var file = tempDir.resolve("MultiCheck.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint b;\n\tint a;\n\tint x = 0;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertTrue(output.result().fixCount() > 0);
+		assertTrue(output.result().skippedReasons().containsKey("FieldSortingCheck"));
+		assertEquals(
+				SkipMessages.FIELD_SORT_SKIP,
+				output.result().skippedReasons().get("FieldSortingCheck").getFirst()
+		);
+	}
+
+	@Test
+	public void testMultipleSkipReasonsPerCheckAccumulated() {
+		final var event1 = createEvent(1, SeverityLevel.WARNING, null, Object.class);
+		final var event2 = createEvent(1, SeverityLevel.ERROR, null, Object.class);
+		final var lines = new ArrayList<>(List.of("only line"));
+		final CheckstyleFixer dummyFixer = (l, i, c) -> null;
+		final var result = CheckstyleFixAction.applyFixes(
+				lines,
+				new ArrayList<>(List.of(event1, event2)),
+				Map.of("java.lang.Object", dummyFixer),
+				Map.of()
+		);
+		assertEquals(0, result.fixCount());
+		assertTrue(result.skippedReasons().containsKey("Object"));
+		final var reasons = result.skippedReasons().get("Object");
+		assertEquals(2, reasons.size());
+		assertTrue(reasons.contains(SkipMessages.FIX_SEVERITY));
+		assertTrue(reasons.contains(SkipMessages.FIX_NOT_FIXABLE));
+	}
+
+	@Test
 	public void testMultipleViolationsSameFile() throws Exception {
 		final var file = tempDir.resolve("Multi2.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1,};\n\tlong x = 100L;\n}");
@@ -1110,6 +1238,19 @@ public class CheckstyleFixIntegrationTest {
 		final var result = runFixPipeline(file);
 		assertEquals(0, result.fixCount());
 		assertFalse(result.needsSecondPass());
+	}
+
+	@Test
+	public void testNullFixerReturnTracksNotFixable() {
+		final var event = createEvent(1, SeverityLevel.ERROR, null, Object.class);
+		final var lines = new ArrayList<>(List.of("content"));
+		final CheckstyleFixer nullFixer = (l, i, c) -> null;
+		final var result = CheckstyleFixAction.applyFixes(
+				lines, new ArrayList<>(List.of(event)), Map.of("java.lang.Object", nullFixer), Map.of()
+		);
+		assertEquals(0, result.fixCount());
+		assertTrue(result.skippedReasons().containsKey("Object"));
+		assertTrue(result.skippedReasons().get("Object").contains(SkipMessages.FIX_NOT_FIXABLE));
 	}
 
 	@Test
@@ -1580,6 +1721,24 @@ public class CheckstyleFixIntegrationTest {
 		);
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferMathMethodSkipsMultilineTernary() throws Exception {
+		// check fires on the QUESTION token line, fixer's regex only matches single-line ternaries
+		final var file = tempDir.resolve("MathMulti.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tint f(int a, int b) {\n\t\treturn a > b\n\t\t\t? a : b;\n\t}\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(0, output.result().fixCount());
+		assertTrue(output.result().skippedReasons().containsKey("PreferMathMethodCheck"));
+		assertTrue(
+				output.result().skippedReasons().get("PreferMathMethodCheck")
+						.contains(SkipMessages.MATH_METHOD_SKIP)
+		);
 	}
 
 	@Test
@@ -2283,6 +2442,10 @@ public class CheckstyleFixIntegrationTest {
 		);
 		assertEquals(0, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
+		assertTrue(output.result().skippedReasons().containsKey("PreferVarCheck"));
+		assertTrue(
+				output.result().skippedReasons().get("PreferVarCheck").contains(SkipMessages.FIX_SEVERITY)
+		);
 	}
 
 	@Test
@@ -2309,6 +2472,11 @@ public class CheckstyleFixIntegrationTest {
 		assertEquals("import java.util.List;\n\nclass T {\n\tList<String> s;\n}", output.content());
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
+		assertFalse(output.result().skippedReasons().isEmpty());
+		assertTrue(
+				output.result().skippedReasons().values().stream()
+						.anyMatch(reasons -> reasons.contains(SkipMessages.FIX_SUPPRESSED))
+		);
 	}
 
 	@Test

@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -19,8 +19,7 @@ public class AnnotationSameLineFixerTest {
 				"\t\t@SuppressWarnings(\"unchecked\")",
 				"\t\tString param"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(List.of("\t\t@SuppressWarnings(\"unchecked\") String param"), result.replacement());
 		assertTrue(result.importsToAdd().isEmpty());
 	}
@@ -34,8 +33,7 @@ public class AnnotationSameLineFixerTest {
 	@Test
 	public void testInlineReorderThreeAnnotations() {
 		final var lines = new ArrayList<>(List.of("\tvoid foo(@C @A @B String param) {}"));
-		final var result = fixer.fix(lines, 0, 13);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 13));
 		assertEquals(List.of("\tvoid foo(@A @B @C String param) {}"), result.replacement());
 		assertTrue(result.importsToAdd().isEmpty());
 	}
@@ -44,8 +42,7 @@ public class AnnotationSameLineFixerTest {
 	public void testInlineReorderTwoAnnotations() {
 		// @B @A on a parameter line, column points to @A (the out-of-order annotation)
 		final var lines = new ArrayList<>(List.of("\tvoid foo(@B @A String param) {}"));
-		final var result = fixer.fix(lines, 0, 13);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 13));
 		assertEquals(List.of("\tvoid foo(@A @B String param) {}"), result.replacement());
 		assertTrue(result.importsToAdd().isEmpty());
 	}
@@ -63,8 +60,7 @@ public class AnnotationSameLineFixerTest {
 				"\t\t@B",
 				"\t\tString param"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\t@A @B String param"), result.replacement());
@@ -77,8 +73,7 @@ public class AnnotationSameLineFixerTest {
 				"\t\t@A",
 				"\t\tString param"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\t@A String param"), result.replacement());
@@ -93,8 +88,7 @@ public class AnnotationSameLineFixerTest {
 				"\t\t@C",
 				"\t\tString param"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(3, result.endLine());
 		assertEquals(List.of("\t\t@A @B @C String param"), result.replacement());
@@ -126,8 +120,7 @@ public class AnnotationSameLineFixerTest {
 				"\t\t\t@A",
 				"\t\t\tString param"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(List.of("\t\t\t@A String param"), result.replacement());
 		assertTrue(result.importsToAdd().isEmpty());
 	}
@@ -140,8 +133,7 @@ public class AnnotationSameLineFixerTest {
 				"\t\t@B",
 				"\t\tString param"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(List.of("\t\t@A @B @C String param"), result.replacement());
 		assertTrue(result.importsToAdd().isEmpty());
 	}
@@ -152,8 +144,7 @@ public class AnnotationSameLineFixerTest {
 				"\t\t@A @B",
 				"\t\tString param"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(List.of("\t\t@A @B String param"), result.replacement());
 		assertTrue(result.importsToAdd().isEmpty());
 	}

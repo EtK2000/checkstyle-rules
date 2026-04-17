@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -34,8 +34,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveAbstract() {
 		final var lines = new ArrayList<>(List.of("\tabstract void method();"));
-		final var result = fixer.fix(lines, 0, 1);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -45,8 +44,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveAtEndOfLineNoTrailingSpace() {
 		final var lines = new ArrayList<>(List.of("int abstract"));
-		final var result = fixer.fix(lines, 0, 4);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 4));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -56,8 +54,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinal() {
 		final var lines = new ArrayList<>(List.of("\tpublic static final int X = 1;"));
-		final var result = fixer.fix(lines, 0, 15);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 15));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -67,8 +64,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromCatch() {
 		final var lines = new ArrayList<>(List.of("\t\tcatch (final Exception e) {"));
-		final var result = fixer.fix(lines, 0, 9);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 9));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -78,8 +74,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromCatchMulti() {
 		final var lines = new ArrayList<>(List.of("\t\tcatch (final RuntimeException | Error e) {"));
-		final var result = fixer.fix(lines, 0, 9);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 9));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -89,8 +84,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromConstructor() {
 		final var lines = new ArrayList<>(List.of("\tT(final int x) {}"));
-		final var result = fixer.fix(lines, 0, 3);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 3));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -100,8 +94,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromForEach() {
 		final var lines = new ArrayList<>(List.of("\t\tfor (final var item : list)"));
-		final var result = fixer.fix(lines, 0, 7);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 7));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -111,8 +104,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromForEachAnnotated() {
 		final var lines = new ArrayList<>(List.of("\t\tfor (@SuppressWarnings(\"unused\") final var item : list)"));
-		final var result = fixer.fix(lines, 0, 35);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 35));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -122,8 +114,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromForInit() {
 		final var lines = new ArrayList<>(List.of("\t\tfor (final var size = list.size(); size > 0;)"));
-		final var result = fixer.fix(lines, 0, 7);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 7));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -133,8 +124,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromForInitMulti() {
 		final var lines = new ArrayList<>(List.of("\t\tfor (final int i = 0, size = 10; i < size;)"));
-		final var result = fixer.fix(lines, 0, 7);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 7));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -144,8 +134,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromLambda() {
 		final var lines = new ArrayList<>(List.of("\t\tlist.sort((final String a, final String b) -> a.compareTo(b));"));
-		final var result = fixer.fix(lines, 0, 13);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 13));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -155,8 +144,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromParameterAnnotatedAfter() {
 		final var lines = new ArrayList<>(List.of("\tvoid method(final @SuppressWarnings(\"unused\") int x) {}"));
-		final var result = fixer.fix(lines, 0, 13);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 13));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -166,8 +154,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromParameterAnnotatedBefore() {
 		final var lines = new ArrayList<>(List.of("\tvoid method(@SuppressWarnings(\"unused\") final String s) {}"));
-		final var result = fixer.fix(lines, 0, 41);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 41));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -177,8 +164,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromParameterFirst() {
 		final var lines = new ArrayList<>(List.of("\tvoid method(final int x, String y) {}"));
-		final var result = fixer.fix(lines, 0, 13);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 13));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -188,8 +174,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromParameterSecond() {
 		final var lines = new ArrayList<>(List.of("\tvoid method(int x, final String y) {}"));
-		final var result = fixer.fix(lines, 0, 20);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 20));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -199,8 +184,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromParameterSingle() {
 		final var lines = new ArrayList<>(List.of("\tvoid method(final int x) {}"));
-		final var result = fixer.fix(lines, 0, 13);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 13));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -210,8 +194,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveFinalFromVarargs() {
 		final var lines = new ArrayList<>(List.of("\tvoid method(final String... args) {}"));
-		final var result = fixer.fix(lines, 0, 13);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 13));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -221,8 +204,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemovePublicFromInterface() {
 		final var lines = new ArrayList<>(List.of("\tpublic void method();"));
-		final var result = fixer.fix(lines, 0, 1);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -232,8 +214,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testRemoveStaticFromInterfaceField() {
 		final var lines = new ArrayList<>(List.of("\tstatic final int X = 1;"));
-		final var result = fixer.fix(lines, 0, 1);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -243,8 +224,7 @@ public class RedundantModifierFixerTest {
 	@Test
 	public void testResultIsBlankDeletesLine() {
 		final var lines = new ArrayList<>(List.of("public"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());

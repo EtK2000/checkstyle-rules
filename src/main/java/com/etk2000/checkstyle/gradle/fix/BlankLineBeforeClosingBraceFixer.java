@@ -14,7 +14,7 @@ import javax.annotation.Nullable;
 class BlankLineBeforeClosingBraceFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var blankStart = lineIndex + 1;
 		if (blankStart >= lines.size() || !lines.get(blankStart).isBlank())
 			return null;

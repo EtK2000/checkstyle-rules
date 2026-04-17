@@ -13,7 +13,7 @@ import javax.annotation.Nullable;
 class BlankLineAfterBreakFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var nextLine = lineIndex + 1;
 		if (nextLine >= lines.size())
 			return null;

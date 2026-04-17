@@ -18,7 +18,7 @@ class PreferStaticImportFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
 		if (column >= line.length())
 			return null;
@@ -30,7 +30,7 @@ class PreferStaticImportFixer implements CheckstyleFixer {
 		final var simpleClass = line.substring(column, end);
 		final var fqcn = SIMPLE_TO_FQCN.get(simpleClass);
 		if (fqcn == null)
-			return null;
+			return new SkipResult(SkipMessages.PREFER_STATIC_IMPORT_SKIP);
 
 		// require a dot immediately after the receiver
 		if (end >= line.length() || line.charAt(end) != '.')

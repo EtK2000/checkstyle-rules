@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
@@ -33,8 +33,7 @@ public class PreferStaticImportFixerTest {
 		final var input = prefix + simpleClass + "." + simpleMethod + suffix;
 		final var lines = new ArrayList<>(List.of(input));
 		final var column = prefix.length();
-		final var result = fixer.fix(lines, 0, column);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, column));
 		assertEquals(prefix + simpleMethod + suffix, result.replacement().getFirst());
 		assertEquals(Set.of("static " + expectedStaticImport), result.importsToAdd());
 	}
@@ -51,8 +50,7 @@ public class PreferStaticImportFixerTest {
 		final var lines = new ArrayList<>(List.of(input));
 		final var firstColumn = input.indexOf("Objects");
 		final var secondColumn = input.indexOf("Objects", firstColumn + 1);
-		final var result = fixer.fix(lines, 0, secondColumn);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, secondColumn));
 		assertEquals("\t\tObjects.requireNonNull(a); requireNonNull(b);", result.replacement().getFirst());
 	}
 
@@ -71,10 +69,11 @@ public class PreferStaticImportFixerTest {
 	}
 
 	@Test
-	public void testNoIdentAtColumnReturnsNull() {
+	public void testNoIdentAtColumnReturnsSkipResult() {
 		final var input = "\t\treturn 42;";
 		final var lines = new ArrayList<>(List.of(input));
-		assertNull(fixer.fix(lines, 0, input.indexOf("42")));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, input.indexOf("42")));
+		assertEquals(SkipMessages.PREFER_STATIC_IMPORT_SKIP, result.reason());
 	}
 
 	@Test
@@ -82,16 +81,16 @@ public class PreferStaticImportFixerTest {
 		final var input = "\t\t\t\t.filter(Predicate.not(String::isEmpty))";
 		final var lines = new ArrayList<>(List.of(input));
 		final var column = input.indexOf("Predicate");
-		final var result = fixer.fix(lines, 0, column);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, column));
 		assertEquals("\t\t\t\t.filter(not(String::isEmpty))", result.replacement().getFirst());
 		assertEquals(Set.of("static java.util.function.Predicate.not"), result.importsToAdd());
 	}
 
 	@Test
-	public void testUnknownClassReturnsNull() {
+	public void testUnknownClassReturnsSkipResult() {
 		final var input = "\t\tString.valueOf(x);";
 		final var lines = new ArrayList<>(List.of(input));
-		assertNull(fixer.fix(lines, 0, input.indexOf("String")));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, input.indexOf("String")));
+		assertEquals(SkipMessages.PREFER_STATIC_IMPORT_SKIP, result.reason());
 	}
 }

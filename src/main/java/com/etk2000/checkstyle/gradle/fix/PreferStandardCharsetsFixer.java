@@ -38,7 +38,7 @@ class PreferStandardCharsetsFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
 
 		// column points to the opening " of the charset string literal
@@ -51,7 +51,7 @@ class PreferStandardCharsetsFixer implements CheckstyleFixer {
 		final var charsetName = line.substring(column + 1, closeQuote);
 		final var constant = CHARSET_MAP.get(charsetName.toLowerCase());
 		if (constant == null)
-			return null;
+			return new SkipResult(SkipMessages.PREFER_STANDARD_CHARSETS_SKIP);
 
 		final var newLine = line.substring(0, column) + "StandardCharsets." + constant
 				+ line.substring(closeQuote + 1);

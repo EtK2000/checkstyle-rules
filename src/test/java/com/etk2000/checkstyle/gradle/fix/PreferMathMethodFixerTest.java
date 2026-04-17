@@ -1,8 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -31,8 +30,7 @@ public class PreferMathMethodFixerTest {
 	@ParameterizedTest
 	void testAbsFix(String ternary, String expected) {
 		final var lines = new ArrayList<>(List.of("\t\treturn " + ternary + ";"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -42,8 +40,7 @@ public class PreferMathMethodFixerTest {
 	@Test
 	public void testClampMaxMin() {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.max(lo, Math.min(hi, value));"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -53,8 +50,7 @@ public class PreferMathMethodFixerTest {
 	@Test
 	public void testClampMaxMinNestedInnerArg() {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.max(lo, Math.min(hi, foo(a, b)));"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -64,8 +60,7 @@ public class PreferMathMethodFixerTest {
 	@Test
 	public void testClampMaxMinNestedOuterArg() {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.max(bar(x, y), Math.min(hi, value));"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -75,8 +70,7 @@ public class PreferMathMethodFixerTest {
 	@Test
 	public void testClampMaxMinReversed() {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.max(Math.min(hi, value), lo);"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -86,8 +80,7 @@ public class PreferMathMethodFixerTest {
 	@Test
 	public void testClampMaxMinReversedNestedArg() {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.max(Math.min(hi, foo(a, b)), lo);"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -97,8 +90,7 @@ public class PreferMathMethodFixerTest {
 	@Test
 	public void testClampMinMax() {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.min(hi, Math.max(lo, value));"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -108,8 +100,7 @@ public class PreferMathMethodFixerTest {
 	@Test
 	public void testClampMinMaxNestedInnerArg() {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.min(hi, Math.max(lo, foo(a, b)));"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -119,8 +110,7 @@ public class PreferMathMethodFixerTest {
 	@Test
 	public void testClampMinMaxReversed() {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.min(Math.max(lo, value), hi);"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -130,8 +120,7 @@ public class PreferMathMethodFixerTest {
 	@Test
 	public void testClampMinMaxReversedNestedArg() {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.min(Math.max(lo, foo(a, b)), hi);"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -151,8 +140,7 @@ public class PreferMathMethodFixerTest {
 	@ParameterizedTest
 	void testMaxMinFix(String ternary, String expected) {
 		final var lines = new ArrayList<>(List.of("\t\treturn " + ternary + ";"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -162,8 +150,7 @@ public class PreferMathMethodFixerTest {
 	@Test
 	public void testMaxPreDecrement() {
 		final var lines = new ArrayList<>(List.of("\t\treturn --a > b ? a : b;"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -173,8 +160,7 @@ public class PreferMathMethodFixerTest {
 	@Test
 	public void testMaxPreIncrement() {
 		final var lines = new ArrayList<>(List.of("\t\treturn ++a > b ? a : b;"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -184,31 +170,41 @@ public class PreferMathMethodFixerTest {
 	@Test
 	public void testNoMatchBooleanCondition() {
 		final var lines = new ArrayList<>(List.of("\t\treturn flag ? a : b;"));
-		assertNull(fixer.fix(lines, 0, 0));
+		final var attempt = fixer.fix(lines, 0, 0);
+		assertInstanceOf(SkipResult.class, attempt);
+		assertEquals(SkipMessages.MATH_METHOD_SKIP, ((SkipResult) attempt).reason());
 	}
 
 	@Test
 	public void testNoMatchClampNoComma() {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.max(Math.min(a));"));
-		assertNull(fixer.fix(lines, 0, 0));
+		final var attempt = fixer.fix(lines, 0, 0);
+		assertInstanceOf(SkipResult.class, attempt);
+		assertEquals(SkipMessages.MATH_METHOD_SKIP, ((SkipResult) attempt).reason());
 	}
 
 	@Test
 	public void testNoMatchClampUnbalancedParens() {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.max(a, Math.min(b, c);"));
-		assertNull(fixer.fix(lines, 0, 0));
+		final var attempt = fixer.fix(lines, 0, 0);
+		assertInstanceOf(SkipResult.class, attempt);
+		assertEquals(SkipMessages.MATH_METHOD_SKIP, ((SkipResult) attempt).reason());
 	}
 
 	@Test
 	public void testNoMatchMismatchedOperands() {
 		final var lines = new ArrayList<>(List.of("\t\treturn a > b ? a : c;"));
-		assertNull(fixer.fix(lines, 0, 0));
+		final var attempt = fixer.fix(lines, 0, 0);
+		assertInstanceOf(SkipResult.class, attempt);
+		assertEquals(SkipMessages.MATH_METHOD_SKIP, ((SkipResult) attempt).reason());
 	}
 
 	@Test
 	public void testNoMatchNestedSameMethod() {
 		final var lines = new ArrayList<>(List.of("\t\treturn Math.max(a, Math.max(b, c));"));
-		assertNull(fixer.fix(lines, 0, 0));
+		final var attempt = fixer.fix(lines, 0, 0);
+		assertInstanceOf(SkipResult.class, attempt);
+		assertEquals(SkipMessages.MATH_METHOD_SKIP, ((SkipResult) attempt).reason());
 	}
 
 	@ParameterizedTest
@@ -216,6 +212,8 @@ public class PreferMathMethodFixerTest {
 			"0 > a ? a : -a", "0 <= a ? -a : a", "0 < a ? -a : a", "a < 1 ? -a : a"})
 	void testNoMatchWrongAbsBranch(String ternary) {
 		final var lines = new ArrayList<>(List.of("\t\treturn " + ternary + ";"));
-		assertNull(fixer.fix(lines, 0, 0));
+		final var attempt = fixer.fix(lines, 0, 0);
+		assertInstanceOf(SkipResult.class, attempt);
+		assertEquals(SkipMessages.MATH_METHOD_SKIP, ((SkipResult) attempt).reason());
 	}
 }

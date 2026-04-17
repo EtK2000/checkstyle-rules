@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,8 +16,7 @@ public class AvoidNoArgumentSuperCallFixerTest {
 	@Test
 	public void testDeleteSuperCall() {
 		final var lines = new ArrayList<>(List.of("\t\tsuper();"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -27,8 +26,7 @@ public class AvoidNoArgumentSuperCallFixerTest {
 	@Test
 	public void testDeleteSuperCallNoIndent() {
 		final var lines = new ArrayList<>(List.of("super();"));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());

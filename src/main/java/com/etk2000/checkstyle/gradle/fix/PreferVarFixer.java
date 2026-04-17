@@ -214,7 +214,7 @@ class PreferVarFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
 
 		// try explicit array init path first (MSG_VAR_EXPLICIT_ARRAY)
@@ -227,6 +227,6 @@ class PreferVarFixer implements CheckstyleFixer {
 		if (varResult != null)
 			return new FixResult(lineIndex, lineIndex, List.of(varResult));
 
-		return null;
+		return new SkipResult(SkipMessages.PREFER_VAR_SKIP);
 	}
 }

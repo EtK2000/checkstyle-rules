@@ -14,7 +14,7 @@ import javax.annotation.Nullable;
 class TrailingNewlineFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		// scan backward from the end to find trailing blank lines
 		var lastBlank = lines.size();
 		while (lastBlank > 0 && lines.get(lastBlank - 1).isBlank())

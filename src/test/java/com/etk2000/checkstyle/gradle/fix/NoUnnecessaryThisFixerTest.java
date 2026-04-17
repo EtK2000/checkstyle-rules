@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -40,8 +40,7 @@ public class NoUnnecessaryThisFixerTest {
 	@Test
 	public void testRemoveThis() {
 		final var lines = new ArrayList<>(List.of("\t\treturn this.field;"));
-		final var result = fixer.fix(lines, 0, 13);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 13));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -51,8 +50,7 @@ public class NoUnnecessaryThisFixerTest {
 	@Test
 	public void testRemoveThisAtStartOfLine() {
 		final var lines = new ArrayList<>(List.of("this.method();"));
-		final var result = fixer.fix(lines, 0, 4);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 4));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -62,8 +60,7 @@ public class NoUnnecessaryThisFixerTest {
 	@Test
 	public void testRemoveThisInExpression() {
 		final var lines = new ArrayList<>(List.of("\t\tint x = this.value + 1;"));
-		final var result = fixer.fix(lines, 0, 14);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 14));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -73,8 +70,7 @@ public class NoUnnecessaryThisFixerTest {
 	@Test
 	public void testRemoveThisInMethodCall() {
 		final var lines = new ArrayList<>(List.of("\t\tthis.doSomething();"));
-		final var result = fixer.fix(lines, 0, 6);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 6));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -84,8 +80,7 @@ public class NoUnnecessaryThisFixerTest {
 	@Test
 	public void testRemoveThisInParens() {
 		final var lines = new ArrayList<>(List.of("foo(this.bar);"));
-		final var result = fixer.fix(lines, 0, 8);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 8));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());

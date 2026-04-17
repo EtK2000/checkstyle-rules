@@ -58,7 +58,7 @@ class PreferCollectionInterfaceFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
 		if (column >= line.length())
 			return null;
@@ -74,13 +74,13 @@ class PreferCollectionInterfaceFixer implements CheckstyleFixer {
 			final var clazz = Class.forName(fqcn, false, getClass().getClassLoader());
 			final var iface = findCollectionInterface(clazz);
 			if (iface == null)
-				return null;
+				return new SkipResult(SkipMessages.COLLECTION_INTERFACE_SKIP);
 
 			final var fixed = line.substring(0, column) + iface + line.substring(end);
 			return new FixResult(lineIndex, lineIndex, List.of(fixed), Set.of("java.util." + iface));
 		}
 		catch (ClassNotFoundException | NoClassDefFoundError e) {
-			return null;
+			return new SkipResult(SkipMessages.COLLECTION_INTERFACE_SKIP);
 		}
 	}
 }

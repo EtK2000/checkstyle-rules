@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -20,8 +20,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < src.length; ++i)",
 				"\t\t\tdst[i] = src[i];"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tSystem.arraycopy(src, 0, dst, 0, src.length);"), result.replacement());
@@ -35,8 +34,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\tdst[i] = src[i];",
 				"\t\t}"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\tSystem.arraycopy(src, 0, dst, 0, src.length);"), result.replacement());
@@ -51,8 +49,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < arr.length; ++i)",
 				"\t\t\tarr[i] = arr[i][0];"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, arr[i][0]);"), result.replacement());
@@ -69,8 +66,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < arr.length; ++i)",
 				"\t\t\tarr[i] = arr[i].clone();"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, arr[i].clone());"), result.replacement());
@@ -85,8 +81,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < arr.length; ++i)",
 				"\t\t\tarr[i] = arr[i]extra;"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, arr[i]extra);"), result.replacement());
@@ -112,8 +107,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < arr.length; ++i)",
 				"\t\t\tarr[i] = 0;"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, 0);"), result.replacement());
@@ -128,8 +122,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; \"< \".length() < arr.length; ++i)",
 				"\t\t\tarr[i] = 0;"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, 0);"), result.replacement());
@@ -155,8 +148,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\tarr[i] = 0;",
 				"\t\t}"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, 0);"), result.replacement());
@@ -170,8 +162,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\tarr[i] = '}';",
 				"\t\t}"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, '}');"), result.replacement());
@@ -205,8 +196,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < arr.length; ++i)",
 				"\t\t\tarr[i] = -1;"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, -1);"), result.replacement());
@@ -222,8 +212,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < arr.length; ++i)",
 				"\t\t\tarr[i] = arr[0];"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, arr[0]);"), result.replacement());
@@ -239,8 +228,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < obj.lengthArray.length; ++i)",
 				"\t\t\tobj.lengthArray[i] = 0;"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(obj.lengthArray, 0);"), result.replacement());
@@ -256,8 +244,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < lengthValues.length; ++i)",
 				"\t\t\tlengthValues[i] = 0;"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(lengthValues, 0);"), result.replacement());
@@ -271,8 +258,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\tarr[i] = \"}\";",
 				"\t\t}"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, \"}\");"), result.replacement());
@@ -286,8 +272,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\tarr[i] = \"{\";",
 				"\t\t}"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, \"{\");"), result.replacement());
@@ -300,8 +285,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < arr.length; ++i)",
 				"\t\t\tarr[i] = \"a\\\"b\";"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, \"a\\\"b\");"), result.replacement());
@@ -314,8 +298,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < arr.length; ++i)",
 				"\t\t\tarr[i] = \"a;b\";"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, \"a;b\");"), result.replacement());
@@ -328,8 +311,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < arr.length; ++i)",
 				"\t\t\tarr[i] = \"http://x\"; // comment"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, \"http://x\");"), result.replacement());
@@ -350,8 +332,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\tWHERE x = 1",
 				"\t\t\t\"\"\";"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(4, result.endLine());
 		assertEquals(
@@ -369,8 +350,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < arr.length; ++i)",
 				"\t\t\tarr[i] = -a[b[0]];"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, -a[b[0]]);"), result.replacement());
@@ -384,8 +364,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < arr.length; ++i)",
 				"\t\t\tarr[i] = +otherArr[0];"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\tArrays.fill(arr, +otherArr[0]);"), result.replacement());
@@ -399,8 +378,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\ttarget.add(item);",
 				"\t\t}"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\ttarget.addAll(source);"), result.replacement());
@@ -413,8 +391,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var item : source)",
 				"\t\t\ttarget.add(item);"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\ttarget.addAll(source);"), result.replacement());
@@ -450,8 +427,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var item : source) // violation: some message",
 				"\t\t\ttarget.add(item);"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\ttarget.addAll(source);"), result.replacement());
@@ -464,8 +440,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var item : map.values())",
 				"\t\t\ttarget.add(item);"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\ttarget.addAll(map.values());"), result.replacement());
@@ -478,8 +453,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var item : getList(a, b))",
 				"\t\t\ttarget.add(item);"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\ttarget.addAll(getList(a, b));"), result.replacement());
@@ -491,8 +465,7 @@ public class PreferBulkOperationFixerTest {
 		final var lines = new ArrayList<>(List.of(
 				"\t\tlist.forEach(item -> other.add(item));"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(List.of("\t\tother.addAll(list);"), result.replacement());
@@ -506,8 +479,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\tother.add(item);",
 				"\t\t});"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\tother.addAll(list);"), result.replacement());
@@ -519,8 +491,7 @@ public class PreferBulkOperationFixerTest {
 		final var lines = new ArrayList<>(List.of(
 				"\t\tlist.forEach(item -> this.other.add(item));"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(List.of("\t\tthis.other.addAll(list);"), result.replacement());
@@ -619,8 +590,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\ttarget.put(k, v);",
 				"\t\t});"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -638,8 +608,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\ttarget.put(k, v);",
 				"\t\t});"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(4, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -660,8 +629,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\treal.put(k, v);",
 				"\t\t});"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(5, result.endLine());
 		assertEquals(List.of("\t\treal.putAll(source);"), result.replacement());
@@ -680,8 +648,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\ttarget.put(k, v);",
 				"\t\t});"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(4, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -700,8 +667,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\ttarget.put(k, v);",
 				"\t\t});"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(5, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -716,8 +682,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\ttarget.put(k, '}');",
 				"\t\t});"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -734,8 +699,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\ttarget.put(k, v);",
 				"\t\t});"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(3, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -753,8 +717,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\ttarget.put(k, v);",
 				"\t\t});"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(4, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -777,8 +740,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tsource.forEach((k, v) -> target.put(k, v));"
 		));
 		final var openParenCol = lines.getFirst().indexOf(".forEach(") + ".forEach".length();
-		final var result = fixer.fix(lines, 0, openParenCol);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, openParenCol));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -792,8 +754,7 @@ public class PreferBulkOperationFixerTest {
 		final var lines = new ArrayList<>(List.of(
 				"\t\tif (flag) source.forEach((k, v) -> target.put(k, v));"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(List.of("\t\tif (flag) target.putAll(source);"), result.replacement());
@@ -805,8 +766,7 @@ public class PreferBulkOperationFixerTest {
 		final var lines = new ArrayList<>(List.of(
 				"\t\tsource.forEach((k, v) -> target.put(k, v));"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -818,8 +778,7 @@ public class PreferBulkOperationFixerTest {
 		final var lines = new ArrayList<>(List.of(
 				"\t\tsource.forEach((k, v) -> this.target.put(k, v));"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(List.of("\t\tthis.target.putAll(source);"), result.replacement());
@@ -832,8 +791,7 @@ public class PreferBulkOperationFixerTest {
 		final var lines = new ArrayList<>(List.of(
 				"\t\tsource.forEach((k, v) -> target.put(k, v)); done();"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source); done();"), result.replacement());
@@ -847,8 +805,7 @@ public class PreferBulkOperationFixerTest {
 		final var lines = new ArrayList<>(List.of(
 				"\t\tsource.forEach((k, v) -> target.put(k, \"a;b\"));"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -879,8 +836,7 @@ public class PreferBulkOperationFixerTest {
 		final var lines = new ArrayList<>(List.of(
 				"\t\tsource.forEach((k, v) -> { target.put(k, v); });"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -912,8 +868,7 @@ public class PreferBulkOperationFixerTest {
 		final var lines = new ArrayList<>(List.of(
 				"\t\tlist.forEach(other::add);"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(List.of("\t\tother.addAll(list);"), result.replacement());
@@ -936,8 +891,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\tother::add",
 				"\t\t);"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\tother.addAll(list);"), result.replacement());
@@ -965,8 +919,7 @@ public class PreferBulkOperationFixerTest {
 		final var lines = new ArrayList<>(List.of(
 				"\t\tsource.forEach(target::put);"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -1011,7 +964,8 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < 10; ++i)",
 				"\t\t\tSystem.out.println(i);"
 		));
-		assertNull(fixer.fix(lines, 0, 0));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_BULK_SKIP, result.reason());
 	}
 
 	@Test
@@ -1020,8 +974,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var i = 0; i < source.size(); ++i)",
 				"\t\t\ttarget.add(source.get(i));"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\ttarget.addAll(source);"), result.replacement());
@@ -1047,8 +1000,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\ttarget.add(source.get(i));",
 				"\t\t}"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\ttarget.addAll(source);"), result.replacement());
@@ -1070,8 +1022,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\tfor (var entry : source.entrySet())",
 				"\t\t\ttarget.put(entry.getKey(), entry.getValue());"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(1, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -1089,8 +1040,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\ttarget.put(entry.getKey(), entry.getValue());",
 				"\t\t}"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(4, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());
@@ -1104,8 +1054,7 @@ public class PreferBulkOperationFixerTest {
 				"\t\t\ttarget.put(entry.getKey(), entry.getValue());",
 				"\t\t}"
 		));
-		final var result = fixer.fix(lines, 0, 0);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(0, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of("\t\ttarget.putAll(source);"), result.replacement());

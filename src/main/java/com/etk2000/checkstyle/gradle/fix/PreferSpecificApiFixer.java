@@ -700,7 +700,7 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
 		final var imports = new TreeSet<String>();
 
@@ -738,7 +738,7 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 			result = fixLengthOrSizeIsEmpty(line);
 
 		if (result == null)
-			return null;
+			return new SkipResult(SkipMessages.PREFER_API_SKIP);
 		if (imports.isEmpty())
 			return new FixResult(lineIndex, lineIndex, List.of(result));
 		return new FixResult(lineIndex, lineIndex, List.of(result), imports);

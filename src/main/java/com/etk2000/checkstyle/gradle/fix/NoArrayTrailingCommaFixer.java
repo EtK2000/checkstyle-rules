@@ -8,7 +8,7 @@ import javax.annotation.Nullable;
 class NoArrayTrailingCommaFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
 		if (column < 0 || column >= line.length() || line.charAt(column) != ',')
 			return null;

@@ -324,7 +324,7 @@ class PreferBulkOperationFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
 		final var indent = extractIndent(line);
 		final var stripped = LambdaCallParser.stripComment(line).stripLeading();
@@ -360,6 +360,6 @@ class PreferBulkOperationFixer implements CheckstyleFixer {
 			return fixArrayFill(lineIndex, endLine, indent, loopText);
 		}
 
-		return null;
+		return new SkipResult(SkipMessages.PREFER_BULK_SKIP);
 	}
 }

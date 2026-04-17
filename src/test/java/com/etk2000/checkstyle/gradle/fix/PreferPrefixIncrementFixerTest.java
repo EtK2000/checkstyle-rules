@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -28,8 +28,7 @@ public class PreferPrefixIncrementFixerTest {
 	@Test
 	public void testColumnAtOperatorDecrement() {
 		final var lines = new ArrayList<>(List.of("\t\ti--;"));
-		final var result = fixer.fix(lines, 0, 3);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 3));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -39,8 +38,7 @@ public class PreferPrefixIncrementFixerTest {
 	@Test
 	public void testColumnAtOperatorIncrement() {
 		final var lines = new ArrayList<>(List.of("\t\ti++;"));
-		final var result = fixer.fix(lines, 0, 3);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 3));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -50,8 +48,7 @@ public class PreferPrefixIncrementFixerTest {
 	@Test
 	public void testColumnAtOperatorMultiCharIdent() {
 		final var lines = new ArrayList<>(List.of("\t\tcount--;"));
-		final var result = fixer.fix(lines, 0, 7);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 7));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -67,8 +64,7 @@ public class PreferPrefixIncrementFixerTest {
 	@Test
 	public void testMultiCharIdentifier() {
 		final var lines = new ArrayList<>(List.of("\t\tcount++;"));
-		final var result = fixer.fix(lines, 0, 2);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 2));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -90,8 +86,7 @@ public class PreferPrefixIncrementFixerTest {
 	@Test
 	public void testOperatorAtEndOfLine() {
 		final var lines = new ArrayList<>(List.of("\t\ti++"));
-		final var result = fixer.fix(lines, 0, 2);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 2));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -107,8 +102,7 @@ public class PreferPrefixIncrementFixerTest {
 	@Test
 	public void testPostfixDecrementToPrefix() {
 		final var lines = new ArrayList<>(List.of("\t\ti--;"));
-		final var result = fixer.fix(lines, 0, 2);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 2));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -118,8 +112,7 @@ public class PreferPrefixIncrementFixerTest {
 	@Test
 	public void testPostfixIncrementToPrefix() {
 		final var lines = new ArrayList<>(List.of("\t\ti++;"));
-		final var result = fixer.fix(lines, 0, 2);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 2));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
@@ -129,8 +122,7 @@ public class PreferPrefixIncrementFixerTest {
 	@Test
 	public void testUnderscoreInIdent() {
 		final var lines = new ArrayList<>(List.of("\t\tmy_var++;"));
-		final var result = fixer.fix(lines, 0, 2);
-		assertNotNull(result);
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 2));
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());

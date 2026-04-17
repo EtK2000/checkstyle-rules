@@ -9,8 +9,8 @@ import com.etk2000.checkstyle.NoArrayTrailingCommaCheck;
 import com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck;
 import com.etk2000.checkstyle.NoFinalParametersCheck;
 import com.etk2000.checkstyle.NoUnnecessaryThisCheck;
-import com.etk2000.checkstyle.PreferCollectionInterfaceCheck;
 import com.etk2000.checkstyle.PreferBulkOperationCheck;
+import com.etk2000.checkstyle.PreferCollectionInterfaceCheck;
 import com.etk2000.checkstyle.PreferMathMethodCheck;
 import com.etk2000.checkstyle.PreferPrefixIncrementCheck;
 import com.etk2000.checkstyle.PreferSpecificApiCheck;
@@ -48,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -58,7 +59,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAction.Params> {
-	record ApplyFixesResult(int fixCount, boolean needsSecondPass) {
+	record ApplyFixesResult(
+			int fixCount,
+			boolean needsSecondPass,
+			@Nonnull Map<String, List<String>> skippedReasons
+	) {
 	}
 
 	interface Params extends WorkParameters {
@@ -151,15 +156,21 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		);
 
 		final var importsToAdd = new TreeSet<String>();
+		final var skippedReasons = new LinkedHashMap<String, List<String>>();
 		var fixed = 0;
 		var suppressedLine = -1;
 		var passedThrough = false;
 		for (var event : violations) {
+			final var checkName = extractCheckShortName(event);
 			final var fixer = resolveFixer(event, fixers, moduleIdFixers);
-			if (fixer == null)
+			if (fixer == null) {
+				trackSkip(skippedReasons, checkName, SkipMessages.FIX_NO_FIXER);
 				continue;
-			if (event.getSeverityLevel() != SeverityLevel.ERROR)
+			}
+			if (event.getSeverityLevel() != SeverityLevel.ERROR) {
+				trackSkip(skippedReasons, checkName, SkipMessages.FIX_SEVERITY);
 				continue;
+			}
 			final var lineIndex = event.getLine() - 1;
 			if (lineIndex == suppressedLine) {
 				// after a prior delete, a blank line may shift into this position;
@@ -170,17 +181,28 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 						&& lines.get(lineIndex).isEmpty()
 						&& fixer instanceof DeleteLineFixer)
 					passedThrough = true;
-				else
+				else {
+					trackSkip(skippedReasons, checkName, SkipMessages.FIX_SUPPRESSED);
 					continue;
+				}
 			}
 			else
 				passedThrough = false;
-			if (lineIndex < 0 || lineIndex >= lines.size())
+			if (lineIndex < 0 || lineIndex >= lines.size()) {
+				trackSkip(skippedReasons, checkName, SkipMessages.FIX_BOUNDS);
 				continue;
+			}
 			final var charColumn = tabColumnToCharIndex(lines.get(lineIndex), event.getColumn() - 1);
-			final var result = fixer.fix(lines, lineIndex, charColumn);
-			if (result == null)
+			final var attempt = fixer.fix(lines, lineIndex, charColumn);
+			if (attempt == null) {
+				trackSkip(skippedReasons, checkName, SkipMessages.FIX_NOT_FIXABLE);
 				continue;
+			}
+			if (attempt instanceof SkipResult(String reason)) {
+				trackSkip(skippedReasons, checkName, reason);
+				continue;
+			}
+			final var result = (FixResult) attempt;
 			if (result.endLine() >= result.startLine())
 				lines.subList(result.startLine(), result.endLine() + 1).clear();
 			lines.addAll(result.startLine(), result.replacement());
@@ -196,7 +218,10 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		if (!importsToAdd.isEmpty())
 			needsSecondPass = insertMissingImports(lines, importsToAdd) > 0;
 
-		return new ApplyFixesResult(fixed, needsSecondPass);
+		final var immutableReasons = new LinkedHashMap<String, List<String>>();
+		for (var entry : skippedReasons.entrySet())
+			immutableReasons.put(entry.getKey(), List.copyOf(entry.getValue()));
+		return new ApplyFixesResult(fixed, needsSecondPass, Map.copyOf(immutableReasons));
 	}
 
 	@CheckReturnValue
@@ -304,6 +329,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		var filesFixed = 0;
 		var totalFixed = 0;
 		var totalSkipped = 0;
+		final var allSkippedReasons = new LinkedHashMap<String, List<String>>();
 
 		for (var entry : violationsByFile.entrySet()) {
 			final var filePath = Path.of(entry.getKey());
@@ -320,11 +346,29 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			if (result.needsSecondPass())
 				needsSecondPass = true;
 			totalSkipped += totalViolations - result.fixCount();
+			for (var skipEntry : result.skippedReasons().entrySet())
+				allSkippedReasons.computeIfAbsent(skipEntry.getKey(), k -> new ArrayList<>()).addAll(skipEntry.getValue());
 		}
 
-		if (totalFixed > 0 || totalSkipped > 0)
+		if (totalFixed > 0 || totalSkipped > 0) {
 			System.out.println("Fixed " + totalFixed + " violations in " + filesFixed + " files (" + totalSkipped + " skipped)");
+			printSkipSummary(allSkippedReasons);
+		}
 		return needsSecondPass;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static String extractCheckShortName(@Nonnull AuditEvent event) {
+		final var moduleId = event.getModuleId();
+		if (moduleId != null && !moduleId.isEmpty())
+			return moduleId;
+		final var source = event.getSourceName();
+		if (source != null && !source.isEmpty()) {
+			final var dot = source.lastIndexOf('.');
+			return dot >= 0 ? source.substring(dot + 1) : source;
+		}
+		return "unknown";
 	}
 
 	/**
@@ -521,6 +565,30 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		return addedStatic + regularToAdd.size();
 	}
 
+	private static void printSkipSummary(@Nonnull Map<String, List<String>> allSkippedReasons) {
+		if (allSkippedReasons.isEmpty())
+			return;
+
+		record ReasonCount(@Nonnull String check, @Nonnull String reason, int count) {
+		}
+
+		final var entries = new ArrayList<ReasonCount>();
+		for (var entry : allSkippedReasons.entrySet()) {
+			final var reasonCounts = new LinkedHashMap<String, Integer>();
+			for (var reason : entry.getValue())
+				reasonCounts.merge(reason, 1, Integer::sum);
+			for (var rc : reasonCounts.entrySet())
+				entries.add(new ReasonCount(entry.getKey(), rc.getKey(), rc.getValue()));
+		}
+
+		entries.sort(Comparator.comparingInt(ReasonCount::count).reversed()
+				.thenComparing(ReasonCount::check));
+
+		System.out.println("Skipped violations:");
+		for (var entry : entries)
+			System.out.println("  " + entry.check() + ": " + entry.reason() + " (x" + entry.count() + ")");
+	}
+
 	@CheckReturnValue
 	@Nullable
 	private static CheckstyleFixer resolveFixer(
@@ -554,6 +622,14 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				++visualCol;
 		}
 		return line.length();
+	}
+
+	private static void trackSkip(
+			@Nonnull Map<String, List<String>> skippedReasons,
+			@Nonnull String checkName,
+			@Nonnull String reason
+	) {
+		skippedReasons.computeIfAbsent(checkName, k -> new ArrayList<>()).add(reason);
 	}
 
 	@Override

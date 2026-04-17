@@ -57,10 +57,11 @@ public class CheckstylePluginTest {
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// fixable errors: PreferPrefixIncrementCheck (source), NoTrailingWhitespace (message), NoDoubleBlankLines (message)
-		// not fixable: NoSpaceIndent (message not fixable), CovariantEquals (not fixable check), PreferVar warning (skipped)
+		// fixable: PreferPrefixIncrementCheck (source), NoTrailingWhitespace (message),
+		// NoDoubleBlankLines (message), PreferVarCheck (source, regardless of warning severity)
+		// not fixable: NoSpaceIndent (message not fixable), CovariantEquals (not fixable check)
 		assertArrayEquals(
-				new int[]{6, 3},
+				new int[]{6, 4},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
 		);
 	}
@@ -111,9 +112,9 @@ public class CheckstylePluginTest {
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// both are from fixable checks but at warning severity, so 0 fixable
+		// both are from fixable checks; severity no longer affects fixable count
 		assertArrayEquals(
-				new int[]{2, 0},
+				new int[]{2, 2},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
 		);
 	}
@@ -130,6 +131,22 @@ public class CheckstylePluginTest {
 		final var file = writeXml(xml);
 		assertArrayEquals(
 				new int[]{3, 3},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsSameSourceMixedSeverity() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="error" message="msg" source="com.etk2000.checkstyle.PreferVarCheck"/>
+				<error line="2" severity="warning" message="msg" source="com.etk2000.checkstyle.PreferVarCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		// both should be counted: total=2, fixable=2 (severity does not affect fixable count)
+		assertArrayEquals(
+				new int[]{2, 2},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
 		);
 	}

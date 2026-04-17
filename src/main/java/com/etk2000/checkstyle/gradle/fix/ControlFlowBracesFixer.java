@@ -240,7 +240,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		if (lineIndex < 0 || lineIndex >= lines.size())
 			return null;
 
@@ -248,7 +248,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		final var stripped = line.stripLeading();
 
 		if (!stripped.startsWith("do ") && !stripped.equals("do") && !stripped.startsWith("do\t"))
-			return null;
+			return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP);
 
 		final var indent = extractIndent(line);
 

@@ -270,14 +270,14 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixResult fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
 
 		var result = fixClamp(line);
 		if (result == null)
 			result = fixTernary(line);
 		if (result == null)
-			return null;
+			return new SkipResult(SkipMessages.MATH_METHOD_SKIP);
 
 		return new FixResult(lineIndex, lineIndex, List.of(result));
 	}
