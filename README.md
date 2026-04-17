@@ -47,6 +47,7 @@ Fixable checks:
 | AnnotationSameLineCheck             | Joins stacked annotations onto the declaration line, sorts inline annotations                                               |
 | AvoidNoArgumentSuperConstructorCall | Removes the redundant `super()` line                                                                                        |
 | ExplicitInitialization              | Removes `= 0`/`= null`/`= false` etc.                                                                                       |
+| FieldSortingCheck (enum only)       | Sorts enum constants alphabetically and splits same-line constants onto separate lines                                      |
 | FinalLocalVariable                  | Adds `final` keyword to non-final locals                                                                                    |
 | LambdaParameterTypeCheck            | Removes explicit types, replaces with `var` when annotated, removes unnecessary parens                                      |
 | NoArrayTrailingCommaCheck           | Removes the trailing comma                                                                                                  |

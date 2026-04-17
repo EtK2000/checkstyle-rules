@@ -719,8 +719,9 @@ public class CheckstyleFixIntegrationTest {
 		Files.writeString(file.toPath(), "enum Color {\n\tRED,\n\tGREEN,\n}");
 
 		final var output = runFixAndGetResult(file);
-		assertEquals("enum Color {\n\tRED,\n\tGREEN\n}", output.content());
-		assertEquals(1, output.result().fixCount());
+		// FieldSortingFixer sorts GREEN before RED; trailing comma fixer removes the comma
+		assertEquals("enum Color {\n\tGREEN,\n\tRED\n}", output.content());
+		assertEquals(2, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
 
@@ -743,6 +744,136 @@ public class CheckstyleFixIntegrationTest {
 		final var output = runFixAndGetResult(file);
 		assertEquals("class T {\n\tint a, b;\n}", output.content());
 		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingEnumAlreadySorted() throws Exception {
+		final var file = tempDir.resolve("SortedEnum.java").toFile();
+		Files.writeString(file.toPath(), "enum T {\n\tALPHA,\n\tBETA\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum T {\n\tALPHA,\n\tBETA\n}", output.content());
+		assertEquals(0, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingEnumInnerClass() throws Exception {
+		final var file = tempDir.resolve("InnerEnum.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tenum E {\n\t\tBETA,\n\t\tALPHA\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tenum E {\n\t\tALPHA,\n\t\tBETA\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingEnumReorder() throws Exception {
+		final var file = tempDir.resolve("EnumReorder.java").toFile();
+		Files.writeString(file.toPath(), "enum T {\n\tBETA,\n\tALPHA\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum T {\n\tALPHA,\n\tBETA\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingEnumSameLine() throws Exception {
+		final var file = tempDir.resolve("EnumSameLine.java").toFile();
+		Files.writeString(file.toPath(), "enum T {\n\tALPHA, BETA\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum T {\n\tALPHA,\n\tBETA\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingEnumSameLineAndReorder() throws Exception {
+		final var file = tempDir.resolve("EnumSameLineReorder.java").toFile();
+		Files.writeString(file.toPath(), "enum T {\n\tZEBRA, ALPHA\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum T {\n\tALPHA,\n\tZEBRA\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingEnumSemicolon() throws Exception {
+		final var file = tempDir.resolve("EnumSemi.java").toFile();
+		Files.writeString(file.toPath(), "enum T {\n\tBETA,\n\tALPHA;\n\tint x;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum T {\n\tALPHA,\n\tBETA;\n\tint x;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingEnumWithAnnotations() throws Exception {
+		final var file = tempDir.resolve("EnumAnnot.java").toFile();
+		Files.writeString(file.toPath(), "enum T {\n\t@Deprecated\n\tBETA,\n\tALPHA\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum T {\n\tALPHA,\n\t@Deprecated\n\tBETA\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingEnumWithArgs() throws Exception {
+		final var file = tempDir.resolve("EnumArgs.java").toFile();
+		Files.writeString(file.toPath(), "enum T {\n\tCHERRY(\"r\"),\n\tAPPLE(\"g\")\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum T {\n\tAPPLE(\"g\"),\n\tCHERRY(\"r\")\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingEnumWithBodies() throws Exception {
+		final var file = tempDir.resolve("EnumBodies.java").toFile();
+		final var input = "enum T {\n\tSUB {\n\t\tint v() {\n\t\t\treturn 1;\n\t\t}\n\t},\n"
+				+ "\tADD {\n\t\tint v() {\n\t\t\treturn 0;\n\t\t}\n\t};\n"
+				+ "\tabstract int v();\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expectedOutput = "enum T {\n\tADD {\n\t\tint v() {\n\t\t\treturn 0;\n\t\t}\n\t},\n"
+				+ "\tSUB {\n\t\tint v() {\n\t\t\treturn 1;\n\t\t}\n\t};\n"
+				+ "\tabstract int v();\n}";
+		assertEquals(
+				expectedOutput,
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingEnumWithTrailingComments() throws Exception {
+		final var file = tempDir.resolve("EnumComments.java").toFile();
+		Files.writeString(file.toPath(), "enum T {\n\tBETA, // b\n\tALPHA // a\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("enum T {\n\tALPHA, // a\n\tBETA // b\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingFieldViolationNotFixed() throws Exception {
+		final var file = tempDir.resolve("FieldOrder.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tstatic final String Z = \"z\";\n\tstatic final int A = 0;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tstatic final String Z = \"z\";\n\tstatic final int A = 0;\n}", output.content());
+		assertEquals(0, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
 
