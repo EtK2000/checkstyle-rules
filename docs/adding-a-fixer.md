@@ -209,3 +209,8 @@ resources.
 
 - **Update auto-fix-coverage.md**: when adding a fixer, add it to `docs/auto-fix-coverage.md`
   in the appropriate table (TreeWalker checks or regex checks).
+
+- **@SuppressWarnings and fixers**: if the check supports `@SuppressWarnings` suppression (see
+  [docs/suppress-warnings.md](suppress-warnings.md)), the fixer automatically skips suppressed
+  types because the check never reports violations for them. No separate handling is needed in
+  the fixer.

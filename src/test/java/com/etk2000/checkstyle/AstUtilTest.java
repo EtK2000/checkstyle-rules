@@ -170,6 +170,27 @@ public class AstUtilTest {
 		return null;
 	}
 
+	static Stream<Arguments> hasSuppressWarningsProvider() {
+		return Stream.of(
+				Arguments.of("@SuppressWarnings(\"Foo\") class T {}", "Foo", true),
+				Arguments.of("@SuppressWarnings(\"Bar\") class T {}", "Foo", false),
+				Arguments.of("@SuppressWarnings({\"Foo\"}) class T {}", "Foo", true),
+				Arguments.of("@SuppressWarnings({\"Bar\", \"Foo\"}) class T {}", "Foo", true),
+				Arguments.of("@SuppressWarnings({\"Foo\", \"Bar\"}) class T {}", "Foo", true),
+				Arguments.of("@SuppressWarnings({\"Bar\"}) class T {}", "Foo", false),
+				Arguments.of("@SuppressWarnings(value = \"Foo\") class T {}", "Foo", true),
+				Arguments.of("@SuppressWarnings(value = \"Bar\") class T {}", "Foo", false),
+				Arguments.of("@SuppressWarnings(value = {\"Foo\", \"Bar\"}) class T {}", "Foo", true),
+				Arguments.of("@SuppressWarnings(value = {\"Bar\", \"Foo\"}) class T {}", "Foo", true),
+				Arguments.of("@SuppressWarnings(value = {\"Bar\"}) class T {}", "Foo", false),
+				Arguments.of("@SuppressWarnings(value = {}) class T {}", "Foo", false),
+				Arguments.of("@SuppressWarnings({}) class T {}", "Foo", false),
+				Arguments.of("@java.lang.SuppressWarnings(\"Foo\") class T {}", "Foo", true),
+				Arguments.of("class T {}", "Foo", false),
+				Arguments.of("@Deprecated class T {}", "Foo", false)
+		);
+	}
+
 	private static boolean isZeroLiteral(@Nonnull String literal) throws Exception {
 		final var ast = parseSource("class T { void f() { var x = " + literal + "; } }");
 		for (var type : new int[]{TokenTypes.NUM_DOUBLE, TokenTypes.NUM_FLOAT, TokenTypes.NUM_INT, TokenTypes.NUM_LONG}) {
@@ -624,6 +645,15 @@ public class AstUtilTest {
 		final var ast = parseSource("class T { void f() { Xyz custom = null; custom.method().other(); } }");
 		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
 		assertNull(AstUtil.getReceiverTypeName(methodCall, null, Set.of()));
+	}
+
+	@MethodSource("hasSuppressWarningsProvider")
+	@ParameterizedTest
+	void testHasSuppressWarnings(String source, String key, boolean expected) throws Exception {
+		final var ast = parseSource(source);
+		final var classDef = requireNonNull(findFirst(ast, TokenTypes.CLASS_DEF));
+		final var modifiers = classDef.findFirstToken(TokenTypes.MODIFIERS);
+		assertEquals(expected, AstUtil.hasSuppressWarnings(modifiers, key));
 	}
 
 	@Test

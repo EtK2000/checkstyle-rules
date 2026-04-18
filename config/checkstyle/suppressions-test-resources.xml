@@ -48,6 +48,8 @@
 	<suppress checks="PreferStaticImportCheck" files="inputs[\\/]preferstaticimport[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]annotationsyntax[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
+	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]preferrecord[\\/]" />
 	<suppress checks="RedundantCastCheck" files="inputs[\\/]redundantcast[\\/]" />
 	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]redundantsuffix[\\/]" />
 	<suppress checks="SwitchCaseOrderCheck" files="inputs[\\/]switchorder[\\/]" />
@@ -98,6 +100,7 @@
 	<suppress checks="PreferImportCheck" files="inputs[\\/]astutil[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]collectioninterface[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]preferrecord[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]multilinecall[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]switchorder[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]fieldsorting[\\/]" />

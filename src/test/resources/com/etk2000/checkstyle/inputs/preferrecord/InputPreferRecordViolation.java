@@ -259,3 +259,30 @@ class WithMultipleImplements implements Cloneable, Comparable<WithMultipleImplem
 		return Integer.compare(value, o.value);
 	}
 }
+
+@SuppressWarnings("unused")
+class SuppressedWrongKey { // violation: class should be a record
+	final int value;
+
+	SuppressedWrongKey(int value) {
+		this.value = value;
+	}
+}
+
+@SuppressWarnings(value = "unused")
+class SuppressedWrongKeyExplicit { // violation: class should be a record
+	final int value;
+
+	SuppressedWrongKeyExplicit(int value) {
+		this.value = value;
+	}
+}
+
+@SuppressWarnings("PreferRecord")
+class SuppressedSibling {
+	final int value;
+
+	SuppressedSibling(int value) {
+		this.value = value;
+	}
+}

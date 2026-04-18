@@ -19,7 +19,7 @@ public class PreferRecordCheckTest {
 	@Test
 	public void testViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferRecordCheck.class, DIR + "InputPreferRecordViolation.java");
-		assertEquals(26, violations.size());
+		assertEquals(28, violations.size());
 
 		assertEquals(10, violations.get(0).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
@@ -124,5 +124,13 @@ public class PreferRecordCheckTest {
 		assertEquals(250, violations.get(25).getLine());
 		assertEquals(SeverityLevel.WARNING, violations.get(25).getSeverityLevel());
 		assertEquals("Class 'WithMultipleImplements' " + MSG, violations.get(25).getMessage());
+
+		assertEquals(263, violations.get(26).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(26).getSeverityLevel());
+		assertEquals("Class 'SuppressedWrongKey' " + MSG, violations.get(26).getMessage());
+
+		assertEquals(272, violations.get(27).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(27).getSeverityLevel());
+		assertEquals("Class 'SuppressedWrongKeyExplicit' " + MSG, violations.get(27).getMessage());
 	}
 }

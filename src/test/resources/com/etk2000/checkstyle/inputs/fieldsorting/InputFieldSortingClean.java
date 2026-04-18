@@ -132,3 +132,81 @@ class InputFieldSortingClean {
 		this.lookup = lookup;
 	}
 }
+
+@SuppressWarnings("FieldSorting")
+enum InputFieldSortingCleanSuppressedEnum {
+	ZEBRA,
+	ALPHA
+}
+
+@SuppressWarnings({"FieldSorting"})
+enum InputFieldSortingCleanSuppressedArrayEnum {
+	ZEBRA,
+	ALPHA
+}
+
+@SuppressWarnings({"FieldSorting", "unused"})
+enum InputFieldSortingCleanSuppressedMixedEnum {
+	ZEBRA,
+	ALPHA
+}
+
+@SuppressWarnings("FieldSorting")
+class InputFieldSortingCleanSuppressedClass {
+	static String z;
+	static int a;
+	String name;
+	int count;
+}
+
+@SuppressWarnings({"unused", "FieldSorting"})
+enum InputFieldSortingCleanSuppressedKeySecond {
+	ZEBRA,
+	ALPHA
+}
+
+class InputFieldSortingCleanSuppressedOuter {
+	@SuppressWarnings("FieldSorting")
+	enum Inner {
+		ZEBRA,
+		ALPHA
+	}
+}
+
+@SuppressWarnings(value = "FieldSorting")
+enum InputFieldSortingCleanSuppressedExplicitValue {
+	ZEBRA,
+	ALPHA
+}
+
+@SuppressWarnings(value = {"FieldSorting"})
+enum InputFieldSortingCleanSuppressedExplicitValueArray {
+	ZEBRA,
+	ALPHA
+}
+
+@SuppressWarnings(value = {"FieldSorting", "unused"})
+enum InputFieldSortingCleanSuppressedExplicitValueMixed {
+	ZEBRA,
+	ALPHA
+}
+
+@SuppressWarnings(value = {"unused", "FieldSorting"})
+enum InputFieldSortingCleanSuppressedExplicitValueMixedSecond {
+	ZEBRA,
+	ALPHA
+}
+
+@java.lang.SuppressWarnings("FieldSorting")
+enum InputFieldSortingCleanSuppressedQualified {
+	ZEBRA,
+	ALPHA
+}
+
+enum InputFieldSortingCleanSuppressedConstantBody {
+	@SuppressWarnings("FieldSorting")
+	INSTANCE {
+		String name;
+		int count;
+	}
+}

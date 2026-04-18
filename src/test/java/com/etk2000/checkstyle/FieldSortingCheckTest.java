@@ -76,7 +76,7 @@ public class FieldSortingCheckTest {
 	@Test
 	public void testEnumConstantViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingEnumConstantViolation.java");
-		assertEquals(8, violations.size());
+		assertEquals(10, violations.size());
 		var i = 0;
 		assertEquals(5, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
@@ -102,6 +102,12 @@ public class FieldSortingCheckTest {
 		assertEquals(63, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Enum constant 'XENON' must appear before 'YELLOW' (alphabetical order).", violations.get(i++).getMessage());
+		assertEquals(70, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'ALPHA' must appear before 'ZEBRA' (alphabetical order).", violations.get(i++).getMessage());
+		assertEquals(76, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Enum constant 'ALPHA' must appear before 'ZEBRA' (alphabetical order).", violations.get(i++).getMessage());
 	}
 
 	@Test
@@ -145,9 +151,12 @@ public class FieldSortingCheckTest {
 	@Test
 	public void testTypeViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingTypeViolation.java");
-		assertEquals(1, violations.size());
-		assertEquals(5, violations.getFirst().getLine());
-		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
-		assertEquals("Field 'count' (type 'int') must appear before 'name' (type 'String').", violations.getFirst().getMessage());
+		assertEquals(2, violations.size());
+		assertEquals(5, violations.get(0).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
+		assertEquals("Field 'count' (type 'int') must appear before 'name' (type 'String').", violations.get(0).getMessage());
+		assertEquals(11, violations.get(1).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
+		assertEquals("Field 'count' (type 'int') must appear before 'name' (type 'String').", violations.get(1).getMessage());
 	}
 }

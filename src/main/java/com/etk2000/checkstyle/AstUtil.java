@@ -135,6 +135,24 @@ class AstUtil {
 		return false;
 	}
 
+	@CheckReturnValue
+	private static boolean containsStringValue(@Nonnull DetailAST ast, @Nonnull String value) {
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(ast);
+		while (!stack.isEmpty()) {
+			final var node = stack.pop();
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
+				if (child.getType() == TokenTypes.STRING_LITERAL) {
+					final var text = child.getText();
+					if (text.length() >= 2 && value.equals(text.substring(1, text.length() - 1)))
+						return true;
+				}
+				stack.push(child);
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * Builds human-readable text for an expression AST.
 	 * Unlike {@link #exprText} which is designed for equality comparison,
@@ -483,6 +501,19 @@ class AstUtil {
 			return FullIdent.createFullIdent(dot).getText();
 
 		return null;
+	}
+
+	@CheckReturnValue
+	static boolean hasSuppressWarnings(@Nonnull DetailAST modifiers, @Nonnull String key) {
+		for (var child = modifiers.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() != TokenTypes.ANNOTATION)
+				continue;
+			if (!"SuppressWarnings".equals(annotationName(child)))
+				continue;
+			if (containsStringValue(child, key))
+				return true;
+		}
+		return false;
 	}
 
 	@CheckReturnValue

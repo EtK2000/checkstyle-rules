@@ -153,6 +153,8 @@ public class PreferRecordCheck extends AbstractCheck {
 		final var modifiers = ast.findFirstToken(TokenTypes.MODIFIERS);
 		if (modifiers != null && modifiers.findFirstToken(TokenTypes.ABSTRACT) != null)
 			return;
+		if (modifiers != null && AstUtil.hasSuppressWarnings(modifiers, "PreferRecord"))
+			return;
 
 		if (hasExtendsClause(ast))
 			return;

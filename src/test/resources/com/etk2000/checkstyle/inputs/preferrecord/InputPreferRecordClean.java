@@ -232,3 +232,104 @@ class WrongParamType {
 		this.value = value;
 	}
 }
+
+@SuppressWarnings("PreferRecord")
+class SuppressedSimple {
+	final int value;
+
+	SuppressedSimple(int value) {
+		this.value = value;
+	}
+}
+
+@SuppressWarnings({"PreferRecord"})
+class SuppressedArray {
+	final int value;
+
+	SuppressedArray(int value) {
+		this.value = value;
+	}
+}
+
+@SuppressWarnings({"PreferRecord", "unused"})
+class SuppressedMixed {
+	final int value;
+
+	SuppressedMixed(int value) {
+		this.value = value;
+	}
+}
+
+@SuppressWarnings({"unused", "PreferRecord"})
+class SuppressedKeySecond {
+	final int value;
+
+	SuppressedKeySecond(int value) {
+		this.value = value;
+	}
+}
+
+@SuppressWarnings("PreferRecord")
+class SuppressedWithImplements implements Cloneable {
+	final int value;
+
+	SuppressedWithImplements(int value) {
+		this.value = value;
+	}
+}
+
+class SuppressedInnerOuter {
+	@SuppressWarnings("PreferRecord")
+	static class Inner {
+		final int value;
+
+		Inner(int value) {
+			this.value = value;
+		}
+	}
+}
+
+@SuppressWarnings(value = "PreferRecord")
+class SuppressedExplicitValue {
+	final int value;
+
+	SuppressedExplicitValue(int value) {
+		this.value = value;
+	}
+}
+
+@SuppressWarnings(value = {"PreferRecord"})
+class SuppressedExplicitValueArray {
+	final int value;
+
+	SuppressedExplicitValueArray(int value) {
+		this.value = value;
+	}
+}
+
+@SuppressWarnings(value = {"PreferRecord", "unused"})
+class SuppressedExplicitValueMixed {
+	final int value;
+
+	SuppressedExplicitValueMixed(int value) {
+		this.value = value;
+	}
+}
+
+@SuppressWarnings(value = {"unused", "PreferRecord"})
+class SuppressedExplicitValueMixedSecond {
+	final int value;
+
+	SuppressedExplicitValueMixedSecond(int value) {
+		this.value = value;
+	}
+}
+
+@java.lang.SuppressWarnings("PreferRecord")
+class SuppressedQualified {
+	final int value;
+
+	SuppressedQualified(int value) {
+		this.value = value;
+	}
+}

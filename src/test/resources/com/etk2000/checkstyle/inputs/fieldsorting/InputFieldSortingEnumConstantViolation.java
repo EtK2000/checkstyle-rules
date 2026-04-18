@@ -63,3 +63,21 @@ enum InputFieldSortingEnumConstantViolationOuterEnum {
 		XENON // violation: Enum constant 'XENON' must appear before 'YELLOW' (alphabetical order).
 	}
 }
+
+@SuppressWarnings("unused")
+enum InputFieldSortingEnumConstantViolationWrongKey {
+	ZEBRA,
+	ALPHA // violation: Enum constant 'ALPHA' must appear before 'ZEBRA' (alphabetical order).
+}
+
+@SuppressWarnings(value = "unused")
+enum InputFieldSortingEnumConstantViolationWrongKeyExplicit {
+	ZEBRA,
+	ALPHA // violation: Enum constant 'ALPHA' must appear before 'ZEBRA' (alphabetical order).
+}
+
+@SuppressWarnings("FieldSorting")
+enum InputFieldSortingEnumConstantViolationSuppressedSibling {
+	ZEBRA,
+	ALPHA
+}

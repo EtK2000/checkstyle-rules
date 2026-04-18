@@ -294,6 +294,15 @@ public class FieldSortingCheck extends AbstractCheck {
 
 	@Override
 	public void visitToken(@Nonnull DetailAST ast) {
+		final var parent = ast.getParent();
+		if (parent != null) {
+			var parentModifiers = parent.findFirstToken(TokenTypes.MODIFIERS);
+			if (parentModifiers == null)
+				parentModifiers = parent.findFirstToken(TokenTypes.ANNOTATIONS);
+			if (parentModifiers != null && AstUtil.hasSuppressWarnings(parentModifiers, "FieldSorting"))
+				return;
+		}
+
 		final var enumConstants = new ArrayList<DetailAST>();
 		final var staticFields = new ArrayList<DetailAST>();
 		final var instanceFields = new ArrayList<DetailAST>();

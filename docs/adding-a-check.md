@@ -80,6 +80,9 @@ Common utilities in `AstUtil` (check before writing your own):
 - `resolveVariableType(DetailAST, String)`: finds the declared type of a variable by walking up
   scopes. Returns null for primitives and `var`
 - `getReceiverTypeName(DetailAST)`: finds the type of a method call's receiver
+- `hasSuppressWarnings(DetailAST, String)`: checks if a MODIFIERS node contains
+  `@SuppressWarnings` with a specific key. Use for per-type suppression support (see
+  `docs/suppress-warnings.md`)
 
 When adding general-purpose utilities, add them to `AstUtil` with tests in `AstUtilTest` rather
 than keeping them private in the check class. This prevents duplication when another check needs
@@ -241,6 +244,13 @@ its own test directory.
 
 If your check also fires on test resources for OTHER checks (e.g., a ternary check fires on
 ternaries in the `controlflow/` test directory), add cross-check suppressions in the second section.
+
+## 9. (Optional) Add @SuppressWarnings support
+
+If users may need to exempt specific types from the check (e.g., intentionally non-alphabetical
+enum constants), add `@SuppressWarnings` support. See
+[docs/suppress-warnings.md](suppress-warnings.md) for implementation details and the full list of
+existing suppression keys.
 
 ## Common pitfalls
 
