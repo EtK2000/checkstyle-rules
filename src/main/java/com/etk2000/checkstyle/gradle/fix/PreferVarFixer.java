@@ -112,6 +112,83 @@ class PreferVarFixer implements CheckstyleFixer {
 	}
 
 	/**
+	 * Replaces {@code <Object>} (or {@code <Object, Object>}, etc.) with
+	 * {@code <>} on a {@code new} expression when the declared type is
+	 * {@code var}. With {@code var}, the diamond operator infers
+	 * {@code Object} by default, so explicit type arguments are redundant.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixRedundantObjectTypeArgs(@Nonnull String line) {
+		// find '=' outside parentheses (skip annotation args like value = ...)
+		var eqIdx = -1;
+		var parenDepth = 0;
+		for (var i = 0; i < line.length(); ++i) {
+			final var ch = line.charAt(i);
+			if (ch == '(')
+				++parenDepth;
+			else if (ch == ')')
+				--parenDepth;
+			else if (ch == '=' && parenDepth == 0 && i + 1 < line.length() && line.charAt(i + 1) != '=') {
+				eqIdx = i;
+				break;
+			}
+		}
+		if (eqIdx < 0)
+			return null;
+
+		final var beforeEq = line.substring(0, eqIdx);
+		var varIdx = -1;
+		var searchFrom = 0;
+		while (true) {
+			varIdx = beforeEq.indexOf("var ", searchFrom);
+			if (varIdx < 0)
+				return null;
+			// "var" must be preceded by whitespace or start-of-string
+			// (rejects identifiers like "myvar" AND annotations like "@var")
+			if (varIdx == 0 || Character.isWhitespace(beforeEq.charAt(varIdx - 1)))
+				break;
+			searchFrom = varIdx + 1;
+		}
+
+		final var newIdx = line.indexOf("new ", eqIdx + 1);
+		if (newIdx < 0)
+			return null;
+
+		var pos = newIdx + 4;
+		while (pos < line.length() && (Character.isJavaIdentifierPart(line.charAt(pos)) || line.charAt(pos) == '.'))
+			++pos;
+
+		if (pos >= line.length() || line.charAt(pos) != '<')
+			return null;
+
+		final var angleStart = pos;
+
+		var depth = 1;
+		++pos;
+		while (pos < line.length() && depth > 0) {
+			if (line.charAt(pos) == '<')
+				++depth;
+			else if (line.charAt(pos) == '>')
+				--depth;
+			++pos;
+		}
+		if (depth != 0)
+			return null;
+
+		final var content = line.substring(angleStart + 1, pos - 1);
+		if (content.isEmpty())
+			return null;
+		for (var part : content.split(",", -1)) {
+			final var trimmed = part.trim();
+			if (!"Object".equals(trimmed) && !"java.lang.Object".equals(trimmed))
+				return null;
+		}
+
+		return line.substring(0, angleStart + 1) + line.substring(pos - 1);
+	}
+
+	/**
 	 * Replaces an explicit type with {@code var}, skipping annotations
 	 * and the {@code final} keyword if present.
 	 */
@@ -187,12 +264,22 @@ class PreferVarFixer implements CheckstyleFixer {
 		while (scanPos < line.length()) {
 			final var ch = line.charAt(scanPos);
 			if (inString) {
-				if (ch == '"' && line.charAt(scanPos - 1) != '\\')
-					inString = false;
+				if (ch == '"') {
+					var backslashes = 0;
+					for (var bs = scanPos - 1; bs >= 0 && line.charAt(bs) == '\\'; --bs)
+						++backslashes;
+					if (backslashes % 2 == 0)
+						inString = false;
+				}
 			}
 			else if (inChar) {
-				if (ch == '\'' && line.charAt(scanPos - 1) != '\\')
-					inChar = false;
+				if (ch == '\'') {
+					var backslashes = 0;
+					for (var bs = scanPos - 1; bs >= 0 && line.charAt(bs) == '\\'; --bs)
+						++backslashes;
+					if (backslashes % 2 == 0)
+						inChar = false;
+				}
 			}
 			else if (ch == '"')
 				inString = true;
@@ -221,6 +308,11 @@ class PreferVarFixer implements CheckstyleFixer {
 		final var arrayResult = fixExplicitArrayInit(line);
 		if (arrayResult != null)
 			return new FixResult(lineIndex, lineIndex, List.of(arrayResult));
+
+		// try diamond fix path (MSG_DIAMOND)
+		final var diamondResult = fixRedundantObjectTypeArgs(line);
+		if (diamondResult != null)
+			return new FixResult(lineIndex, lineIndex, List.of(diamondResult));
 
 		// try type-to-var path (MSG_LOCAL, MSG_FOREACH, MSG_TRY)
 		final var varResult = fixTypeToVar(line, column);

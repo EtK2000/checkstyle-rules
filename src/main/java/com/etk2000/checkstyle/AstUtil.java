@@ -164,7 +164,7 @@ class AstUtil {
 	@Nonnull
 	static String displayText(@Nonnull DetailAST ast) {
 		final var sb = new StringBuilder();
-		final var stack = new ArrayDeque<Object>();
+		final var stack = new ArrayDeque<>();
 		stack.push(ast);
 		while (!stack.isEmpty()) {
 			final var task = stack.pop();
@@ -380,6 +380,33 @@ class AstUtil {
 				stack.push(children.get(i));
 		}
 		return sb.toString();
+	}
+
+	/**
+	 * Finds the class-level TYPE_ARGUMENTS on a LITERAL_NEW node,
+	 * handling both simple names ({@code new Foo<T>()}) and qualified
+	 * names ({@code new pkg.Foo<T>()}). Constructor-level type arguments
+	 * ({@code new <T>Foo()}) are skipped. Returns {@code null} if no
+	 * class-level type arguments exist (including diamond {@code <>}).
+	 */
+	@CheckReturnValue
+	@Nullable
+	static DetailAST findNewClassTypeArguments(@Nonnull DetailAST literalNew) {
+		// simple name: LITERAL_NEW > IDENT > TYPE_ARGUMENTS (as siblings)
+		var pastClassName = false;
+		for (var child = literalNew.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.IDENT || child.getType() == TokenTypes.DOT)
+				pastClassName = true;
+			else if (pastClassName && child.getType() == TokenTypes.TYPE_ARGUMENTS)
+				return child;
+		}
+
+		// qualified name: TYPE_ARGUMENTS may be nested inside the DOT subtree
+		final var dot = literalNew.findFirstToken(TokenTypes.DOT);
+		if (dot != null)
+			return dot.findFirstToken(TokenTypes.TYPE_ARGUMENTS);
+
+		return null;
 	}
 
 	/**

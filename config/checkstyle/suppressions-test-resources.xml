@@ -102,6 +102,7 @@
 	<suppress checks="PreferImportCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]preferrecord[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]multilinecall[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]switchorder[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="PreferRecordCheck" files="inputs[\\/]fieldconsolidation[\\/]" />

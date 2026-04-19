@@ -487,6 +487,60 @@ public class AstUtilTest {
 	}
 
 	@Test
+	public void testFindNewClassTypeArgumentsConstructorLevelSkipped() throws Exception {
+		final var ast = parseSource("class T { <U> T(U arg) {} void f() { var x = new <String>T(\"a\"); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		// constructor-level <String> should NOT be returned
+		assertNull(AstUtil.findNewClassTypeArguments(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassTypeArgumentsConstructorLevelWithClassLevel() throws Exception {
+		final var ast = parseSource(
+				"import java.util.ArrayList;\nclass T { <U> T(U arg) {} void f() { var x = new <String>ArrayList<Object>(\"a\"); } }"
+		);
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		// should return the class-level <Object>, not the constructor-level <String>
+		final var typeArgs = AstUtil.findNewClassTypeArguments(literalNew);
+		assertTrue(typeArgs != null && typeArgs.findFirstToken(TokenTypes.TYPE_ARGUMENT) != null);
+		final var typeArg = typeArgs.findFirstToken(TokenTypes.TYPE_ARGUMENT);
+		final var ident = typeArg.findFirstToken(TokenTypes.IDENT);
+		assertEquals("Object", ident.getText());
+	}
+
+	@Test
+	public void testFindNewClassTypeArgumentsDiamond() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = new java.util.ArrayList<>(); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		final var typeArgs = AstUtil.findNewClassTypeArguments(literalNew);
+		// diamond <> has TYPE_ARGUMENTS but no TYPE_ARGUMENT children
+		assertTrue(typeArgs == null || typeArgs.findFirstToken(TokenTypes.TYPE_ARGUMENT) == null);
+	}
+
+	@Test
+	public void testFindNewClassTypeArgumentsNoTypeArgs() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = new Object(); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertNull(AstUtil.findNewClassTypeArguments(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassTypeArgumentsQualifiedName() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = new java.util.ArrayList<Object>(); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		final var typeArgs = AstUtil.findNewClassTypeArguments(literalNew);
+		assertTrue(typeArgs != null && typeArgs.findFirstToken(TokenTypes.TYPE_ARGUMENT) != null);
+	}
+
+	@Test
+	public void testFindNewClassTypeArgumentsSimpleName() throws Exception {
+		final var ast = parseSource("import java.util.ArrayList;\nclass T { void f() { var x = new ArrayList<Object>(); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		final var typeArgs = AstUtil.findNewClassTypeArguments(literalNew);
+		assertTrue(typeArgs != null && typeArgs.findFirstToken(TokenTypes.TYPE_ARGUMENT) != null);
+	}
+
+	@Test
 	public void testGetReceiverTypeNameBareCall() throws Exception {
 		final var ast = parseSource("class T { void foo() {} void f() { foo(); } }");
 		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);

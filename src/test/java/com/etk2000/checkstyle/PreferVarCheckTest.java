@@ -70,6 +70,49 @@ public class PreferVarCheckTest {
 	}
 
 	@Test
+	public void testDiamondViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarDiamondViolation.java");
+		assertEquals(9, violations.size());
+
+		final var msg = "Use diamond operator '<>' instead of explicit '<Object>' with 'var'.";
+		var i = 0;
+
+		assertEquals(10, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(msg, violations.get(i++).getMessage());
+
+		assertEquals(19, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(msg, violations.get(i++).getMessage());
+		assertEquals(20, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(msg, violations.get(i++).getMessage());
+
+		assertEquals(24, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(msg, violations.get(i++).getMessage());
+
+		assertEquals(28, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(msg, violations.get(i++).getMessage());
+
+		assertEquals(32, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(msg, violations.get(i++).getMessage());
+
+		assertEquals(36, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(msg, violations.get(i++).getMessage());
+
+		assertEquals(40, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(msg, violations.get(i++).getMessage());
+		assertEquals(41, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(msg, violations.get(i++).getMessage());
+	}
+
+	@Test
 	public void testExplicitTypeLiteralMismatchViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarLiteralMismatchViolation.java");
 		assertEquals(65, violations.size());

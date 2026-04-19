@@ -25,6 +25,7 @@ public class PreferVarCheck extends AbstractCheck {
 		WARN
 	}
 
+	private static final String MSG_DIAMOND = "prefer.var.diamond";
 	private static final String MSG_FOREACH = "prefer.var.foreach";
 	private static final String MSG_LOCAL = "prefer.var.local";
 	private static final String MSG_TRY = "prefer.var.try.resource";
@@ -99,6 +100,48 @@ public class PreferVarCheck extends AbstractCheck {
 			case TokenTypes.LITERAL_SHORT -> "short";
 			default -> null;
 		};
+	}
+
+	/**
+	 * Checks whether the initializer is a {@code new XXX<Object[, Object]...>()}
+	 * constructor call where all class-level type arguments are bare
+	 * {@code Object} or {@code java.lang.Object}. Constructor-level type
+	 * arguments ({@code new <T>Foo()}) are ignored.
+	 */
+	@CheckReturnValue
+	private static boolean hasAllObjectTypeArgs(@Nonnull DetailAST assign) {
+		var value = assign.getFirstChild();
+		if (value != null && value.getType() == TokenTypes.EXPR)
+			value = value.getFirstChild();
+		if (value == null || value.getType() != TokenTypes.LITERAL_NEW)
+			return false;
+
+		final var typeArgs = AstUtil.findNewClassTypeArguments(value);
+		if (typeArgs == null)
+			return false;
+
+		var hasTypeArg = false;
+		for (var child = typeArgs.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() != TokenTypes.TYPE_ARGUMENT)
+				continue;
+			hasTypeArg = true;
+
+			// must be exactly one child: IDENT "Object" or DOT "java.lang.Object"
+			if (child.getChildCount() != 1)
+				return false;
+			final var firstChild = child.getFirstChild();
+			if (firstChild.getType() == TokenTypes.IDENT) {
+				if (!"Object".equals(firstChild.getText()))
+					return false;
+			}
+			else if (firstChild.getType() == TokenTypes.DOT) {
+				if (!"java.lang.Object".equals(FullIdent.createFullIdent(firstChild).getText()))
+					return false;
+			}
+			else
+				return false;
+		}
+		return hasTypeArg;
 	}
 
 	@CheckReturnValue
@@ -532,6 +575,13 @@ public class PreferVarCheck extends AbstractCheck {
 				if (assign == null)
 					return;
 
+				// redundant <Object> with var: applies regardless of
+				// anonymous class, constructor args, etc.
+				if (isVarType(ast) && hasAllObjectTypeArgs(assign)) {
+					log(ast, MSG_DIAMOND);
+					return;
+				}
+
 				// multi-var declarations (int x = 1, y = 2;) can't use var
 				if (isMultiVarDeclaration(ast)) {
 					if (!isVarType(ast))
@@ -579,7 +629,6 @@ public class PreferVarCheck extends AbstractCheck {
 				}
 
 				if (isVarType(ast)) {
-					// warn when var is used with a generic return type method
 					if (isGeneric)
 						logWarning(ast, MSG_VAR_GENERIC, methodName);
 				}

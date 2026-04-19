@@ -1,6 +1,9 @@
 package com.etk2000.checkstyle.inputs.prefervar;
 
 import java.io.ByteArrayInputStream;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -9,6 +12,9 @@ import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 
 class InputPreferVarClean {
+	@interface Ann {
+	}
+
 	String field = "not flagged";
 
 	void annotatedLocalVariable() {
@@ -50,7 +56,6 @@ class InputPreferVarClean {
 	}
 
 	void knownParseMethodWithVar() {
-		// parse methods with var — already using var, not flagged
 		final var bp = Boolean.parseBoolean("true");
 		final var byp = Byte.parseByte("5");
 		final var dp = Double.parseDouble("5.0");
@@ -61,7 +66,7 @@ class InputPreferVarClean {
 	}
 
 	void literalTypeMismatchUnfixable() {
-		// byte/short have no literal suffix — var would change type to int
+		// byte/short have no literal suffix, var would change type to int
 		final byte b = 5;
 		final byte bBin = 0b101;
 		final byte bHex = 0xF;
@@ -76,30 +81,28 @@ class InputPreferVarClean {
 		final short sOct = 077;
 		final short sPlus = +5;
 		final short sSep = 1_000;
-		// char from int literal — var would change type to int
+		// char from int literal, var would change type to int
 		final char ci = 65;
 		final char ciHex = 0x41;
-		// int from char literal — var would change type to char
+		// int from char literal, var would change type to char
 		final int ic = 'a';
 		final int icEscape = '\n';
 		final int icNeg = -'a';
 		final int icUnicode = '\u0041';
-		// long/float/double from char literal — var would change type to char
+		// long/float/double from char literal, var would change type to char
 		final double dc = 'a';
 		final float fc = 'a';
 		final long lc = 'a';
-		// float from long literal — var would change type to long
+		// float from long literal, var would change type to long
 		final float fl = 5L;
 	}
 
 	void localVariableNoInit() {
-		// no initializer — no violation (can't infer type)
 		final int x;
 		final String s;
 	}
 
 	void localVariableNoInitMultiVar() {
-		// multi-var without initializers — no violation (no ASSIGN)
 		final int x, y;
 	}
 
@@ -130,6 +133,50 @@ class InputPreferVarClean {
 				System.out.println(count);
 			}
 		};
+	}
+
+	void newAnonymousClassWithNonObjectTypeArg() {
+		final var cmp = new Comparator<String>() {
+			@Override
+			public int compare(String a, String b) {
+				return 0;
+			}
+		};
+	}
+
+	void newWithAnnotatedObjectTypeArg() {
+		final var list = new ArrayList<@Ann Object>();
+	}
+
+	void newWithConstructorArgs() {
+		final var list = new ArrayList<String>(16);
+		final var map = new HashMap<String, Integer>(8, 0.5f);
+	}
+
+	void newWithDiamondAlreadyUsed() {
+		final var list = new ArrayList<>();
+		final var map = new HashMap<>();
+	}
+
+	void newWithFirstArgObjectSecondNot() {
+		final var map = new HashMap<Object, String>();
+	}
+
+	void newWithMixedTypeArgs() {
+		final var map = new HashMap<String, Object>();
+	}
+
+	void newWithNonObjectQualifiedTypeArg() {
+		final var list = new ArrayList<java.lang.String>();
+	}
+
+	void newWithNonObjectTypeArg() {
+		final var list = new ArrayList<String>();
+		final var map = new HashMap<String, Integer>();
+	}
+
+	void newWithoutTypeArgs() {
+		final var obj = new Object();
 	}
 
 	void tryWithResources() throws Exception {

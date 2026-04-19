@@ -2384,6 +2384,104 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferVarDiamond() throws Exception {
+		final var file = tempDir.resolve("VarDiam.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.ArrayList;\nclass T {\n\tvoid f() {\n\t\tfinal var l = new ArrayList<Object>();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.ArrayList;\nclass T {\n\tvoid f() {\n\t\tfinal var l = new ArrayList<>();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferVarDiamondAnonymousClass() throws Exception {
+		final var file = tempDir.resolve("VarDiamAnon.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Comparator;\nclass T {\n\tvoid f() {\n\t\tfinal var cmp = new Comparator<Object>() {\n\t\t\t@Override\n\t\t\tpublic int compare(Object a, Object b) {\n\t\t\t\treturn 0;\n\t\t\t}\n\t\t};\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.Comparator;\nclass T {\n\tvoid f() {\n\t\tfinal var cmp = new Comparator<>() {\n\t\t\t@Override\n\t\t\tpublic int compare(Object a, Object b) {\n\t\t\t\treturn 0;\n\t\t\t}\n\t\t};\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferVarDiamondConstructorArgs() throws Exception {
+		final var file = tempDir.resolve("VarDiamCtor.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.ArrayList;\nclass T {\n\tvoid f() {\n\t\tfinal var l = new ArrayList<Object>(16);\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.ArrayList;\nclass T {\n\tvoid f() {\n\t\tfinal var l = new ArrayList<>(16);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferVarDiamondFqConstructorName() throws Exception {
+		final var file = tempDir.resolve("VarDiamFqCtor.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tfinal var l = new java.util.ArrayList<Object>();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid f() {\n\t\tfinal var l = new java.util.ArrayList<>();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferVarDiamondFqn() throws Exception {
+		final var file = tempDir.resolve("VarDiamFqn.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.ArrayList;\nclass T {\n\tvoid f() {\n\t\tfinal var l = new ArrayList<java.lang.Object>();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.ArrayList;\nclass T {\n\tvoid f() {\n\t\tfinal var l = new ArrayList<>();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferVarDiamondMixedQualifiedAndBare() throws Exception {
+		final var file = tempDir.resolve("VarDiamMix.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.HashMap;\nclass T {\n\tvoid f() {\n\t\tfinal var m = new HashMap<Object, java.lang.Object>();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.HashMap;\nclass T {\n\tvoid f() {\n\t\tfinal var m = new HashMap<>();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferVarDiamondMultipleArgs() throws Exception {
+		final var file = tempDir.resolve("VarDiamMulti.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.HashMap;\nclass T {\n\tvoid f() {\n\t\tfinal var m = new HashMap<Object, Object>();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.util.HashMap;\nclass T {\n\tvoid f() {\n\t\tfinal var m = new HashMap<>();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testPreferVarExplicitArrayInit() throws Exception {
 		final var file = tempDir.resolve("VarArr.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tfinal var a = new String[]{\"a\"};\n\t}\n}");

@@ -178,10 +178,12 @@
 ## Naming & Comments
 
 - Always use understandable variable names (except `i`, `j`, `k` for index iteration)
-- No slop comments. Never add comments that restate what the next few lines of code clearly say
-  (e.g. "// Create a new list", "// Return the result", "// Check if X is null"). Only TODOs
-  (FIXME for high priority) or explanations of genuinely non-obvious logic. If the code is clear
-  without a comment, don't add one
+- No slop comments. A comment is slop if the same information is already conveyed by the method
+  name, variable names, Javadoc, test name, class name, or surrounding code. This includes
+  section headers that summarize what a Javadoc already says, test markers that restate fixture
+  method names, and parsing comments on self-evident patterns (indexOf, depth-tracking loops).
+  Only TODOs (FIXME for high priority) or explanations of genuinely non-obvious logic. If the
+  code is clear without a comment, don't add one
 - Magic numbers/strings should be `static final` variables, consolidated if correlated across
   classes
 
