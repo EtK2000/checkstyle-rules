@@ -7,6 +7,21 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 class PreferVarFixer implements CheckstyleFixer {
+	@CheckReturnValue
+	private static int findAssignmentEquals(@Nonnull String line) {
+		var parenDepth = 0;
+		for (var i = 0; i < line.length(); ++i) {
+			final var ch = line.charAt(i);
+			if (ch == '(')
+				++parenDepth;
+			else if (ch == ')')
+				--parenDepth;
+			else if (ch == '=' && parenDepth == 0 && i + 1 < line.length() && line.charAt(i + 1) != '=')
+				return i;
+		}
+		return -1;
+	}
+
 	/**
 	 * Fixes explicit array initializers: converts {@code var x = new Type[]{...}}
 	 * to {@code Type[] x = {...}}, or removes {@code new Type[]} from
@@ -15,13 +30,17 @@ class PreferVarFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nullable
 	private static String fixExplicitArrayInit(@Nonnull String line) {
-		final var eqIdx = line.indexOf('=');
+		final var eqIdx = findAssignmentEquals(line);
 		if (eqIdx < 0)
 			return null;
 
 		// find "new " after the "="
 		final var newIdx = line.indexOf("new ", eqIdx + 1);
 		if (newIdx < 0)
+			return null;
+
+		final var betweenEqAndNew = line.substring(eqIdx + 1, newIdx);
+		if (!betweenEqAndNew.isBlank())
 			return null;
 
 		// extract array type: scan type name + generics + brackets
@@ -120,20 +139,7 @@ class PreferVarFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nullable
 	private static String fixRedundantObjectTypeArgs(@Nonnull String line) {
-		// find '=' outside parentheses (skip annotation args like value = ...)
-		var eqIdx = -1;
-		var parenDepth = 0;
-		for (var i = 0; i < line.length(); ++i) {
-			final var ch = line.charAt(i);
-			if (ch == '(')
-				++parenDepth;
-			else if (ch == ')')
-				--parenDepth;
-			else if (ch == '=' && parenDepth == 0 && i + 1 < line.length() && line.charAt(i + 1) != '=') {
-				eqIdx = i;
-				break;
-			}
-		}
+		final var eqIdx = findAssignmentEquals(line);
 		if (eqIdx < 0)
 			return null;
 

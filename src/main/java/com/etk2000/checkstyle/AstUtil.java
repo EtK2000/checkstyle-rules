@@ -621,15 +621,19 @@ class AstUtil {
 			final var node = stack.pop();
 			switch (node.getType()) {
 				case TokenTypes.CHAR_LITERAL, TokenTypes.IDENT, TokenTypes.LITERAL_FALSE,
-				     TokenTypes.LITERAL_NULL, TokenTypes.LITERAL_THIS, TokenTypes.LITERAL_TRUE, TokenTypes.NUM_DOUBLE,
+				     TokenTypes.LITERAL_NULL, TokenTypes.LITERAL_THIS, TokenTypes.LITERAL_TRUE,
+				     TokenTypes.NUM_DOUBLE,
 				     TokenTypes.NUM_FLOAT, TokenTypes.NUM_INT, TokenTypes.NUM_LONG,
-				     TokenTypes.RBRACK, TokenTypes.STRING_LITERAL -> {}
+				     TokenTypes.RBRACK, TokenTypes.STRING_LITERAL -> {
+				}
 				case TokenTypes.DOT, TokenTypes.EXPR, TokenTypes.INDEX_OP,
 				     TokenTypes.UNARY_MINUS, TokenTypes.UNARY_PLUS -> {
 					for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
 						stack.push(child);
 				}
-				default -> { return false; }
+				default -> {
+					return false;
+				}
 			}
 		}
 		return true;
@@ -724,9 +728,7 @@ class AstUtil {
 			return typeName;
 
 		// `var` type: infer from `new X(...)` initializer so checks can resolve
-		// the real type instead of giving up. Bails for array constructors
-		// (`new X[...]`) and anonymous classes (`new X() { ... }`), since the
-		// runtime type for those is not the simple class name `X`.
+		// the real type instead of giving up.
 		if (node.getType() == TokenTypes.VARIABLE_DEF) {
 			final var assign = node.findFirstToken(TokenTypes.ASSIGN);
 			if (assign == null)
@@ -737,12 +739,30 @@ class AstUtil {
 			final var init = assignChild.getType() == TokenTypes.EXPR ? assignChild.getFirstChild() : assignChild;
 			if (init == null || init.getType() != TokenTypes.LITERAL_NEW)
 				return null;
-			if (init.findFirstToken(TokenTypes.ARRAY_DECLARATOR) != null)
-				return null;
-			if (init.findFirstToken(TokenTypes.OBJBLOCK) != null)
-				return null;
+
+			var dimensions = 0;
+			for (var child = init.getFirstChild(); child != null; child = child.getNextSibling()) {
+				if (child.getType() == TokenTypes.ARRAY_DECLARATOR)
+					++dimensions;
+			}
+
+			final var dot = init.findFirstToken(TokenTypes.DOT);
+			if (dot != null)
+				return dottedName(dot) + "[]".repeat(dimensions);
 			final var newIdent = init.findFirstToken(TokenTypes.IDENT);
-			return newIdent == null ? null : newIdent.getText();
+			if (newIdent != null)
+				return newIdent.getText() + "[]".repeat(dimensions);
+			for (var child = init.getFirstChild(); child != null; child = child.getNextSibling()) {
+				switch (child.getType()) {
+					case TokenTypes.LITERAL_BOOLEAN, TokenTypes.LITERAL_BYTE,
+						 TokenTypes.LITERAL_CHAR, TokenTypes.LITERAL_DOUBLE,
+						 TokenTypes.LITERAL_FLOAT, TokenTypes.LITERAL_INT,
+						 TokenTypes.LITERAL_LONG, TokenTypes.LITERAL_SHORT ->
+						{ return child.getText() + "[]".repeat(dimensions); }
+					default -> {}
+				}
+			}
+			return null;
 		}
 		return null;
 	}

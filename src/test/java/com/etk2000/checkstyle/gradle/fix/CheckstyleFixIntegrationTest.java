@@ -2496,6 +2496,34 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferVarExplicitArrayInitMethodCallArg() throws Exception {
+		final var file = tempDir.resolve("VarArrMeth.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tString result = String.join(\",\", new String[]{\"a\", \"b\"});\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid f() {\n\t\tfinal var result = String.join(\",\", new String[]{\"a\", \"b\"});\n\t}\n}",
+				output.content()
+		);
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferVarExplicitArrayInitTyped() throws Exception {
+		final var file = tempDir.resolve("VarArrTyped.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tfinal String[] a = new String[]{\"a\"};\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid f() {\n\t\tfinal String[] a = {\"a\"};\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testPreferVarFinalLocalInteraction() throws Exception {
 		final var file = tempDir.resolve("VarFinal.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tint x = 5;\n\t}\n}");

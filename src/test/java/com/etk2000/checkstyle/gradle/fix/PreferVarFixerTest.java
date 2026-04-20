@@ -348,12 +348,99 @@ public class PreferVarFixerTest {
 	}
 
 	@Test
+	public void testEqualsAtLineEnd() {
+		final var lines = new ArrayList<>(List.of("\tint[] a ="));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\tvar a =", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testEqualsComparisonNotAssignment() {
+		final var lines = new ArrayList<>(List.of("\tfinal boolean b = x == y;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\tfinal var b = x == y;", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testEqualsOnlyDoubleEquals() {
+		// "var" already present so fixTypeToVar bails, isolating findAssignmentEquals's == rejection
+		final var lines = new ArrayList<>(List.of("\tvar b == true;"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
+		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
+	}
+
+	@Test
+	public void testExplicitArrayInitAnnotationEqualSign() {
+		final var lines = new ArrayList<>(List.of("\t@Anno(param = \"x\") String[] arr = new String[]{\"a\"};"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\t@Anno(param = \"x\") String[] arr = {\"a\"};", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testExplicitArrayInitAnnotationEqualSignVar() {
+		final var lines = new ArrayList<>(List.of("\t@Anno(param = \"x\") var arr = new String[]{\"a\"};"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\t@Anno(param = \"x\") String[] arr = {\"a\"};", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testExplicitArrayInitAnnotationNestedEqualSign() {
+		final var lines = new ArrayList<>(List.of("\t@Anno(a = \"x\", b = @Inner(c = \"y\")) String[] arr = new String[]{\"a\"};"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\t@Anno(a = \"x\", b = @Inner(c = \"y\")) String[] arr = {\"a\"};", result.replacement().getFirst());
+		assertEquals(0, result.startLine());
+		assertEquals(0, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testExplicitArrayInitAnnotationNestedEqualSignVar() {
+		final var lines = new ArrayList<>(List.of("\t@Anno(a = \"x\", b = @Inner(c = \"y\")) var arr = new String[]{\"a\"};"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\t@Anno(a = \"x\", b = @Inner(c = \"y\")) String[] arr = {\"a\"};", result.replacement().getFirst());
+	}
+
+	@Test
 	public void testExplicitArrayInitConstructorNotArray() {
 		// "new Type(...)" without [] should not be treated as array init
 		final var lines = new ArrayList<>(List.of("\tfinal var x = new String(\"x\");"));
 		// array path returns null (no []), falls through to type-to-var which sees "final var" -> SkipResult
 		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
 		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
+	}
+
+	@Test
+	public void testExplicitArrayInitEmptyTyped() {
+		final var lines = new ArrayList<>(List.of("\tfinal String[] a = new String[]{};"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\tfinal String[] a = {};", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testExplicitArrayInitEmptyVar() {
+		final var lines = new ArrayList<>(List.of("\tfinal var a = new String[]{};"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\tfinal String[] a = {};", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testExplicitArrayInitGenericDeclaredType() {
+		final var lines = new ArrayList<>(List.of("\tfinal List<String>[] arr = new List<String>[]{list};"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\tfinal List<String>[] arr = {list};", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testExplicitArrayInitGenericDeclaredTypeNested() {
+		final var lines = new ArrayList<>(List.of("\tfinal Map<String, List<Integer>>[] arr = new Map<String, List<Integer>>[]{map};"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\tfinal Map<String, List<Integer>>[] arr = {map};", result.replacement().getFirst());
 	}
 
 	@Test
@@ -367,6 +454,27 @@ public class PreferVarFixerTest {
 	}
 
 	@Test
+	public void testExplicitArrayInitListOf() {
+		final var lines = new ArrayList<>(List.of("\tfinal Object[] a = List.of(new Object[]{\"a\"});"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\tfinal var a = List.of(new Object[]{\"a\"});", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testExplicitArrayInitMethodCallArg() {
+		final var lines = new ArrayList<>(List.of("\tfinal String result = String.join(\",\", new String[]{\"a\", \"b\"});"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\tfinal var result = String.join(\",\", new String[]{\"a\", \"b\"});", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testExplicitArrayInitMultiArgMethodCall() {
+		final var lines = new ArrayList<>(List.of("\tfinal Object[] a = Arrays.asList(new int[]{1}, new int[]{2});"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\tfinal var a = Arrays.asList(new int[]{1}, new int[]{2});", result.replacement().getFirst());
+	}
+
+	@Test
 	public void testExplicitArrayInitMultiDim() {
 		final var lines = new ArrayList<>(List.of("\tfinal int[][] m = new int[][]{{1}};"));
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
@@ -377,6 +485,55 @@ public class PreferVarFixerTest {
 	}
 
 	@Test
+	public void testExplicitArrayInitMultiSpace() {
+		final var lines = new ArrayList<>(List.of("\tfinal String[] a =   new String[]{\"a\"};"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\tfinal String[] a = {\"a\"};", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testExplicitArrayInitNoBrace() {
+		final var lines = new ArrayList<>(List.of("\tint[] a = new int[]"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\tvar a = new int[]", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testExplicitArrayInitNoBraceVar() {
+		final var lines = new ArrayList<>(List.of("\tfinal var a = new String[]"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
+		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
+	}
+
+	@Test
+	public void testExplicitArrayInitNoEquals() {
+		final var lines = new ArrayList<>(List.of("\tnew String[]{\"a\"};"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, -1));
+		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
+	}
+
+	@Test
+	public void testExplicitArrayInitQualifiedNewType() {
+		final var lines = new ArrayList<>(List.of("\tfinal var a = new java.lang.String[]{\"a\"};"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\tfinal java.lang.String[] a = {\"a\"};", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testExplicitArrayInitTernary() {
+		final var lines = new ArrayList<>(List.of("\tfinal int[] a = cond ? new int[]{1} : new int[]{2};"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
+		assertEquals("\tfinal var a = cond ? new int[]{1} : new int[]{2};", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testExplicitArrayInitTernaryVar() {
+		final var lines = new ArrayList<>(List.of("\tfinal var a = cond ? new int[]{1} : new int[]{2};"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
+		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
+	}
+
+	@Test
 	public void testExplicitArrayInitTypedMatching() {
 		final var lines = new ArrayList<>(List.of("\tfinal String[] a = new String[]{\"a\"};"));
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
@@ -384,6 +541,13 @@ public class PreferVarFixerTest {
 		assertEquals(0, result.startLine());
 		assertEquals(0, result.endLine());
 		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testExplicitArrayInitUnbalancedParen() {
+		final var lines = new ArrayList<>(List.of("\tvar x) = new String[]{\"a\"};"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
+		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
 	}
 
 	@Test

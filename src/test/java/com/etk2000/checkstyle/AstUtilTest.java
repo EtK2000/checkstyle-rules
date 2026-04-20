@@ -230,6 +230,45 @@ public class AstUtilTest {
 		}
 	}
 
+	static Stream<Arguments> primitiveArrayInitializerProvider() {
+		return Stream.of(
+				Arguments.of("boolean", "new boolean[]{true}"),
+				Arguments.of("byte", "new byte[]{1}"),
+				Arguments.of("char", "new char[]{'a'}"),
+				Arguments.of("double", "new double[]{1.0}"),
+				Arguments.of("float", "new float[]{1.0f}"),
+				Arguments.of("int", "new int[]{1}"),
+				Arguments.of("long", "new long[]{1L}"),
+				Arguments.of("short", "new short[]{1}")
+		);
+	}
+
+	static Stream<Arguments> primitiveArrayProvider() {
+		return Stream.of(
+				Arguments.of("boolean", "new boolean[10]"),
+				Arguments.of("byte", "new byte[10]"),
+				Arguments.of("char", "new char[10]"),
+				Arguments.of("double", "new double[10]"),
+				Arguments.of("float", "new float[10]"),
+				Arguments.of("int", "new int[10]"),
+				Arguments.of("long", "new long[10]"),
+				Arguments.of("short", "new short[10]")
+		);
+	}
+
+	static Stream<Arguments> primitiveExplicitTypeProvider() {
+		return Stream.of(
+				Arguments.of("boolean x = false"),
+				Arguments.of("byte x = 0"),
+				Arguments.of("char x = 0"),
+				Arguments.of("double x = 0"),
+				Arguments.of("float x = 0"),
+				Arguments.of("int x = 0"),
+				Arguments.of("long x = 0"),
+				Arguments.of("short x = 0")
+		);
+	}
+
 	@BeforeAll
 	public static void setUp() throws Exception {
 		root = parse("astutil/InputAstUtil.java");
@@ -962,6 +1001,14 @@ public class AstUtilTest {
 		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
+	@MethodSource("primitiveExplicitTypeProvider")
+	@ParameterizedTest
+	void testResolveVariableTypePrimitiveTypes(String declaration) throws Exception {
+		final var ast = parseSource("class T { void f() { " + declaration + "; } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
 	@Test
 	public void testResolveVariableTypeUnknown() {
 		final var method = findMethod(root, "castAndResolve");
@@ -979,6 +1026,27 @@ public class AstUtilTest {
 	public void testResolveVariableTypeVarAnonymousClass() {
 		final var method = findMethod(root, "varAnonymousClassLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("Thread", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarGenericAnonymousClass() {
+		final var method = findMethod(root, "varGenericAnonymousClassLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("ArrayList", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarLambdaParameter() {
+		final var method = findMethod(root, "varLambdaParameterLocal");
+		final var methodCall = findFirst(method, TokenTypes.METHOD_CALL);
+		assertNull(AstUtil.resolveVariableType(methodCall, "s"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarMethodCallInit() {
+		final var method = findMethod(root, "varMethodCallInitLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
 		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
@@ -986,25 +1054,205 @@ public class AstUtilTest {
 	public void testResolveVariableTypeVarNewArray() {
 		final var method = findMethod(root, "varNewArrayLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
-		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+		assertEquals("String[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
 	@Test
 	public void testResolveVariableTypeVarNewArrayInitializer() {
-		// `var x = new int[]{...}` also produces an ARRAY_DECLARATOR child; the guard
-		// must bail on this form too, not just `new X[N]`.
 		final var method = findMethod(root, "varNewArrayInitializerLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
-		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+		assertEquals("int[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewArrayInitializerRef() {
+		final var method = findMethod(root, "varNewArrayInitializerRefLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("String[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewBothAnnotatedArray() {
+		final var method = findMethod(root, "varNewBothAnnotatedArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("String[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewDeeplyQualified() {
+		final var method = findMethod(root, "varNewDeeplyQualifiedLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.util.concurrent.atomic.AtomicInteger", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewDimAnnotatedArray() {
+		final var method = findMethod(root, "varNewDimAnnotatedArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("String[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewDimAnnotatedMultiDimArray() {
+		final var method = findMethod(root, "varNewDimAnnotatedMultiDimArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("String[][]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
 	@Test
 	public void testResolveVariableTypeVarNewGeneric() {
-		// Qualified constructors use a DOT subtree rather than a bare IDENT child,
-		// so the simple-name inference bails. Documented limitation.
 		final var method = findMethod(root, "varNewGenericLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
-		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+		assertEquals("java.util.HashMap", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewMultiDimArray() {
+		final var method = findMethod(root, "varNewMultiDimArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("String[][]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@MethodSource("primitiveArrayInitializerProvider")
+	@ParameterizedTest
+	void testResolveVariableTypeVarNewPrimitiveArrayInitializerTypes(String type, String expr) throws Exception {
+		final var ast = parseSource("class T { void f() { var x = " + expr + "; } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals(type + "[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@MethodSource("primitiveArrayProvider")
+	@ParameterizedTest
+	void testResolveVariableTypeVarNewPrimitiveArrayTypes(String type, String expr) throws Exception {
+		final var ast = parseSource("class T { void f() { var x = " + expr + "; } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals(type + "[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewPrimitiveBothAnnotatedArray() {
+		final var method = findMethod(root, "varNewPrimitiveBothAnnotatedArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("int[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewPrimitiveDimAnnotatedArray() {
+		final var method = findMethod(root, "varNewPrimitiveDimAnnotatedArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("int[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewPrimitiveDimAnnotatedMultiDimArray() {
+		final var method = findMethod(root, "varNewPrimitiveDimAnnotatedMultiDimArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("int[][]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewPrimitiveMultiDimArray() {
+		final var method = findMethod(root, "varNewPrimitiveMultiDimArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("int[][]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewPrimitiveMultiDimArrayInitializer() {
+		final var method = findMethod(root, "varNewPrimitiveMultiDimArrayInitializerLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("int[][]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewPrimitiveSizedArray() {
+		final var method = findMethod(root, "varNewPrimitiveSizedArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("int[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewPrimitiveTypeAnnotatedArray() {
+		final var method = findMethod(root, "varNewPrimitiveTypeAnnotatedArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("int[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewQualified() {
+		final var method = findMethod(root, "varNewQualifiedLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.lang.Object", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewQualifiedAnonymousClass() {
+		final var method = findMethod(root, "varNewQualifiedAnonymousClassLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.lang.Thread", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewQualifiedArray() {
+		final var method = findMethod(root, "varNewQualifiedArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.lang.String[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewQualifiedArrayInitializer() {
+		final var method = findMethod(root, "varNewQualifiedArrayInitializerLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.lang.String[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewQualifiedDiamond() {
+		final var method = findMethod(root, "varNewQualifiedDiamondLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.util.HashMap", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewQualifiedDimAnnotatedArray() {
+		final var method = findMethod(root, "varNewQualifiedDimAnnotatedArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.lang.String[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewQualifiedDimAnnotatedMultiDimArray() {
+		final var method = findMethod(root, "varNewQualifiedDimAnnotatedMultiDimArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.lang.String[][]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewQualifiedGenericAnonymousClass() {
+		final var method = findMethod(root, "varNewQualifiedGenericAnonymousClassLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.util.ArrayList", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewQualifiedInnerClass() {
+		final var method = findMethod(root, "varNewQualifiedInnerClassLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.util.AbstractMap.SimpleEntry", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewQualifiedMultiDimArray() {
+		final var method = findMethod(root, "varNewQualifiedMultiDimArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.lang.String[][]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewQualifiedTypeAnnotatedArray() {
+		final var method = findMethod(root, "varNewQualifiedTypeAnnotatedArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.lang.String[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
 	@Test
@@ -1012,6 +1260,13 @@ public class AstUtilTest {
 		final var method = findMethod(root, "varNewLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
 		assertEquals("StringBuilder", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewTypeAnnotatedArray() {
+		final var method = findMethod(root, "varNewTypeAnnotatedArrayLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("String[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
 	@Test
