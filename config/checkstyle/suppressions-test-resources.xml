@@ -5,6 +5,7 @@
 <suppressions>
 	<!-- Suppress each check in the directory whose test inputs intentionally violate it -->
 	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]annotationownline[\\/]" />
+	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
 	<suppress checks="AnnotationSameLineCheck" files="inputs[\\/]annotationsameline[\\/]" />
 	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]classstructure[\\/]" />
@@ -87,6 +88,8 @@
 	<suppress checks="ExplicitInitialization" files="inputs[\\/]preferlambda[\\/]" />
 	<suppress checks="ExplicitInitialization" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="ExplicitInitialization" files="inputs[\\/]redundantsuffix[\\/]" />
+	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
+	<suppress checks="FieldSortingCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]annotationownline[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]multilinecall[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]preferrecord[\\/]" />
@@ -99,6 +102,7 @@
 	<suppress checks="OneStatementPerLine" files="inputs[\\/]controlflow[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]astutil[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]collectioninterface[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]preferlambda[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]preferrecord[\\/]" />

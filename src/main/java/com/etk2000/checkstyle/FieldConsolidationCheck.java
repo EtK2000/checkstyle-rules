@@ -40,7 +40,6 @@ public class FieldConsolidationCheck extends AbstractCheck {
 	private static boolean canCombine(@Nonnull DetailAST prev, @Nonnull DetailAST curr) {
 		final var prevIdentLine = prev.findFirstToken(TokenTypes.IDENT).getLineNo();
 		final var currIdentLine = curr.findFirstToken(TokenTypes.IDENT).getLineNo();
-		// already on the same line (already combined)
 		if (prevIdentLine == currIdentLine)
 			return false;
 		// gap between fields (comment, blank line, or javadoc)
@@ -73,12 +72,21 @@ public class FieldConsolidationCheck extends AbstractCheck {
 		for (var child = annotation.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() == TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR) {
 				final var key = child.findFirstToken(TokenTypes.IDENT).getText();
-				// value can be EXPR (single value) or ANNOTATION_ARRAY_INIT (array value)
+				// value can be EXPR, ANNOTATION_ARRAY_INIT, or ANNOTATION (nested)
 				var value = child.findFirstToken(TokenTypes.EXPR);
 				if (value == null)
 					value = child.findFirstToken(TokenTypes.ANNOTATION_ARRAY_INIT);
-				params.put(key, serializeAst(value));
+				if (value == null)
+					value = child.findFirstToken(TokenTypes.ANNOTATION);
+				if (value != null) {
+					final var serialized = value.getType() == TokenTypes.ANNOTATION
+							? canonicalAnnotation(value)
+							: serializeAst(value);
+					params.put(key, serialized);
+				}
 			}
+			else if (child.getType() == TokenTypes.ANNOTATION)
+				params.put("value", canonicalAnnotation(child));
 			else if (child.getType() == TokenTypes.EXPR || child.getType() == TokenTypes.ANNOTATION_ARRAY_INIT)
 				params.put("value", serializeAst(child));
 		}
@@ -128,6 +136,22 @@ public class FieldConsolidationCheck extends AbstractCheck {
 		return sb.toString();
 	}
 
+	private static void serializeBoundChildren(@Nonnull DetailAST bounds, @Nonnull StringBuilder sb) {
+		for (var bc = bounds.getFirstChild(); bc != null; bc = bc.getNextSibling()) {
+			if (bc.getType() == TokenTypes.ANNOTATIONS) {
+				for (var ann = bc.getFirstChild(); ann != null; ann = ann.getNextSibling()) {
+					if (ann.getType() == TokenTypes.ANNOTATION) {
+						sb.append('@');
+						sb.append(canonicalAnnotation(ann));
+						sb.append(' ');
+					}
+				}
+			}
+			else
+				serializeTypeName(bc, sb);
+		}
+	}
+
 	private static void serializeDot(@Nonnull DetailAST dot, @Nonnull StringBuilder sb) {
 		final var first = dot.getFirstChild();
 		if (first.getType() == TokenTypes.DOT)
@@ -135,10 +159,12 @@ public class FieldConsolidationCheck extends AbstractCheck {
 		else
 			sb.append(first.getText());
 		sb.append('.');
-		var last = first;
-		while (last.getNextSibling() != null)
-			last = last.getNextSibling();
-		sb.append(last.getText());
+		// find the IDENT child (skip TYPE_ARGUMENTS which may follow)
+		var ident = first.getNextSibling();
+		while (ident != null && ident.getType() != TokenTypes.IDENT)
+			ident = ident.getNextSibling();
+		if (ident != null)
+			sb.append(ident.getText());
 	}
 
 	private static void serializeTypeArguments(@Nonnull DetailAST typeArgs, @Nonnull StringBuilder sb) {
@@ -150,10 +176,27 @@ public class FieldConsolidationCheck extends AbstractCheck {
 					sb.append(',');
 				first = false;
 				for (var tc = child.getFirstChild(); tc != null; tc = tc.getNextSibling()) {
-					if (tc.getType() == TokenTypes.WILDCARD_TYPE)
-						serializeWildcard(tc, sb);
-					else
-						serializeTypeName(tc, sb);
+					switch (tc.getType()) {
+						case TokenTypes.ANNOTATIONS -> {
+							for (var ann = tc.getFirstChild(); ann != null; ann = ann.getNextSibling()) {
+								if (ann.getType() == TokenTypes.ANNOTATION) {
+									sb.append('@');
+									sb.append(canonicalAnnotation(ann));
+									sb.append(' ');
+								}
+							}
+						}
+						case TokenTypes.TYPE_LOWER_BOUNDS -> {
+							sb.append(" super ");
+							serializeBoundChildren(tc, sb);
+						}
+						case TokenTypes.TYPE_UPPER_BOUNDS -> {
+							sb.append(" extends ");
+							serializeBoundChildren(tc, sb);
+						}
+						case TokenTypes.WILDCARD_TYPE -> sb.append('?');
+						default -> serializeTypeName(tc, sb);
+					}
 				}
 			}
 		}
@@ -168,9 +211,15 @@ public class FieldConsolidationCheck extends AbstractCheck {
 			}
 			case TokenTypes.DOT -> {
 				serializeDot(ast, sb);
-				final var next = ast.getNextSibling();
-				if (next != null && next.getType() == TokenTypes.TYPE_ARGUMENTS)
-					serializeTypeArguments(next, sb);
+				// TYPE_ARGUMENTS may be a child of DOT (FQN generics) or a sibling
+				var typeArgs = ast.findFirstToken(TokenTypes.TYPE_ARGUMENTS);
+				if (typeArgs == null) {
+					final var next = ast.getNextSibling();
+					if (next != null && next.getType() == TokenTypes.TYPE_ARGUMENTS)
+						typeArgs = next;
+				}
+				if (typeArgs != null)
+					serializeTypeArguments(typeArgs, sb);
 			}
 			case TokenTypes.IDENT -> {
 				sb.append(ast.getText());
@@ -181,20 +230,6 @@ public class FieldConsolidationCheck extends AbstractCheck {
 			case TokenTypes.LITERAL_BOOLEAN, TokenTypes.LITERAL_BYTE, TokenTypes.LITERAL_CHAR,
 			     TokenTypes.LITERAL_DOUBLE, TokenTypes.LITERAL_FLOAT, TokenTypes.LITERAL_INT,
 			     TokenTypes.LITERAL_LONG, TokenTypes.LITERAL_SHORT -> sb.append(ast.getText());
-		}
-	}
-
-	private static void serializeWildcard(@Nonnull DetailAST wildcard, @Nonnull StringBuilder sb) {
-		sb.append('?');
-		for (var child = wildcard.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.TYPE_UPPER_BOUNDS) {
-				sb.append(" extends ");
-				serializeTypeName(child.getFirstChild(), sb);
-			}
-			else if (child.getType() == TokenTypes.TYPE_LOWER_BOUNDS) {
-				sb.append(" super ");
-				serializeTypeName(child.getFirstChild(), sb);
-			}
 		}
 	}
 

@@ -231,6 +231,42 @@ Single value `@Anno("x")`: value wrapped in `EXPR`.
 Array value `@Anno({"x", "y"})`: uses `ANNOTATION_ARRAY_INIT` (no `EXPR` wrapper).
 Named param `@Anno(key = value)`: uses `ANNOTATION_MEMBER_VALUE_PAIR`.
 
+## Wildcard type arguments
+
+```
+List<? extends Number> x;
+```
+
+```
+TYPE_ARGUMENTS
+  GENERIC_START[<]
+  TYPE_ARGUMENT
+    WILDCARD_TYPE[?]
+    TYPE_UPPER_BOUNDS[extends]
+      IDENT[Number]
+  GENERIC_END[>]
+```
+
+```
+List<? super Integer> y;
+```
+
+```
+TYPE_ARGUMENTS
+  GENERIC_START[<]
+  TYPE_ARGUMENT
+    WILDCARD_TYPE[?]
+    TYPE_LOWER_BOUNDS[super]
+      IDENT[Integer]
+  GENERIC_END[>]
+```
+
+`WILDCARD_TYPE` and `TYPE_UPPER_BOUNDS`/`TYPE_LOWER_BOUNDS` are **siblings** under `TYPE_ARGUMENT`,
+not parent-child. `WILDCARD_TYPE` has no children. The bound node's (`TYPE_UPPER_BOUNDS` or
+`TYPE_LOWER_BOUNDS`) first child is the bound type `IDENT` directly (no `TYPE` wrapper).
+
+Plain `?` (unbounded) has just `WILDCARD_TYPE` with no bounds sibling.
+
 ## Array type declarations
 
 Both `int[] x` (Java-style) and `int x[]` (C-style) produce `ARRAY_DECLARATOR` siblings under

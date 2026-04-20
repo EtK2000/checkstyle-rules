@@ -1,50 +1,48 @@
 package com.etk2000.checkstyle.inputs.fieldconsolidation;
 
 import java.util.List;
+import java.util.Map;
 
-// Already combined on one line
+@interface CleanMulti {
+	int a() default 0;
+	int b() default 0;
+}
+
 class InputFieldConsolidationCleanAlreadyCombined {
 	int height, width;
 }
 
-// Different types cannot be combined
 class InputFieldConsolidationCleanDifferentTypes {
 	int count;
 	String name;
 }
 
-// Prev has initializer prevents combining
 class InputFieldConsolidationCleanPrevInitializer {
 	int active = 1;
 	int passive;
 }
 
-// Curr has initializer prevents combining
 class InputFieldConsolidationCleanCurrInitializer {
 	int alpha;
 	int beta = 1;
 }
 
-// Both have initializers
 class InputFieldConsolidationCleanBothInitializers {
 	int first = 1;
 	int second = 2;
 }
 
-// Different visibility prevents combining
 class InputFieldConsolidationCleanVisibility {
 	private int priv;
 	int pub;
 }
 
-// Static vs instance prevents combining
 class InputFieldConsolidationCleanStatic {
 	static int shared;
 
 	int local;
 }
 
-// Final vs non-final prevents combining
 class InputFieldConsolidationCleanFinal {
 	final int fixed;
 	int flex;
@@ -54,7 +52,6 @@ class InputFieldConsolidationCleanFinal {
 	}
 }
 
-// Different annotation names prevent combining
 class InputFieldConsolidationCleanDifferentAnnotations {
 	@Deprecated
 	int newer;
@@ -62,7 +59,6 @@ class InputFieldConsolidationCleanDifferentAnnotations {
 	int old;
 }
 
-// Same annotation name, different params prevent combining
 class InputFieldConsolidationCleanDifferentParams {
 	@SuppressWarnings("a")
 	int first;
@@ -70,15 +66,13 @@ class InputFieldConsolidationCleanDifferentParams {
 	int second;
 }
 
-// Same annotation name, different named param values prevent combining
 class InputFieldConsolidationCleanDifferentNamedParams {
-	@Multi(a = 1, b = 2)
+	@CleanMulti(a = 1, b = 2)
 	int first;
-	@Multi(a = 1, b = 3)
+	@CleanMulti(a = 1, b = 3)
 	int second;
 }
 
-// Same annotation with array value in swapped order (different expression, not combinable)
 class InputFieldConsolidationCleanSwappedArrayParam {
 	@SuppressWarnings({"all", "unused"})
 	int first;
@@ -86,59 +80,186 @@ class InputFieldConsolidationCleanSwappedArrayParam {
 	int second;
 }
 
-// One has annotation, other doesn't
 class InputFieldConsolidationCleanAnnotationMismatch {
 	@Deprecated
 	int annotated;
 	int plain;
 }
 
-// Comment between same-type fields (creates line gap)
 class InputFieldConsolidationCleanCommentBetween {
 	int alpha;
 	// separator comment
 	int beta;
 }
 
-// Blank line between same-type fields (creates line gap)
 class InputFieldConsolidationCleanBlankLine {
 	int alpha;
 
 	int beta;
 }
 
-// Javadoc on curr field (creates line gap)
 class InputFieldConsolidationCleanJavadocCurr {
 	int x;
 	/** The Y coordinate */
 	int y;
 }
 
-// Array vs non-array of same base type are different types
 class InputFieldConsolidationCleanArrayMismatch {
 	int scalar;
 	int[] vector;
 }
 
-// Different generic types prevent combining
 class InputFieldConsolidationCleanGenericMismatch {
 	List<Integer> numbers;
 	List<String> words;
 }
 
-// Single field, nothing to combine
 class InputFieldConsolidationCleanSingle {
 	int only;
 }
 
-// Multidimensional array vs single array are different types
 class InputFieldConsolidationCleanArrayDimension {
 	int[] flat;
 	int[][] matrix;
 }
 
-// Compound array (Type[] name[]) vs single array (different dimension)
 class InputFieldConsolidationCleanCompoundArrayMismatch {
 	String[] flat;
 	String[] compound[];
+}
+
+enum InputFieldConsolidationCleanEnumSeparated {
+	A,
+	B;
+
+	int beta;
+
+	void doSomething() {}
+}
+
+interface InputFieldConsolidationCleanInterface {
+	int ALPHA = 1;
+	int BETA = 2;
+}
+
+class InputFieldConsolidationCleanFqnVsSimple {
+	java.util.List<String> alpha;
+	List<String> beta;
+}
+
+class InputFieldConsolidationCleanDifferentWildcards {
+	List<? extends Number> bounded;
+	List<? super Number> lower;
+}
+
+class InputFieldConsolidationCleanWildcardVsConcrete {
+	List<Number> concrete;
+	List<? extends Number> wildcard;
+}
+
+class InputFieldConsolidationCleanNestedGenericMismatch {
+	Map<String, List<Integer>> intMap;
+	Map<String, List<String>> strMap;
+}
+
+class InputFieldConsolidationCleanFqnAnnotation {
+	@java.lang.Deprecated
+	int alpha;
+	@Deprecated
+	int beta;
+}
+
+class InputFieldConsolidationCleanUnboundedVsBounded {
+	List<? extends Number> bounded;
+	List<?> unbounded;
+}
+
+class InputFieldConsolidationCleanMethodBetween {
+	int alpha;
+
+	void doSomething() {}
+
+	int beta;
+}
+
+class InputFieldConsolidationCleanConstructorBetween {
+	int alpha;
+
+	InputFieldConsolidationCleanConstructorBetween() {}
+
+	int beta;
+}
+
+class InputFieldConsolidationCleanStaticInitBetween {
+	static int alpha;
+
+	static {
+		System.out.println();
+	}
+
+	static int beta;
+}
+
+class InputFieldConsolidationCleanInstanceInitBetween {
+	int alpha;
+
+	{
+		System.out.println();
+	}
+
+	int beta;
+}
+
+class InputFieldConsolidationCleanInnerTypeBetween {
+	int alpha;
+
+	static class Inner {}
+
+	int beta;
+}
+
+@interface TypeAnn {}
+
+class InputFieldConsolidationCleanTypeUseAnnotation {
+	List<@TypeAnn String> annotated;
+	List<String> plain;
+}
+
+@interface CleanInner {}
+
+@interface CleanOtherInner {}
+
+@interface CleanContainer {
+	CleanInner value();
+}
+
+@interface CleanContainerOther {
+	CleanOtherInner value();
+}
+
+class InputFieldConsolidationCleanNestedAnnotationDiff {
+	@CleanContainer(@CleanInner)
+	int alpha;
+	@CleanContainerOther(@CleanOtherInner)
+	int beta;
+}
+
+class InputFieldConsolidationCleanAnnotatedBoundMismatch {
+	List<? extends @TypeAnn Number> annotated;
+	List<? extends Number> plain;
+}
+
+class InputFieldConsolidationCleanGenericArrayVsPlain {
+	List<String[]> array;
+	List<String> plain;
+}
+
+class InputFieldConsolidationCleanAnonymousClass {
+	Runnable r = new Runnable() {
+		int alpha = 1;
+		int beta = 2;
+
+		@Override
+		public void run() {}
+	};
 }

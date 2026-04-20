@@ -192,7 +192,7 @@ public class CheckstyleFixIntegrationTest {
 	@Test
 	public void testAllSkippedHasReasons() throws Exception {
 		final var file = tempDir.resolve("AllSkipped.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tint b;\n\tint a;\n}");
+		Files.writeString(file.toPath(), "class T {\n\tint b = 2;\n\tint a = 1;\n}");
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(0, output.result().fixCount());
@@ -910,6 +910,141 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testFieldConsolidationAnnotated() throws Exception {
+		final var file = tempDir.resolve("FieldConsAnn.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\tint alpha;\n\t@Deprecated\n\tint beta;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\t@Deprecated\n\tint alpha, beta;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldConsolidationAnnotatedMultipleOwnLine() throws Exception {
+		final var file = tempDir.resolve("FieldConsMultiAnn.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"import javax.annotation.CheckReturnValue;\nimport javax.annotation.Nonnull;\n"
+						+ "class T {\n\t@CheckReturnValue\n\t@Nonnull\n\tString alpha;\n"
+						+ "\t@CheckReturnValue\n\t@Nonnull\n\tString beta;\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import javax.annotation.CheckReturnValue;\nimport javax.annotation.Nonnull;\n"
+						+ "class T {\n\t@CheckReturnValue\n\t@Nonnull\n\tString alpha, beta;\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldConsolidationBothCStyleArray() throws Exception {
+		final var file = tempDir.resolve("FieldConsBothC.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint alpha[];\n\tint beta[];\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint alpha[], beta[];\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldConsolidationCStyleCurrJavaPrev() throws Exception {
+		final var file = tempDir.resolve("FieldConsCCurrJPrev.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint[] alpha;\n\tint beta[];\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint[] alpha, beta;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldConsolidationCStylePrevJavaCurrSkipped() throws Exception {
+		final var file = tempDir.resolve("FieldConsCPrevJCurr.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint alpha[];\n\tint[] beta;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint alpha[];\n\tint[] beta;\n}", output.content());
+		assertEquals(0, output.result().fixCount());
+	}
+
+	@Test
+	public void testFieldConsolidationFinal() throws Exception {
+		final var file = tempDir.resolve("FieldConsFinal.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tfinal int alpha;\n\tfinal int beta;\n\tT(int a, int b) { alpha = a; beta = b; }\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tfinal int alpha, beta;\n\tT(int a, int b) { alpha = a; beta = b; }\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldConsolidationGenericType() throws Exception {
+		final var file = tempDir.resolve("FieldConsGeneric.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"import java.util.List;\nclass T {\n\tList<String> names;\n\tList<String> words;\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("import java.util.List;\nclass T {\n\tList<String> names, words;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldConsolidationMultiVarPrev() throws Exception {
+		final var file = tempDir.resolve("FieldConsMultiVar.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint a, b;\n\tint c;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint a, b, c;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldConsolidationSimple() throws Exception {
+		final var file = tempDir.resolve("FieldCons.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint alpha;\n\tint beta;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint alpha, beta;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldConsolidationStatic() throws Exception {
+		final var file = tempDir.resolve("FieldConsStatic.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tstatic int global;\n\tstatic int shared;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tstatic int global, shared;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldConsolidationThreeFields() throws Exception {
+		final var file = tempDir.resolve("FieldCons3.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint a;\n\tint b;\n\tint c;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint a, b, c;\n}", output.content());
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testFieldSortingEnumAlreadySorted() throws Exception {
 		final var file = tempDir.resolve("SortedEnum.java").toFile();
 		Files.writeString(file.toPath(), "enum T {\n\tALPHA,\n\tBETA\n}");
@@ -1207,7 +1342,7 @@ public class CheckstyleFixIntegrationTest {
 	@Test
 	public void testMultipleChecksSkipReasons() throws Exception {
 		final var file = tempDir.resolve("MultiCheck.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tint b;\n\tint a;\n\tint x = 0;\n}");
+		Files.writeString(file.toPath(), "class T {\n\tint b = 2;\n\tint a = 1;\n\tint x = 0;\n}");
 
 		final var output = runFixAndGetResult(file);
 		assertTrue(output.result().fixCount() > 0);

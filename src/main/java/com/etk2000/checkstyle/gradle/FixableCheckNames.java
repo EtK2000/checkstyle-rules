@@ -39,6 +39,7 @@ final class FixableCheckNames {
 			"com.etk2000.checkstyle.AnnotationOwnLineCheck",
 			"com.etk2000.checkstyle.AnnotationSameLineCheck",
 			"com.etk2000.checkstyle.ControlFlowBracesCheck",
+			"com.etk2000.checkstyle.FieldConsolidationCheck",
 			"com.etk2000.checkstyle.FieldSortingCheck",
 			"com.etk2000.checkstyle.LambdaParameterTypeCheck",
 			"com.etk2000.checkstyle.NoArrayTrailingCommaCheck",
