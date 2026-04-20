@@ -383,6 +383,27 @@ class AstUtil {
 	}
 
 	/**
+	 * Extracts the class name from a LITERAL_NEW node, handling both
+	 * simple names ({@code new Foo()}) and qualified names
+	 * ({@code new pkg.Foo()}). Constructor-level type arguments
+	 * ({@code new <T>Foo()}) are correctly skipped by iterating direct
+	 * children until the first IDENT or DOT is found.
+	 *
+	 * @return the class name, or {@code null} for primitive arrays
+	 */
+	@CheckReturnValue
+	@Nullable
+	static String findNewClassName(@Nonnull DetailAST literalNew) {
+		for (var child = literalNew.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.DOT)
+				return dottedName(child);
+			if (child.getType() == TokenTypes.IDENT)
+				return child.getText();
+		}
+		return null;
+	}
+
+	/**
 	 * Finds the class-level TYPE_ARGUMENTS on a LITERAL_NEW node,
 	 * handling both simple names ({@code new Foo<T>()}) and qualified
 	 * names ({@code new pkg.Foo<T>()}). Constructor-level type arguments
@@ -746,12 +767,9 @@ class AstUtil {
 					++dimensions;
 			}
 
-			final var dot = init.findFirstToken(TokenTypes.DOT);
-			if (dot != null)
-				return dottedName(dot) + "[]".repeat(dimensions);
-			final var newIdent = init.findFirstToken(TokenTypes.IDENT);
-			if (newIdent != null)
-				return newIdent.getText() + "[]".repeat(dimensions);
+			final var className = findNewClassName(init);
+			if (className != null)
+				return className + "[]".repeat(dimensions);
 			for (var child = init.getFirstChild(); child != null; child = child.getNextSibling()) {
 				switch (child.getType()) {
 					case TokenTypes.LITERAL_BOOLEAN, TokenTypes.LITERAL_BYTE,

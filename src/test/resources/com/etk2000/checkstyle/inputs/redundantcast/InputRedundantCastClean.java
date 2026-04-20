@@ -36,6 +36,11 @@ class InputRedundantCastClean {
 		final var s = (String) null;
 	}
 
+	// qualified new: expressionType returns "java.lang.Object" but cast type is "Object"
+	void qualifiedNewCast() {
+		final Object x = (Object) new java.lang.Object();
+	}
+
 	void takesLong(long x) {}
 	void takesString(String s) {}
 

@@ -87,6 +87,8 @@ class InputStandardCharsetsClean {
 		final var j = new PrintStream(new ByteArrayOutputStream(), true, StandardCharsets.UTF_8);
 		final var k = new PrintWriter(file, StandardCharsets.UTF_8);
 		final var l = new Scanner(new ByteArrayInputStream(data), StandardCharsets.UTF_8);
+		final var m = new <String>String(data, StandardCharsets.UTF_8);
+		final var n = new <String>ByteArrayOutputStream().toString(StandardCharsets.UTF_8);
 	}
 
 	void standardCharsetsOther(byte[] data) throws Exception {

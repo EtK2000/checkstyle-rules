@@ -13,6 +13,10 @@ class InputSpecificApiToArrayViolation {
 		final var arr = getList().toArray(new String[0]); // violation: Use 'String[]::new' instead of 'new String[0]'.
 	}
 
+	void toArrayQualified(List<String> list) {
+		final var arr = list.toArray(new java.lang.String[0]); // violation: Use 'java.lang.String[]::new' instead of 'new java.lang.String[0]'.
+	}
+
 	void toArrayString(List<String> list) {
 		final var arr = list.toArray(new String[0]); // violation: Use 'String[]::new' instead of 'new String[0]'.
 	}

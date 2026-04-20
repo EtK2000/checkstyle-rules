@@ -93,10 +93,7 @@ public class RedundantCastCheck extends AbstractCheck {
 			}
 			case TokenTypes.IDENT -> lookupVariableType(expr);
 			case TokenTypes.LITERAL_FALSE, TokenTypes.LITERAL_TRUE -> "boolean";
-			case TokenTypes.LITERAL_NEW -> {
-				final var ident = expr.findFirstToken(TokenTypes.IDENT);
-				yield ident != null ? ident.getText() : null;
-			}
+			case TokenTypes.LITERAL_NEW -> AstUtil.findNewClassName(expr);
 			case TokenTypes.LITERAL_THIS -> enclosingClassName(expr);
 			case TokenTypes.NUM_DOUBLE -> "double";
 			case TokenTypes.NUM_FLOAT -> {

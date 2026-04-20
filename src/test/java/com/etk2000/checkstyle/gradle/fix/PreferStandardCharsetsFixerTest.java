@@ -49,6 +49,19 @@ public class PreferStandardCharsetsFixerTest {
 	}
 
 	@Test
+	public void testColumnPastEndReturnsNull() {
+		final var lines = new ArrayList<>(List.of("\t\tshort"));
+		assertNull(fixer.fix(lines, 0, 100));
+	}
+
+	@Test
+	public void testUnclosedQuoteReturnsNull() {
+		final var lines = new ArrayList<>(List.of("\t\ts.getBytes(\"UTF-8"));
+		final var column = lines.getFirst().indexOf('"');
+		assertNull(fixer.fix(lines, 0, column));
+	}
+
+	@Test
 	public void testUnknownCharsetReturnsSkipResult() {
 		final var input = "\t\tfinal var bytes = s.getBytes(\"Windows-1252\");";
 		final var lines = new ArrayList<>(List.of(input));

@@ -526,6 +526,99 @@ public class AstUtilTest {
 	}
 
 	@Test
+	public void testFindNewClassNameAnnotated() throws Exception {
+		final var ast = parseSource("@interface Ann {}\nclass T { void f() { var x = new @Ann Object(); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertEquals("Object", AstUtil.findNewClassName(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassNameAnonymousClass() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = new Thread() { @Override public void run() {} }; } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertEquals("Thread", AstUtil.findNewClassName(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassNameBothTypeArgLevels() throws Exception {
+		final var ast = parseSource(
+				"import java.util.ArrayList;\nclass T { <U> T(U arg) {} void f() { var x = new <String>ArrayList<Object>(); } }"
+		);
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertEquals("ArrayList", AstUtil.findNewClassName(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassNameConstructorTypeArgsQualified() throws Exception {
+		final var ast = parseSource("class T { <U> T(U arg) {} void f() { var x = new <String>java.util.ArrayList<>(); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertEquals("java.util.ArrayList", AstUtil.findNewClassName(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassNameConstructorTypeArgsSimple() throws Exception {
+		final var ast = parseSource("class T { <U> T(U arg) {} void f() { var x = new <String>T(\"a\"); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertEquals("T", AstUtil.findNewClassName(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassNameDeeplyQualified() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = new java.util.concurrent.atomic.AtomicInteger(); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertEquals("java.util.concurrent.atomic.AtomicInteger", AstUtil.findNewClassName(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassNameInnerClass() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = new java.util.AbstractMap.SimpleEntry<>(\"a\", \"b\"); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertEquals("java.util.AbstractMap.SimpleEntry", AstUtil.findNewClassName(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassNamePrimitiveArray() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = new int[10]; } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertNull(AstUtil.findNewClassName(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassNameQualified() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = new java.lang.Object(); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertEquals("java.lang.Object", AstUtil.findNewClassName(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassNameQualifiedWithTypeArgs() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = new java.util.ArrayList<String>(); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertEquals("java.util.ArrayList", AstUtil.findNewClassName(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassNameReferenceArray() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = new String[10]; } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertEquals("String", AstUtil.findNewClassName(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassNameSimple() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = new Object(); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertEquals("Object", AstUtil.findNewClassName(literalNew));
+	}
+
+	@Test
+	public void testFindNewClassNameSimpleWithTypeArgs() throws Exception {
+		final var ast = parseSource("import java.util.ArrayList;\nclass T { void f() { var x = new ArrayList<String>(); } }");
+		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
+		assertEquals("ArrayList", AstUtil.findNewClassName(literalNew));
+	}
+
+	@Test
 	public void testFindNewClassTypeArgumentsConstructorLevelSkipped() throws Exception {
 		final var ast = parseSource("class T { <U> T(U arg) {} void f() { var x = new <String>T(\"a\"); } }");
 		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
@@ -1076,6 +1169,29 @@ public class AstUtilTest {
 		final var method = findMethod(root, "varNewBothAnnotatedArrayLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
 		assertEquals("String[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewConstructorTypeArgs() throws Exception {
+		final var ast = parseSource("class T { <U> T(U arg) {} void f() { var x = new <String>T(\"a\"); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("T", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewConstructorTypeArgsBothLevels() throws Exception {
+		final var ast = parseSource(
+				"import java.util.ArrayList;\nclass T { void f() { var x = new <String>ArrayList<Object>(); } }"
+		);
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("ArrayList", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNewConstructorTypeArgsQualified() throws Exception {
+		final var ast = parseSource("class T { void f() { var x = new <String>java.util.ArrayList<>(); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.util.ArrayList", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
 	@Test

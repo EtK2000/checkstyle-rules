@@ -2301,6 +2301,20 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferStandardCharsetsConstructorTypeArgs() throws Exception {
+		final var file = tempDir.resolve("StdCharsetCtor.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tString run(byte[] data) throws Exception {\n\t\treturn new <String>String(data, \"UTF-8\");\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import java.nio.charset.StandardCharsets;\nclass T {\n\tString run(byte[] data) throws Exception {\n\t\treturn new <String>String(data, StandardCharsets.UTF_8);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testPreferStandardCharsetsImportAlreadyPresent() throws Exception {
 		final var file = tempDir.resolve("StdCharsetImp.java").toFile();
 		Files.writeString(file.toPath(), "import java.nio.charset.StandardCharsets;\n\nclass T {\n\tbyte[] run(String s) throws Exception {\n\t\treturn s.getBytes(\"UTF-8\");\n\t}\n}");

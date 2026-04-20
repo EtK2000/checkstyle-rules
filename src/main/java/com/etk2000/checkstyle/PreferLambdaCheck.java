@@ -10,7 +10,6 @@ import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Checkstyle check that flags anonymous class implementations of
@@ -46,19 +45,6 @@ public class PreferLambdaCheck extends AbstractCheck {
 			}
 		}
 		return false;
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static String getNewTypeName(@Nonnull DetailAST literalNew) {
-		final var child = literalNew.getFirstChild();
-		if (child == null)
-			return null;
-		if (child.getType() == TokenTypes.IDENT)
-			return child.getText();
-		if (child.getType() == TokenTypes.DOT)
-			return FullIdent.createFullIdent(child).getText();
-		return null;
 	}
 
 	@CheckReturnValue
@@ -100,7 +86,7 @@ public class PreferLambdaCheck extends AbstractCheck {
 		if (containsThisOrSuperReference(objBlock))
 			return;
 
-		final var typeName = getNewTypeName(literalNew);
+		final var typeName = AstUtil.findNewClassName(literalNew);
 		if (typeName == null)
 			return;
 

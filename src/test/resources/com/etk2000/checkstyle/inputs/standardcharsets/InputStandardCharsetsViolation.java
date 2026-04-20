@@ -29,6 +29,8 @@ class InputStandardCharsetsViolation {
 		final var k = new PrintStream(new ByteArrayOutputStream(), true, "UTF-8"); // violation: use StandardCharsets.UTF_8
 		final var l = new PrintWriter(file, "UTF-8"); // violation: use StandardCharsets.UTF_8
 		final var m = new Scanner(new ByteArrayInputStream(data), "UTF-8"); // violation: use StandardCharsets.UTF_8
+		final var n = new <String>String(data, "UTF-8"); // violation: use StandardCharsets.UTF_8
+		final var o = new <String>ByteArrayOutputStream().toString("UTF-8"); // violation: use StandardCharsets.UTF_8
 	}
 
 	void otherCharsets() throws Exception {

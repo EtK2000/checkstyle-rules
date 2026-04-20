@@ -455,7 +455,7 @@ public class PreferSpecificApiCheckTest {
 		final var violations = BaseCheckTest.runCheck(
 				PreferSpecificApiCheck.class, DIR + "InputSpecificApiToArrayViolation.java", "minSdk", "33"
 		);
-		assertEquals(3, violations.size());
+		assertEquals(4, violations.size());
 	}
 
 	@Test
@@ -736,7 +736,7 @@ public class PreferSpecificApiCheckTest {
 	@Test
 	public void testToArrayNewZeroViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiToArrayViolation.java");
-		assertEquals(3, violations.size());
+		assertEquals(4, violations.size());
 
 		var i = 0;
 		assertEquals(9, violations.get(i).getLine());
@@ -746,6 +746,9 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Use 'String[]::new' instead of 'new String[0]'.", violations.get(i++).getMessage());
 		assertEquals(17, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'java.lang.String[]::new' instead of 'new java.lang.String[0]'.", violations.get(i++).getMessage());
+		assertEquals(21, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Use 'String[]::new' instead of 'new String[0]'.", violations.get(i++).getMessage());
 	}

@@ -1157,17 +1157,9 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		if (inner == null || inner.getType() != TokenTypes.LITERAL_NEW)
 			return null;
 
-		// extract the type name: simple (IDENT) or qualified (DOT, e.g. Map.Entry)
-		final String typeName;
-		final var typeDot = inner.findFirstToken(TokenTypes.DOT);
-		if (typeDot != null)
-			typeName = FullIdent.createFullIdent(typeDot).getText();
-		else {
-			final var typeIdent = inner.findFirstToken(TokenTypes.IDENT);
-			if (typeIdent == null)
-				return null;
-			typeName = typeIdent.getText();
-		}
+		final var typeName = AstUtil.findNewClassName(inner);
+		if (typeName == null)
+			return null;
 
 		// skip multi-dimensional arrays (e.g. new String[0][])
 		var arrayDeclCount = 0;

@@ -137,11 +137,11 @@ public class PreferStandardCharsetsCheck extends AbstractCheck {
 	 */
 	@CheckReturnValue
 	private int findConstructorCharsetArgIndex(@Nonnull DetailAST ast, int argCount) {
-		final var ident = ast.findFirstToken(TokenTypes.IDENT);
-		if (ident == null)
+		final var className = AstUtil.findNewClassName(ast);
+		if (className == null)
 			return -1;
 
-		final var fqcn = ReflectionUtil.resolveClassName(ident.getText(), packageName, imports);
+		final var fqcn = ReflectionUtil.resolveClassName(className, packageName, imports);
 		if (fqcn == null)
 			return -1;
 
@@ -166,12 +166,8 @@ public class PreferStandardCharsetsCheck extends AbstractCheck {
 
 			if (receiver != null && receiver.getType() == TokenTypes.STRING_LITERAL)
 				receiverTypeName = "String";
-			else if (receiver != null && receiver.getType() == TokenTypes.LITERAL_NEW) {
-				// handle new Foo().method() where receiver is a constructor call
-				final var ident = receiver.findFirstToken(TokenTypes.IDENT);
-				if (ident != null)
-					receiverTypeName = ident.getText();
-			}
+			else if (receiver != null && receiver.getType() == TokenTypes.LITERAL_NEW)
+				receiverTypeName = AstUtil.findNewClassName(receiver);
 			else
 				receiverTypeName = AstUtil.getReceiverTypeName(ast, packageName, imports);
 		}

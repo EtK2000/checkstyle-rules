@@ -100,9 +100,12 @@
 	<suppress checks="PreferImportCheck" files="inputs[\\/]astutil[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]collectioninterface[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]preferlambda[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]preferrecord[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]multilinecall[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]prefervar[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]redundantcast[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]specificapi[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]switchorder[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="PreferRecordCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
