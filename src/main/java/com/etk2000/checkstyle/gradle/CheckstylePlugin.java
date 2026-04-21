@@ -22,6 +22,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 
 public class CheckstylePlugin implements Plugin<Project> {
@@ -52,6 +53,7 @@ public class CheckstylePlugin implements Plugin<Project> {
 			"android:minSdkVersion\\s*=\\s*\"(\\d+)\""
 	);
 	private static final Pattern XML_ATTR_MESSAGE = Pattern.compile("message=\"([^\"]+)\"");
+	private static final Pattern XML_ATTR_SEVERITY = Pattern.compile("severity=\"([^\"]+)\"");
 	private static final Pattern XML_ATTR_SOURCE = Pattern.compile("source=\"([^\"]+)\"");
 	private static final Pattern XML_ERROR = Pattern.compile("<error\\b[^>]*/>");
 	private static final String CHECKSTYLE_VERSION;
@@ -87,11 +89,11 @@ public class CheckstylePlugin implements Plugin<Project> {
 
 	/**
 	 * Counts total and fixable violations in a Checkstyle XML report file.
-	 * Returns {total, fixable}. Fixable violations are counted regardless of
-	 * severity (the fix task treats all violations as errors). TreeWalker
-	 * violations are matched by source name; regexp-based violations are
-	 * matched by message (since their XML source is the generic
-	 * RegexpMultiline/RegexpSingleline class name).
+	 * Returns {total, fixable}. Only error-severity violations are counted as
+	 * fixable, matching the fix task's behavior. TreeWalker violations are
+	 * matched by source name; regexp-based violations are matched by message
+	 * (since their XML source is the generic RegexpMultiline/RegexpSingleline
+	 * class name).
 	 */
 	@Nonnull
 	@VisibleForTesting
@@ -110,6 +112,10 @@ public class CheckstylePlugin implements Plugin<Project> {
 			while (errorMatcher.find()) {
 				final var element = errorMatcher.group();
 				++total;
+
+				final var severityMatcher = XML_ATTR_SEVERITY.matcher(element);
+				if (!severityMatcher.find() || !"error".equals(severityMatcher.group(1)))
+					continue;
 
 				final var sourceMatcher = XML_ATTR_SOURCE.matcher(element);
 				if (sourceMatcher.find() && fixableNames.contains(sourceMatcher.group(1)))
@@ -185,30 +191,32 @@ public class CheckstylePlugin implements Plugin<Project> {
 				}
 		);
 
-		// hint task: after checkstyle runs, show how many violations are auto-fixable
+		// hint task: after checkstyle runs, dry-run fixers to count truly fixable violations
 		final var reportsDir = new File(project.getLayout().getBuildDirectory().getAsFile().get(), "reports/checkstyle");
 		project.getTasks().register(
 				"checkstyleFixHint",
-				DefaultTask.class,
+				CheckstyleFixTask.class,
 				task -> {
 					task.mustRunAfter("checkstyleMain", "checkstyleTest");
 					task.getOutputs().upToDateWhen(t -> false);
-					task.doLast(t -> {
+					task.getCheckstyleClasspath().from(checkstyleConfig);
+					task.getDryRun().set(true);
+					task.getMinSdk().set(project.provider(() -> resolveMinSdk(project)));
+					task.getSource().set(project.file("src/main/java"));
+					final var testSrcDir = project.file("src/test/java");
+					if (testSrcDir.isDirectory())
+						task.getTestSource().set(testSrcDir);
+					task.doFirst(t -> {
 						final var fixableMessages = FixableCheckNames.FIXABLE_MESSAGES;
 						final var fixableNames = FixableCheckNames.all();
 						final var mainCounts = countViolations(new File(reportsDir, "main.xml"), fixableNames, fixableMessages);
 						final var testCounts = countViolations(new File(reportsDir, "test.xml"), fixableNames, fixableMessages);
-						final var fixable = mainCounts[1] + testCounts[1];
 						final var total = mainCounts[0] + testCounts[0];
-						if (fixable <= 0)
-							return;
-						final var taskName = fixable == mainCounts[1]
-								? "checkstyleFix"
-								: fixable == testCounts[1] ? "checkstyleFixTest" : "checkstyleFixAll";
-						if (fixable == total)
-							t.getLogger().lifecycle("Run ./gradlew {} to auto-fix all {} violations.", taskName, fixable);
-						else
-							t.getLogger().lifecycle("Run ./gradlew {} to auto-fix {} of {} violations.", taskName, fixable, total);
+						final var mainFixable = mainCounts[1];
+						final var testFixable = testCounts[1];
+						final var taskName = selectFixTaskName(mainFixable, testFixable);
+						task.getDryRunTotal().set(total);
+						task.getDryRunTaskName().set(taskName);
 					});
 				}
 		);
@@ -267,6 +275,17 @@ public class CheckstylePlugin implements Plugin<Project> {
 
 		// non-Android: assume latest Java (all APIs available)
 		return String.valueOf(Integer.MAX_VALUE);
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	@VisibleForTesting
+	static String selectFixTaskName(int mainFixable, int testFixable) {
+		if (mainFixable > 0 && testFixable <= 0)
+			return "checkstyleFix";
+		if (mainFixable <= 0 && testFixable > 0)
+			return "checkstyleFixTest";
+		return "checkstyleFixAll";
 	}
 
 	@Override

@@ -38,6 +38,7 @@ import com.puppycrawl.tools.checkstyle.checks.imports.UnusedImportsCheck;
 import com.puppycrawl.tools.checkstyle.checks.modifier.RedundantModifierCheck;
 
 import org.gradle.api.file.DirectoryProperty;
+import org.jetbrains.annotations.VisibleForTesting;
 import org.gradle.api.provider.Property;
 import org.gradle.workers.WorkAction;
 import org.gradle.workers.WorkParameters;
@@ -69,9 +70,17 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 	}
 
 	interface Params extends WorkParameters {
+		Property<Boolean> getDryRun();
+
+		Property<String> getDryRunTaskName();
+
+		Property<Integer> getDryRunTotal();
+
 		Property<String> getMinSdk();
 
 		DirectoryProperty getSource();
+
+		DirectoryProperty getTestSource();
 	}
 
 	private static final int TAB_WIDTH = 8;
@@ -228,9 +237,21 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		return new ApplyFixesResult(fixed, needsSecondPass, Map.copyOf(immutableReasons));
 	}
 
+	@VisibleForTesting
+	static void collectJavaFiles(@Nonnull Path dir, @Nonnull List<File> out) throws IOException {
+		if (!Files.isDirectory(dir))
+			return;
+		try (var stream = Files.walk(dir)) {
+			stream.filter(p -> p.toString().endsWith(".java"))
+					.map(Path::toFile)
+					.forEach(out::add);
+		}
+	}
+
 	@CheckReturnValue
 	@Nonnull
-	private static DefaultConfiguration createCheckerConfig(@Nonnull String minSdk) {
+	@VisibleForTesting
+	static DefaultConfiguration createCheckerConfig(@Nonnull String minSdk) {
 		final var treeWalkerConfig = new DefaultConfiguration(TreeWalker.class.getName());
 		treeWalkerConfig.addProperty("tabWidth", String.valueOf(TAB_WIDTH));
 		for (var checkName : FIXERS.keySet()) {
@@ -290,8 +311,13 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		return checkerConfig;
 	}
 
-	private static boolean doExecute(
+	/**
+	 * @return {needsSecondPass ? 1 : 0, totalFixed}
+	 */
+	@VisibleForTesting
+	static int[] doExecute(
 			@Nonnull DefaultConfiguration checkerConfig,
+			boolean dryRun,
 			@Nonnull List<File> files
 	) throws CheckstyleException, IOException {
 		final var checker = new Checker();
@@ -348,7 +374,8 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			final var result = applyFixes(lines, violations, FIXERS, MODULE_ID_FIXERS);
 
 			if (result.fixCount() > 0) {
-				Files.writeString(filePath, String.join("\n", lines));
+				if (!dryRun)
+					Files.writeString(filePath, String.join("\n", lines));
 				++filesFixed;
 				totalFixed += result.fixCount();
 			}
@@ -359,11 +386,11 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				allSkippedReasons.computeIfAbsent(skipEntry.getKey(), k -> new ArrayList<>()).addAll(skipEntry.getValue());
 		}
 
-		if (totalFixed > 0 || totalSkipped > 0) {
+		if (!dryRun && (totalFixed > 0 || totalSkipped > 0)) {
 			System.out.println("Fixed " + totalFixed + " violations in " + filesFixed + " files (" + totalSkipped + " skipped)");
 			printSkipSummary(allSkippedReasons);
 		}
-		return needsSecondPass;
+		return new int[]{needsSecondPass ? 1 : 0, totalFixed};
 	}
 
 	@CheckReturnValue
@@ -400,6 +427,17 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 	@Nonnull
 	public static String fixerAllowedMethods() {
 		return ALLOWED_METHODS;
+	}
+
+	@CheckReturnValue
+	@Nullable
+	@VisibleForTesting
+	static String formatHintMessage(int fixable, int total, @Nonnull String taskName) {
+		if (fixable <= 0)
+			return null;
+		if (fixable == total)
+			return "Run ./gradlew " + taskName + " to auto-fix all " + fixable + " violations.";
+		return "Run ./gradlew " + taskName + " to auto-fix " + fixable + " of " + total + " violations.";
 	}
 
 	/**
@@ -644,21 +682,28 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 	@Override
 	public void execute() {
 		try {
-			final var checkerConfig = createCheckerConfig(getParameters().getMinSdk().get());
+			final var params = getParameters();
+			final var checkerConfig = createCheckerConfig(params.getMinSdk().get());
+			final var dryRun = Boolean.TRUE.equals(params.getDryRun().getOrElse(false));
 
-			final var sourceDir = getParameters().getSource().get().getAsFile().toPath();
-			final List<File> files;
-			try (var stream = Files.walk(sourceDir)) {
-				files = stream
-						.filter(p -> p.toString().endsWith(".java"))
-						.map(Path::toFile)
-						.toList();
+			final var files = new ArrayList<File>();
+			collectJavaFiles(params.getSource().get().getAsFile().toPath(), files);
+			if (params.getTestSource().isPresent())
+				collectJavaFiles(params.getTestSource().get().getAsFile().toPath(), files);
+
+			final var result = doExecute(checkerConfig, dryRun, files);
+			if (dryRun) {
+				final var fixable = result[1];
+				final var total = Math.max(params.getDryRunTotal().getOrElse(fixable), fixable);
+				final var taskName = params.getDryRunTaskName().getOrElse("checkstyleFix");
+				final var hint = formatHintMessage(fixable, total, taskName);
+				if (hint != null)
+					System.out.println(hint);
 			}
-
-			// Pass 1: apply all fixes. Pass 2: clean up cascading violations
+			// Pass 2: clean up cascading violations
 			// (e.g. imports that became unused after a fixer replaced their usage).
-			if (doExecute(checkerConfig, files))
-				doExecute(checkerConfig, files);
+			else if (result[0] != 0)
+				doExecute(checkerConfig, false, files);
 		}
 		catch (CheckstyleException | IOException e) {
 			throw new RuntimeException("Checkstyle fix failed", e);

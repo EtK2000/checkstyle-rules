@@ -30,6 +30,13 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 				params -> {
 					params.getMinSdk().set(getMinSdk());
 					params.getSource().set(getSource());
+					if (getDryRun().isPresent()) {
+						params.getDryRun().set(getDryRun());
+						params.getDryRunTaskName().set(getDryRunTaskName());
+						params.getDryRunTotal().set(getDryRunTotal());
+					}
+					if (getTestSource().isPresent())
+						params.getTestSource().set(getTestSource());
 				}
 		);
 	}
@@ -37,11 +44,23 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 	@Classpath
 	public abstract ConfigurableFileCollection getCheckstyleClasspath();
 
+	@Internal
+	public abstract Property<Boolean> getDryRun();
+
+	@Internal
+	public abstract Property<String> getDryRunTaskName();
+
+	@Internal
+	public abstract Property<Integer> getDryRunTotal();
+
 	@Input
 	public abstract Property<String> getMinSdk();
 
 	@Internal
 	public abstract DirectoryProperty getSource();
+
+	@Internal
+	public abstract DirectoryProperty getTestSource();
 
 	@Inject
 	public abstract WorkerExecutor getWorkerExecutor();

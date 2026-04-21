@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.etk2000.checkstyle.gradle.fix.CheckstyleFixAction;
+import com.etk2000.checkstyle.gradle.fix.CheckstyleFixTask;
 
 import org.gradle.api.plugins.quality.CheckstyleExtension;
 import org.gradle.testfixtures.ProjectBuilder;
@@ -36,10 +37,207 @@ public class CheckstylePluginTest {
 	Path tempDir;
 
 	@Test
+	public void countViolationsAttributeOrderIrrelevant() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error source="com.etk2000.checkstyle.PreferPrefixIncrementCheck" line="1" message="msg" severity="error"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		assertArrayEquals(
+				new int[]{1, 1},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsAttributeSpacesAroundEquals() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity = "error" message="msg" source="com.etk2000.checkstyle.PreferVarCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		// severity = "error" (with spaces) doesn't match severity="([^"]+)" regex
+		assertArrayEquals(
+				new int[]{1, 0},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsEmptyAttributeValues() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="" message="" source=""/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		// severity="" doesn't match regex [^"]+ so treated as missing -> not fixable
+		// source="" and message="" also don't match their [^"]+ regexes
+		assertArrayEquals(
+				new int[]{1, 0},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsEmptyFile() throws Exception {
+		final var file = tempDir.resolve("empty.xml").toFile();
+		Files.writeString(file.toPath(), "");
+		assertArrayEquals(
+				new int[]{0, 0},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
 	public void countViolationsEmptyXml() throws Exception {
 		final var file = writeXml("");
 		assertArrayEquals(
 				new int[]{0, 0},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsErrorElementMultiline() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1"
+				severity="error"
+				message="No trailing whitespace."
+				source="com.etk2000.checkstyle.PreferPrefixIncrementCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		// [^>] character class matches newlines, so multi-line elements are matched
+		assertArrayEquals(
+				new int[]{1, 1},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsErrorSeverityNoAttributes() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="error"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		assertArrayEquals(
+				new int[]{1, 0},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsErrorSeverityUppercase() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="Error" message="msg" source="com.etk2000.checkstyle.PreferVarCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		assertArrayEquals(
+				new int[]{1, 0},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsErrorTagWordBoundary() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<errorSummary line="1" severity="error" source="com.etk2000.checkstyle.PreferVarCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		// \b in <error\b prevents matching <errorSummary>
+		assertArrayEquals(
+				new int[]{0, 0},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsFixableMessagesNotHardcoded() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="error" message="No trailing whitespace."/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		// message is normally fixable, but passing empty set proves the parameter is used
+		assertArrayEquals(
+				new int[]{1, 0},
+				CheckstylePlugin.countViolations(file, Set.of(), Set.of())
+		);
+	}
+
+	@Test
+	public void countViolationsFixableNamesNotHardcoded() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="error" message="msg" source="com.etk2000.checkstyle.PreferPrefixIncrementCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		// source is normally fixable, but passing empty set proves the parameter is used
+		assertArrayEquals(
+				new int[]{1, 0},
+				CheckstylePlugin.countViolations(file, Set.of(), Set.of())
+		);
+	}
+
+	@Test
+	public void countViolationsIgnoreSeverity() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="ignore" message="msg" source="com.etk2000.checkstyle.PreferVarCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		assertArrayEquals(
+				new int[]{1, 0},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsInfoSeverity() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="info" message="msg" source="com.etk2000.checkstyle.PreferVarCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		assertArrayEquals(
+				new int[]{1, 0},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsIoException() {
+		final var dir = tempDir.toFile();
+		assertArrayEquals(
+				new int[]{0, 0},
+				CheckstylePlugin.countViolations(dir, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsMissingSeverity() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" message="msg" source="com.etk2000.checkstyle.PreferVarCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		assertArrayEquals(
+				new int[]{1, 0},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
 		);
 	}
@@ -58,10 +256,57 @@ public class CheckstylePluginTest {
 				""";
 		final var file = writeXml(xml);
 		// fixable: PreferPrefixIncrementCheck (source), NoTrailingWhitespace (message),
-		// NoDoubleBlankLines (message), PreferVarCheck (source, regardless of warning severity)
-		// not fixable: NoSpaceIndent (message not fixable), CovariantEquals (not fixable check)
+		// NoDoubleBlankLines (message)
+		// not fixable: NoSpaceIndent (message not fixable), CovariantEquals (not fixable check),
+		// PreferVarCheck (warning severity)
 		assertArrayEquals(
-				new int[]{6, 4},
+				new int[]{6, 3},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsMultipleElementsSameLine() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="error" source="com.etk2000.checkstyle.PreferPrefixIncrementCheck"/><error line="2" severity="error" source="com.puppycrawl.tools.checkstyle.checks.imports.RedundantImportCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		assertArrayEquals(
+				new int[]{2, 2},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsMultipleFiles() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="error" message="Use prefix increment." source="com.etk2000.checkstyle.PreferPrefixIncrementCheck"/>
+				<error line="2" severity="warning" message="prefer.var.local" source="com.etk2000.checkstyle.PreferVarCheck"/>
+				</file>
+				<file name="B.java">
+				<error line="1" severity="error" message="No trailing whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		assertArrayEquals(
+				new int[]{3, 2},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsNoMessageAttribute() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="error" source="com.puppycrawl.tools.checkstyle.checks.coding.CovariantEqualsCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		assertArrayEquals(
+				new int[]{1, 0},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
 		);
 	}
@@ -104,6 +349,49 @@ public class CheckstylePluginTest {
 	}
 
 	@Test
+	public void countViolationsNonSelfClosingElementIgnored() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="error" source="com.etk2000.checkstyle.PreferVarCheck">text</error>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		// regex requires /> (self-closing), so <error ...> is not matched
+		assertArrayEquals(
+				new int[]{0, 0},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsNoSourceAttribute() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="error" message="No trailing whitespace."/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		assertArrayEquals(
+				new int[]{1, 1},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsNoSourceNonFixableMessage() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="error" message="Some non-fixable message."/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		assertArrayEquals(
+				new int[]{1, 0},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
 	public void countViolationsOnlyWarnings() throws Exception {
 		final var xml = """
 				<file name="A.java">
@@ -112,9 +400,9 @@ public class CheckstylePluginTest {
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// both are from fixable checks; severity no longer affects fixable count
+		// both from fixable checks but warning severity, so not counted as fixable
 		assertArrayEquals(
-				new int[]{2, 2},
+				new int[]{2, 0},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
 		);
 	}
@@ -136,6 +424,21 @@ public class CheckstylePluginTest {
 	}
 
 	@Test
+	public void countViolationsSameMessageMixedSeverity() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="error" message="No trailing whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
+				<error line="2" severity="warning" message="No trailing whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		assertArrayEquals(
+				new int[]{2, 1},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
 	public void countViolationsSameSourceMixedSeverity() throws Exception {
 		final var xml = """
 				<file name="A.java">
@@ -144,9 +447,25 @@ public class CheckstylePluginTest {
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// both should be counted: total=2, fixable=2 (severity does not affect fixable count)
+		// only the error-severity violation is fixable
 		assertArrayEquals(
-				new int[]{2, 2},
+				new int[]{2, 1},
+				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
+		);
+	}
+
+	@Test
+	public void countViolationsSourceAndMessageBothFixable() throws Exception {
+		final var xml = """
+				<file name="A.java">
+				<error line="1" severity="error" message="No trailing whitespace." source="com.etk2000.checkstyle.PreferPrefixIncrementCheck"/>
+				</file>
+				""";
+		final var file = writeXml(xml);
+		// source matches fixable names, so fixable is incremented once via source;
+		// message also matches fixable messages but the else-branch is not reached
+		assertArrayEquals(
+				new int[]{1, 1},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
 		);
 	}
@@ -241,6 +560,18 @@ public class CheckstylePluginTest {
 		assertEquals(CheckstyleFixAction.fixerAllowedMethods(), propMatcher.group(1));
 	}
 
+	@Test
+	public void fixTaskDryRunNotPresent() throws Exception {
+		final var projectDir = Files.createDirectory(tempDir.resolve("fixProject")).toFile();
+		final var project = ProjectBuilder.builder().withProjectDir(projectDir).build();
+		project.getConfigurations().create("compileOnly");
+		new CheckstylePlugin().apply(project);
+
+		final var fixTask = (CheckstyleFixTask) project.getTasks().findByName("checkstyleFix");
+		assertNotNull(fixTask);
+		assertFalse(fixTask.getDryRun().isPresent());
+	}
+
 	/**
 	 * CheckstyleFixTask must have zero checkstyle imports so Gradle can
 	 * decorate it on the buildscript classpath (which lacks checkstyle).
@@ -255,6 +586,59 @@ public class CheckstylePluginTest {
 				content.contains("import com.puppycrawl"),
 				"CheckstyleFixTask must not import checkstyle classes"
 		);
+	}
+
+	@Test
+	public void hintTaskRegisteredAsDryRun() throws Exception {
+		final var projectDir = Files.createDirectory(tempDir.resolve("hintProject")).toFile();
+		final var project = ProjectBuilder.builder().withProjectDir(projectDir).build();
+		project.getConfigurations().create("compileOnly");
+		new CheckstylePlugin().apply(project);
+
+		final var task = (CheckstyleFixTask) project.getTasks().findByName("checkstyleFixHint");
+		assertNotNull(task);
+		assertTrue(task.getDryRun().get());
+		assertFalse(task.getTestSource().isPresent());
+	}
+
+	@Test
+	public void hintTaskTestSourceSetWhenDirExists() throws Exception {
+		final var projectDir = Files.createDirectory(tempDir.resolve("hintTestProject")).toFile();
+		Files.createDirectories(new File(projectDir, "src/test/java").toPath());
+		final var project = ProjectBuilder.builder().withProjectDir(projectDir).build();
+		project.getConfigurations().create("compileOnly");
+		new CheckstylePlugin().apply(project);
+
+		final var task = (CheckstyleFixTask) project.getTasks().findByName("checkstyleFixHint");
+		assertNotNull(task);
+		assertTrue(task.getTestSource().isPresent());
+	}
+
+	@Test
+	public void selectFixTaskNameBothFixable() {
+		assertEquals("checkstyleFixAll", CheckstylePlugin.selectFixTaskName(3, 2));
+	}
+
+	@Test
+	public void selectFixTaskNameMainOnly() {
+		assertEquals("checkstyleFix", CheckstylePlugin.selectFixTaskName(5, 0));
+	}
+
+	@Test
+	public void selectFixTaskNameNegativeInputs() {
+		assertEquals("checkstyleFixAll", CheckstylePlugin.selectFixTaskName(-1, 0));
+		assertEquals("checkstyleFixAll", CheckstylePlugin.selectFixTaskName(0, -1));
+		assertEquals("checkstyleFixAll", CheckstylePlugin.selectFixTaskName(-1, -1));
+	}
+
+	@Test
+	public void selectFixTaskNameNeitherFixable() {
+		assertEquals("checkstyleFixAll", CheckstylePlugin.selectFixTaskName(0, 0));
+	}
+
+	@Test
+	public void selectFixTaskNameTestOnly() {
+		assertEquals("checkstyleFixTest", CheckstylePlugin.selectFixTaskName(0, 3));
 	}
 
 	@Test

@@ -2,6 +2,7 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.etk2000.checkstyle.gradle.fix.CheckstyleFixAction.ApplyFixesResult;
@@ -45,6 +46,232 @@ public class CheckstyleFixIntegrationTest {
 
 	@TempDir
 	Path tempDir;
+
+	@Test
+	public void collectJavaFilesEmptyDir() throws Exception {
+		final var dir = Files.createDirectory(tempDir.resolve("empty"));
+		final var files = new ArrayList<File>();
+		CheckstyleFixAction.collectJavaFiles(dir, files);
+		assertTrue(files.isEmpty());
+	}
+
+	@Test
+	public void collectJavaFilesFiltersNonJava() throws Exception {
+		final var dir = Files.createDirectory(tempDir.resolve("src"));
+		Files.writeString(dir.resolve("A.java"), "class A {}");
+		Files.writeString(dir.resolve("B.txt"), "not java");
+		Files.writeString(dir.resolve("C.java"), "class C {}");
+		final var files = new ArrayList<File>();
+		CheckstyleFixAction.collectJavaFiles(dir, files);
+		assertEquals(2, files.size());
+		assertTrue(files.stream().allMatch(f -> f.getName().endsWith(".java")));
+	}
+
+	@Test
+	public void collectJavaFilesNonExistentDir() throws Exception {
+		final var dir = tempDir.resolve("does-not-exist");
+		final var files = new ArrayList<File>();
+		CheckstyleFixAction.collectJavaFiles(dir, files);
+		assertTrue(files.isEmpty());
+	}
+
+	@Test
+	public void collectJavaFilesRecursive() throws Exception {
+		final var dir = Files.createDirectory(tempDir.resolve("src"));
+		final var sub = Files.createDirectory(dir.resolve("sub"));
+		Files.writeString(dir.resolve("A.java"), "class A {}");
+		Files.writeString(sub.resolve("B.java"), "class B {}");
+		final var files = new ArrayList<File>();
+		CheckstyleFixAction.collectJavaFiles(dir, files);
+		assertEquals(2, files.size());
+	}
+
+	@Test
+	public void doExecuteDryRunDoesNotModifyFile() throws Exception {
+		final var file = tempDir.resolve("DryExec.java").toFile();
+		final var original = "class T {\n\tint[] a = {1, 2,};\n}";
+		Files.writeString(file.toPath(), original);
+
+		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
+		assertTrue(result[1] > 0);
+		assertEquals(original, Files.readString(file.toPath()));
+	}
+
+	@Test
+	public void doExecuteDryRunReturnsCorrectCount() throws Exception {
+		final var file = tempDir.resolve("DryCount.java").toFile();
+		// trailing comma (fixable) + field sorting (skipped for non-enum)
+		Files.writeString(file.toPath(), "class T {\n\tint b, a;\n\tint[] c = {1, 2,};\n}");
+
+		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
+		assertEquals(1, result[1]);
+	}
+
+	@Test
+	public void doExecuteDryRunSecondPassFlag() throws Exception {
+		final var file = tempDir.resolve("DryPass.java").toFile();
+		Files.writeString(file.toPath(), "import java.nio.charset.Charset;\nclass T {\n\tCharset c = Charset.forName(\"UTF-8\");\n}");
+
+		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
+		assertEquals(1, result[0]);
+		assertTrue(result[1] > 0);
+	}
+
+	@Test
+	public void doExecuteDryRunSuppressesSummaryOutput() throws Exception {
+		final var file = tempDir.resolve("DrySilent.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1, 2,};\n}");
+
+		final var origOut = System.out;
+		final var captured = new java.io.ByteArrayOutputStream();
+		System.setOut(new java.io.PrintStream(captured));
+		try {
+			final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+			CheckstyleFixAction.doExecute(config, true, List.of(file));
+		}
+		finally {
+			System.setOut(origOut);
+		}
+		assertFalse(captured.toString().contains("Fixed"));
+	}
+
+	@Test
+	public void doExecuteNormalModePrintsSummary() throws Exception {
+		final var file = tempDir.resolve("NormalSummary.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1, 2,};\n}");
+
+		final var origOut = System.out;
+		final var captured = new java.io.ByteArrayOutputStream();
+		System.setOut(new java.io.PrintStream(captured));
+		try {
+			final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+			CheckstyleFixAction.doExecute(config, false, List.of(file));
+		}
+		finally {
+			System.setOut(origOut);
+		}
+		assertTrue(captured.toString().contains("Fixed"));
+	}
+
+	@Test
+	public void doExecuteNormalModeSecondPassFlag() throws Exception {
+		final var file = tempDir.resolve("SecondPass.java").toFile();
+		Files.writeString(file.toPath(), "import java.nio.charset.Charset;\nclass T {\n\tCharset c = Charset.forName(\"UTF-8\");\n}");
+
+		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+		final var result = CheckstyleFixAction.doExecute(config, false, List.of(file));
+		assertEquals(1, result[0]);
+	}
+
+	@Test
+	public void doExecuteNormalModeWritesFile() throws Exception {
+		final var file = tempDir.resolve("NormalExec.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1, 2,};\n}");
+
+		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+		final var result = CheckstyleFixAction.doExecute(config, false, List.of(file));
+		assertTrue(result[1] > 0);
+		assertFalse(Files.readString(file.toPath()).contains(",}"));
+	}
+
+	@Test
+	public void doExecuteZeroViolationsReturnsZeros() throws Exception {
+		final var file = tempDir.resolve("Clean.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid m() {}\n}");
+
+		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
+		assertEquals(0, result[0]);
+		assertEquals(0, result[1]);
+	}
+
+	@Test
+	public void e2eFixableCountMatchesBetweenDryRunAndNormalRun() throws Exception {
+		final var file1 = tempDir.resolve("E2E1.java").toFile();
+		// 3 fixable violations: trailing comma, explicit init, uppercase ell
+		Files.writeString(file1.toPath(), "class T {\n\tint x = 0;\n\tint[] a = {1,};\n\tlong y = 3000000000l;\n}");
+
+		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+		final var dryResult = CheckstyleFixAction.doExecute(config, true, List.of(file1));
+
+		// restore original for normal run
+		Files.writeString(file1.toPath(), "class T {\n\tint x = 0;\n\tint[] a = {1,};\n\tlong y = 3000000000l;\n}");
+		final var normalResult = CheckstyleFixAction.doExecute(config, false, List.of(file1));
+
+		assertEquals(normalResult[1], dryResult[1]);
+	}
+
+	@Test
+	public void e2eMixedFixableAndUnfixableViolations() throws Exception {
+		final var file = tempDir.resolve("E2EMixed.java").toFile();
+		// trailing comma = fixable, field order = unfixable (non-enum)
+		Files.writeString(file.toPath(), "class T {\n\tint b, a;\n\tint[] c = {1, 2,};\n}");
+
+		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
+
+		final var violations = runChecks(file);
+		final var fixable = result[1];
+		final var total = violations.size();
+
+		assertTrue(fixable > 0);
+		assertTrue(total > fixable);
+	}
+
+	@Test
+	public void e2eMultipleFilesAggregatesCount() throws Exception {
+		final var dir = Files.createDirectory(tempDir.resolve("multi"));
+		final var f1 = dir.resolve("A.java").toFile();
+		final var f2 = dir.resolve("B.java").toFile();
+		Files.writeString(f1.toPath(), "class A {\n\tint x = 0;\n}");
+		Files.writeString(f2.toPath(), "class B {\n\tint[] a = {1,};\n}");
+
+		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+		final var result = CheckstyleFixAction.doExecute(config, true, List.of(f1, f2));
+		assertEquals(2, result[1]);
+	}
+
+	@Test
+	public void formatHintMessageAllFixable() {
+		assertEquals(
+				"Run ./gradlew checkstyleFix to auto-fix all 5 violations.",
+				CheckstyleFixAction.formatHintMessage(5, 5, "checkstyleFix")
+		);
+	}
+
+	@Test
+	public void formatHintMessageNegativeFixable() {
+		assertNull(CheckstyleFixAction.formatHintMessage(-1, 5, "checkstyleFix"));
+	}
+
+	@Test
+	public void formatHintMessagePartiallyFixable() {
+		assertEquals(
+				"Run ./gradlew checkstyleFixAll to auto-fix 3 of 10 violations.",
+				CheckstyleFixAction.formatHintMessage(3, 10, "checkstyleFixAll")
+		);
+	}
+
+	@Test
+	public void formatHintMessageSingleFixable() {
+		assertEquals(
+				"Run ./gradlew checkstyleFix to auto-fix all 1 violations.",
+				CheckstyleFixAction.formatHintMessage(1, 1, "checkstyleFix")
+		);
+	}
+
+	@Test
+	public void formatHintMessageZeroFixable() {
+		assertNull(CheckstyleFixAction.formatHintMessage(0, 5, "checkstyleFix"));
+	}
+
+	@Test
+	public void formatHintMessageZeroTotal() {
+		assertNull(CheckstyleFixAction.formatHintMessage(0, 0, "checkstyleFix"));
+	}
 
 	@Nonnull
 	private List<AuditEvent> runChecks(@Nonnull File file) throws Exception {
