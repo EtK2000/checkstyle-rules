@@ -49,11 +49,13 @@ class AnnotationFixerUtil {
 							++pos;
 						}
 					}
-					++pos;
+					if (pos < stripped.length())
+						++pos;
 				}
 			}
 
-			while (pos < stripped.length() && stripped.charAt(pos) == ' ')
+			while (pos < stripped.length()
+						&& (stripped.charAt(pos) == ' ' || stripped.charAt(pos) == '\t'))
 				++pos;
 		}
 		return pos >= stripped.length();
@@ -97,18 +99,20 @@ class AnnotationFixerUtil {
 							++pos;
 						}
 					}
-					++pos;
+					if (pos < content.length())
+						++pos;
 				}
 			}
 
-			annotations.add(content.substring(start, pos));
+			annotations.add(content.substring(start, Math.min(pos, content.length())));
 
 			// skip whitespace between annotations
-			while (pos < content.length() && content.charAt(pos) == ' ')
+			while (pos < content.length()
+					&& (content.charAt(pos) == ' ' || content.charAt(pos) == '\t'))
 				++pos;
 		}
 
-		final var remaining = content.substring(pos).stripLeading();
+		final var remaining = content.substring(Math.min(pos, content.length())).stripLeading();
 		return new ParseResult(annotations, remaining);
 	}
 

@@ -8,6 +8,48 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 class AnnotationOwnLineFixer implements CheckstyleFixer {
+	private record EmbeddedResult(@Nonnull List<String> annotations, @Nonnull String prefix,
+			@Nonnull String remaining) {}
+
+	/**
+	 * Extracts annotations that appear after modifier keywords (e.g. {@code final @A var x}).
+	 * Returns {@code null} if no embedded annotations are found.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static EmbeddedResult extractEmbeddedAnnotations(@Nonnull String content) {
+		var pos = 0;
+
+		while (pos < content.length()) {
+			while (pos < content.length()
+					&& (content.charAt(pos) == ' ' || content.charAt(pos) == '\t'))
+				++pos;
+
+			if (pos >= content.length())
+				return null;
+
+			if (content.charAt(pos) == '@') {
+				if (pos == 0)
+					return null;
+
+				final var prefix = content.substring(0, pos).stripTrailing();
+				final var parsed = AnnotationFixerUtil.parseAnnotations(content.substring(pos));
+				if (parsed.annotations().isEmpty())
+					return null;
+
+				return new EmbeddedResult(parsed.annotations(), prefix, parsed.remaining());
+			}
+
+			if (!Character.isJavaIdentifierStart(content.charAt(pos)))
+				return null;
+
+			while (pos < content.length() && Character.isJavaIdentifierPart(content.charAt(pos)))
+				++pos;
+		}
+
+		return null;
+	}
+
 	@CheckReturnValue
 	private static boolean isInsideOrStartsComment(@Nonnull String line, boolean inBlockComment) {
 		if (inBlockComment)
@@ -41,16 +83,31 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 		final var stripped = line.stripLeading();
 		final var indent = line.substring(0, line.length() - stripped.length());
 
-		// case 1: multiple annotations or annotation + declaration on same line - split and sort
+		// case 1: annotations on same line as declaration - split and sort
+		// handles leading annotations (@A @B void f), embedded annotations (final @A var x),
+		// and mixed (@ C final @A var x)
 		final var parsed = AnnotationFixerUtil.parseAnnotations(stripped);
-		if (parsed.annotations().size() > 1
-				|| (!parsed.annotations().isEmpty() && !parsed.remaining().isEmpty())) {
-			AnnotationFixerUtil.sortAnnotations(parsed.annotations());
+		final var allAnnotations = new ArrayList<>(parsed.annotations());
+		var declarationPart = parsed.remaining();
+
+		while (!declarationPart.isEmpty()) {
+			final var embedded = extractEmbeddedAnnotations(declarationPart);
+			if (embedded == null)
+				break;
+			allAnnotations.addAll(embedded.annotations());
+			declarationPart = embedded.remaining().isEmpty()
+					? embedded.prefix()
+					: embedded.prefix() + " " + embedded.remaining();
+		}
+
+		if (allAnnotations.size() > 1
+				|| (!allAnnotations.isEmpty() && !declarationPart.isEmpty())) {
+			AnnotationFixerUtil.sortAnnotations(allAnnotations);
 			final var replacement = new ArrayList<String>();
-			for (var annotation : parsed.annotations())
+			for (var annotation : allAnnotations)
 				replacement.add(indent + annotation);
-			if (!parsed.remaining().isEmpty())
-				replacement.add(indent + parsed.remaining());
+			if (!declarationPart.isEmpty())
+				replacement.add(indent + declarationPart);
 			return new FixResult(lineIndex, lineIndex, replacement);
 		}
 
@@ -86,16 +143,16 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 		while (end + 1 < lines.size() && AnnotationFixerUtil.isAnnotationOnlyLine(lines.get(end + 1).stripLeading()))
 			++end;
 
-		final var allAnnotations = new ArrayList<String>();
+		final var blockAnnotations = new ArrayList<String>();
 		for (var i = start; i <= end; ++i) {
 			final var p = AnnotationFixerUtil.parseAnnotations(lines.get(i).stripLeading());
-			allAnnotations.addAll(p.annotations());
+			blockAnnotations.addAll(p.annotations());
 		}
 
-		final var sorted = new ArrayList<>(allAnnotations);
+		final var sorted = new ArrayList<>(blockAnnotations);
 		AnnotationFixerUtil.sortAnnotations(sorted);
 
-		if (sorted.equals(allAnnotations))
+		if (sorted.equals(blockAnnotations))
 			return null;
 
 		final var replacement = new ArrayList<String>();

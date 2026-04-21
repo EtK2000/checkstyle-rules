@@ -584,6 +584,62 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testAnnotationOwnLineEmbeddedAfterFinal() throws Exception {
+		final var file = tempDir.resolve("AnnEmbed.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tfinal @Deprecated int x;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid f() {\n\t\t@Deprecated\n\t\tfinal int x;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testAnnotationOwnLineEmbeddedAfterMultipleModifiers() throws Exception {
+		final var file = tempDir.resolve("AnnEmbedField.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tprivate final @Deprecated String field;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\t@Deprecated\n\tprivate final String field;\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testAnnotationOwnLineEmbeddedAfterStaticFinal() throws Exception {
+		final var file = tempDir.resolve("AnnEmbedStatic.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tstatic final @Deprecated int CONST = 1;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\t@Deprecated\n\tstatic final int CONST = 1;\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testAnnotationOwnLineEmbeddedLeadingAndEmbedded() throws Exception {
+		final var file = tempDir.resolve("AnnEmbedMixed.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\t@Override final @Deprecated int x;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid f() {\n\t\t@Deprecated\n\t\t@Override\n\t\tfinal int x;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testAnnotationOwnLineReorder() throws Exception {
 		final var file = tempDir.resolve("AnnReorder.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Override\n\t@Deprecated\n\tvoid method() {}\n}");

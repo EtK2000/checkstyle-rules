@@ -131,7 +131,7 @@ public class AnnotationOwnLineCheckTest {
 	@Test
 	public void testSameLineViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, DIR + "InputAnnotationOwnLineViolation.java");
-		assertEquals(17, violations.size());
+		assertEquals(20, violations.size());
 
 		assertEquals(7, violations.get(0).getLine());
 		assertEquals(9, violations.get(1).getLine());
@@ -144,12 +144,15 @@ public class AnnotationOwnLineCheckTest {
 		assertEquals(26, violations.get(8).getLine());
 		assertEquals(29, violations.get(9).getLine());
 		assertEquals(31, violations.get(10).getLine());
-		assertEquals(34, violations.get(11).getLine());
+		assertEquals(33, violations.get(11).getLine());
 		assertEquals(36, violations.get(12).getLine());
 		assertEquals(38, violations.get(13).getLine());
-		assertEquals(41, violations.get(14).getLine());
+		assertEquals(40, violations.get(14).getLine());
 		assertEquals(43, violations.get(15).getLine());
-		assertEquals(46, violations.get(16).getLine());
+		assertEquals(45, violations.get(16).getLine());
+		assertEquals(47, violations.get(17).getLine());
+		assertEquals(49, violations.get(18).getLine());
+		assertEquals(52, violations.get(19).getLine());
 
 		for (var violation : violations) {
 			assertEquals(SeverityLevel.ERROR, violation.getSeverityLevel());

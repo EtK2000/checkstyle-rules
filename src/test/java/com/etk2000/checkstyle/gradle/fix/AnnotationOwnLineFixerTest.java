@@ -20,6 +20,22 @@ public class AnnotationOwnLineFixerTest {
 	}
 
 	@Test
+	public void testAnnotationWithCharLiteral() {
+		final var lines = new ArrayList<>(List.of("\t@A('x') @B void f() {}"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A('x')", "\t@B", "\tvoid f() {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testAnnotationWithNestedAnnotation() {
+		final var lines = new ArrayList<>(List.of("\t@A(@B) @C void f() {}"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A(@B)", "\t@C", "\tvoid f() {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
 	public void testAnnotationWithNestedParens() {
 		final var lines = new ArrayList<>(List.of("\t@A(v = (1 + 2)) @B void f() {}"));
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
@@ -166,10 +182,138 @@ public class AnnotationOwnLineFixerTest {
 	}
 
 	@Test
+	public void testEmbeddedAnnotationAfterMultipleModifiers() {
+		final var lines = new ArrayList<>(List.of("\tprivate final @A String field;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A", "\tprivate final String field;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testEmbeddedAnnotationAfterStaticFinal() {
+		final var lines = new ArrayList<>(List.of("\tstatic final @A int CONST = 1;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A", "\tstatic final int CONST = 1;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testEmbeddedAnnotationBetweenModifiers() {
+		final var lines = new ArrayList<>(List.of("\tprivate @A final var x = 1;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A", "\tprivate final var x = 1;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testEmbeddedAnnotationsWithEmptyRemaining() {
+		final var lines = new ArrayList<>(List.of("\t@B final @A"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A", "\t@B", "\tfinal"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testEmbeddedAnnotationWithArrayOfAnnotations() {
+		final var lines = new ArrayList<>(List.of("\tfinal @A({@B, @C}) var x = 1;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A({@B, @C})", "\tfinal var x = 1;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testEmbeddedAnnotationWithDeepNestedAnnotation() {
+		final var lines = new ArrayList<>(List.of("\tfinal @A(value = @B(\"test\")) var x = 1;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A(value = @B(\"test\"))", "\tfinal var x = 1;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testEmbeddedAnnotationWithEscapedQuotes() {
+		final var lines = new ArrayList<>(List.of("\tfinal @A(\"he said \\\"hi\\\"\") var x = 1;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A(\"he said \\\"hi\\\"\")", "\tfinal var x = 1;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testEmbeddedAnnotationWithNestedAnnotation() {
+		final var lines = new ArrayList<>(List.of("\tfinal @A(@B) var x = 1;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A(@B)", "\tfinal var x = 1;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testEmbeddedAnnotationWithNestedParens() {
+		final var lines = new ArrayList<>(List.of("\tfinal @A(v = (1 + 2)) var x = 1;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A(v = (1 + 2))", "\tfinal var x = 1;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testEmbeddedAnnotationWithTabSeparator() {
+		final var lines = new ArrayList<>(List.of("\tfinal\t@A var x = 1;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A", "\tfinal var x = 1;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testEmbeddedAnnotationWithValue() {
+		final var lines = new ArrayList<>(List.of("\tfinal @SuppressWarnings(\"unused\") var x = 1;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@SuppressWarnings(\"unused\")", "\tfinal var x = 1;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testEmbeddedMultipleAnnotationsAfterFinal() {
+		final var lines = new ArrayList<>(List.of("\tfinal @A @B var x = 1;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A", "\t@B", "\tfinal var x = 1;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testEmbeddedQualifiedAnnotation() {
+		final var lines = new ArrayList<>(List.of("\tfinal @javax.annotation.Nonnull var x = \"\";"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@javax.annotation.Nonnull", "\tfinal var x = \"\";"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testEmbeddedSingleAnnotationAfterFinal() {
+		final var lines = new ArrayList<>(List.of("\tfinal @A var x = 1;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A", "\tfinal var x = 1;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
 	public void testEscapedQuoteInStringParam() {
 		final var lines = new ArrayList<>(List.of("\t@A(\"he said \\\"hi\\\"\") @B void f() {}"));
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(List.of("\t@A(\"he said \\\"hi\\\"\")", "\t@B", "\tvoid f() {}"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testLeadingAndEmbeddedAnnotations() {
+		final var lines = new ArrayList<>(List.of("\t@C final @A var x = 1;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A", "\t@C", "\tfinal var x = 1;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testLeadingAndEmbeddedAnnotationsWithMultipleModifiers() {
+		final var lines = new ArrayList<>(List.of("\t@B private final @A String x;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A", "\t@B", "\tprivate final String x;"), result.replacement());
 		assertTrue(result.importsToAdd().isEmpty());
 	}
 
@@ -180,6 +324,54 @@ public class AnnotationOwnLineFixerTest {
 		assertEquals(1, result.startLine());
 		assertEquals(2, result.endLine());
 		assertEquals(List.of(), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testMultipleLeadingAndEmbeddedAnnotations() {
+		final var lines = new ArrayList<>(List.of("\t@D @C final @B @A var x = 1;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A", "\t@B", "\t@C", "\t@D", "\tfinal var x = 1;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testMultiplePositionsAllThree() {
+		final var lines = new ArrayList<>(List.of("\t@X static @Y final @Z int v;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@X", "\t@Y", "\t@Z", "\tstatic final int v;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testMultiplePositionsBetweenAndAfter() {
+		final var lines = new ArrayList<>(List.of("\tstatic @X final @Y int v;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@X", "\t@Y", "\tstatic final int v;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testMultiplePositionsBetweenOnly() {
+		final var lines = new ArrayList<>(List.of("\tstatic @X final int v;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@X", "\tstatic final int v;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testMultiplePositionsLeadingAndAfter() {
+		final var lines = new ArrayList<>(List.of("\t@X static final @Y int v;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@X", "\t@Y", "\tstatic final int v;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testMultiplePositionsLeadingAndBetween() {
+		final var lines = new ArrayList<>(List.of("\t@X static @Y final int v;"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@X", "\t@Y", "\tstatic final int v;"), result.replacement());
 		assertTrue(result.importsToAdd().isEmpty());
 	}
 
@@ -281,6 +473,14 @@ public class AnnotationOwnLineFixerTest {
 		final var lines = new ArrayList<>(List.of("\t@A @B"));
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals(List.of("\t@A", "\t@B"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTabBetweenLeadingAnnotations() {
+		final var lines = new ArrayList<>(List.of("\t@A\t@B void f() {}"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\t@A", "\t@B", "\tvoid f() {}"), result.replacement());
 		assertTrue(result.importsToAdd().isEmpty());
 	}
 
