@@ -12,6 +12,11 @@ class InputFieldConsolidationCleanAlreadyCombined {
 	int height, width;
 }
 
+@interface CleanAnnotationType {
+	int alpha() default 0;
+	int beta() default 0;
+}
+
 class InputFieldConsolidationCleanDifferentTypes {
 	int count;
 	String name;
@@ -86,9 +91,9 @@ class InputFieldConsolidationCleanAnnotationMismatch {
 	int plain;
 }
 
-class InputFieldConsolidationCleanCommentBetween {
+class InputFieldConsolidationCleanBlockCommentBetween {
 	int alpha;
-	// separator comment
+	/* separator */
 	int beta;
 }
 
@@ -98,10 +103,32 @@ class InputFieldConsolidationCleanBlankLine {
 	int beta;
 }
 
-class InputFieldConsolidationCleanJavadocCurr {
+class InputFieldConsolidationCleanJavadocBetween {
 	int x;
 	/** The Y coordinate */
 	int y;
+}
+
+class InputFieldConsolidationCleanLineCommentBetween {
+	int alpha;
+	// separator comment
+	int beta;
+}
+
+class InputFieldConsolidationCleanMultiLineBlockCommentBetween {
+	int alpha;
+	/*
+	 * Multi-line separator
+	 */
+	int beta;
+}
+
+class InputFieldConsolidationCleanMultiLineBlockCommentNoStar {
+	int alpha;
+	/*
+	   continued without star prefix
+	*/
+	int beta;
 }
 
 class InputFieldConsolidationCleanArrayMismatch {
@@ -128,6 +155,15 @@ class InputFieldConsolidationCleanCompoundArrayMismatch {
 	String[] compound[];
 }
 
+enum InputFieldConsolidationCleanEnumConstantBodies {
+	A {
+		int x;
+	},
+	B {
+		int x;
+	}
+}
+
 enum InputFieldConsolidationCleanEnumSeparated {
 	A,
 	B;
@@ -145,6 +181,11 @@ interface InputFieldConsolidationCleanInterface {
 class InputFieldConsolidationCleanFqnVsSimple {
 	java.util.List<String> alpha;
 	List<String> beta;
+}
+
+class InputFieldConsolidationCleanFqnVsSimpleNoGenerics {
+	java.lang.String first;
+	String second;
 }
 
 class InputFieldConsolidationCleanDifferentWildcards {
@@ -262,4 +303,21 @@ class InputFieldConsolidationCleanAnonymousClass {
 		@Override
 		public void run() {}
 	};
+}
+
+class InputFieldConsolidationCleanMultiLineDeclaration {
+	boolean areInvestmentFundsTreatedAsPensionLiquidity,
+			arePensionsTreatedAsSeparateLiquidity,
+			areUnvestedRsusExcludedFromSum,
+			areUnvestedRsusTreatedAsSeparateLiquidity;
+}
+
+class InputFieldConsolidationCleanMultiVarThenDifferentType {
+	int alpha, beta;
+	String gamma;
+}
+
+class InputFieldConsolidationCleanWrappedTwoPerLine {
+	boolean areInvestmentFundsTreatedAsPensionLiquidity, arePensionsTreatedAsSeparateLiquidity,
+			areUnvestedRsusExcludedFromSum, areUnvestedRsusTreatedAsSeparateLiquidity;
 }

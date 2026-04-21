@@ -19,6 +19,7 @@ import javax.annotation.Nonnull;
  * (e.g. {@code int height, width;}).
  */
 public class FieldConsolidationCheck extends AbstractCheck {
+	private static final int MAX_ANNOTATION_DEPTH = 50;
 	private static final String MSG_KEY = "field.consolidate.same.type";
 
 	@CheckReturnValue
@@ -29,7 +30,7 @@ public class FieldConsolidationCheck extends AbstractCheck {
 		if (modifiers != null) {
 			for (var child = modifiers.getFirstChild(); child != null; child = child.getNextSibling()) {
 				if (child.getType() == TokenTypes.ANNOTATION)
-					result.add(canonicalAnnotation(child));
+					result.add(canonicalAnnotation(child, MAX_ANNOTATION_DEPTH));
 			}
 		}
 		result.sort(String::compareTo);
@@ -42,7 +43,6 @@ public class FieldConsolidationCheck extends AbstractCheck {
 		final var currIdentLine = curr.findFirstToken(TokenTypes.IDENT).getLineNo();
 		if (prevIdentLine == currIdentLine)
 			return false;
-		// gap between fields (comment, blank line, or javadoc)
 		if (curr.getLineNo() > prevIdentLine + 1)
 			return false;
 		if (prev.findFirstToken(TokenTypes.ASSIGN) != null || curr.findFirstToken(TokenTypes.ASSIGN) != null)
@@ -56,7 +56,9 @@ public class FieldConsolidationCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	@Nonnull
-	private static String canonicalAnnotation(@Nonnull DetailAST annotation) {
+	private static String canonicalAnnotation(@Nonnull DetailAST annotation, int remainingDepth) {
+		if (remainingDepth <= 0)
+			return "";
 		final var sb = new StringBuilder();
 		for (var child = annotation.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() == TokenTypes.IDENT) {
@@ -72,7 +74,6 @@ public class FieldConsolidationCheck extends AbstractCheck {
 		for (var child = annotation.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() == TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR) {
 				final var key = child.findFirstToken(TokenTypes.IDENT).getText();
-				// value can be EXPR, ANNOTATION_ARRAY_INIT, or ANNOTATION (nested)
 				var value = child.findFirstToken(TokenTypes.EXPR);
 				if (value == null)
 					value = child.findFirstToken(TokenTypes.ANNOTATION_ARRAY_INIT);
@@ -80,13 +81,13 @@ public class FieldConsolidationCheck extends AbstractCheck {
 					value = child.findFirstToken(TokenTypes.ANNOTATION);
 				if (value != null) {
 					final var serialized = value.getType() == TokenTypes.ANNOTATION
-							? canonicalAnnotation(value)
+							? canonicalAnnotation(value, remainingDepth - 1)
 							: serializeAst(value);
 					params.put(key, serialized);
 				}
 			}
 			else if (child.getType() == TokenTypes.ANNOTATION)
-				params.put("value", canonicalAnnotation(child));
+				params.put("value", canonicalAnnotation(child, remainingDepth - 1));
 			else if (child.getType() == TokenTypes.EXPR || child.getType() == TokenTypes.ANNOTATION_ARRAY_INIT)
 				params.put("value", serializeAst(child));
 		}
@@ -142,7 +143,7 @@ public class FieldConsolidationCheck extends AbstractCheck {
 				for (var ann = bc.getFirstChild(); ann != null; ann = ann.getNextSibling()) {
 					if (ann.getType() == TokenTypes.ANNOTATION) {
 						sb.append('@');
-						sb.append(canonicalAnnotation(ann));
+						sb.append(canonicalAnnotation(ann, MAX_ANNOTATION_DEPTH));
 						sb.append(' ');
 					}
 				}
@@ -181,7 +182,7 @@ public class FieldConsolidationCheck extends AbstractCheck {
 							for (var ann = tc.getFirstChild(); ann != null; ann = ann.getNextSibling()) {
 								if (ann.getType() == TokenTypes.ANNOTATION) {
 									sb.append('@');
-									sb.append(canonicalAnnotation(ann));
+									sb.append(canonicalAnnotation(ann, MAX_ANNOTATION_DEPTH));
 									sb.append(' ');
 								}
 							}
@@ -270,16 +271,22 @@ public class FieldConsolidationCheck extends AbstractCheck {
 	@Override
 	public void visitToken(@Nonnull DetailAST ast) {
 		DetailAST prev = null;
+		var prevSeparatedByComma = false;
 
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
 			switch (child.getType()) {
-				case TokenTypes.COMMA, TokenTypes.SEMI -> {}
+				case TokenTypes.COMMA -> prevSeparatedByComma = true;
+				case TokenTypes.SEMI -> {}
 				case TokenTypes.VARIABLE_DEF -> {
-					if (prev != null && canCombine(prev, child))
+					if (prev != null && !prevSeparatedByComma && canCombine(prev, child))
 						log(child.findFirstToken(TokenTypes.IDENT), MSG_KEY, fieldName(child), fieldName(prev), typeName(child));
 					prev = child;
+					prevSeparatedByComma = false;
 				}
-				default -> prev = null;
+				default -> {
+					prev = null;
+					prevSeparatedByComma = false;
+				}
 			}
 		}
 	}

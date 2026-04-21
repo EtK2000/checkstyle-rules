@@ -1224,12 +1224,67 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testFieldConsolidationBlockCommentBeforeFieldNameSkipped() throws Exception {
+		final var file = tempDir.resolve("FieldConsBlockComment.java").toFile();
+		final var content = "class T {\n\tint /* note */ alpha;\n\tint /* note */ beta;\n}";
+		Files.writeString(file.toPath(), content);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(content, output.content());
+		assertEquals(0, output.result().fixCount());
+	}
+
+	@Test
+	public void testFieldConsolidationBlockCommentPostNameSkipped() throws Exception {
+		final var file = tempDir.resolve("FieldConsBlockCommentPost.java").toFile();
+		final var content = "class T {\n\tint alpha;\n\tint beta /* doc */;\n}";
+		Files.writeString(file.toPath(), content);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(content, output.content());
+		assertEquals(0, output.result().fixCount());
+	}
+
+	@Test
 	public void testFieldConsolidationBothCStyleArray() throws Exception {
 		final var file = tempDir.resolve("FieldConsBothC.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint alpha[];\n\tint beta[];\n}");
 
 		final var output = runFixAndGetResult(file);
 		assertEquals("class T {\n\tint alpha[], beta[];\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldConsolidationBothCStyleArrayWrapping() throws Exception {
+		final var a = "a".repeat(53);
+		final var b = "b".repeat(53);
+		final var file = tempDir.resolve("FieldConsBothCWrap.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tint " + a + "[];\n\tint " + b + "[];\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tint " + a + "[],\n\t\t\t" + b + "[];\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldConsolidationCommaMerge() throws Exception {
+		final var file = tempDir.resolve("FieldConsCommaMerge.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tint alpha, beta;\n\tint gamma;\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint alpha, beta, gamma;\n}", output.content());
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
@@ -1295,6 +1350,17 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testFieldConsolidationProtected() throws Exception {
+		final var file = tempDir.resolve("FieldConsProt.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tprotected int alpha;\n\tprotected int beta;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tprotected int alpha, beta;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testFieldConsolidationSimple() throws Exception {
 		final var file = tempDir.resolve("FieldCons.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint alpha;\n\tint beta;\n}");
@@ -1324,6 +1390,80 @@ public class CheckstyleFixIntegrationTest {
 		final var output = runFixAndGetResult(file);
 		assertEquals("class T {\n\tint a, b, c;\n}", output.content());
 		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldConsolidationWrappingFourLongFields() throws Exception {
+		final var a = "a".repeat(35);
+		final var b = "b".repeat(35);
+		final var c = "c".repeat(35);
+		final var d = "d".repeat(35);
+		final var file = tempDir.resolve("FieldConsWrap4.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tboolean " + a + ";\n\tboolean " + b + ";\n\tboolean " + c + ";\n\tboolean " + d + ";\n}"
+		);
+
+		final var content = runFixMultiPass(file);
+		assertEquals(
+				"class T {\n\tboolean " + a + ", " + b + ",\n\t\t\t" + c + ", " + d + ";\n}",
+				content
+		);
+	}
+
+	@Test
+	public void testFieldConsolidationWrappingPreExistingMultiLineNotFlagged() throws Exception {
+		final var file = tempDir.resolve("FieldConsPreWrap.java").toFile();
+		final var content = "class T {\n"
+				+ "\tprivate boolean areInvestmentFundsTreatedAsPensionLiquidity,\n"
+				+ "\t\t\tarePensionsTreatedAsSeparateLiquidity,\n"
+				+ "\t\t\tareUnvestedRsusExcludedFromSum,\n"
+				+ "\t\t\tareUnvestedRsusTreatedAsSeparateLiquidity;\n"
+				+ "}";
+		Files.writeString(file.toPath(), content);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(content, output.content());
+		assertEquals(0, output.result().fixCount());
+	}
+
+	@Test
+	public void testFieldConsolidationWrappingThreeFields() throws Exception {
+		final var a = "a".repeat(35);
+		final var b = "b".repeat(35);
+		final var c = "c".repeat(35);
+		final var file = tempDir.resolve("FieldConsWrap3.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tboolean " + a + ";\n\tboolean " + b + ";\n\tboolean " + c + ";\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean " + a + ", " + b + ",\n\t\t\t" + c + ";\n}",
+				output.content()
+		);
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldConsolidationWrappingTwoLongFields() throws Exception {
+		final var a = "a".repeat(55);
+		final var b = "b".repeat(55);
+		final var file = tempDir.resolve("FieldConsWrap2.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tint " + a + ";\n\tint " + b + ";\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tint " + a + ",\n\t\t\t" + b + ";\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
 

@@ -158,6 +158,16 @@ public class FieldConsolidationFixerTest {
 	}
 
 	@Test
+	public void testBackwardScanHitsBlockComment() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint alpha;",
+				"\t/* separator */",
+				"\tint beta;"
+		));
+		assertNull(fixer.fix(lines, 2, 5));
+	}
+
+	@Test
 	public void testBackwardScanHitsCommentLine() {
 		final var lines = new ArrayList<>(List.of(
 				"\tint alpha;",
@@ -168,9 +178,340 @@ public class FieldConsolidationFixerTest {
 	}
 
 	@Test
+	public void testBackwardScanHitsJavadoc() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint alpha;",
+				"\t/** Javadoc for beta */",
+				"\tint beta;"
+		));
+		assertNull(fixer.fix(lines, 2, 5));
+	}
+
+	@Test
+	public void testBackwardScanHitsMultiLineJavadoc() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint alpha;",
+				"\t/**",
+				"\t * Javadoc for beta.",
+				"\t */",
+				"\tint beta;"
+		));
+		assertNull(fixer.fix(lines, 4, 5));
+	}
+
+	@Test
 	public void testColumnOutOfBounds() {
 		final var lines = new ArrayList<>(List.of("int alpha;", "int beta;"));
 		assertNull(fixer.fix(lines, 1, 50));
+	}
+
+	@Test
+	public void testCommaMergeCharLiteralWithEscapedQuote() {
+		final var lines = new ArrayList<>(List.of(
+				"@Ann('\\'') int alpha,",
+				"\t\t\tbeta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("@Ann('\\'') int alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCommaMergeContinuationCollected() {
+		final var lines = new ArrayList<>(List.of(
+				"\tboolean alpha,",
+				"\t\t\tbeta,",
+				"\t\t\t\tgamma,",
+				"\t\t\t\tdelta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(3, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tboolean alpha, beta, gamma, delta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCommaMergeCStyleArrays() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint alpha[],",
+				"\t\t\tbeta[];"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint alpha[], beta[];", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCommaMergeIntermediate() {
+		final var lines = new ArrayList<>(List.of(
+				"\tboolean alpha,",
+				"\t\t\tbeta,",
+				"\t\t\tgamma;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tboolean alpha, beta,", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCommaMergeLastField() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\t\talpha,",
+				"\t\t\tbeta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\t\t\talpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCommaMergeNoTerminatorOnViolation() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint alpha,",
+				"\t\t\tbeta"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint alpha, beta,", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCommaMergeThroughAnnotation() {
+		final var lines = new ArrayList<>(List.of(
+				"\tboolean alpha,",
+				"\t@Deprecated",
+				"\t\t\tbeta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tboolean alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCommaMergeWithBlockComment() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint /* , */ alpha,",
+				"\t\t\tbeta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint /* , */ alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCommaMergeWithLineComment() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint alpha, // trailing,",
+				"\t\t\tbeta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCommaMergeWithStringLiteral() {
+		final var lines = new ArrayList<>(List.of(
+				"@SuppressWarnings(\"a,b\") int alpha,",
+				"\t\t\tbeta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("@SuppressWarnings(\"a,b\") int alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCommaMergeWithStringLiteralEscapedQuote() {
+		final var lines = new ArrayList<>(List.of(
+				"@SuppressWarnings(\"a\\\"b\") int alpha,",
+				"\t\t\tbeta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("@SuppressWarnings(\"a\\\"b\") int alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCommaMergeWithTypePrefix() {
+		final var lines = new ArrayList<>(List.of(
+				"\tprivate boolean areInvestmentFundsTreatedAsPensionLiquidity,",
+				"\t\t\tarePensionsTreatedAsSeparateLiquidity,",
+				"\t\t\tareUnvestedRsusExcludedFromSum;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals(
+				"\tprivate boolean areInvestmentFundsTreatedAsPensionLiquidity, arePensionsTreatedAsSeparateLiquidity,",
+				result.replacement().getFirst()
+		);
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testCommaMergeWraps() {
+		final var name1 = "a".repeat(55);
+		final var name2 = "b".repeat(55);
+		final var lines = new ArrayList<>(List.of(
+				"\tint " + name1 + ",",
+				"\t\t\t" + name2 + ";"
+		));
+		// tab(4) + "int "(4) + 55 + ", "(2) + 55 + ";"(1) = 121
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(2, result.replacement().size());
+		assertEquals("\tint " + name1 + ",", result.replacement().get(0));
+		assertEquals("\t\t\t" + name2 + ";", result.replacement().get(1));
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testContinuationLoopExhaustsLines() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint prevName;",
+				"\tint alpha,",
+				"\t\t\tbeta,",
+				"\t\t\tgamma,"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(3, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint prevName, alpha, beta, gamma;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testContinuationStopsAtBlockComment() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint prevName;",
+				"\tint alpha,",
+				"\t\t\t/* single-line block comment */",
+				"\t\t\tbeta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint prevName, alpha,", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testContinuationStopsAtCollectedThenComment() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint prevName;",
+				"\tint alpha,",
+				"\t\t\tbeta,",
+				"\t\t\t// comment about gamma",
+				"\t\t\tgamma;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint prevName, alpha, beta,", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testContinuationStopsAtComment() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint prevName;",
+				"\tint alpha,",
+				"\t\t\t// comment about beta",
+				"\t\t\tbeta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint prevName, alpha,", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testContinuationStopsAtCommentNoCommaOnViolation() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint prevName;",
+				"\tint alpha",
+				"\t\t\t// comment",
+				"\t\t\tbeta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint prevName, alpha;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testContinuationStopsAtJavadoc() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint prevName;",
+				"\tint alpha,",
+				"\t\t\t/** Javadoc for beta */",
+				"\t\t\tbeta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint prevName, alpha,", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testContinuationStopsAtMultiLineBlockComment() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint prevName;",
+				"\tint alpha,",
+				"\t\t\t/*",
+				"\t\t\t * multi-line comment",
+				"\t\t\t */",
+				"\t\t\tbeta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint prevName, alpha,", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -214,6 +555,20 @@ public class FieldConsolidationFixerTest {
 	}
 
 	@Test
+	public void testMergeIgnoresTrailingCommaBeforeSemicolon() {
+		final var lines = new ArrayList<>(List.of(
+				"int alpha;",
+				"int beta, ;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 4));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("int alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
 	public void testNegativeColumn() {
 		final var lines = new ArrayList<>(List.of("int alpha;", "int beta;"));
 		assertNull(fixer.fix(lines, 1, -1));
@@ -229,6 +584,29 @@ public class FieldConsolidationFixerTest {
 	public void testNoPreviousSemicolon() {
 		final var lines = new ArrayList<>(List.of("class Foo {", "\tint beta;"));
 		assertNull(fixer.fix(lines, 1, 5));
+	}
+
+	@Test
+	public void testPrevLineAdjacentBlockComments() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint /* ; *//* x */ alpha;",
+				"\tint beta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint /* ; *//* x */ alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testPrevLineAllCommasInStrings() {
+		final var lines = new ArrayList<>(List.of(
+				"@Ann(\"a,b\") // no semicolon or real comma",
+				"int beta;"
+		));
+		assertNull(fixer.fix(lines, 1, 4));
 	}
 
 	@Test
@@ -255,6 +633,24 @@ public class FieldConsolidationFixerTest {
 	}
 
 	@Test
+	public void testPrevLineBlockCommentSpanningMultipleFields() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint /* comment */ alpha;",
+				"\tint /* comment */ beta;"
+		));
+		assertNull(fixer.fix(lines, 1, 19));
+	}
+
+	@Test
+	public void testPrevLineBlockCommentUnclosed() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint /* unclosed alpha;",
+				"\tint beta;"
+		));
+		assertNull(fixer.fix(lines, 1, 5));
+	}
+
+	@Test
 	public void testPrevLineBlockCommentWithSemicolon() {
 		final var lines = new ArrayList<>(List.of(
 				"\tint /* ; */ alpha;",
@@ -265,6 +661,76 @@ public class FieldConsolidationFixerTest {
 		assertEquals(1, result.endLine());
 		assertEquals(1, result.replacement().size());
 		assertEquals("\tint /* ; */ alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testPrevLineCharLiteralWithComma() {
+		final var lines = new ArrayList<>(List.of(
+				"@Ann(',') int alpha,",
+				"\t\t\tbeta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 3));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("@Ann(',') int alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testPrevLineCharLiteralWithEscapedBackslash() {
+		final var lines = new ArrayList<>(List.of(
+				"@Ann('\\\\') int alpha;",
+				"@Ann('\\\\') int beta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 15));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("@Ann('\\\\') int alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testPrevLineCharLiteralWithEscapedQuote() {
+		final var lines = new ArrayList<>(List.of(
+				"@Ann('\\'') int alpha;",
+				"@Ann('\\'') int beta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 15));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("@Ann('\\'') int alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testPrevLineCharLiteralWithSemicolon() {
+		final var lines = new ArrayList<>(List.of(
+				"@Ann(';') int alpha;",
+				"@Ann(';') int beta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 14));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("@Ann(';') int alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testPrevLineTrailingCommentNotEndingWithSemicolon() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint alpha; // field comment",
+				"\tint beta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint alpha, beta; // field comment", result.replacement().getFirst());
 		assertTrue(result.importsToAdd().isEmpty());
 	}
 
@@ -376,6 +842,98 @@ public class FieldConsolidationFixerTest {
 	}
 
 	@Test
+	public void testViolationLineBlockCommentAfterFieldNameProceeds() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint alpha;",
+				"\tint beta; /* note */"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testViolationLineBlockCommentInsideCharLiteralProceeds() {
+		final var lines = new ArrayList<>(List.of(
+				"@Ann('/') int alpha;",
+				"@Ann('/') int beta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 14));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("@Ann('/') int alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testViolationLineBlockCommentInsideEscapedStringProceeds() {
+		final var lines = new ArrayList<>(List.of(
+				"@SuppressWarnings(\"a\\\"/*b\") int alpha;",
+				"@SuppressWarnings(\"a\\\"/*b\") int beta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 32));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("@SuppressWarnings(\"a\\\"/*b\") int alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testViolationLineBlockCommentInsideStringProceeds() {
+		final var lines = new ArrayList<>(List.of(
+				"@SuppressWarnings(\"a/*b\") int alpha;",
+				"@SuppressWarnings(\"a/*b\") int beta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 30));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("@SuppressWarnings(\"a/*b\") int alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testViolationLineBlockCommentPostName() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint alpha;",
+				"\tint beta /* doc */;"
+		));
+		assertNull(fixer.fix(lines, 1, 5));
+	}
+
+	@Test
+	public void testViolationLineBlockCommentPostNameNoSemicolon() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint alpha;",
+				"\tint beta /* doc */"
+		));
+		assertNull(fixer.fix(lines, 1, 5));
+	}
+
+	@Test
+	public void testViolationLineBlockCommentUnclosed() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint alpha;",
+				"\tint beta /* unclosed"
+		));
+		assertNull(fixer.fix(lines, 1, 5));
+	}
+
+	@Test
+	public void testViolationLineBlockCommentWithSemicolon() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint alpha;",
+				"\tint /* ; */ beta;"
+		));
+		assertNull(fixer.fix(lines, 1, 13));
+	}
+
+	@Test
 	public void testViolationLineWithoutSemicolon() {
 		final var lines = new ArrayList<>(List.of(
 				"\tint alpha;",
@@ -448,6 +1006,293 @@ public class FieldConsolidationFixerTest {
 		assertEquals(1, result.endLine());
 		assertEquals(1, result.replacement().size());
 		assertEquals("\tint alpha, beta;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapBoundary121Wraps() {
+		// tab(4) + "int "(4) + 55 + ", "(2) + 55 + ";"(1) = 121
+		final var name1 = "a".repeat(55);
+		final var name2 = "b".repeat(55);
+		final var lines = new ArrayList<>(List.of(
+				"\tint " + name1 + ";",
+				"\tint " + name2 + ";"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(2, result.replacement().size());
+		assertEquals("\tint " + name1 + ",", result.replacement().get(0));
+		assertEquals("\t\t\t" + name2 + ";", result.replacement().get(1));
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapBoundaryExactly120NoWrap() {
+		// tab(4) + "int "(4) + 55 + ", "(2) + 54 + ";"(1) = 120
+		final var name1 = "a".repeat(55);
+		final var name2 = "b".repeat(54);
+		final var lines = new ArrayList<>(List.of(
+				"\tint " + name1 + ";",
+				"\tint " + name2 + ";"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint " + name1 + ", " + name2 + ";", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapContinuationBreaksAtNoIdentLine() {
+		final var name1 = "a".repeat(40);
+		final var lines = new ArrayList<>(List.of(
+				"\tint prevName;",
+				"\tint " + name1 + ",",
+				"\t\t\t}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint prevName, " + name1 + ";", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapContinuationBreaksAtSameIndent() {
+		final var name1 = "a".repeat(40);
+		final var lines = new ArrayList<>(List.of(
+				"\tint prevName;",
+				"\tint " + name1 + ",",
+				"\tint anotherField;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint prevName, " + name1 + ";", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapContinuationBreaksAtSameIndentMixedTabsSpaces() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint prevName;",
+				"\tint alpha,",
+				"    beta;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint prevName, alpha;", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapContinuationCommentPreserved() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint prevName;",
+				"\tint alpha,",
+				"\t\t\tbeta; // important"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(1, result.replacement().size());
+		assertEquals("\tint prevName, alpha, beta; // important", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapContinuationFromPreviousWrap() {
+		final var name1 = "a".repeat(40);
+		final var name2 = "b".repeat(40);
+		final var name3 = "c".repeat(40);
+		final var lines = new ArrayList<>(List.of(
+				"\tint prevName;",
+				"\tint " + name1 + ", " + name2 + ",",
+				"\t\t\t" + name3 + ";"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(2, result.replacement().size());
+		assertEquals("\tint prevName, " + name1 + ", " + name2 + ",", result.replacement().get(0));
+		assertEquals("\t\t\t" + name3 + ";", result.replacement().get(1));
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapContinuationMultipleLines() {
+		final var name1 = "a".repeat(30);
+		final var name2 = "b".repeat(30);
+		final var name3 = "c".repeat(30);
+		final var name4 = "d".repeat(30);
+		final var lines = new ArrayList<>(List.of(
+				"\tint prevName;",
+				"\tint " + name1 + ",",
+				"\t\t\t" + name2 + ",",
+				"\t\t\t" + name3 + ",",
+				"\t\t\t" + name4 + ";"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(4, result.endLine());
+		assertEquals(2, result.replacement().size());
+		assertEquals(
+				"\tint prevName, " + name1 + ", " + name2 + ", " + name3 + ",",
+				result.replacement().get(0)
+		);
+		assertEquals("\t\t\t" + name4 + ";", result.replacement().get(1));
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapCStyleArrays() {
+		// tab(4) + "int "(4) + 53 + "[], "(4) + 53 + "[];"(3) = 121
+		final var name1 = "a".repeat(53);
+		final var name2 = "b".repeat(53);
+		final var lines = new ArrayList<>(List.of(
+				"\tint " + name1 + "[];",
+				"\tint " + name2 + "[];"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(2, result.replacement().size());
+		assertEquals("\tint " + name1 + "[],", result.replacement().get(0));
+		assertEquals("\t\t\t" + name2 + "[];", result.replacement().get(1));
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapDeepIndent() {
+		// tabs(8) + "int "(4) + 53 + ", "(2) + 53 + ";"(1) = 121
+		final var name1 = "a".repeat(53);
+		final var name2 = "b".repeat(53);
+		final var lines = new ArrayList<>(List.of(
+				"\t\tint " + name1 + ";",
+				"\t\tint " + name2 + ";"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 6));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(2, result.replacement().size());
+		assertEquals("\t\tint " + name1 + ",", result.replacement().get(0));
+		assertEquals("\t\t\t\t" + name2 + ";", result.replacement().get(1));
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapEachNameOwnLine() {
+		final var name1 = "a".repeat(51);
+		final var name2 = "b".repeat(51);
+		final var name3 = "c".repeat(51);
+		final var lines = new ArrayList<>(List.of(
+				"\t\t\tint " + name1 + ";",
+				"\t\t\tint " + name2 + ", " + name3 + ";"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 7));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(3, result.replacement().size());
+		assertEquals("\t\t\tint " + name1 + ",", result.replacement().get(0));
+		assertEquals("\t\t\t\t\t" + name2 + ",", result.replacement().get(1));
+		assertEquals("\t\t\t\t\t" + name3 + ";", result.replacement().get(2));
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapFourFieldsTwoPerLine() {
+		final var a = "a".repeat(35);
+		final var b = "b".repeat(35);
+		final var c = "c".repeat(35);
+		final var d = "d".repeat(35);
+		final var lines = new ArrayList<>(List.of(
+				"\tboolean " + a + ";",
+				"\tboolean " + b + ", " + c + ", " + d + ";"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 9));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(2, result.replacement().size());
+		assertEquals("\tboolean " + a + ", " + b + ",", result.replacement().get(0));
+		assertEquals("\t\t\t" + c + ", " + d + ";", result.replacement().get(1));
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapThreeFieldsOnePlusTwo() {
+		final var a = "a".repeat(55);
+		final var b = "b".repeat(55);
+		final var c = "c".repeat(30);
+		final var lines = new ArrayList<>(List.of(
+				"\tboolean " + a + ";",
+				"\tboolean " + b + ", " + c + ";"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 9));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(2, result.replacement().size());
+		assertEquals("\tboolean " + a + ",", result.replacement().get(0));
+		assertEquals("\t\t\t" + b + ", " + c + ";", result.replacement().get(1));
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapThreeFieldsTwoPlusOne() {
+		final var a = "a".repeat(35);
+		final var b = "b".repeat(35);
+		final var c = "c".repeat(35);
+		final var lines = new ArrayList<>(List.of(
+				"\tboolean " + a + ";",
+				"\tboolean " + b + ", " + c + ";"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 9));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(2, result.replacement().size());
+		assertEquals("\tboolean " + a + ", " + b + ",", result.replacement().get(0));
+		assertEquals("\t\t\t" + c + ";", result.replacement().get(1));
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapWithModifiers() {
+		// tab(4) + "private static int "(19) + 48 + ", "(2) + 48 + ";"(1) = 122
+		final var name1 = "a".repeat(48);
+		final var name2 = "b".repeat(48);
+		final var lines = new ArrayList<>(List.of(
+				"\tprivate static int " + name1 + ";",
+				"\tprivate static int " + name2 + ";"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 20));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(2, result.replacement().size());
+		assertEquals("\tprivate static int " + name1 + ",", result.replacement().get(0));
+		assertEquals("\t\t\t" + name2 + ";", result.replacement().get(1));
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testWrapWithTrailingComment() {
+		// tab(4) + "int "(4) + 48 + ", "(2) + 48 + "; // see init();"(16) = 122
+		final var name1 = "a".repeat(48);
+		final var name2 = "b".repeat(48);
+		final var lines = new ArrayList<>(List.of(
+				"\tint " + name1 + "; // see init();",
+				"\tint " + name2 + ";"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 5));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertEquals(2, result.replacement().size());
+		assertEquals("\tint " + name1 + ",", result.replacement().get(0));
+		assertEquals("\t\t\t" + name2 + "; // see init();", result.replacement().get(1));
 		assertTrue(result.importsToAdd().isEmpty());
 	}
 }

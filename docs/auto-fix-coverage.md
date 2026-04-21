@@ -4,37 +4,37 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 
 ## TreeWalker checks (FIXERS map)
 
-| Check                                    | Fixer                              | Notes                                                                                                          |
-|------------------------------------------|------------------------------------|----------------------------------------------------------------------------------------------------------------|
-| AnnotationOwnLineCheck                   | AnnotationOwnLineFixer             | Splits stacked annotations to own lines, removes blank lines, sorts alphabetically                             |
-| AnnotationSameLineCheck                  | AnnotationSameLineFixer            | Joins annotations onto declaration line, sorts inline annotations alphabetically                               |
-| AvoidNoArgumentSuperConstructorCallCheck | AvoidNoArgumentSuperCallFixer      | Removes `super()` call                                                                                         |
-| ControlFlowBracesCheck                   | ControlFlowBracesFixer             | Do-while only: removes unnecessary braces, fixes one-liners, adds missing braces                               |
-| ExplicitInitializationCheck              | ExplicitInitializationFixer        | Removes `= 0`/`= null`/`= false` etc.                                                                          |
-| FieldConsolidationCheck                  | FieldConsolidationFixer            | Merges consecutive same-type fields onto one line. Handles C-style arrays (see [docs](c-style-array-fixer.md)) |
-| FieldSortingCheck                        | FieldSortingFixer                  | Enum constants only: sorts alphabetically, splits same-line; field violations return null                      |
-| FinalLocalVariableCheck                  | FinalLocalVariableFixer            | Adds `final` keyword                                                                                           |
-| LambdaParameterTypeCheck                 | LambdaParameterTypeFixer           | See sub-rules below                                                                                            |
-| NoArrayTrailingCommaCheck                | NoArrayTrailingCommaFixer          | Removes trailing comma                                                                                         |
-| NoBlankLineBetweenSingleCasesCheck       | NoBlankLineBetweenSingleCasesFixer | Removes blank line                                                                                             |
-| NoEnumTrailingCommaCheck                 | NoArrayTrailingCommaFixer          | Same fixer as array trailing comma                                                                             |
-| NoEnumTrailingSemicolonCheck             | NoEnumTrailingSemicolonFixer       | Removes trailing semicolon; deletes line if semicolon was the only content                                     |
-| NoFinalParametersCheck                   | RedundantModifierFixer             | Removes `final` keyword from parameter                                                                         |
-| NoUnnecessaryThisCheck                   | NoUnnecessaryThisFixer             | Removes `this.` prefix                                                                                         |
-| PreferBulkOperationCheck                 | PreferBulkOperationFixer           | See sub-rules below                                                                                            |
-| PreferCollectionInterfaceCheck           | PreferCollectionInterfaceFixer     | Replaces concrete collection type with interface (e.g. `ArrayList` to `List`)                                  |
-| PreferMathMethodCheck                    | PreferMathMethodFixer              | See sub-rules below                                                                                            |
-| PreferPrefixIncrementCheck               | PreferPrefixIncrementFixer         | Moves `++`/`--` to prefix position                                                                             |
-| PreferSpecificApiCheck                   | PreferSpecificApiFixer             | See sub-rules below                                                                                            |
-| PreferStandardCharsetsCheck              | PreferStandardCharsetsFixer        | Replaces charset string literal with `StandardCharsets.X` constant (adds import)                               |
-| PreferStaticImportCheck                  | PreferStaticImportFixer            | Strips `Class.` prefix from a qualified call and adds an `import static <fqcn>.<method>;`                      |
-| PreferVarCheck                           | PreferVarFixer                     | Replaces type with `var`; converts explicit array init to implicit; replaces `<Object>` with `<>`              |
-| RedundantAnnotationSyntaxCheck           | RedundantAnnotationSyntaxFixer     | Removes `()` or `value =`                                                                                      |
-| RedundantImportCheck                     | DeleteLineFixer                    | Deletes import line                                                                                            |
-| RedundantModifierCheck                   | RedundantModifierFixer             | Removes redundant modifier keyword                                                                             |
-| RedundantNumericSuffixCheck              | RedundantNumericSuffixFixer        | Removes redundant `L`/`f`/`d` suffix                                                                           |
-| UnusedImportsCheck                       | DeleteLineFixer                    | Deletes import line                                                                                            |
-| UpperEllCheck                            | UpperEllFixer                      | Changes `l` to `L`                                                                                             |
+| Check                                    | Fixer                              | Notes                                                                                                                                                                       |
+|------------------------------------------|------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| AnnotationOwnLineCheck                   | AnnotationOwnLineFixer             | Splits stacked/embedded annotations to own lines, removes blank lines, sorts alphabetically                                                                                 |
+| AnnotationSameLineCheck                  | AnnotationSameLineFixer            | Joins annotations onto declaration line, sorts inline annotations alphabetically                                                                                            |
+| AvoidNoArgumentSuperConstructorCallCheck | AvoidNoArgumentSuperCallFixer      | Removes `super()` call                                                                                                                                                      |
+| ControlFlowBracesCheck                   | ControlFlowBracesFixer             | Do-while only: removes unnecessary braces, fixes one-liners, adds missing braces                                                                                            |
+| ExplicitInitializationCheck              | ExplicitInitializationFixer        | Removes `= 0`/`= null`/`= false` etc.                                                                                                                                       |
+| FieldConsolidationCheck                  | FieldConsolidationFixer            | Merges consecutive same-type fields; wraps across lines if >120 chars. See [C-style arrays](c-style-array-fixer.md) and [limitations](#fieldconsolidationfixer-limitations) |
+| FieldSortingCheck                        | FieldSortingFixer                  | Enum constants only: sorts alphabetically, splits same-line; field violations return null                                                                                   |
+| FinalLocalVariableCheck                  | FinalLocalVariableFixer            | Adds `final` keyword                                                                                                                                                        |
+| LambdaParameterTypeCheck                 | LambdaParameterTypeFixer           | See sub-rules below                                                                                                                                                         |
+| NoArrayTrailingCommaCheck                | NoArrayTrailingCommaFixer          | Removes trailing comma                                                                                                                                                      |
+| NoBlankLineBetweenSingleCasesCheck       | NoBlankLineBetweenSingleCasesFixer | Removes blank line                                                                                                                                                          |
+| NoEnumTrailingCommaCheck                 | NoArrayTrailingCommaFixer          | Same fixer as array trailing comma                                                                                                                                          |
+| NoEnumTrailingSemicolonCheck             | NoEnumTrailingSemicolonFixer       | Removes trailing semicolon; deletes line if semicolon was the only content                                                                                                  |
+| NoFinalParametersCheck                   | RedundantModifierFixer             | Removes `final` keyword from parameter                                                                                                                                      |
+| NoUnnecessaryThisCheck                   | NoUnnecessaryThisFixer             | Removes `this.` prefix                                                                                                                                                      |
+| PreferBulkOperationCheck                 | PreferBulkOperationFixer           | See sub-rules below                                                                                                                                                         |
+| PreferCollectionInterfaceCheck           | PreferCollectionInterfaceFixer     | Replaces concrete collection type with interface (e.g. `ArrayList` to `List`)                                                                                               |
+| PreferMathMethodCheck                    | PreferMathMethodFixer              | See sub-rules below                                                                                                                                                         |
+| PreferPrefixIncrementCheck               | PreferPrefixIncrementFixer         | Moves `++`/`--` to prefix position                                                                                                                                          |
+| PreferSpecificApiCheck                   | PreferSpecificApiFixer             | See sub-rules below                                                                                                                                                         |
+| PreferStandardCharsetsCheck              | PreferStandardCharsetsFixer        | Replaces charset string literal with `StandardCharsets.X` constant (adds import)                                                                                            |
+| PreferStaticImportCheck                  | PreferStaticImportFixer            | Strips `Class.` prefix from a qualified call and adds an `import static <fqcn>.<method>;`                                                                                   |
+| PreferVarCheck                           | PreferVarFixer                     | Replaces type with `var`; converts explicit array init to implicit; replaces `<Object>` with `<>`                                                                           |
+| RedundantAnnotationSyntaxCheck           | RedundantAnnotationSyntaxFixer     | Removes `()` or `value =`                                                                                                                                                   |
+| RedundantImportCheck                     | DeleteLineFixer                    | Deletes import line                                                                                                                                                         |
+| RedundantModifierCheck                   | RedundantModifierFixer             | Removes redundant modifier keyword                                                                                                                                          |
+| RedundantNumericSuffixCheck              | RedundantNumericSuffixFixer        | Removes redundant `L`/`f`/`d` suffix                                                                                                                                        |
+| UnusedImportsCheck                       | DeleteLineFixer                    | Deletes import line                                                                                                                                                         |
+| UpperEllCheck                            | UpperEllFixer                      | Changes `l` to `L`                                                                                                                                                          |
 
 ## Regex checks (MODULE_ID_FIXERS map)
 
@@ -216,6 +216,16 @@ Custom checks without auto-fix support and why.
 | RedundantCastCheck                   | Removing a cast may change method overload resolution or widen the expression type                                                          |
 | SwitchCaseOrderCheck                 | Reordering switch cases requires moving multi-line blocks with fall-through analysis                                                        |
 | ThreadAnnotationCheck                | Cannot determine which thread annotation (`@MainThread`, `@AnyThread`, etc.) to add                                                         |
+
+## FieldConsolidationFixer limitations
+
+Line-length wrapping measures tab-expanded length at tab-width 4, with a 120-character threshold.
+Continuation lines use base indent + 2 tabs.
+
+| Scenario                                                   | Behavior                       | Reason                                                                                                                    |
+|------------------------------------------------------------|--------------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| C-style array fields that were wrapped by a prior fix pass | Second merge skipped           | The wrapped first line has no `;`, so C-style bracket detection fails and the `prevCStyle && !currCStyle` guard bails out |
+| Line length at a different tab width                       | May wrap too early or too late | Wrapping uses a fixed tab-width of 4; projects displaying tabs as 8 will see wider lines than the fixer expects           |
 
 ## Future fix opportunities
 
