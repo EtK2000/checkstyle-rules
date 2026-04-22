@@ -94,10 +94,13 @@ In `src/test/java/com/etk2000/checkstyle/gradle/fix/MyFixerTest.java`:
   pairing)
 - If the fixer handles multiple dimensions (e.g., different suffixes, prefixes), test each axis
 
-### 5. Write integration test
+### 5. Write integration tests
 
-In `CheckstyleFixIntegrationTest`, add a test that runs the full pipeline. Call `applyFixes()`
-directly so you can assert the exact output, `fixCount`, and `needsSecondPass`:
+Fix-producing integration tests go in `CheckstyleFixIntegrationTest`. This class has an
+`@AfterEach` that asserts `verifyFixedOutputClean` was called exactly once per test, so
+every fix test automatically re-checks its output for remaining fixable violations.
+
+Use `runFixAndGetResult()` for most tests (it calls `verifyFixedOutputClean` internally):
 
 ```java
 @Test
@@ -105,26 +108,27 @@ public void testMyFix() throws Exception {
     final var file = tempDir.resolve("My.java").toFile();
     Files.writeString(file.toPath(), "class T {\n\t...\n}");
 
-    final var violations = runChecks(file);
-    final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-    final var result = CheckstyleFixAction.applyFixes(
-            lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS
-    );
-    assertEquals("class T {\n\t...(fixed)...\n}", String.join("\n", lines));
-    assertEquals(1, result.fixCount());
-    assertFalse(result.needsSecondPass());
+    final var output = runFixAndGetResult(file);
+    assertEquals("class T {\n\t...(fixed)...\n}", output.content());
+    assertEquals(1, output.result().fixCount());
+    assertFalse(output.result().needsSecondPass());
 }
 ```
 
 Assert the **exact full output**, not fragments. Assert `fixCount` to catch accidental extra
 or missing fixes. Assert `needsSecondPass` to verify the fixer correctly signals whether
 imports were added. Use inputs that only trigger the check being tested (avoid cross-check
-interference).
+interference). Don't include imports that would become unused after fixing (Checkstyle is
+AST-based, so the check fires even without the import).
 
-If the fixer adds imports, also write a multi-pass test using `runFixMultiPass()` to verify
-the unused old import gets cleaned up on the second pass.
+If the fixer changes a class qualifier (e.g. `Collections.sort` to `list.sort`), also write
+a multi-pass test using `runFixMultiPass()` with the import present to verify the unused
+import gets cleaned up on the second pass.
 
 If the check is a Checker-level module, also configure it in `runChecks()`.
+
+No-fix tests (clean files, skipped violations, warning-only) go in `CheckstyleFixNoFixTest`.
+Pure utility tests (hint messages, tab-column math) go in `CheckstyleFixUtilTest`.
 
 ### 6. Update README
 

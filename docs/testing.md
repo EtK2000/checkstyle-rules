@@ -40,7 +40,16 @@ checkstyle.xml config. The format string must match the one in checkstyle.xml ex
 
 Fixers are unit-tested by calling `fix()` directly with crafted input lines. Integration tests
 create real Java files, run Checkstyle to detect violations, apply fixes, and assert the exact
-full output.
+full output. Integration tests are split across three classes:
+
+- **`CheckstyleFixIntegrationTest`**: fix-producing tests. Every test must call
+  `verifyFixedOutputClean` exactly once (enforced by `@AfterEach`). This re-checks the fixed
+  output through the full pipeline to ensure no fixer produces output that still has fixable
+  violations
+- **`CheckstyleFixNoFixTest`**: pipeline tests where fixCount=0 (clean files, skipped violations,
+  dry-run execution, warning-only violations)
+- **`CheckstyleFixUtilTest`**: pure utility tests (hint message formatting, tab-column conversion,
+  skip reason tracking) with no file I/O
 
 ## Tab-expanded columns
 
@@ -485,8 +494,11 @@ Every fixable pattern needs three layers of tests:
    crafted input lines. Cover success cases, return-null guards, boundary rejections, and edge
    cases (nested parens, escaped quotes, complex receivers).
 2. **Integration test** (`CheckstyleFixIntegrationTest`): run the full pipeline (Checkstyle
-   detection -> column conversion -> fixer application -> output verification). Assert exact full
-   output, `fixCount`, and `needsSecondPass`.
+   detection -> column conversion -> fixer application -> output verification -> re-check).
+   Assert exact full output, `fixCount`, and `needsSecondPass`. Every fix-producing test
+   automatically re-checks the output via `verifyFixedOutputClean` (enforced by `@AfterEach`).
+   If the fix makes an import unused, add a separate `runFixMultiPass` test to verify the
+   unused import is cleaned up on the second pass.
 3. **Violation/clean test resources**: the check must have violation test cases for every pattern
    the fixer handles, and clean cases for every pattern it should NOT handle.
 

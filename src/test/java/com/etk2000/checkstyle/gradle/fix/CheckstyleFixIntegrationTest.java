@@ -2,7 +2,6 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.etk2000.checkstyle.gradle.fix.CheckstyleFixAction.ApplyFixesResult;
@@ -11,132 +10,30 @@ import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.TreeWalker;
 import com.puppycrawl.tools.checkstyle.api.AuditEvent;
 import com.puppycrawl.tools.checkstyle.api.AuditListener;
-import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
-import com.puppycrawl.tools.checkstyle.api.Violation;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 public class CheckstyleFixIntegrationTest {
 	record FixOutput(@Nonnull String content, @Nonnull ApplyFixesResult result) {
 	}
 
-	@Nonnull
-	private static AuditEvent createEvent(
-			int line,
-			@Nonnull SeverityLevel severity,
-			@Nullable String moduleId,
-			@Nonnull Class<?> sourceClass
-	) {
-		final var violation = new Violation(
-				line, 0, "", "", null, severity, moduleId, sourceClass, "test"
-		);
-		return new AuditEvent(new Object(), "Test.java", violation);
-	}
+	private int verifyCleanCallCount;
 
 	@TempDir
 	Path tempDir;
-
-	@Test
-	public void collectJavaFilesEmptyDir() throws Exception {
-		final var dir = Files.createDirectory(tempDir.resolve("empty"));
-		final var files = new ArrayList<File>();
-		CheckstyleFixAction.collectJavaFiles(dir, files);
-		assertTrue(files.isEmpty());
-	}
-
-	@Test
-	public void collectJavaFilesFiltersNonJava() throws Exception {
-		final var dir = Files.createDirectory(tempDir.resolve("src"));
-		Files.writeString(dir.resolve("A.java"), "class A {}");
-		Files.writeString(dir.resolve("B.txt"), "not java");
-		Files.writeString(dir.resolve("C.java"), "class C {}");
-		final var files = new ArrayList<File>();
-		CheckstyleFixAction.collectJavaFiles(dir, files);
-		assertEquals(2, files.size());
-		assertTrue(files.stream().allMatch(f -> f.getName().endsWith(".java")));
-	}
-
-	@Test
-	public void collectJavaFilesNonExistentDir() throws Exception {
-		final var dir = tempDir.resolve("does-not-exist");
-		final var files = new ArrayList<File>();
-		CheckstyleFixAction.collectJavaFiles(dir, files);
-		assertTrue(files.isEmpty());
-	}
-
-	@Test
-	public void collectJavaFilesRecursive() throws Exception {
-		final var dir = Files.createDirectory(tempDir.resolve("src"));
-		final var sub = Files.createDirectory(dir.resolve("sub"));
-		Files.writeString(dir.resolve("A.java"), "class A {}");
-		Files.writeString(sub.resolve("B.java"), "class B {}");
-		final var files = new ArrayList<File>();
-		CheckstyleFixAction.collectJavaFiles(dir, files);
-		assertEquals(2, files.size());
-	}
-
-	@Test
-	public void doExecuteDryRunDoesNotModifyFile() throws Exception {
-		final var file = tempDir.resolve("DryExec.java").toFile();
-		final var original = "class T {\n\tint[] a = {1, 2,};\n}";
-		Files.writeString(file.toPath(), original);
-
-		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
-		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
-		assertTrue(result[1] > 0);
-		assertEquals(original, Files.readString(file.toPath()));
-	}
-
-	@Test
-	public void doExecuteDryRunReturnsCorrectCount() throws Exception {
-		final var file = tempDir.resolve("DryCount.java").toFile();
-		// trailing comma (fixable) + field sorting (skipped for non-enum)
-		Files.writeString(file.toPath(), "class T {\n\tint b, a;\n\tint[] c = {1, 2,};\n}");
-
-		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
-		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
-		assertEquals(1, result[1]);
-	}
-
-	@Test
-	public void doExecuteDryRunSecondPassFlag() throws Exception {
-		final var file = tempDir.resolve("DryPass.java").toFile();
-		Files.writeString(file.toPath(), "import java.nio.charset.Charset;\nclass T {\n\tCharset c = Charset.forName(\"UTF-8\");\n}");
-
-		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
-		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
-		assertEquals(1, result[0]);
-		assertTrue(result[1] > 0);
-	}
-
-	@Test
-	public void doExecuteDryRunSuppressesSummaryOutput() throws Exception {
-		final var file = tempDir.resolve("DrySilent.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1, 2,};\n}");
-
-		final var origOut = System.out;
-		final var captured = new java.io.ByteArrayOutputStream();
-		System.setOut(new java.io.PrintStream(captured));
-		try {
-			final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
-			CheckstyleFixAction.doExecute(config, true, List.of(file));
-		}
-		finally {
-			System.setOut(origOut);
-		}
-		assertFalse(captured.toString().contains("Fixed"));
-	}
 
 	@Test
 	public void doExecuteNormalModePrintsSummary() throws Exception {
@@ -144,8 +41,8 @@ public class CheckstyleFixIntegrationTest {
 		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1, 2,};\n}");
 
 		final var origOut = System.out;
-		final var captured = new java.io.ByteArrayOutputStream();
-		System.setOut(new java.io.PrintStream(captured));
+		final var captured = new ByteArrayOutputStream();
+		System.setOut(new PrintStream(captured));
 		try {
 			final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
 			CheckstyleFixAction.doExecute(config, false, List.of(file));
@@ -154,6 +51,7 @@ public class CheckstyleFixIntegrationTest {
 			System.setOut(origOut);
 		}
 		assertTrue(captured.toString().contains("Fixed"));
+		verifyFixedOutputClean(file, Files.readString(file.toPath()), String.valueOf(Integer.MAX_VALUE), false);
 	}
 
 	@Test
@@ -164,6 +62,7 @@ public class CheckstyleFixIntegrationTest {
 		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
 		final var result = CheckstyleFixAction.doExecute(config, false, List.of(file));
 		assertEquals(1, result[0]);
+		verifyFixedOutputClean(file, Files.readString(file.toPath()), String.valueOf(Integer.MAX_VALUE), false);
 	}
 
 	@Test
@@ -175,102 +74,22 @@ public class CheckstyleFixIntegrationTest {
 		final var result = CheckstyleFixAction.doExecute(config, false, List.of(file));
 		assertTrue(result[1] > 0);
 		assertFalse(Files.readString(file.toPath()).contains(",}"));
-	}
-
-	@Test
-	public void doExecuteZeroViolationsReturnsZeros() throws Exception {
-		final var file = tempDir.resolve("Clean.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tvoid m() {}\n}");
-
-		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
-		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
-		assertEquals(0, result[0]);
-		assertEquals(0, result[1]);
+		verifyFixedOutputClean(file, Files.readString(file.toPath()), String.valueOf(Integer.MAX_VALUE), false);
 	}
 
 	@Test
 	public void e2eFixableCountMatchesBetweenDryRunAndNormalRun() throws Exception {
 		final var file1 = tempDir.resolve("E2E1.java").toFile();
-		// 3 fixable violations: trailing comma, explicit init, uppercase ell
 		Files.writeString(file1.toPath(), "class T {\n\tint x = 0;\n\tint[] a = {1,};\n\tlong y = 3000000000l;\n}");
 
 		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
 		final var dryResult = CheckstyleFixAction.doExecute(config, true, List.of(file1));
 
-		// restore original for normal run
 		Files.writeString(file1.toPath(), "class T {\n\tint x = 0;\n\tint[] a = {1,};\n\tlong y = 3000000000l;\n}");
 		final var normalResult = CheckstyleFixAction.doExecute(config, false, List.of(file1));
 
 		assertEquals(normalResult[1], dryResult[1]);
-	}
-
-	@Test
-	public void e2eMixedFixableAndUnfixableViolations() throws Exception {
-		final var file = tempDir.resolve("E2EMixed.java").toFile();
-		// trailing comma = fixable, field order = unfixable (non-enum)
-		Files.writeString(file.toPath(), "class T {\n\tint b, a;\n\tint[] c = {1, 2,};\n}");
-
-		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
-		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
-
-		final var violations = runChecks(file);
-		final var fixable = result[1];
-		final var total = violations.size();
-
-		assertTrue(fixable > 0);
-		assertTrue(total > fixable);
-	}
-
-	@Test
-	public void e2eMultipleFilesAggregatesCount() throws Exception {
-		final var dir = Files.createDirectory(tempDir.resolve("multi"));
-		final var f1 = dir.resolve("A.java").toFile();
-		final var f2 = dir.resolve("B.java").toFile();
-		Files.writeString(f1.toPath(), "class A {\n\tint x = 0;\n}");
-		Files.writeString(f2.toPath(), "class B {\n\tint[] a = {1,};\n}");
-
-		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
-		final var result = CheckstyleFixAction.doExecute(config, true, List.of(f1, f2));
-		assertEquals(2, result[1]);
-	}
-
-	@Test
-	public void formatHintMessageAllFixable() {
-		assertEquals(
-				"Run ./gradlew checkstyleFix to auto-fix all 5 violations.",
-				CheckstyleFixAction.formatHintMessage(5, 5, "checkstyleFix")
-		);
-	}
-
-	@Test
-	public void formatHintMessageNegativeFixable() {
-		assertNull(CheckstyleFixAction.formatHintMessage(-1, 5, "checkstyleFix"));
-	}
-
-	@Test
-	public void formatHintMessagePartiallyFixable() {
-		assertEquals(
-				"Run ./gradlew checkstyleFixAll to auto-fix 3 of 10 violations.",
-				CheckstyleFixAction.formatHintMessage(3, 10, "checkstyleFixAll")
-		);
-	}
-
-	@Test
-	public void formatHintMessageSingleFixable() {
-		assertEquals(
-				"Run ./gradlew checkstyleFix to auto-fix all 1 violations.",
-				CheckstyleFixAction.formatHintMessage(1, 1, "checkstyleFix")
-		);
-	}
-
-	@Test
-	public void formatHintMessageZeroFixable() {
-		assertNull(CheckstyleFixAction.formatHintMessage(0, 5, "checkstyleFix"));
-	}
-
-	@Test
-	public void formatHintMessageZeroTotal() {
-		assertNull(CheckstyleFixAction.formatHintMessage(0, 0, "checkstyleFix"));
+		verifyFixedOutputClean(file1, Files.readString(file1.toPath()), String.valueOf(Integer.MAX_VALUE), false);
 	}
 
 	@Nonnull
@@ -281,6 +100,7 @@ public class CheckstyleFixIntegrationTest {
 	@Nonnull
 	private List<AuditEvent> runChecks(@Nonnull File file, @Nonnull String minSdk) throws Exception {
 		final var treeWalkerConfig = new DefaultConfiguration(TreeWalker.class.getName());
+		treeWalkerConfig.addProperty("tabWidth", "8");
 		for (var checkName : CheckstyleFixAction.FIXERS.keySet()) {
 			final var checkConfig = new DefaultConfiguration(checkName);
 			if (checkName.endsWith("FinalLocalVariableCheck"))
@@ -290,13 +110,14 @@ public class CheckstyleFixIntegrationTest {
 					|| checkName.endsWith("PreferStandardCharsetsCheck")
 					|| checkName.endsWith("PreferStaticImportCheck"))
 				checkConfig.addProperty("minSdk", minSdk);
+			if (checkName.endsWith("PreferVarCheck"))
+				checkConfig.addProperty("allowedMethods", CheckstyleFixAction.fixerAllowedMethods());
 			treeWalkerConfig.addChild(checkConfig);
 		}
 
 		final var checkerConfig = new DefaultConfiguration("Checker");
 		checkerConfig.addChild(treeWalkerConfig);
 
-		// Checker-level regex modules
 		final var blankAfterBreakConfig = new DefaultConfiguration("RegexpMultiline");
 		blankAfterBreakConfig.addProperty("id", "BlankLineAfterBreak");
 		blankAfterBreakConfig.addProperty("format", "break\\s*;\\n[^\\S\\n]*(case |default[\\s:])");
@@ -384,26 +205,39 @@ public class CheckstyleFixIntegrationTest {
 		final var violations = runChecks(file, minSdk);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
-		return new FixOutput(String.join("\n", lines), result);
+		final var content = String.join("\n", lines);
+		if (result.fixCount() > 0)
+			verifyFixedOutputClean(file, content, minSdk, result.needsSecondPass());
+		return new FixOutput(content, result);
 	}
 
 	@Nonnull
 	private String runFixMultiPass(@Nonnull File file) throws Exception {
-		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		for (var pass = 0; pass < 2; ++pass) {
-			Files.writeString(file.toPath(), String.join("\n", lines));
-			final var violations = runChecks(file);
-			if (CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS).fixCount() == 0)
-				break;
-		}
-		return String.join("\n", lines);
+		return runFixMultiPass(file, String.valueOf(Integer.MAX_VALUE));
 	}
 
 	@Nonnull
-	private ApplyFixesResult runFixPipeline(@Nonnull File file) throws Exception {
-		final var violations = runChecks(file);
+	private String runFixMultiPass(@Nonnull File file, @Nonnull String minSdk) throws Exception {
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		return CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		for (var pass = 0; pass < 2; ++pass) {
+			Files.writeString(file.toPath(), String.join("\n", lines));
+			final var violations = runChecks(file, minSdk);
+			if (CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS).fixCount() == 0)
+				break;
+		}
+		final var content = String.join("\n", lines);
+		verifyFixedOutputClean(file, content, minSdk, false);
+		return content;
+	}
+
+	@BeforeEach
+	void setUp() {
+		verifyCleanCallCount = 0;
+	}
+
+	@AfterEach
+	void tearDown() {
+		assertEquals(1, verifyCleanCallCount, "verifyFixedOutputClean must be called exactly once per test");
 	}
 
 	@Test
@@ -414,19 +248,6 @@ public class CheckstyleFixIntegrationTest {
 		final var output = runFixAndGetResult(file);
 		assertEquals(2, output.result().fixCount());
 		assertTrue(output.result().skippedReasons().isEmpty());
-	}
-
-	@Test
-	public void testAllSkippedHasReasons() throws Exception {
-		final var file = tempDir.resolve("AllSkipped.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tint b = 2;\n\tint a = 1;\n}");
-
-		final var output = runFixAndGetResult(file);
-		assertEquals(0, output.result().fixCount());
-		assertTrue(output.result().skippedReasons().containsKey("FieldSortingCheck"));
-		final var reasons = output.result().skippedReasons().get("FieldSortingCheck");
-		assertFalse(reasons.isEmpty());
-		assertEquals(SkipMessages.FIELD_SORT_SKIP, reasons.getFirst());
 	}
 
 	@Test
@@ -724,24 +545,6 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
-	public void testApplyFixesSkipsUnknownViolations() throws Exception {
-		final var file = tempDir.resolve("Unknown.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1, 2,};\n}");
-
-		final var violations = runChecks(file);
-		assertFalse(violations.isEmpty());
-
-		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
-		final var result = CheckstyleFixAction.applyFixes(lines, violations, Map.of(), Map.of());
-		assertEquals(0, result.fixCount());
-		assertFalse(result.skippedReasons().isEmpty());
-		assertTrue(
-				result.skippedReasons().values().stream()
-						.anyMatch(reasons -> reasons.contains(SkipMessages.FIX_NO_FIXER))
-		);
-	}
-
-	@Test
 	public void testArrayTrailingComma() throws Exception {
 		final var file = tempDir.resolve("Arr.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint[] a = {1, 2,};\n}");
@@ -770,7 +573,6 @@ public class CheckstyleFixIntegrationTest {
 	@Test
 	public void testBlankLineAfterBreakFallThrough() throws Exception {
 		final var file = tempDir.resolve("BreakFall.java").toFile();
-		// fall-through cases (no break between case 1 and case 2) should be untouched
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\tcase 2:\n\t\t\t\tdoSomething();\n\t\t\t\tbreak;\n\t\t\tcase 3:\n\t\t\t\tbreak;\n\t\t}\n\t}\n\tvoid doSomething() {}\n}";
 		Files.writeString(file.toPath(), input);
 
@@ -855,16 +657,6 @@ public class CheckstyleFixIntegrationTest {
 		);
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
-	}
-
-	@Test
-	public void testCleanFileNoViolationsNoReasons() throws Exception {
-		final var file = tempDir.resolve("Clean.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tvoid method() {}\n}");
-
-		final var output = runFixAndGetResult(file);
-		assertEquals(0, output.result().fixCount());
-		assertTrue(output.result().skippedReasons().isEmpty());
 	}
 
 	@Test
@@ -1166,33 +958,6 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
-	public void testExtractCheckShortNameModuleIdPreferred() {
-		final var event = createEvent(1, SeverityLevel.ERROR, "NoDoubleBlankLines", Object.class);
-		final var lines = new ArrayList<>(List.of("line1"));
-		final CheckstyleFixer nullFixer = (l, i, c) -> null;
-		final var result = CheckstyleFixAction.applyFixes(
-				lines, new ArrayList<>(List.of(event)), Map.of(), Map.of("NoDoubleBlankLines", nullFixer)
-		);
-		assertTrue(result.skippedReasons().containsKey("NoDoubleBlankLines"));
-		assertTrue(result.skippedReasons().get("NoDoubleBlankLines").contains(SkipMessages.FIX_NOT_FIXABLE));
-	}
-
-	@Test
-	public void testExtractCheckShortNameSourceNameFallback() {
-		final var event = createEvent(1, SeverityLevel.ERROR, null, Object.class);
-		final var lines = new ArrayList<>(List.of("line1"));
-		final CheckstyleFixer nullFixer = (l, i, c) -> null;
-		final var result = CheckstyleFixAction.applyFixes(
-				lines,
-				new ArrayList<>(List.of(event)),
-				Map.of("java.lang.Object", nullFixer),
-				Map.of()
-		);
-		assertTrue(result.skippedReasons().containsKey("Object"));
-		assertTrue(result.skippedReasons().get("Object").contains(SkipMessages.FIX_NOT_FIXABLE));
-	}
-
-	@Test
 	public void testFieldConsolidationAnnotated() throws Exception {
 		final var file = tempDir.resolve("FieldConsAnn.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\t@Deprecated\n\tint alpha;\n\t@Deprecated\n\tint beta;\n}");
@@ -1221,28 +986,6 @@ public class CheckstyleFixIntegrationTest {
 		);
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
-	}
-
-	@Test
-	public void testFieldConsolidationBlockCommentBeforeFieldNameSkipped() throws Exception {
-		final var file = tempDir.resolve("FieldConsBlockComment.java").toFile();
-		final var content = "class T {\n\tint /* note */ alpha;\n\tint /* note */ beta;\n}";
-		Files.writeString(file.toPath(), content);
-
-		final var output = runFixAndGetResult(file);
-		assertEquals(content, output.content());
-		assertEquals(0, output.result().fixCount());
-	}
-
-	@Test
-	public void testFieldConsolidationBlockCommentPostNameSkipped() throws Exception {
-		final var file = tempDir.resolve("FieldConsBlockCommentPost.java").toFile();
-		final var content = "class T {\n\tint alpha;\n\tint beta /* doc */;\n}";
-		Files.writeString(file.toPath(), content);
-
-		final var output = runFixAndGetResult(file);
-		assertEquals(content, output.content());
-		assertEquals(0, output.result().fixCount());
 	}
 
 	@Test
@@ -1298,16 +1041,6 @@ public class CheckstyleFixIntegrationTest {
 		assertEquals("class T {\n\tint[] alpha, beta;\n}", output.content());
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
-	}
-
-	@Test
-	public void testFieldConsolidationCStylePrevJavaCurrSkipped() throws Exception {
-		final var file = tempDir.resolve("FieldConsCPrevJCurr.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tint alpha[];\n\tint[] beta;\n}");
-
-		final var output = runFixAndGetResult(file);
-		assertEquals("class T {\n\tint alpha[];\n\tint[] beta;\n}", output.content());
-		assertEquals(0, output.result().fixCount());
 	}
 
 	@Test
@@ -1413,22 +1146,6 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
-	public void testFieldConsolidationWrappingPreExistingMultiLineNotFlagged() throws Exception {
-		final var file = tempDir.resolve("FieldConsPreWrap.java").toFile();
-		final var content = "class T {\n"
-				+ "\tprivate boolean areInvestmentFundsTreatedAsPensionLiquidity,\n"
-				+ "\t\t\tarePensionsTreatedAsSeparateLiquidity,\n"
-				+ "\t\t\tareUnvestedRsusExcludedFromSum,\n"
-				+ "\t\t\tareUnvestedRsusTreatedAsSeparateLiquidity;\n"
-				+ "}";
-		Files.writeString(file.toPath(), content);
-
-		final var output = runFixAndGetResult(file);
-		assertEquals(content, output.content());
-		assertEquals(0, output.result().fixCount());
-	}
-
-	@Test
 	public void testFieldConsolidationWrappingThreeFields() throws Exception {
 		final var a = "a".repeat(35);
 		final var b = "b".repeat(35);
@@ -1464,17 +1181,6 @@ public class CheckstyleFixIntegrationTest {
 				output.content()
 		);
 		assertEquals(1, output.result().fixCount());
-		assertFalse(output.result().needsSecondPass());
-	}
-
-	@Test
-	public void testFieldSortingEnumAlreadySorted() throws Exception {
-		final var file = tempDir.resolve("SortedEnum.java").toFile();
-		Files.writeString(file.toPath(), "enum T {\n\tALPHA,\n\tBETA\n}");
-
-		final var output = runFixAndGetResult(file);
-		assertEquals("enum T {\n\tALPHA,\n\tBETA\n}", output.content());
-		assertEquals(0, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
 
@@ -1587,17 +1293,6 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
-	public void testFieldSortingFieldViolationNotFixed() throws Exception {
-		final var file = tempDir.resolve("FieldOrder.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tstatic final String Z = \"z\";\n\tstatic final int A = 0;\n}");
-
-		final var output = runFixAndGetResult(file);
-		assertEquals("class T {\n\tstatic final String Z = \"z\";\n\tstatic final int A = 0;\n}", output.content());
-		assertEquals(0, output.result().fixCount());
-		assertFalse(output.result().needsSecondPass());
-	}
-
-	@Test
 	public void testFinalLocalVariable() throws Exception {
 		final var file = tempDir.resolve("Final.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tint x = 5;\n\t\tvar y = \"hello\";\n\t}\n}");
@@ -1636,6 +1331,7 @@ public class CheckstyleFixIntegrationTest {
 
 		assertEquals("class T {\n\tvoid f() {\n\t\tfinal int x, y;\n\t}\n}", String.join("\n", lines));
 		assertEquals(1, result.fixCount());
+		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), result.needsSecondPass());
 	}
 
 	@Test
@@ -1705,18 +1401,17 @@ public class CheckstyleFixIntegrationTest {
 
 		assertEquals("class T {\n\tint[] a = {1};\n\tint[] b = {2};\n\tint[] c = {3};\n}", String.join("\n", lines));
 		assertEquals(3, result.fixCount());
+		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), result.needsSecondPass());
 	}
 
 	@Test
 	public void testMinSdkGatesCollectionsSort() throws Exception {
 		final var file = tempDir.resolve("MinSort.java").toFile();
-		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tCollections.sort(list);\n\t}\n}");
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tCollections.sort(list);\n\t}\n}");
 
-		// minSdk 23: below API 24 threshold, sort should NOT be fixed
 		final var below = runFixAndGetResult(file, "23");
 		assertEquals(0, below.result().fixCount());
 
-		// minSdk 24: at threshold, sort should be fixed
 		final var at = runFixAndGetResult(file, "24");
 		assertEquals(1, at.result().fixCount());
 	}
@@ -1726,11 +1421,9 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("MinFmt.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tString run(String name) {\n\t\treturn String.format(\"Hello %s\", name);\n\t}\n}");
 
-		// minSdk 33: below API 34 threshold, formatted should NOT be fixed
 		final var below = runFixAndGetResult(file, "33");
 		assertEquals(0, below.result().fixCount());
 
-		// minSdk 34: at threshold, formatted should be fixed
 		final var at = runFixAndGetResult(file, "34");
 		assertEquals(1, at.result().fixCount());
 	}
@@ -1740,11 +1433,9 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("MinArr.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tString[] run(List<String> list) {\n\t\treturn list.toArray(new String[0]);\n\t}\n}");
 
-		// minSdk 32: below API 33 threshold, toArray should NOT be fixed
 		final var below = runFixAndGetResult(file, "32");
 		assertEquals(0, below.result().fixCount());
 
-		// minSdk 33: at threshold, toArray should be fixed
 		final var at = runFixAndGetResult(file, "33");
 		assertEquals(1, at.result().fixCount());
 	}
@@ -1774,26 +1465,6 @@ public class CheckstyleFixIntegrationTest {
 				SkipMessages.FIELD_SORT_SKIP,
 				output.result().skippedReasons().get("FieldSortingCheck").getFirst()
 		);
-	}
-
-	@Test
-	public void testMultipleSkipReasonsPerCheckAccumulated() {
-		final var event1 = createEvent(1, SeverityLevel.WARNING, null, Object.class);
-		final var event2 = createEvent(1, SeverityLevel.ERROR, null, Object.class);
-		final var lines = new ArrayList<>(List.of("only line"));
-		final CheckstyleFixer dummyFixer = (l, i, c) -> null;
-		final var result = CheckstyleFixAction.applyFixes(
-				lines,
-				new ArrayList<>(List.of(event1, event2)),
-				Map.of("java.lang.Object", dummyFixer),
-				Map.of()
-		);
-		assertEquals(0, result.fixCount());
-		assertTrue(result.skippedReasons().containsKey("Object"));
-		final var reasons = result.skippedReasons().get("Object");
-		assertEquals(2, reasons.size());
-		assertTrue(reasons.contains(SkipMessages.FIX_SEVERITY));
-		assertTrue(reasons.contains(SkipMessages.FIX_NOT_FIXABLE));
 	}
 
 	@Test
@@ -1866,30 +1537,6 @@ public class CheckstyleFixIntegrationTest {
 		assertEquals("class T {\n\tvoid f(int x, String y) {}\n}", output.content());
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
-	}
-
-	@Test
-	public void testNoViolations() throws Exception {
-		final var file = tempDir.resolve("Clean.java").toFile();
-		final var input = "class Clean {\n\tint[] a = {1, 2};\n\tint x = 100;\n}";
-		Files.writeString(file.toPath(), input);
-
-		final var result = runFixPipeline(file);
-		assertEquals(0, result.fixCount());
-		assertFalse(result.needsSecondPass());
-	}
-
-	@Test
-	public void testNullFixerReturnTracksNotFixable() {
-		final var event = createEvent(1, SeverityLevel.ERROR, null, Object.class);
-		final var lines = new ArrayList<>(List.of("content"));
-		final CheckstyleFixer nullFixer = (l, i, c) -> null;
-		final var result = CheckstyleFixAction.applyFixes(
-				lines, new ArrayList<>(List.of(event)), Map.of("java.lang.Object", nullFixer), Map.of()
-		);
-		assertEquals(0, result.fixCount());
-		assertTrue(result.skippedReasons().containsKey("Object"));
-		assertTrue(result.skippedReasons().get("Object").contains(SkipMessages.FIX_NOT_FIXABLE));
 	}
 
 	@Test
@@ -2287,7 +1934,6 @@ public class CheckstyleFixIntegrationTest {
 		Files.writeString(file.toPath(), "import java.util.ArrayList;\nimport java.util.List;\nclass T {\n\tArrayList<String> f() {\n\t\treturn new ArrayList<>();\n\t}\n}");
 
 		final var output = runFixAndGetResult(file);
-		// type replaced, List import already exists so no duplicate
 		assertTrue(output.content().contains("List<String> f()"));
 		assertFalse(output.content().contains("import java.util.List;\nimport java.util.List;"));
 	}
@@ -2363,35 +2009,28 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
-	public void testPreferMathMethodSkipsMultilineTernary() throws Exception {
-		// check fires on the QUESTION token line, fixer's regex only matches single-line ternaries
-		final var file = tempDir.resolve("MathMulti.java").toFile();
-		Files.writeString(
-				file.toPath(),
-				"class T {\n\tint f(int a, int b) {\n\t\treturn a > b\n\t\t\t? a : b;\n\t}\n}"
-		);
-
-		final var output = runFixAndGetResult(file);
-		assertEquals(0, output.result().fixCount());
-		assertTrue(output.result().skippedReasons().containsKey("PreferMathMethodCheck"));
-		assertTrue(
-				output.result().skippedReasons().get("PreferMathMethodCheck")
-						.contains(SkipMessages.MATH_METHOD_SKIP)
-		);
-	}
-
-	@Test
 	public void testPreferSpecificApiArraysAsList() throws Exception {
 		final var file = tempDir.resolve("AsList.java").toFile();
-		Files.writeString(file.toPath(), "import java.util.Arrays;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn Arrays.asList(\"a\", \"b\");\n\t}\n}");
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn Arrays.asList(\"a\", \"b\");\n\t}\n}");
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"import java.util.Arrays;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn List.of(\"a\", \"b\");\n\t}\n}",
+				"import java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn List.of(\"a\", \"b\");\n\t}\n}",
 				output.content()
 		);
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiArraysAsListRemovesUnusedImport() throws Exception {
+		final var file = tempDir.resolve("AsListUnused.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Arrays;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn Arrays.asList(\"a\", \"b\");\n\t}\n}");
+
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn List.of(\"a\", \"b\");\n\t}\n}",
+				runFixMultiPass(file)
+		);
 	}
 
 	@Test
@@ -2425,14 +2064,15 @@ public class CheckstyleFixIntegrationTest {
 	@Test
 	public void testPreferSpecificApiCollectionsFactory() throws Exception {
 		final var file = tempDir.resolve("CollFactory.java").toFile();
-		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn Collections.singletonList(\"a\");\n\t}\n}");
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn Collections.singletonList(\"a\");\n\t}\n}");
 
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
-		assertEquals("import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn List.of(\"a\");\n\t}\n}", String.join("\n", lines));
+		assertEquals("import java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn List.of(\"a\");\n\t}\n}", String.join("\n", lines));
 		assertEquals(1, result.fixCount());
 		assertFalse(result.needsSecondPass());
+		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), false);
 	}
 
 	@Test
@@ -2446,19 +2086,21 @@ public class CheckstyleFixIntegrationTest {
 		assertEquals("import java.util.Collections;\nimport java.util.List;\nclass T {\n\tObject run() {\n\t\treturn List.of();\n\t}\n}", String.join("\n", lines));
 		assertEquals(1, result.fixCount());
 		assertTrue(result.needsSecondPass());
+		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), true);
 	}
 
 	@Test
 	public void testPreferSpecificApiCollectionsFactoryImportAlreadyPresent() throws Exception {
 		final var file = tempDir.resolve("CollFactoryPresent.java").toFile();
-		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn Collections.emptyList();\n\t}\n}");
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn Collections.emptyList();\n\t}\n}");
 
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
-		assertEquals("import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn List.of();\n\t}\n}", String.join("\n", lines));
+		assertEquals("import java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn List.of();\n\t}\n}", String.join("\n", lines));
 		assertEquals(1, result.fixCount());
 		assertFalse(result.needsSecondPass());
+		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), false);
 	}
 
 	@Test
@@ -2472,6 +2114,7 @@ public class CheckstyleFixIntegrationTest {
 		assertEquals("import java.util.Collections;\nimport java.util.List;\n\nimport javax.annotation.Nonnull;\nclass T {\n\t@Nonnull\n\tObject run() {\n\t\treturn List.of();\n\t}\n}", String.join("\n", lines));
 		assertEquals(1, result.fixCount());
 		assertTrue(result.needsSecondPass());
+		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), true);
 	}
 
 	@Test
@@ -2485,6 +2128,7 @@ public class CheckstyleFixIntegrationTest {
 		assertEquals("import java.util.Collections;\nimport java.util.List;\nimport java.util.Map;\nimport java.util.Set;\nclass T {\n\tObject a() {\n\t\treturn List.of();\n\t}\n\tObject b() {\n\t\treturn Map.of();\n\t}\n\tObject c() {\n\t\treturn Set.of();\n\t}\n}", String.join("\n", lines));
 		assertEquals(3, result.fixCount());
 		assertTrue(result.needsSecondPass());
+		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), true);
 	}
 
 	@Test
@@ -2498,6 +2142,7 @@ public class CheckstyleFixIntegrationTest {
 		assertEquals("import java.util.Collections;\nimport java.util.List;\nimport java.util.Set;\n\nimport javax.annotation.Nonnull;\nclass T {\n\t@Nonnull\n\tObject a() {\n\t\treturn List.of();\n\t}\n\t@Nonnull\n\tObject b() {\n\t\treturn Set.of();\n\t}\n}", String.join("\n", lines));
 		assertEquals(2, result.fixCount());
 		assertTrue(result.needsSecondPass());
+		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), true);
 	}
 
 	@Test
@@ -2510,6 +2155,7 @@ public class CheckstyleFixIntegrationTest {
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 		assertEquals(1, result.fixCount());
 		assertTrue(result.needsSecondPass());
+		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), true);
 	}
 
 	@Test
@@ -2523,6 +2169,7 @@ public class CheckstyleFixIntegrationTest {
 		assertEquals("import java.util.Collections;\nimport java.util.List;\nimport java.util.Set;\nclass T {\n\tList<String> a() {\n\t\treturn List.of();\n\t}\n\tObject b() {\n\t\treturn Set.of();\n\t}\n}", String.join("\n", lines));
 		assertEquals(2, result.fixCount());
 		assertTrue(result.needsSecondPass());
+		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), true);
 	}
 
 	@Test
@@ -2548,13 +2195,24 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferSpecificApiCollectionsSingletonListRemovesUnusedImport() throws Exception {
+		final var file = tempDir.resolve("CollSingletonUnused.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn Collections.singletonList(\"a\");\n\t}\n}");
+
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tList<String> run() {\n\t\treturn List.of(\"a\");\n\t}\n}",
+				runFixMultiPass(file)
+		);
+	}
+
+	@Test
 	public void testPreferSpecificApiCollectionsSortNoComparator() throws Exception {
 		final var file = tempDir.resolve("CollSort.java").toFile();
-		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tCollections.sort(list);\n\t}\n}");
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tCollections.sort(list);\n\t}\n}");
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"import java.util.Collections;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.sort(null);\n\t}\n}",
+				"import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.sort(null);\n\t}\n}",
 				output.content()
 		);
 		assertEquals(1, output.result().fixCount());
@@ -2562,17 +2220,39 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferSpecificApiCollectionsSortRemovesUnusedImport() throws Exception {
+		final var file = tempDir.resolve("CollSortUnused.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tCollections.sort(list);\n\t}\n}");
+
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.sort(null);\n\t}\n}",
+				runFixMultiPass(file)
+		);
+	}
+
+	@Test
 	public void testPreferSpecificApiCollectionsSortWithComparator() throws Exception {
 		final var file = tempDir.resolve("CollSortCmp.java").toFile();
-		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.Comparator;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tCollections.sort(list, Comparator.naturalOrder());\n\t}\n}");
+		Files.writeString(file.toPath(), "import java.util.Comparator;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tCollections.sort(list, Comparator.naturalOrder());\n\t}\n}");
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"import java.util.Collections;\nimport java.util.Comparator;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.sort(Comparator.naturalOrder());\n\t}\n}",
+				"import java.util.Comparator;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.sort(Comparator.naturalOrder());\n\t}\n}",
 				output.content()
 		);
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiCollectionsSortWithComparatorRemovesUnusedImport() throws Exception {
+		final var file = tempDir.resolve("CollSortCmpUnused.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nimport java.util.Comparator;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tCollections.sort(list, Comparator.naturalOrder());\n\t}\n}");
+
+		assertEquals(
+				"import java.util.Comparator;\nimport java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tlist.sort(Comparator.naturalOrder());\n\t}\n}",
+				runFixMultiPass(file)
+		);
 	}
 
 	@Test
@@ -2655,6 +2335,7 @@ public class CheckstyleFixIntegrationTest {
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 		assertEquals(1, result.fixCount());
 		assertFalse(result.needsSecondPass());
+		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), false);
 	}
 
 	@Test
@@ -3208,32 +2889,12 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
-	public void testPreferVarWarningNotFixed() throws Exception {
-		// float f = a + b with int params: var would infer int, so it's a WARNING
-		final var file = tempDir.resolve("VarWarn.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tvoid f(int a, int b) {\n\t\tfinal float x = a + b;\n\t}\n}");
-
-		// WARNING should not be fixed — line stays unchanged
-		final var output = runFixAndGetResult(file);
-		assertEquals(
-				"class T {\n\tvoid f(int a, int b) {\n\t\tfinal float x = a + b;\n\t}\n}",
-				output.content()
-		);
-		assertEquals(0, output.result().fixCount());
-		assertFalse(output.result().needsSecondPass());
-		assertTrue(output.result().skippedReasons().containsKey("PreferVarCheck"));
-		assertTrue(
-				output.result().skippedReasons().get("PreferVarCheck").contains(SkipMessages.FIX_SEVERITY)
-		);
-	}
-
-	@Test
 	public void testRedundantImport() throws Exception {
 		final var file = tempDir.resolve("Imp.java").toFile();
 		Files.writeString(file.toPath(), "import java.lang.String;\n\nclass T {\n\tString s;\n}");
 
 		// both RedundantImport and UnusedImports fire on java.lang.String, so
-		// the import line is deleted twice — the second delete removes the blank line
+		// the import line is deleted twice. The second delete removes the blank line
 		final var output = runFixAndGetResult(file);
 		assertEquals("class T {\n\tString s;\n}", output.content());
 		assertEquals(2, output.result().fixCount());
@@ -3351,45 +3012,6 @@ public class CheckstyleFixIntegrationTest {
 		final var output = runFixAndGetResult(file);
 		assertEquals("class Outer {\n\tclass Inner extends Object {\n\t\tInner() {\n\t\t}\n\t}\n}", output.content());
 		assertEquals(1, output.result().fixCount());
-		assertFalse(output.result().needsSecondPass());
-	}
-
-	@Test
-	public void testTabColumnConversion() {
-		assertEquals(0, CheckstyleFixAction.tabColumnToCharIndex("hello", 0));
-		assertEquals(5, CheckstyleFixAction.tabColumnToCharIndex("hello", 5));
-		assertEquals(1, CheckstyleFixAction.tabColumnToCharIndex("\thello", 8));
-		assertEquals(2, CheckstyleFixAction.tabColumnToCharIndex("\t\thello", 16));
-		assertEquals(6, CheckstyleFixAction.tabColumnToCharIndex("\thello world", 13));
-	}
-
-	@Test
-	public void testTabColumnConversionBeyondLine() {
-		assertEquals(5, CheckstyleFixAction.tabColumnToCharIndex("hello", 10));
-	}
-
-	@Test
-	public void testTabColumnConversionMidLineTab() {
-		// "ab\tcd" - a=0, b=1, \t=2 (expands from col 2 to col 8), c=3 at col 8, d=4 at col 9
-		assertEquals(3, CheckstyleFixAction.tabColumnToCharIndex("ab\tcd", 8));
-		assertEquals(4, CheckstyleFixAction.tabColumnToCharIndex("ab\tcd", 9));
-	}
-
-	@Test
-	public void testTabColumnConversionNoTabs() {
-		assertEquals(0, CheckstyleFixAction.tabColumnToCharIndex("abcdef", 0));
-		assertEquals(3, CheckstyleFixAction.tabColumnToCharIndex("abcdef", 3));
-		assertEquals(6, CheckstyleFixAction.tabColumnToCharIndex("abcdef", 6));
-	}
-
-	@Test
-	public void testTrailingNewline() throws Exception {
-		final var file = tempDir.resolve("TrailNl.java").toFile();
-		Files.writeString(file.toPath(), "class T {}\n");
-
-		final var output = runFixAndGetResult(file);
-		assertEquals("class T {}", output.content());
-		assertEquals(0, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
 
@@ -3515,5 +3137,51 @@ public class CheckstyleFixIntegrationTest {
 		assertEquals("class T {\n\tlong x = 0xB00000000L;\n}", output.content());
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testVerifyCleanAcceptsCleanOutput() throws Exception {
+		final var file = tempDir.resolve("VerClean.java").toFile();
+		final var content = "class T {\n\tvoid method() {}\n}";
+		Files.writeString(file.toPath(), content);
+		verifyFixedOutputClean(file, content, String.valueOf(Integer.MAX_VALUE), false);
+	}
+
+	@Test
+	public void testVerifyCleanAcceptsUnfixableViolations() throws Exception {
+		final var file = tempDir.resolve("VerUnfixable.java").toFile();
+		final var content = "class T {\n\tint b = 2;\n\tint a = 1;\n}";
+		Files.writeString(file.toPath(), content);
+		verifyFixedOutputClean(file, content, String.valueOf(Integer.MAX_VALUE), false);
+	}
+
+	@Test
+	public void testVerifyCleanHandlesMultiPassStabilization() throws Exception {
+		final var file = tempDir.resolve("VerMulti.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.Collections;\nclass T {\n\tObject run() {\n\t\treturn Collections.emptyList();\n\t}\n}");
+		final var violations = runChecks(file);
+		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
+		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
+		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), result.needsSecondPass());
+	}
+
+	private void verifyFixedOutputClean(@Nonnull File file, @Nonnull String content, @Nonnull String minSdk, boolean needsSecondPass) throws Exception {
+		++verifyCleanCallCount;
+		Files.writeString(file.toPath(), content);
+		if (needsSecondPass) {
+			final var violations = runChecks(file, minSdk);
+			final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
+			final var secondPassResult = CheckstyleFixAction.applyFixes(
+					lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS
+			);
+			assertFalse(secondPassResult.needsSecondPass(), "Second pass should not require a third pass");
+			Files.writeString(file.toPath(), String.join("\n", lines));
+		}
+		final var finalViolations = runChecks(file, minSdk);
+		final var finalLines = new ArrayList<>(Files.readAllLines(file.toPath()));
+		final var finalResult = CheckstyleFixAction.applyFixes(
+				finalLines, finalViolations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS
+		);
+		assertEquals(0, finalResult.fixCount(), "Fixed output still has fixable violations");
 	}
 }
