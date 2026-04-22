@@ -6,6 +6,7 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -90,6 +91,27 @@ class AstUtil {
 		}
 		types.sort(null);
 		return types;
+	}
+
+	/**
+	 * Collects the names of all parameters in the given constructor or
+	 * method definition.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static Set<String> collectParameterNames(@Nonnull DetailAST defNode) {
+		final var names = new HashSet<String>();
+		final var params = defNode.findFirstToken(TokenTypes.PARAMETERS);
+		if (params != null) {
+			for (var child = params.getFirstChild(); child != null; child = child.getNextSibling()) {
+				if (child.getType() != TokenTypes.PARAMETER_DEF)
+					continue;
+				final var ident = child.findFirstToken(TokenTypes.IDENT);
+				if (ident != null)
+					names.add(ident.getText());
+			}
+		}
+		return names;
 	}
 
 	/**

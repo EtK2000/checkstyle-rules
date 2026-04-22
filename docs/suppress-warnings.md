@@ -9,7 +9,7 @@ entirely, and the auto-fix task never sees the violation.
 | Key            | Check             | Effect                                                   |
 |----------------|-------------------|----------------------------------------------------------|
 | `FieldSorting` | FieldSortingCheck | Suppresses all field ordering and enum constant ordering |
-| `PreferRecord` | PreferRecordCheck | Suppresses the "should be a record" suggestion           |
+| `PreferRecord` | PreferRecordCheck | Suppresses the "should/can be a record" suggestion       |
 
 ## Annotation forms
 
@@ -40,7 +40,7 @@ class MyClass {
 	MyClass(int value) {
 		this.value = value;
 	}
-	// no "should be a record" suggestion
+	// no "should/can be a record" suggestion
 }
 ```
 

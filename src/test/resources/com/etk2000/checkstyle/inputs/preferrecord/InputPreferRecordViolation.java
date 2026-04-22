@@ -62,15 +62,6 @@ class AnnotatedParamOnly { // violation: class should be a record
 	}
 }
 
-class ConstructorLocalAssignment { // violation: class should be a record
-	final int value;
-
-	ConstructorLocalAssignment(int value) {
-		final var temp = value;
-		this.value = temp;
-	}
-}
-
 class ConstructorBareAssignment { // violation: class should be a record
 	final int value;
 
@@ -226,7 +217,7 @@ class SingleField { // violation: class should be a record
 	}
 }
 
-class WithGenericImplements implements Comparable<WithGenericImplements> { // violation (warning): class should be a record
+class WithGenericImplements implements Comparable<WithGenericImplements> { // violation (warning): class can be a record
 	final int value;
 
 	WithGenericImplements(int value) {
@@ -239,7 +230,7 @@ class WithGenericImplements implements Comparable<WithGenericImplements> { // vi
 	}
 }
 
-class WithImplements implements Cloneable { // violation (warning): class should be a record
+class WithImplements implements Cloneable { // violation (warning): class can be a record
 	final int value;
 
 	WithImplements(int value) {
@@ -247,7 +238,7 @@ class WithImplements implements Cloneable { // violation (warning): class should
 	}
 }
 
-class WithMultipleImplements implements Cloneable, Comparable<WithMultipleImplements> { // violation (warning): class should be a record
+class WithMultipleImplements implements Cloneable, Comparable<WithMultipleImplements> { // violation (warning): class can be a record
 	final int value;
 
 	WithMultipleImplements(int value) {
@@ -274,6 +265,33 @@ class SuppressedWrongKeyExplicit { // violation: class should be a record
 	final int value;
 
 	SuppressedWrongKeyExplicit(int value) {
+		this.value = value;
+	}
+}
+
+final class FinalClass { // violation: class should be a record
+	final int value;
+
+	FinalClass(int value) {
+		this.value = value;
+	}
+}
+
+class OuterForNested {
+	static class NestedViolation { // violation: class should be a record
+		final int value;
+
+		NestedViolation(int value) {
+			this.value = value;
+		}
+	}
+}
+
+@SuppressWarnings("unused")
+class WithImplementsSuppressedWrongKey implements Cloneable { // violation (warning): class can be a record
+	final int value;
+
+	WithImplementsSuppressedWrongKey(int value) {
 		this.value = value;
 	}
 }

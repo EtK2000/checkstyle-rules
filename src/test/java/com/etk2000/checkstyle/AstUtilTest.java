@@ -86,6 +86,19 @@ public class AstUtilTest {
 		);
 	}
 
+	static Stream<Arguments> collectParameterNamesProvider() {
+		return Stream.of(
+				Arguments.of("class T { T() {} }", TokenTypes.CTOR_DEF, Set.of()),
+				Arguments.of("class T { T(int x) {} }", TokenTypes.CTOR_DEF, Set.of("x")),
+				Arguments.of("class T { T(String a, int b) {} }", TokenTypes.CTOR_DEF, Set.of("a", "b")),
+				Arguments.of("class T { void f(String a, int b) {} }", TokenTypes.METHOD_DEF, Set.of("a", "b")),
+				Arguments.of("class T { T(@Deprecated String a, @Deprecated int b) {} }", TokenTypes.CTOR_DEF, Set.of("a", "b")),
+				Arguments.of("class T { T(String... args) {} }", TokenTypes.CTOR_DEF, Set.of("args")),
+				Arguments.of("class T { void f(String... args) {} }", TokenTypes.METHOD_DEF, Set.of("args")),
+				Arguments.of("class T { void f(int a, String... rest) {} }", TokenTypes.METHOD_DEF, Set.of("a", "rest"))
+		);
+	}
+
 	static Stream<Arguments> collectParameterTypesProvider() {
 		return Stream.of(
 				Arguments.of("class T { T() {} }", TokenTypes.CTOR_DEF, List.of()),
@@ -94,7 +107,12 @@ public class AstUtilTest {
 				Arguments.of("class T { void f(String a, int b) {} }", TokenTypes.METHOD_DEF, List.of("String", "int")),
 				Arguments.of("class T { T(@Deprecated String a, @Deprecated int b) {} }", TokenTypes.CTOR_DEF, List.of("String", "int")),
 				Arguments.of("class T { T(@Deprecated String a, int b) {} }", TokenTypes.CTOR_DEF, List.of("String", "int")),
-				Arguments.of("class T { void f(@Deprecated String a, @Deprecated int[] b) {} }", TokenTypes.METHOD_DEF, List.of("String", "int[]"))
+				Arguments.of("class T { void f(@Deprecated String a, @Deprecated int[] b) {} }", TokenTypes.METHOD_DEF, List.of("String", "int[]")),
+				Arguments.of("class T { void f(String[] args) {} }", TokenTypes.METHOD_DEF, List.of("String[]")),
+				Arguments.of("class T { void f(String... args) {} }", TokenTypes.METHOD_DEF, List.of("String")),
+				Arguments.of("class T { void f(int a, String... rest) {} }", TokenTypes.METHOD_DEF, List.of("String", "int")),
+				Arguments.of("class T { T(String... args) {} }", TokenTypes.CTOR_DEF, List.of("String")),
+				Arguments.of("class T { T(int a, String... rest) {} }", TokenTypes.CTOR_DEF, List.of("String", "int"))
 		);
 	}
 
@@ -344,6 +362,14 @@ public class AstUtilTest {
 		final var ast = parseSource(source);
 		final var objBlock = findFirst(ast, TokenTypes.OBJBLOCK);
 		assertEquals(expected, AstUtil.collectInstanceFieldTypes(objBlock));
+	}
+
+	@MethodSource("collectParameterNamesProvider")
+	@ParameterizedTest
+	void testCollectParameterNames(String source, int tokenType, Set<String> expected) throws Exception {
+		final var ast = parseSource(source);
+		final var def = findFirst(ast, tokenType);
+		assertEquals(expected, AstUtil.collectParameterNames(def));
 	}
 
 	@MethodSource("collectParameterTypesProvider")

@@ -73,11 +73,11 @@ class InputPreferVarLiteralMismatchViolation {
 		// matching return type (error)
 		final byte b = Byte.parseByte("5"); // violation: Local variable must use 'var' instead of an explicit type.
 		// widening to other primitives (warning — var would infer byte)
-		final double bd = Byte.parseByte("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final float bf = Byte.parseByte("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final int bi = Byte.parseByte("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final long bl = Byte.parseByte("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final short bs = Byte.parseByte("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
+		final double bd = Byte.parseByte("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final float bf = Byte.parseByte("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final int bi = Byte.parseByte("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final long bl = Byte.parseByte("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final short bs = Byte.parseByte("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
 	}
 
 	void parseDouble() {
@@ -88,42 +88,42 @@ class InputPreferVarLiteralMismatchViolation {
 		// matching return type (error)
 		final float f = Float.parseFloat("5.0"); // violation: Local variable must use 'var' instead of an explicit type.
 		// widening (warning — var would infer float)
-		final double fd = Float.parseFloat("5.0"); // violation (warning): Local variable must use 'var' instead of an explicit type.
+		final double fd = Float.parseFloat("5.0"); // violation (warning): Local variable should use 'var' instead of an explicit type.
 	}
 
 	void parseInt() {
 		// matching return type (error)
 		final int i = Integer.parseInt("5"); // violation: Local variable must use 'var' instead of an explicit type.
 		// widening (warning — var would infer int)
-		final double id = Integer.parseInt("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final float ifl = Integer.parseInt("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final long il = Integer.parseInt("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
+		final double id = Integer.parseInt("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final float ifl = Integer.parseInt("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final long il = Integer.parseInt("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
 	}
 
 	void parseLong() {
 		// matching return type (error)
 		final long l = Long.parseLong("5"); // violation: Local variable must use 'var' instead of an explicit type.
 		// widening (warning — var would infer long)
-		final double ld = Long.parseLong("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final float lf = Long.parseLong("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
+		final double ld = Long.parseLong("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final float lf = Long.parseLong("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
 	}
 
 	void parseShort() {
 		// matching return type (error)
 		final short s = Short.parseShort("5"); // violation: Local variable must use 'var' instead of an explicit type.
 		// widening (warning — var would infer short)
-		final double sd = Short.parseShort("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final float sf = Short.parseShort("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final int si = Short.parseShort("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final long sl = Short.parseShort("5"); // violation (warning): Local variable must use 'var' instead of an explicit type.
+		final double sd = Short.parseShort("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final float sf = Short.parseShort("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final int si = Short.parseShort("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final long sl = Short.parseShort("5"); // violation (warning): Local variable should use 'var' instead of an explicit type.
 	}
 
 	void primitiveWithNonLiteralExpression(int a, byte b, boolean flag) {
 		// non-literal expression on a primitive — can't verify inferred type (warning)
-		final float fAdd = a + b; // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final int fCast = (byte) a; // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final long lMul = a * b; // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final long lShift = a << b; // violation (warning): Local variable must use 'var' instead of an explicit type.
-		final long tern = flag ? 1L : 2L; // violation (warning): Local variable must use 'var' instead of an explicit type.
+		final float fAdd = a + b; // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final int fCast = (byte) a; // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final long lMul = a * b; // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final long lShift = a << b; // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final long tern = flag ? 1L : 2L; // violation (warning): Local variable should use 'var' instead of an explicit type.
 	}
 }

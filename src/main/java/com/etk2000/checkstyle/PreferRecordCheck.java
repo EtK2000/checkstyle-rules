@@ -20,6 +20,7 @@ import javax.annotation.Nonnull;
 public class PreferRecordCheck extends AbstractCheck {
 	private static final Set<String> RECORD_OVERRIDE_METHODS = Set.of("equals", "hashCode", "toString");
 	private static final String MSG_KEY = "prefer.record";
+	private static final String MSG_KEY_WARNING = "prefer.record.warning";
 
 	@CheckReturnValue
 	private static boolean hasAnnotation(@Nonnull DetailAST modifiers, @Nonnull String name) {
@@ -63,6 +64,7 @@ public class PreferRecordCheck extends AbstractCheck {
 		if (slist == null)
 			return true;
 
+		final var paramNames = AstUtil.collectParameterNames(ctorDef);
 		for (var child = slist.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() != TokenTypes.EXPR)
 				continue;
@@ -79,9 +81,12 @@ public class PreferRecordCheck extends AbstractCheck {
 			if (thisToken == null || thisToken.getType() != TokenTypes.LITERAL_THIS)
 				continue;
 
-			// it IS a this.field assignment — RHS must be a simple identifier
+			// it IS a this.field assignment — RHS must be the matching parameter
+			final var fieldIdent = thisToken.getNextSibling();
 			final var rhs = lhs.getNextSibling();
-			if (rhs == null || rhs.getType() != TokenTypes.IDENT)
+			if (rhs == null || rhs.getType() != TokenTypes.IDENT
+					|| !paramNames.contains(rhs.getText())
+					|| (fieldIdent != null && !fieldIdent.getText().equals(rhs.getText())))
 				return false;
 		}
 		return true;
@@ -191,13 +196,18 @@ public class PreferRecordCheck extends AbstractCheck {
 			return;
 
 		final var ident = ast.findFirstToken(TokenTypes.IDENT);
+		final var name = ident != null ? ident.getText() : "<unknown>";
 		if (hasImplementsClause(ast)) {
 			final var savedSeverity = getSeverity();
-			setSeverity(SeverityLevel.WARNING.getName());
-			log(ast, MSG_KEY, ident != null ? ident.getText() : "<unknown>");
-			setSeverity(savedSeverity);
+			try {
+				setSeverity(SeverityLevel.WARNING.getName());
+				log(ast, MSG_KEY_WARNING, name);
+			}
+			finally {
+				setSeverity(savedSeverity);
+			}
 		}
 		else
-			log(ast, MSG_KEY, ident != null ? ident.getText() : "<unknown>");
+			log(ast, MSG_KEY, name);
 	}
 }

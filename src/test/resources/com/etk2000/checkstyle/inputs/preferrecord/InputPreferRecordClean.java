@@ -76,6 +76,52 @@ class GenericFieldWrongType {
 	}
 }
 
+class ConstructorLocalAssignment {
+	final int value;
+
+	ConstructorLocalAssignment(int value) {
+		final var temp = value;
+		this.value = temp;
+	}
+}
+
+class ConstructorMixedAssignment {
+	final int first;
+	final int second;
+
+	ConstructorMixedAssignment(int first, int second) {
+		this.first = first;
+		this.second = 42;
+	}
+}
+
+class ConstructorRenamedAssignment {
+	final int val;
+
+	ConstructorRenamedAssignment(int value) {
+		this.val = value;
+	}
+}
+
+class ConstructorNonParamAssignment {
+	static final int DEFAULT_VALUE = 30;
+	final int value;
+
+	ConstructorNonParamAssignment(int value) {
+		this.value = DEFAULT_VALUE;
+	}
+}
+
+class ConstructorSwappedAssignment {
+	final int a;
+	final int b;
+
+	ConstructorSwappedAssignment(int a, int b) {
+		this.a = b;
+		this.b = a;
+	}
+}
+
 class ConstructorOtherAssignment {
 	final int value;
 

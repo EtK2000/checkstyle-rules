@@ -210,9 +210,13 @@ public class PreferVarCheckTest {
 			assertEquals(SeverityLevel.WARNING, violations.get(i++).getSeverityLevel());
 		}
 
-		// verify all violations have the same message
-		for (var v : violations)
-			assertEquals(msg, v.getMessage());
+		final var msgWarning = "Local variable should use 'var' instead of an explicit type.";
+		for (var v : violations) {
+			if (v.getSeverityLevel() == SeverityLevel.WARNING)
+				assertEquals(msgWarning, v.getMessage());
+			else
+				assertEquals(msg, v.getMessage());
+		}
 	}
 
 	@Test
@@ -332,9 +336,9 @@ public class PreferVarCheckTest {
 	@Test
 	public void testMultiVarWarning() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarMultiVarViolation.java");
-		assertEquals(7, violations.size());
+		assertEquals(9, violations.size());
 
-		final var msg = "Local variable must use 'var' instead of an explicit type.";
+		final var msg = "Local variable should use 'var' instead of an explicit type.";
 
 		assertEquals(7, violations.get(0).getLine());
 		assertEquals(SeverityLevel.WARNING, violations.get(0).getSeverityLevel());
@@ -352,7 +356,7 @@ public class PreferVarCheckTest {
 		assertEquals(SeverityLevel.WARNING, violations.get(3).getSeverityLevel());
 		assertEquals(msg, violations.get(3).getMessage());
 
-		assertEquals(23, violations.get(4).getLine());
+		assertEquals(26, violations.get(4).getLine());
 		assertEquals(SeverityLevel.WARNING, violations.get(4).getSeverityLevel());
 		assertEquals(msg, violations.get(4).getMessage());
 
@@ -363,6 +367,14 @@ public class PreferVarCheckTest {
 		assertEquals(31, violations.get(6).getLine());
 		assertEquals(SeverityLevel.WARNING, violations.get(6).getSeverityLevel());
 		assertEquals(msg, violations.get(6).getMessage());
+
+		assertEquals(35, violations.get(7).getLine());
+		assertEquals(SeverityLevel.WARNING, violations.get(7).getSeverityLevel());
+		assertEquals(msg, violations.get(7).getMessage());
+
+		assertEquals(39, violations.get(8).getLine());
+		assertEquals(SeverityLevel.WARNING, violations.get(8).getSeverityLevel());
+		assertEquals(msg, violations.get(8).getMessage());
 	}
 
 	@Test

@@ -28,6 +28,7 @@ public class PreferVarCheck extends AbstractCheck {
 	private static final String MSG_DIAMOND = "prefer.var.diamond";
 	private static final String MSG_FOREACH = "prefer.var.foreach";
 	private static final String MSG_LOCAL = "prefer.var.local";
+	private static final String MSG_LOCAL_WARNING = "prefer.var.local.warning";
 	private static final String MSG_TRY = "prefer.var.try.resource";
 	private static final String MSG_TYPE_ARGS = "prefer.var.type.args";
 	private static final String MSG_VAR_EXPLICIT_ARRAY = "prefer.var.explicit.array";
@@ -343,28 +344,51 @@ public class PreferVarCheck extends AbstractCheck {
 
 	/**
 	 * Returns whether the variable definition is part of a multi-variable
-	 * declaration (e.g. {@code int x = 1, y = 2;}). Multi-var declarations
-	 * can't use {@code var}, so they must be downgraded to a warning.
-	 * <p>
-	 * Detection: multi-var declarations have COMMA siblings between the
-	 * VARIABLE_DEF nodes. Separate statements ({@code int a; int b;}) have
-	 * SEMI siblings instead.
+	 * declaration (first or subsequent variable). Detects both COMMA
+	 * separators (for-init) and adjacent VARIABLE_DEF siblings (blocks).
 	 */
 	@CheckReturnValue
 	private static boolean isMultiVarDeclaration(@Nonnull DetailAST varDef) {
 		for (var sibling = varDef.getNextSibling(); sibling != null; sibling = sibling.getNextSibling()) {
-			if (sibling.getType() == TokenTypes.COMMA)
+			if (sibling.getType() == TokenTypes.COMMA || sibling.getType() == TokenTypes.VARIABLE_DEF)
 				return true;
 			if (sibling.getType() == TokenTypes.SEMI)
-				return false;
+				break;
 		}
 		for (var sibling = varDef.getPreviousSibling(); sibling != null; sibling = sibling.getPreviousSibling()) {
-			if (sibling.getType() == TokenTypes.COMMA)
+			if (sibling.getType() == TokenTypes.COMMA || sibling.getType() == TokenTypes.VARIABLE_DEF)
 				return true;
 			if (sibling.getType() == TokenTypes.SEMI)
-				return false;
+				break;
 		}
 		return false;
+	}
+
+	/**
+	 * Returns whether the variable definition is the first variable in a
+	 * multi-variable declaration. Only the first variable logs a warning
+	 * to avoid duplicate violations.
+	 */
+	@CheckReturnValue
+	private static boolean isMultiVarFirst(@Nonnull DetailAST varDef) {
+		var hasNext = false;
+		for (var sibling = varDef.getNextSibling(); sibling != null; sibling = sibling.getNextSibling()) {
+			if (sibling.getType() == TokenTypes.COMMA || sibling.getType() == TokenTypes.VARIABLE_DEF) {
+				hasNext = true;
+				break;
+			}
+			if (sibling.getType() == TokenTypes.SEMI)
+				break;
+		}
+		if (!hasNext)
+			return false;
+		for (var sibling = varDef.getPreviousSibling(); sibling != null; sibling = sibling.getPreviousSibling()) {
+			if (sibling.getType() == TokenTypes.COMMA || sibling.getType() == TokenTypes.VARIABLE_DEF)
+				return false;
+			if (sibling.getType() == TokenTypes.SEMI)
+				break;
+		}
+		return true;
 	}
 
 	/**
@@ -533,9 +557,13 @@ public class PreferVarCheck extends AbstractCheck {
 
 	private void logWarning(@Nonnull DetailAST ast, @Nonnull String msgKey, @Nonnull Object... args) {
 		final var savedSeverity = getSeverity();
-		setSeverity(SeverityLevel.WARNING.getName());
-		log(ast, msgKey, args);
-		setSeverity(savedSeverity);
+		try {
+			setSeverity(SeverityLevel.WARNING.getName());
+			log(ast, msgKey, args);
+		}
+		finally {
+			setSeverity(savedSeverity);
+		}
 	}
 
 	/**
@@ -584,8 +612,8 @@ public class PreferVarCheck extends AbstractCheck {
 
 				// multi-var declarations (int x = 1, y = 2;) can't use var
 				if (isMultiVarDeclaration(ast)) {
-					if (!isVarType(ast))
-						logWarning(ast, MSG_LOCAL);
+					if (!isVarType(ast) && isMultiVarFirst(ast))
+						logWarning(ast, MSG_LOCAL_WARNING);
 					return;
 				}
 
@@ -635,7 +663,7 @@ public class PreferVarCheck extends AbstractCheck {
 				else if (!isGeneric) {
 					// primitive with non-literal expression: warn (can't verify inferred type)
 					if (primAction == PrimitiveVarAction.WARN)
-						logWarning(ast, MSG_LOCAL);
+						logWarning(ast, MSG_LOCAL_WARNING);
 					else
 						log(ast, MSG_LOCAL);
 				}

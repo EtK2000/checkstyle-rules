@@ -10,7 +10,7 @@ class InputPreferVarReflectionViolation {
 	}
 
 	void staticCallNonGeneric() {
-		final String s = String.valueOf(42); // violation (warning): Local variable must use 'var' instead of an explicit type.
+		final String s = String.valueOf(42); // violation: Local variable must use 'var' instead of an explicit type.
 	}
 
 	void typeArgsOnReflectionGeneric() {
