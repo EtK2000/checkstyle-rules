@@ -69,16 +69,183 @@ public class FieldSortingFixerTest {
 	}
 
 	@Test
-	public void testFieldLineNotEnum() {
+	public void testFieldAlreadySorted() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tfinal int alpha = 0;",
+				"\tfinal int beta = 1;",
+				"}"
+		));
+		assertNull(fixer.fix(lines, 2, 0));
+	}
+
+	@Test
+	public void testFieldAlreadySortedSingleField() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tint x;",
+				"}"
+		));
+		assertNull(fixer.fix(lines, 1, 0));
+	}
+
+	@Test
+	public void testFieldAlreadySortedSingleInGroup() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tstatic int x;",
+				"\tint a;",
+				"}"
+		));
+		assertNull(fixer.fix(lines, 2, 0));
+	}
+
+	@Test
+	public void testFieldArrayTypeOrder() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tint[] arr;",
+				"\tint x;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(List.of("\tint x;", "\tint[] arr;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testFieldBodyEndNotFound() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tint b;",
+				"\tint a;"
+		));
+		assertNull(fixer.fix(lines, 2, 0));
+	}
+
+	@Test
+	public void testFieldBodyStartNotFound() {
+		final var lines = new ArrayList<>(List.of(
+				"\tint b;",
+				"\tint a;"
+		));
+		assertNull(fixer.fix(lines, 1, 0));
+	}
+
+	@Test
+	public void testFieldChunkOrder() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tint nonFinal;",
+				"\tfinal int finalWithValue = 1;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(1, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(
+				List.of("\tfinal int finalWithValue = 1;", "", "\tint nonFinal;"),
+				result.replacement()
+		);
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testFieldChunkOrderAllThreeChunks() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tint c;",
+				"\tfinal int b;",
+				"\tfinal int a = 1;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 3, 0));
+		assertEquals(1, result.startLine());
+		assertEquals(3, result.endLine());
+		assertEquals(
+				List.of("\tfinal int a = 1;", "", "\tfinal int b;", "", "\tint c;"),
+				result.replacement()
+		);
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testFieldCircularDependencyDoesNotHang() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tstatic final int A = B + 1;",
+				"\tstatic final int B = A + 1;",
+				"}"
+		));
+		fixer.fix(lines, 2, 0);
+	}
+
+	@Test
+	public void testFieldDependencyOrder() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tstatic final int B = A + 1;",
+				"\tstatic final int A = 0;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(
+				List.of("\tstatic final int A = 0;", "\tstatic final int B = A + 1;"),
+				result.replacement()
+		);
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testFieldNameOrder() {
 		final var lines = new ArrayList<>(List.of(
 				"class T {",
 				"\tstatic final int Z = 1;",
 				"\tstatic final int A = 0;",
 				"}"
 		));
-		final var attempt = fixer.fix(lines, 2, 1);
-		assertInstanceOf(SkipResult.class, attempt);
-		assertEquals(SkipMessages.FIELD_SORT_SKIP, ((SkipResult) attempt).reason());
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(1, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(
+				List.of("\tstatic final int A = 0;", "\tstatic final int Z = 1;"),
+				result.replacement()
+		);
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testFieldStringWithFinalKeyword() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tString b = \"final\";",
+				"\tString a = \"hello\";",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(
+				List.of("\tString a = \"hello\";", "\tString b = \"final\";"),
+				result.replacement()
+		);
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testFieldTypeOrder() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tfinal String name = \"x\";",
+				"\tfinal int count = 0;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(1, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(
+				List.of("\tfinal int count = 0;", "\tfinal String name = \"x\";"),
+				result.replacement()
+		);
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test

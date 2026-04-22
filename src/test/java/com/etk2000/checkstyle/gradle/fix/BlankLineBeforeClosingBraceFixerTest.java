@@ -34,6 +34,56 @@ public class BlankLineBeforeClosingBraceFixerTest {
 	}
 
 	@Test
+	public void testDeleteWhenLineIndexIsBlank() {
+		final var lines = new ArrayList<>(List.of("\tint x;", "", "", "}"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(1, result.startLine());
+		assertEquals(2, result.endLine());
+		assertTrue(result.replacement().isEmpty());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testDeleteWhenLineIndexIsBlankTriple() {
+		final var lines = new ArrayList<>(List.of("\tint x;", "", "", "", "}"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(1, result.startLine());
+		assertEquals(3, result.endLine());
+		assertTrue(result.replacement().isEmpty());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testDeleteWhenLineIndexIsBlankTripleFromLast() {
+		final var lines = new ArrayList<>(List.of("content", "", "", "", "}"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 3, 0));
+		assertEquals(1, result.startLine());
+		assertEquals(3, result.endLine());
+		assertTrue(result.replacement().isEmpty());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testDeleteWhenLineIndexIsWhitespaceOnly() {
+		final var lines = new ArrayList<>(List.of("content", "\t", "}"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
+		assertEquals(1, result.startLine());
+		assertEquals(1, result.endLine());
+		assertTrue(result.replacement().isEmpty());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testDeleteWhenLineIndexReachesZero() {
+		final var lines = new ArrayList<>(List.of("", "", "}"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertTrue(result.replacement().isEmpty());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
 	public void testDeleteWhitespaceOnlyBeforeCloseBrace() {
 		final var lines = new ArrayList<>(List.of("\tint x;", "\t", "}"));
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));

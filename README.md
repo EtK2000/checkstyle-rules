@@ -42,9 +42,8 @@ Run ./gradlew checkstyleFixAll to auto-fix 5 of 8 violations.
 The fix task reports what it fixed and what it skipped with reasons:
 
 ```
-Fixed 3 violations in 2 files (5 skipped)
+Fixed 5 violations in 2 files (2 skipped)
 Skipped violations:
-  FieldSortingCheck: field ordering unsupported, only enum constants (x3)
   PreferMathMethodCheck: parenthesized or multiline ternary (x2)
 ```
 

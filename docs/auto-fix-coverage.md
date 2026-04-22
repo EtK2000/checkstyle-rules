@@ -9,10 +9,11 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | AnnotationOwnLineCheck                   | AnnotationOwnLineFixer             | Splits stacked/embedded annotations to own lines, removes blank lines, sorts alphabetically                                                                                 |
 | AnnotationSameLineCheck                  | AnnotationSameLineFixer            | Joins annotations onto declaration line, sorts inline annotations alphabetically                                                                                            |
 | AvoidNoArgumentSuperConstructorCallCheck | AvoidNoArgumentSuperCallFixer      | Removes `super()` call                                                                                                                                                      |
-| ControlFlowBracesCheck                   | ControlFlowBracesFixer             | Do-while only: removes unnecessary braces, fixes one-liners, adds missing braces                                                                                            |
+| ConstructorAssignmentOrderCheck          | ConstructorAssignmentOrderFixer    | Sorts `this.xxx = ...` assignments by group (simple, multi-line, var-dependent) then alphabetically; handles dependencies                                                   |
+| ControlFlowBracesCheck                   | ControlFlowBracesFixer             | Do-while: removes unnecessary braces, fixes one-liners, adds missing braces. Non-do-while: adds braces to multi-line braceless bodies                                       |
 | ExplicitInitializationCheck              | ExplicitInitializationFixer        | Removes `= 0`/`= null`/`= false` etc.                                                                                                                                       |
 | FieldConsolidationCheck                  | FieldConsolidationFixer            | Merges consecutive same-type fields; wraps across lines if >120 chars. See [C-style arrays](c-style-array-fixer.md) and [limitations](#fieldconsolidationfixer-limitations) |
-| FieldSortingCheck                        | FieldSortingFixer                  | Enum constants only: sorts alphabetically, splits same-line; field violations return null                                                                                   |
+| FieldSortingCheck                        | FieldSortingFixer                  | Enum constants: sorts alphabetically, splits same-line. Fields: sorts by chunk, type (primitives first), name; handles dependencies                                         |
 | FinalLocalVariableCheck                  | FinalLocalVariableFixer            | Adds `final` keyword                                                                                                                                                        |
 | LambdaParameterTypeCheck                 | LambdaParameterTypeFixer           | See sub-rules below                                                                                                                                                         |
 | NoArrayTrailingCommaCheck                | NoArrayTrailingCommaFixer          | Removes trailing comma                                                                                                                                                      |
@@ -184,6 +185,78 @@ fixer goes straight to naked form (removing both type and parens).
 | Use var (multi mixed) | `(@A String x, String y) ->`    | `(@A var x, var y) ->`    |
 | Use var (multi both)  | `(@A String x, @B String y) ->` | `(@A var x, @B var y) ->` |
 
+## ConstructorAssignmentOrderCheck sub-rules
+
+The fixer parses constructor and instance initializer bodies to find `this.xxx = ...` assignment
+statements. It groups them (simple single-line, multi-line, variable-dependent) and sorts within
+each group. Local variable declarations are placed before the assignments that reference them.
+
+| Violation type               | Input pattern                                           | Auto-fix | Notes                                                   |
+|------------------------------|---------------------------------------------------------|----------|---------------------------------------------------------|
+| Alphabetical order           | `this.beta = b; this.alpha = a;`                        | Yes      | Swaps/sorts by field name                               |
+| Simple before multi-line     | Multi-line before `this.alpha = a;`                     | Yes      | Moves simple group before multi group                   |
+| Non-var before var-dependent | Var-dependent before `this.beta = x;`                   | Yes      | Moves non-var groups before var group                   |
+| Var sub-group order          | `this.beta = second; this.alpha = first;`               | Yes      | Sorts by variable declaration order                     |
+| Field-to-field dependency    | `this.beta = this.alpha + 1;` before `this.alpha = a;`  | Yes      | Respects dependency: A before B if B uses A             |
+| Multi-line alphabetical      | Two multi-line anonymous class assignments out of order | Yes      | Tracks brace/paren depth for boundaries                 |
+| Circular dependencies        | `this.a = this.b + 1; this.b = this.a + 1;`             | No       | Max-iteration guard stops the loop; best-effort order   |
+| Non-assignment statements    | `System.out.println()` between assignments              | No       | Returns null if non-assignment lines exist in the range |
+| Multi-line local var decl    | `final var x =\n\tnew Foo();`                           | No       | Only single-line local var decls parsed                 |
+| Nested generics in local var | `Map<String, List<Integer>> m = ...`                    | No       | `[^>]*` in regex stops at first `>`; var not tracked    |
+| Text blocks in assignments   | `this.x = """\n...\n""";`                               | No       | String parser doesn't handle `"""`; may misparse body   |
+
+## ControlFlowBracesCheck sub-rules (non-do-while)
+
+The fixer adds braces to braceless multi-line bodies, removes unnecessary braces from single-line
+bodies, and handles brace-on-own-line formatting. Do-while violations are handled separately (see
+main table).
+
+| Violation type                      | Input pattern                             | Auto-fix | Notes                                                     |
+|-------------------------------------|-------------------------------------------|----------|-----------------------------------------------------------|
+| Missing braces (if)                 | `if (cond)\n\tfor (...)\n\t\tstmt;`       | Yes      | Wraps in `{ }`, preserves body indentation                |
+| Missing braces (else)               | `else\n\tfor (...)\n\t\tstmt;`            | Yes      | Same wrapping logic                                       |
+| Missing braces (for)                | `for (...)\n\tif (...)\n\t\tstmt;`        | Yes      | Same wrapping logic                                       |
+| Missing braces (for-each)           | `for (var x : list)\n\tif...\n\t...`      | Yes      | Same wrapping logic                                       |
+| Missing braces (while)              | `while (cond)\n\tif (...)\n\t...`         | Yes      | Same wrapping logic                                       |
+| Missing braces + trailing comment   | `if (cond) // note\n\tfor...\n\t\tstmt;`  | Yes      | Inserts `{` before the `//` comment                       |
+| Unnecessary braces (if)             | `if (cond) { singleStmt; }`               | Yes      | Removes `{` and `}`, preserves `else` on own line         |
+| Unnecessary braces (else)           | `else { singleStmt; }`                    | Yes      | Same removal logic                                        |
+| Unnecessary braces (while)          | `while (cond) { singleStmt; }`            | Yes      | Same removal logic                                        |
+| Unnecessary braces (for)            | `for (...) { singleStmt; }`               | No       | PreferBulkOperation may also fire; returns SkipResult     |
+| Brace on own line (if)              | `if (cond)\n{\n\tstmt;\n}`                | Yes      | Removes `{` and `}` lines                                 |
+| Brace on own line (else)            | `else\n{\n\tstmt;\n}`                     | Yes      | Same removal logic                                        |
+| Brace on own line (while)           | `while (cond)\n{\n\tstmt;\n}`             | Yes      | Same removal logic                                        |
+| Brace on own line (for)             | `for (...)\n{\n\tstmt;\n}`                | No       | PreferBulkOperation may also fire; returns SkipResult     |
+| Brace on own line + comment on `{`  | `if (cond)\n{ // note\n\tstmt;\n}`        | No       | Returns null to avoid losing the comment                  |
+| Variable declaration body           | `if (cond) { int x = 5; }`                | No       | Returns null; braces required for variable scope          |
+| Annotated variable declaration body | `if (cond) { @Nullable String s = ...; }` | No       | Returns null; annotation-aware variable detection         |
+| One-liner                           | `if (cond) stmt;`                         | No       | Returns SkipResult; body on same line as keyword          |
+| No semicolon found                  | Body without reachable `;`                | No       | Returns null from `findStatementEnd`                      |
+| Text blocks in body                 | Body containing `"""`                     | No       | String parser doesn't handle text blocks; may return null |
+| Qualified annotation in body        | `@java.lang.Deprecated int x`             | No       | Annotation parser doesn't handle dot-separated names      |
+
+## FieldSortingCheck sub-rules (field ordering)
+
+The fixer parses field declarations in a class body and sorts them by the check's rules.
+Enum constant sorting is handled separately (see main table).
+
+| Violation type              | Input pattern                                 | Auto-fix | Notes                                                   |
+|-----------------------------|-----------------------------------------------|----------|---------------------------------------------------------|
+| Chunk order                 | Non-final before final-with-value             | Yes      | Adds blank lines between chunks                         |
+| Type order (prim vs ref)    | `String name` before `int count`              | Yes      | Primitives sort before reference types                  |
+| Type order (alphabetical)   | `String` before `int` (same chunk)            | Yes      | Alphabetical by base type name                          |
+| Array depth                 | `int[]` before `int`                          | Yes      | Base type first, then arrays                            |
+| Name order                  | `int z` before `int a` (same type)            | Yes      | Case-insensitive alphabetical                           |
+| Field dependencies          | `B = A + 1` before `A = 0`                    | Yes      | Respects dependency: A before B if B uses A             |
+| Multi-line initializers     | Fields with anonymous class or lambda init    | Yes      | Tracks brace/paren depth for field end                  |
+| Annotated fields            | Fields with `@Deprecated` etc. above          | Yes      | Annotation lines move with their field                  |
+| Circular dependencies       | `A = B + 1; B = A + 1`                        | No       | Max-iteration guard stops the loop; best-effort order   |
+| Unparseable field pattern   | Complex generics, multi-variable declarations | No       | Returns null if FIELD_PATTERN doesn't match             |
+| Anonymous class initializer | anon.class field must come before non-anon    | No       | Not implemented in fixer sorting                        |
+| Text blocks in initializers | Field with `"""` initializer containing `{}`  | No       | String parser doesn't handle text blocks                |
+| Nested generics in type     | `Map<String, List<Integer>>` field            | No       | `[^>]*` in FIELD_PATTERN stops at first `>`             |
+| Inline annotation with `()` | `@SuppressWarnings(")")` in field value       | No       | Annotation parser doesn't track string literals in args |
+
 ## Regex checks without fixers
 
 | Module ID     | Reason                                                                                            |
@@ -195,27 +268,27 @@ fixer goes straight to naked form (removing both type and parens).
 
 Custom checks without auto-fix support and why.
 
-| Check                                | Reason                                                                                                                                      |
-|--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------|
-| ClassStructureOrderCheck             | Reordering class members requires moving multi-line blocks with dependency analysis                                                         |
-| ConstructorAssignmentOrderCheck      | Reordering assignments requires dependency analysis between fields                                                                          |
-| EmptyBodyCheck                       | Ambiguous: removing the statement may discard intentional no-ops; adding a body requires context                                            |
-| EmptySwitchCheck                     | Same as EmptyBodyCheck                                                                                                                      |
-| FieldSortingCheck (field sub-rules)  | Field ordering violations (type, name, chunk, dependency, anon.class) require dependency analysis. Enum constant sub-rules are auto-fixable |
-| InfiniteEmptyLoopCheck               | Flags bugs (infinite empty loops), not a stylistic issue with a deterministic fix                                                           |
-| InstanceofBeforeCastCheck            | Reordering sub-expressions in compound boolean conditions while preserving short-circuit semantics                                          |
-| MethodAlphabeticalOrderCheck         | Reordering methods requires moving multi-line blocks                                                                                        |
-| MultilineCallFormattingCheck         | Reformatting argument layout across lines with context-dependent indent and grouping rules                                                  |
-| NoCaseBracesCheck                    | Removing braces requires scope analysis to verify no variable declarations leak                                                             |
-| OverloadMethodOrderCheck             | Reordering method overloads requires moving multi-line blocks                                                                               |
-| PreferImportCheck                    | Replacing FQN with short name and adding import; must verify no name conflicts                                                              |
-| PreferLambdaCheck                    | Structural transformation: anonymous class to lambda, must handle `this` references and field shadowing                                     |
-| PreferLiteralSuffixCheck             | Replacing widening cast with literal suffix requires expression context analysis                                                            |
-| PreferPatternMatchingInstanceofCheck | Restructuring instanceof + subsequent cast into pattern matching across multiple statements                                                 |
-| PreferRecordCheck                    | Multi-line structural transformation: must rewrite class header, remove fields/constructor, adjust annotations                              |
-| RedundantCastCheck                   | Removing a cast may change method overload resolution or widen the expression type                                                          |
-| SwitchCaseOrderCheck                 | Reordering switch cases requires moving multi-line blocks with fall-through analysis                                                        |
-| ThreadAnnotationCheck                | Cannot determine which thread annotation (`@MainThread`, `@AnyThread`, etc.) to add                                                         |
+| Check                                      | Reason                                                                                                         |
+|--------------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| ClassStructureOrderCheck                   | Reordering class members requires moving multi-line blocks with dependency analysis                            |
+| ControlFlowBracesCheck (one-liner)         | Body on same line as keyword; moving to own line requires re-indentation context                               |
+| EmptyBodyCheck                             | Ambiguous: removing the statement may discard intentional no-ops; adding a body requires context               |
+| EmptySwitchCheck                           | Same as EmptyBodyCheck                                                                                         |
+| FieldSortingCheck (dependency, anon.class) | Dependency and anonymous class ordering violations may return null if the fixer can't parse the pattern        |
+| InfiniteEmptyLoopCheck                     | Flags bugs (infinite empty loops), not a stylistic issue with a deterministic fix                              |
+| InstanceofBeforeCastCheck                  | Reordering sub-expressions in compound boolean conditions while preserving short-circuit semantics             |
+| MethodAlphabeticalOrderCheck               | Reordering methods requires moving multi-line blocks                                                           |
+| MultilineCallFormattingCheck               | Reformatting argument layout across lines with context-dependent indent and grouping rules                     |
+| NoCaseBracesCheck                          | Removing braces requires scope analysis to verify no variable declarations leak                                |
+| OverloadMethodOrderCheck                   | Reordering method overloads requires moving multi-line blocks                                                  |
+| PreferImportCheck                          | Replacing FQN with short name and adding import; must verify no name conflicts                                 |
+| PreferLambdaCheck                          | Structural transformation: anonymous class to lambda, must handle `this` references and field shadowing        |
+| PreferLiteralSuffixCheck                   | Replacing widening cast with literal suffix requires expression context analysis                               |
+| PreferPatternMatchingInstanceofCheck       | Restructuring instanceof + subsequent cast into pattern matching across multiple statements                    |
+| PreferRecordCheck                          | Multi-line structural transformation: must rewrite class header, remove fields/constructor, adjust annotations |
+| RedundantCastCheck                         | Removing a cast may change method overload resolution or widen the expression type                             |
+| SwitchCaseOrderCheck                       | Reordering switch cases requires moving multi-line blocks with fall-through analysis                           |
+| ThreadAnnotationCheck                      | Cannot determine which thread annotation (`@MainThread`, `@AnyThread`, etc.) to add                            |
 
 ## FieldConsolidationFixer limitations
 
@@ -226,6 +299,25 @@ Continuation lines use base indent + 2 tabs.
 |------------------------------------------------------------|--------------------------------|---------------------------------------------------------------------------------------------------------------------------|
 | C-style array fields that were wrapped by a prior fix pass | Second merge skipped           | The wrapped first line has no `;`, so C-style bracket detection fails and the `prevCStyle && !currCStyle` guard bails out |
 | Line length at a different tab width                       | May wrap too early or too late | Wrapping uses a fixed tab-width of 4; projects displaying tabs as 8 will see wider lines than the fixer expects           |
+
+## Other fixer limitations
+
+Known cases where fixers return null or SkipResult. These are not bugs; each represents a
+pattern the fixer intentionally skips because it cannot safely transform the code.
+
+| Fixer                          | Skipped case                                       | Reason                                                                                 |
+|--------------------------------|----------------------------------------------------|----------------------------------------------------------------------------------------|
+| RedundantAnnotationSyntaxFixer | Multiline annotation with `()` or `value =`        | Skip: regex can't reliably detect annotation boundary across lines                     |
+| PreferVarFixer                 | Multi-variable declaration (`int a, b;`)           | Skip: can't replace type with `var` when multiple variables share the declaration      |
+| PreferVarFixer                 | No `new` after `=` in explicit array init          | null: pattern requires `= new Type[]{}` structure                                      |
+| PreferVarFixer                 | Non-Object generic type args (`<String>`)          | null: diamond `<>` only replaces `<Object>`, not other explicit types                  |
+| PreferCollectionInterfaceFixer | Class not resolvable or not a standard collection  | Skip: concrete-to-interface mapping requires class resolution at runtime               |
+| LambdaParameterTypeFixer       | Arrow `->` not found from violation column         | Skip: fixer operates on text from the column; if arrow is on a different line, skipped |
+| LambdaParameterTypeFixer       | Opening paren not found for lambda params          | Skip: single naked param without parens in unusual positions                           |
+| FieldConsolidationFixer        | Block comment between field names                  | null: comment would be lost or misplaced during merge                                  |
+| FieldConsolidationFixer        | C-style array type mismatch between fields         | null: `int[] a` and `int b` can't merge to one declaration safely                      |
+| AnnotationOwnLineFixer         | Annotation already on own line, just needs sorting | null when already in correct order                                                     |
+| AnnotationSameLineFixer        | Annotation block reaches end of file               | null: no declaration found to join annotations onto                                    |
 
 ## Future fix opportunities
 

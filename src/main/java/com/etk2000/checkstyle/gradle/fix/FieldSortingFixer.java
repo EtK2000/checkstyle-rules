@@ -1,21 +1,69 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Fixer for FieldSortingCheck enum constant violations only.
- * Sorts enum constants alphabetically and splits same-line constants.
- * Returns null for field ordering violations (type, name, chunk, dependency, anon.class).
+ * Fixer for FieldSortingCheck violations. Sorts enum constants alphabetically
+ * and splits same-line constants. Also sorts field declarations by chunk
+ * (final+value, final-no-value, non-final), type (primitives first), and
+ * name (alphabetical).
  */
 class FieldSortingFixer implements CheckstyleFixer {
 	private record EnumEntry(@Nonnull String name, @Nonnull List<String> leadingLines, @Nonnull List<String> contentLines) {}
 
+	private record FieldEntry(
+			@Nonnull String name,
+			@Nonnull String typeName,
+			int chunk,
+			boolean isStatic,
+			@Nonnull List<String> lines,
+			@Nonnull Set<String> dependencies
+	) {}
+
 	private record ParseResult(@Nonnull List<EnumEntry> entries, int blockStart, int blockEnd, @Nonnull String terminal) {}
+
+	private static final Pattern FIELD_PATTERN = Pattern.compile(
+			"^\\s*(?:(?:@\\w+(?:\\([^)]*\\))?\\s+)*)"
+					+ "(?:(?:public|private|protected|static|final|transient|volatile)\\s+)*"
+					+ "((?:boolean|byte|char|double|float|int|long|short|[A-Z]\\w*)(?:<[^>]*>)?(?:\\[\\])*)"
+					+ "\\s+(\\w+)"
+	);
+	private static final Set<String> PRIMITIVES = Set.of(
+			"boolean", "byte", "char", "double", "float", "int", "long", "short"
+	);
+
+	@CheckReturnValue
+	private static int arrayDepthOf(@Nonnull String typeName) {
+		var depth = 0;
+		var idx = typeName.indexOf('[');
+		while (idx >= 0) {
+			++depth;
+			idx = typeName.indexOf('[', idx + 1);
+		}
+		return depth;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static String baseTypeName(@Nonnull String typeName) {
+		final var bracket = typeName.indexOf('[');
+		final var angle = typeName.indexOf('<');
+		var end = typeName.length();
+		if (bracket >= 0)
+			end = Math.min(end, bracket);
+		if (angle >= 0)
+			end = Math.min(end, angle);
+		return typeName.substring(0, end);
+	}
 
 	@CheckReturnValue
 	@Nonnull
@@ -37,6 +85,19 @@ class FieldSortingFixer implements CheckstyleFixer {
 	}
 
 	@CheckReturnValue
+	private static int compareFieldTypes(@Nonnull String a, @Nonnull String b) {
+		final var aBase = baseTypeName(a);
+		final var bBase = baseTypeName(b);
+		final var aPrim = PRIMITIVES.contains(aBase);
+		final var bPrim = PRIMITIVES.contains(bBase);
+		if (aPrim != bPrim)
+			return aPrim ? -1 : 1;
+		if (aBase.equals(bBase))
+			return Integer.compare(arrayDepthOf(a), arrayDepthOf(b));
+		return aBase.compareToIgnoreCase(bBase);
+	}
+
+	@CheckReturnValue
 	private static boolean containsEnumKeyword(@Nonnull List<String> lines, int braceLineIndex) {
 		for (var i = braceLineIndex; i >= 0 && i >= braceLineIndex - 5; --i) {
 			final var line = lines.get(i);
@@ -55,6 +116,27 @@ class FieldSortingFixer implements CheckstyleFixer {
 			}
 		}
 		return false;
+	}
+
+	@CheckReturnValue
+	private static boolean containsFieldWord(@Nonnull String text, @Nonnull String word) {
+		var idx = text.indexOf(word);
+		while (idx >= 0) {
+			final var before = idx == 0 || !Character.isJavaIdentifierPart(text.charAt(idx - 1));
+			final var after = idx + word.length() >= text.length()
+					|| !Character.isJavaIdentifierPart(text.charAt(idx + word.length()));
+			if (before && after)
+				return true;
+			idx = text.indexOf(word, idx + 1);
+		}
+		return false;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static String declPrefix(@Nonnull String stripped) {
+		final var eqIdx = stripped.indexOf('=');
+		return eqIdx >= 0 ? stripped.substring(0, eqIdx) : stripped;
 	}
 
 	@CheckReturnValue
@@ -175,6 +257,89 @@ class FieldSortingFixer implements CheckstyleFixer {
 	}
 
 	@CheckReturnValue
+	private static int fieldChunk(@Nonnull String declLine) {
+		final var prefix = declPrefix(declLine.stripLeading());
+		final var hasFinal = containsFieldWord(prefix, "final");
+		if (!hasFinal)
+			return 2;
+		return declLine.contains("=") ? 0 : 1;
+	}
+
+	@CheckReturnValue
+	private static boolean fieldIsStatic(@Nonnull String declLine) {
+		return containsFieldWord(declPrefix(declLine.stripLeading()), "static");
+	}
+
+	@CheckReturnValue
+	private static int findClassBodyEnd(@Nonnull List<String> lines, int afterOpen) {
+		var depth = 1;
+		var inBlockComment = false;
+		var inString = false;
+		var inChar = false;
+		for (var i = afterOpen; i < lines.size(); ++i) {
+			final var line = lines.get(i);
+			for (var j = 0; j < line.length(); ++j) {
+				final var c = line.charAt(j);
+				if (inBlockComment) {
+					if (c == '*' && j + 1 < line.length() && line.charAt(j + 1) == '/') {
+						inBlockComment = false;
+						++j;
+					}
+					continue;
+				}
+				if (inString) {
+					if (c == '"' && !isEscaped(line, j))
+						inString = false;
+				}
+				else if (inChar) {
+					if (c == '\'' && !isEscaped(line, j))
+						inChar = false;
+				}
+				else if (c == '"')
+					inString = true;
+				else if (c == '\'')
+					inChar = true;
+				else if (c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '/')
+					break;
+				else if (c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '*') {
+					inBlockComment = true;
+					++j;
+				}
+				else if (c == '{')
+					++depth;
+				else if (c == '}') {
+					--depth;
+					if (depth == 0)
+						return i;
+				}
+			}
+		}
+		return -1;
+	}
+
+	@CheckReturnValue
+	private static int findClassBodyStart(@Nonnull List<String> lines, int fromLine) {
+		var depth = 0;
+		for (var i = fromLine - 1; i >= 0; --i) {
+			final var line = lines.get(i);
+			for (var j = line.length() - 1; j >= 0; --j) {
+				final var c = line.charAt(j);
+				if (c == '{' || c == '}') {
+					if (isInsideString(line, j))
+						continue;
+					if (c == '}')
+						++depth;
+					else if (depth == 0)
+						return i;
+					else
+						--depth;
+				}
+			}
+		}
+		return -1;
+	}
+
+	@CheckReturnValue
 	private static int findEnumOpen(@Nonnull List<String> lines, int lineIndex) {
 		var depth = 0;
 		for (var i = lineIndex - 1; i >= 0; --i) {
@@ -225,6 +390,106 @@ class FieldSortingFixer implements CheckstyleFixer {
 		return -1;
 	}
 
+	@Nullable
+	private static FixResult fixFieldOrder(@Nonnull List<String> lines, int lineIndex) {
+		final var bodyStart = findClassBodyStart(lines, lineIndex);
+		if (bodyStart < 0)
+			return null;
+
+		final var bodyEnd = findClassBodyEnd(lines, bodyStart + 1);
+		if (bodyEnd < 0)
+			return null;
+
+		// parse fields
+		final var fields = parseFields(lines, bodyStart + 1, bodyEnd);
+		if (fields.size() < 2)
+			return null;
+
+		// determine if the violation is in static or instance fields
+		final var violationStatic = fieldIsStatic(lines.get(lineIndex));
+		final var group = new ArrayList<FieldEntry>();
+		for (var f : fields) {
+			if (f.isStatic == violationStatic)
+				group.add(f);
+		}
+
+		if (group.size() < 2)
+			return null;
+
+		// sort by chunk, type, name, with dependency exceptions
+		final var fieldNames = new HashSet<String>();
+		for (var f : group)
+			fieldNames.add(f.name);
+
+		final var sorted = new ArrayList<>(group);
+		sorted.sort(Comparator
+				.comparingInt(FieldEntry::chunk)
+				.thenComparing(FieldEntry::typeName, FieldSortingFixer::compareFieldTypes)
+				.thenComparing(FieldEntry::name, String.CASE_INSENSITIVE_ORDER));
+
+		// apply dependency adjustments, with cycle guard
+		var maxIter = sorted.size() * sorted.size();
+		for (var changed = true; changed && --maxIter >= 0; ) {
+			changed = false;
+			for (var i = 0; i < sorted.size(); ++i) {
+				final var entry = sorted.get(i);
+				for (var j = i + 1; j < sorted.size(); ++j) {
+					if (entry.dependencies.contains(sorted.get(j).name)) {
+						sorted.remove(i);
+						sorted.add(j, entry);
+						changed = true;
+						break;
+					}
+				}
+				if (changed)
+					break;
+			}
+		}
+
+		// find the range of lines to replace (first to last field in this group)
+		final var firstLine = group.getFirst().lines.getFirst();
+		final var lastLine = group.getLast().lines.getLast();
+		var startIdx = -1;
+		var endIdx = -1;
+		for (var i = bodyStart + 1; i < bodyEnd; ++i) {
+			if (lines.get(i).equals(firstLine) && startIdx < 0)
+				startIdx = i;
+			if (lines.get(i).equals(lastLine))
+				endIdx = i;
+		}
+		if (startIdx < 0 || endIdx < 0)
+			return null;
+
+		// expand startIdx backward to include annotations of the first field
+		for (var f : group) {
+			if (!f.lines.isEmpty() && f.lines.getFirst().equals(lines.get(startIdx)))
+				break;
+			for (var fl : f.lines) {
+				for (var i = bodyStart + 1; i < startIdx; ++i) {
+					if (lines.get(i).equals(fl))
+						startIdx = i;
+				}
+			}
+		}
+
+		// build replacement
+		final var replacement = new ArrayList<String>();
+		var prevChunk = -1;
+		for (var entry : sorted) {
+			if (!replacement.isEmpty() && entry.chunk != prevChunk)
+				replacement.add("");
+			replacement.addAll(entry.lines);
+			prevChunk = entry.chunk;
+		}
+
+		// idempotence check
+		final var original = new ArrayList<>(lines.subList(startIdx, endIdx + 1));
+		if (replacement.equals(original))
+			return null;
+
+		return new FixResult(startIdx, endIdx, replacement);
+	}
+
 	/**
 	 * Inserts a separator (comma or semicolon) before any trailing line comment.
 	 * For "ALPHA // comment" with sep "," returns "ALPHA, // comment".
@@ -250,6 +515,19 @@ class FieldSortingFixer implements CheckstyleFixer {
 		for (var i = pos - 1; i >= 0 && line.charAt(i) == '\\'; --i)
 			++backslashes;
 		return backslashes % 2 != 0;
+	}
+
+	@CheckReturnValue
+	private static boolean isInsideString(@Nonnull String line, int pos) {
+		var quotes = 0;
+		for (var i = 0; i < pos; ++i) {
+			final var c = line.charAt(i);
+			if (c == '"' && !isEscaped(line, i))
+				++quotes;
+			else if (c == '/' && i + 1 < line.length() && line.charAt(i + 1) == '/')
+				break;
+		}
+		return quotes % 2 != 0;
 	}
 
 	@CheckReturnValue
@@ -404,6 +682,105 @@ class FieldSortingFixer implements CheckstyleFixer {
 		return new ParseResult(entries, blockStart, blockEnd, terminal);
 	}
 
+	@CheckReturnValue
+	@Nonnull
+	private static List<FieldEntry> parseFields(
+			@Nonnull List<String> lines,
+			int bodyContentStart,
+			int bodyContentEnd
+	) {
+		final var fields = new ArrayList<FieldEntry>();
+		final var allFieldNames = new HashSet<String>();
+
+		// first pass: collect field names
+		for (var i = bodyContentStart; i < bodyContentEnd; ++i) {
+			final var matcher = FIELD_PATTERN.matcher(lines.get(i));
+			if (matcher.find())
+				allFieldNames.add(matcher.group(2));
+		}
+
+		// second pass: build field entries with dependencies
+		var i = bodyContentStart;
+		while (i < bodyContentEnd) {
+			final var line = lines.get(i);
+			final var stripped = line.stripLeading();
+
+			// skip blank lines, comments, and non-field lines
+			if (stripped.isEmpty() || stripped.startsWith("//") || stripped.startsWith("/*")
+					|| stripped.startsWith("*") || stripped.startsWith("{") || stripped.startsWith("}")) {
+				++i;
+				continue;
+			}
+
+			// skip enum constants, methods, constructors, inner classes, static/instance init blocks
+			// check for ( only in the non-annotation part of the line to avoid
+			// skipping fields with inline annotations like @SuppressWarnings("unchecked") int x;
+			final var afterAnnotations = stripped.startsWith("@")
+					? stripped.replaceAll("^(?:@\\w+(?:\\([^)]*\\))?\\s*)+", "")
+					: stripped;
+			if (stripped.startsWith("enum ") || stripped.startsWith("class ")
+					|| stripped.startsWith("interface ") || stripped.startsWith("record ")
+					|| afterAnnotations.contains("(") && !stripped.contains("=")
+					|| stripped.equals("static {") || stripped.equals("{")) {
+				++i;
+				continue;
+			}
+
+			// try to match a field declaration
+			final var matcher = FIELD_PATTERN.matcher(line);
+			if (!matcher.find()) {
+				// could be an annotation line -- look ahead
+				if (stripped.startsWith("@")) {
+					++i;
+					continue;
+				}
+				++i;
+				continue;
+			}
+
+			final var typeName = matcher.group(1);
+			final var fieldName = matcher.group(2);
+			final var chunk = fieldChunk(line);
+			final var isStatic = fieldIsStatic(line);
+
+			// collect all lines for this field (including annotations above)
+			final var fieldLines = new ArrayList<String>();
+
+			// look backward for annotation lines immediately above
+			var annotStart = i;
+			for (var j = i - 1; j >= bodyContentStart; --j) {
+				final var prevStripped = lines.get(j).stripLeading();
+				if (prevStripped.startsWith("@") || prevStripped.startsWith("//"))
+					annotStart = j;
+				else if (!prevStripped.isEmpty())
+					break;
+				else
+					break;
+			}
+			for (var j = annotStart; j < i; ++j)
+				fieldLines.add(lines.get(j));
+
+			// find the end of the field declaration (tracking depth for multi-line initializers)
+			final var fieldEnd = readFieldEnd(lines, i, bodyContentEnd);
+			for (var j = i; j <= fieldEnd; ++j)
+				fieldLines.add(lines.get(j));
+
+			// extract dependencies: field names referenced in the initializer
+			final var deps = new HashSet<String>();
+			if (line.contains("=")) {
+				final var initText = String.join(" ", fieldLines);
+				for (var fn : allFieldNames) {
+					if (!fn.equals(fieldName) && containsFieldWord(initText, fn))
+						deps.add(fn);
+				}
+			}
+
+			fields.add(new FieldEntry(fieldName, typeName, chunk, isStatic, fieldLines, deps));
+			i = fieldEnd + 1;
+		}
+		return fields;
+	}
+
 	/**
 	 * Parses same-line constants from a trimmed line like "ALPHA, BETA, GAMMA".
 	 * Returns entries with trailing separators stripped, or null if not same-line.
@@ -491,6 +868,57 @@ class FieldSortingFixer implements CheckstyleFixer {
 		entries.add(new EnumEntry(lastName, List.of(), List.of(lastStripped)));
 
 		return entries.size() > 1 ? entries : null;
+	}
+
+	@CheckReturnValue
+	private static int readFieldEnd(@Nonnull List<String> lines, int startIdx, int limit) {
+		var parenDepth = 0;
+		var braceDepth = 0;
+		var inBlockComment = false;
+		var inString = false;
+		var inChar = false;
+		for (var i = startIdx; i < limit; ++i) {
+			final var line = lines.get(i);
+			for (var j = 0; j < line.length(); ++j) {
+				final var c = line.charAt(j);
+				if (inBlockComment) {
+					if (c == '*' && j + 1 < line.length() && line.charAt(j + 1) == '/') {
+						inBlockComment = false;
+						++j;
+					}
+					continue;
+				}
+				if (inString) {
+					if (c == '"' && !isEscaped(line, j))
+						inString = false;
+				}
+				else if (inChar) {
+					if (c == '\'' && !isEscaped(line, j))
+						inChar = false;
+				}
+				else if (c == '"')
+					inString = true;
+				else if (c == '\'')
+					inChar = true;
+				else if (c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '/')
+					break;
+				else if (c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '*') {
+					inBlockComment = true;
+					++j;
+				}
+				else {
+					switch (c) {
+						case '(' -> ++parenDepth;
+						case ')' -> --parenDepth;
+						case '{' -> ++braceDepth;
+						case '}' -> --braceDepth;
+					}
+					if (c == ';' && parenDepth == 0 && braceDepth == 0)
+						return i;
+				}
+			}
+		}
+		return startIdx;
 	}
 
 	@CheckReturnValue
@@ -652,31 +1080,30 @@ class FieldSortingFixer implements CheckstyleFixer {
 			return null;
 
 		final var enumOpenLine = findEnumOpen(lines, lineIndex);
-		if (enumOpenLine < 0)
-			return new SkipResult(SkipMessages.FIELD_SORT_SKIP);
+		if (enumOpenLine >= 0) {
+			final var result = parseBlock(lines, enumOpenLine + 1);
+			if (result == null || result.entries().size() < 2)
+				return null;
 
-		final var result = parseBlock(lines, enumOpenLine + 1);
-		if (result == null || result.entries().size() < 2)
-			return null;
+			final var sorted = new ArrayList<>(result.entries());
+			sorted.sort((a, b) -> a.name().compareToIgnoreCase(b.name()));
 
-		// sort entries alphabetically by name
-		final var sorted = new ArrayList<>(result.entries());
-		sorted.sort((a, b) -> a.name().compareToIgnoreCase(b.name()));
+			final var first = sorted.getFirst();
+			final var strippedLeading = new ArrayList<>(first.leadingLines());
+			while (!strippedLeading.isEmpty() && strippedLeading.getFirst().isBlank())
+				strippedLeading.removeFirst();
+			sorted.set(0, new EnumEntry(first.name(), strippedLeading, first.contentLines()));
 
-		// strip leading blank lines from the first entry to avoid NoBlankLineAfterClassBrace
-		final var first = sorted.getFirst();
-		final var strippedLeading = new ArrayList<>(first.leadingLines());
-		while (!strippedLeading.isEmpty() && strippedLeading.getFirst().isBlank())
-			strippedLeading.removeFirst();
-		sorted.set(0, new EnumEntry(first.name(), strippedLeading, first.contentLines()));
+			final var replacement = buildReplacement(sorted, result.terminal());
 
-		final var replacement = buildReplacement(sorted, result.terminal());
+			final var original = new ArrayList<>(lines.subList(result.blockStart(), result.blockEnd() + 1));
+			if (replacement.equals(original))
+				return null;
 
-		// idempotence check
-		final var original = new ArrayList<>(lines.subList(result.blockStart(), result.blockEnd() + 1));
-		if (replacement.equals(original))
-			return null;
+			return new FixResult(result.blockStart(), result.blockEnd(), replacement);
+		}
 
-		return new FixResult(result.blockStart(), result.blockEnd(), replacement);
+		// try field ordering fix
+		return fixFieldOrder(lines, lineIndex);
 	}
 }

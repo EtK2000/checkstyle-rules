@@ -6,19 +6,25 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Fixes blank lines before closing braces.
- * The violation line points to the last content line before the blank lines
- * (where the regex match starts). The fixer deletes all consecutive blank
- * lines between the content and the closing brace.
+ * Fixes blank lines before closing braces. For a single blank line, the
+ * violation points to the content line before the blank. For 2+ blank
+ * lines, the regex match starts on a blank line within the group. The
+ * fixer scans both directions from {@code lineIndex} to find and delete
+ * all consecutive blank lines in the group.
  */
 class BlankLineBeforeClosingBraceFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
-		final var blankStart = lineIndex + 1;
+		var blankStart = lines.get(lineIndex).isBlank() ? lineIndex : lineIndex + 1;
 		if (blankStart >= lines.size() || !lines.get(blankStart).isBlank())
 			return null;
 
+		// scan backward to find the first blank in the group
+		while (blankStart > 0 && lines.get(blankStart - 1).isBlank())
+			--blankStart;
+
+		// scan forward to find the last blank in the group
 		var blankEnd = blankStart;
 		while (blankEnd + 1 < lines.size() && lines.get(blankEnd + 1).isBlank())
 			++blankEnd;

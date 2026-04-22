@@ -98,6 +98,85 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		return whileClause;
 	}
 
+	/**
+	 * Finds the line where the body statement ends by tracking paren/brace depth
+	 * until a semicolon is found at depth 0.
+	 */
+	@CheckReturnValue
+	private static int findStatementEnd(@Nonnull List<String> lines, int startIdx) {
+		var parenDepth = 0;
+		var braceDepth = 0;
+		var inString = false;
+		var inChar = false;
+		var inBlockComment = false;
+		for (var i = startIdx; i < lines.size(); ++i) {
+			final var line = lines.get(i);
+			for (var j = 0; j < line.length(); ++j) {
+				final var c = line.charAt(j);
+				if (inBlockComment) {
+					if (c == '*' && j + 1 < line.length() && line.charAt(j + 1) == '/') {
+						inBlockComment = false;
+						++j;
+					}
+					continue;
+				}
+				if (inString) {
+					if (c == '"' && !isEscaped(line, j))
+						inString = false;
+				}
+				else if (inChar) {
+					if (c == '\'' && !isEscaped(line, j))
+						inChar = false;
+				}
+				else if (c == '"')
+					inString = true;
+				else if (c == '\'')
+					inChar = true;
+				else if (c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '/')
+					break;
+				else if (c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '*') {
+					inBlockComment = true;
+					++j;
+				}
+				else {
+					switch (c) {
+						case '(' -> ++parenDepth;
+						case ')' -> --parenDepth;
+						case '{' -> ++braceDepth;
+						case '}' -> --braceDepth;
+					}
+					if (c == ';' && parenDepth == 0 && braceDepth == 0)
+						return i;
+				}
+			}
+		}
+		return -1;
+	}
+
+	@CheckReturnValue
+	private static int findTrailingComment(@Nonnull String line) {
+		var inString = false;
+		var inChar = false;
+		for (var i = 0; i < line.length(); ++i) {
+			final var c = line.charAt(i);
+			if (inString) {
+				if (c == '"' && !isEscaped(line, i))
+					inString = false;
+			}
+			else if (inChar) {
+				if (c == '\'' && !isEscaped(line, i))
+					inChar = false;
+			}
+			else if (c == '"')
+				inString = true;
+			else if (c == '\'')
+				inChar = true;
+			else if (c == '/' && i + 1 < line.length() && line.charAt(i + 1) == '/')
+				return i;
+		}
+		return -1;
+	}
+
 	@CheckReturnValue
 	private static int findWhileInText(@Nonnull String text) {
 		var idx = text.lastIndexOf("while");
@@ -142,7 +221,21 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 			bodyLines.add(lines.get(i));
 
 		final var closeLineStripped = lines.get(closeBraceLine).stripLeading();
-		final var whileClause = closeLineStripped.substring(closeLineStripped.indexOf("while"));
+		final var whileIdx = closeLineStripped.indexOf("while");
+		if (whileIdx < 0) {
+			final var nextWhile = findWhileLine(lines, closeBraceLine);
+			if (nextWhile < 0)
+				return null;
+			final var whileClauseFromNext = lines.get(nextWhile).stripLeading();
+			if (bodyLines.size() == 1)
+				return buildTierResult(bodyLines.getFirst().stripLeading(), whileClauseFromNext, lineIndex, nextWhile, indent);
+			final var r = new ArrayList<String>();
+			r.add(indent + "do");
+			r.addAll(bodyLines);
+			r.add(indent + whileClauseFromNext);
+			return new FixResult(lineIndex, nextWhile, r);
+		}
+		final var whileClause = closeLineStripped.substring(whileIdx);
 
 		if (bodyLines.size() == 1)
 			return buildTierResult(bodyLines.getFirst().stripLeading(), whileClause, lineIndex, closeBraceLine, indent);
@@ -170,6 +263,146 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 			result.add(lines.get(i));
 		result.add(indent + "} " + lines.get(whileLine).stripLeading());
 		return new FixResult(lineIndex, whileLine, result);
+	}
+
+	/**
+	 * Fixes a non-do-while control flow where the opening brace is on its own line.
+	 * Removes the brace lines and keeps keyword + body (same as unnecessary braces).
+	 */
+	@Nullable
+	private static FixResult fixNonDoWhileBraceOnOwnLine(
+			@Nonnull List<String> lines,
+			int lineIndex,
+			int braceLine,
+			@Nonnull String indent
+	) {
+		// find body line after the { line
+		var bodyLine = braceLine + 1;
+		while (bodyLine < lines.size() && lines.get(bodyLine).isBlank())
+			++bodyLine;
+		if (bodyLine >= lines.size())
+			return null;
+
+		// check if body is a variable declaration (braces needed for scope)
+		if (isVariableDeclaration(lines.get(bodyLine).stripLeading()))
+			return null;
+
+		// if the brace line has a comment, refuse to fix (would lose the comment)
+		if (findTrailingComment(lines.get(braceLine)) >= 0)
+			return null;
+
+		// find the closing } line
+		var closeBrace = bodyLine + 1;
+		while (closeBrace < lines.size() && lines.get(closeBrace).isBlank())
+			++closeBrace;
+		if (closeBrace >= lines.size())
+			return null;
+
+		final var closeStripped = lines.get(closeBrace).stripLeading();
+		if (!closeStripped.startsWith("}"))
+			return null;
+
+		final var result = new ArrayList<String>();
+		result.add(lines.get(lineIndex));
+		result.add(lines.get(bodyLine));
+
+		if (closeStripped.length() > 1) {
+			final var afterBrace = closeStripped.substring(1).stripLeading();
+			if (!afterBrace.isEmpty())
+				result.add(indent + afterBrace);
+		}
+
+		return new FixResult(lineIndex, closeBrace, result);
+	}
+
+	/**
+	 * Fixes a non-do-while control flow statement with a multi-line braceless body
+	 * by wrapping the body in braces.
+	 */
+	@Nullable
+	private static FixResult fixNonDoWhileMissingBraces(
+			@Nonnull List<String> lines,
+			int lineIndex,
+			@Nonnull String indent
+	) {
+		// find the body start: the next non-blank line after the keyword
+		var bodyStart = lineIndex + 1;
+		while (bodyStart < lines.size() && lines.get(bodyStart).isBlank())
+			++bodyStart;
+		if (bodyStart >= lines.size())
+			return null;
+
+		// find the body end using semicolon tracking
+		final var bodyEnd = findStatementEnd(lines, bodyStart);
+		if (bodyEnd < 0 || bodyEnd == bodyStart)
+			return null;
+
+		// build replacement: keyword line + { + body lines + }
+		// if keyword line has a trailing comment, insert { before the comment
+		final var keywordLine = lines.get(lineIndex);
+		final var commentIdx = findTrailingComment(keywordLine);
+		final var result = new ArrayList<String>();
+		if (commentIdx >= 0)
+			result.add(keywordLine.substring(0, commentIdx).stripTrailing() + " { " + keywordLine.substring(commentIdx));
+		else
+			result.add(keywordLine + " {");
+		for (var i = bodyStart; i <= bodyEnd; ++i)
+			result.add(lines.get(i));
+		result.add(indent + "}");
+		return new FixResult(lineIndex, bodyEnd, result);
+	}
+
+	/**
+	 * Fixes a non-do-while control flow statement with unnecessary braces on a
+	 * single-line body by removing the braces.
+	 */
+	@Nullable
+	private static FixResult fixNonDoWhileUnnecessaryBraces(
+			@Nonnull List<String> lines,
+			int lineIndex,
+			@Nonnull String indent
+	) {
+		final var line = lines.get(lineIndex);
+		final var braceIdx = line.lastIndexOf('{');
+		if (braceIdx < 0)
+			return null;
+
+		final var keywordLine = line.substring(0, braceIdx).stripTrailing();
+
+		// find the single body line
+		var bodyLine = lineIndex + 1;
+		while (bodyLine < lines.size() && lines.get(bodyLine).isBlank())
+			++bodyLine;
+		if (bodyLine >= lines.size())
+			return null;
+
+		// if the body declares a variable, braces are needed for scope
+		if (isVariableDeclaration(lines.get(bodyLine).stripLeading()))
+			return null;
+
+		// find the closing brace line
+		var closeBrace = bodyLine + 1;
+		while (closeBrace < lines.size() && lines.get(closeBrace).isBlank())
+			++closeBrace;
+		if (closeBrace >= lines.size())
+			return null;
+
+		final var closeStripped = lines.get(closeBrace).stripLeading();
+		if (!closeStripped.startsWith("}"))
+			return null;
+
+		final var result = new ArrayList<String>();
+		result.add(keywordLine);
+		result.add(lines.get(bodyLine));
+
+		// if close brace has "else" after it, keep the else part on its own line
+		if (closeStripped.length() > 1) {
+			final var afterBrace = closeStripped.substring(1).stripLeading();
+			if (!afterBrace.isEmpty())
+				result.add(indent + afterBrace);
+		}
+
+		return new FixResult(lineIndex, closeBrace, result);
 	}
 
 	@Nullable
@@ -238,6 +471,92 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		return buildTierResult(bodyText, whileClause, lineIndex, whileLine, indent);
 	}
 
+	@CheckReturnValue
+	private static boolean isEscaped(@Nonnull String line, int pos) {
+		var backslashes = 0;
+		for (var i = pos - 1; i >= 0 && line.charAt(i) == '\\'; --i)
+			++backslashes;
+		return backslashes % 2 != 0;
+	}
+
+	@CheckReturnValue
+	private static boolean isNonDoWhileKeyword(@Nonnull String stripped) {
+		return stripped.startsWith("if ") || stripped.startsWith("if(")
+				|| stripped.equals("else") || stripped.startsWith("else ")
+				|| stripped.startsWith("for ") || stripped.startsWith("for(")
+				|| stripped.startsWith("while ") || stripped.startsWith("while(");
+	}
+
+	@CheckReturnValue
+	private static boolean isVariableDeclaration(@Nonnull String stripped) {
+		// skip leading annotations (e.g., @SuppressWarnings("unused") int x = 5;)
+		var s = stripped;
+		while (s.startsWith("@")) {
+			var j = 1;
+			while (j < s.length() && Character.isJavaIdentifierPart(s.charAt(j)))
+				++j;
+			if (j < s.length() && s.charAt(j) == '(') {
+				var depth = 1;
+				++j;
+				while (j < s.length() && depth > 0) {
+					if (s.charAt(j) == '(')
+						++depth;
+					else if (s.charAt(j) == ')')
+						--depth;
+					++j;
+				}
+			}
+			while (j < s.length() && s.charAt(j) == ' ')
+				++j;
+			s = s.substring(j);
+		}
+
+		if (s.startsWith("final ") || s.startsWith("var "))
+			return true;
+
+		// extract the first word
+		var end = 0;
+		while (end < s.length() && Character.isJavaIdentifierPart(s.charAt(end)))
+			++end;
+		if (end == 0 || end >= s.length())
+			return false;
+
+		final var firstWord = s.substring(0, end);
+
+		// statement keywords are not variable declarations
+		return switch (firstWord) {
+			case "assert", "break", "case", "continue", "default", "do", "else", "for",
+			     "if", "new", "return", "super", "switch", "synchronized", "this",
+			     "throw", "try", "while", "yield" -> false;
+			default -> {
+				// after the type name, skip dot-separated qualifiers (e.g., Map.Entry)
+				var i = end;
+				while (i < s.length() && s.charAt(i) == '.') {
+					++i;
+					while (i < s.length() && Character.isJavaIdentifierPart(s.charAt(i)))
+						++i;
+				}
+				// skip optional generics and array brackets, then check for identifier
+				if (i < s.length() && s.charAt(i) == '<') {
+					var depth = 1;
+					++i;
+					while (i < s.length() && depth > 0) {
+						if (s.charAt(i) == '<')
+							++depth;
+						else if (s.charAt(i) == '>')
+							--depth;
+						++i;
+					}
+				}
+				while (i + 1 < s.length() && s.charAt(i) == '[' && s.charAt(i + 1) == ']')
+					i += 2;
+				// must be followed by space then identifier
+				yield i < s.length() && s.charAt(i) == ' '
+						&& i + 1 < s.length() && Character.isJavaIdentifierStart(s.charAt(i + 1));
+			}
+		};
+	}
+
 	@Nullable
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
@@ -246,11 +565,37 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 
 		final var line = lines.get(lineIndex);
 		final var stripped = line.stripLeading();
+		final var indent = extractIndent(line);
+
+		// handle non-do-while keywords
+		if (isNonDoWhileKeyword(stripped)) {
+			// one-liner (body on same line as keyword)
+			if (stripped.endsWith(";"))
+				return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP);
+
+			// unnecessary braces: keyword line ends with {
+			if (stripped.endsWith("{")) {
+				// skip for-loops: PreferBulkOperation may also fire on them
+				if (stripped.startsWith("for ") || stripped.startsWith("for("))
+					return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP);
+				return fixNonDoWhileUnnecessaryBraces(lines, lineIndex, indent);
+			}
+
+			// brace on its own line: treat as unnecessary braces
+			var next = lineIndex + 1;
+			while (next < lines.size() && lines.get(next).isBlank())
+				++next;
+			if (next < lines.size() && lines.get(next).stripLeading().startsWith("{")) {
+				if (stripped.startsWith("for ") || stripped.startsWith("for("))
+					return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP);
+				return fixNonDoWhileBraceOnOwnLine(lines, lineIndex, next, indent);
+			}
+
+			return fixNonDoWhileMissingBraces(lines, lineIndex, indent);
+		}
 
 		if (!stripped.startsWith("do ") && !stripped.equals("do") && !stripped.startsWith("do\t"))
 			return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP);
-
-		final var indent = extractIndent(line);
 
 		if (stripped.startsWith("do {") || stripped.startsWith("do\t{"))
 			return fixBracedBody(lines, lineIndex, indent);

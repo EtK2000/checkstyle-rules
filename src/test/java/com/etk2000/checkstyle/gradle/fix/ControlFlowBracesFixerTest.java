@@ -52,8 +52,61 @@ public class ControlFlowBracesFixerTest {
 	}
 
 	@Test
+	public void testBracedMultiLineBody() {
+		final var lines = new ArrayList<>(List.of(
+				"\tdo {",
+				"\t\tif (x > 0)",
+				"\t\t\t--x;",
+				"\t} while (x > 0);"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		final var expected = List.of(
+				"\tdo",
+				"\t\tif (x > 0)",
+				"\t\t\t--x;",
+				"\twhile (x > 0);"
+		);
+		assertEquals(expected, result.replacement());
+		assertEquals(0, result.startLine());
+		assertEquals(3, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testBracedMultiLineBodyWhileOnSeparateLine() {
+		final var lines = new ArrayList<>(List.of(
+				"\tdo {",
+				"\t\tif (x > 0)",
+				"\t\t\t--x;",
+				"\t}",
+				"\twhile (x > 0);"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		final var expected = List.of(
+				"\tdo",
+				"\t\tif (x > 0)",
+				"\t\t\t--x;",
+				"\twhile (x > 0);"
+		);
+		assertEquals(expected, result.replacement());
+		assertEquals(0, result.startLine());
+		assertEquals(4, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
 	public void testBracedNoClosingBrace() {
 		assertNull(fixer.fix(new ArrayList<>(List.of("\tdo {", "\t\t--x;")), 0, 0));
+	}
+
+	@Test
+	public void testBracedTabBeforeBrace() {
+		final var lines = new ArrayList<>(List.of("\tdo\t{", "\t\t--x;", "\t} while (x > 0);"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\tdo --x; while (x > 0);"), result.replacement());
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -176,6 +229,140 @@ public class ControlFlowBracesFixerTest {
 	}
 
 	@Test
+	public void testBracedWhileOnSeparateLine() {
+		final var lines = new ArrayList<>(List.of(
+				"\tdo {",
+				"\t\t++x;",
+				"\t}",
+				"\twhile (x < 10);"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\tdo ++x; while (x < 10);"), result.replacement());
+		assertEquals(0, result.startLine());
+		assertEquals(3, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testBraceOnOwnLineElse() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\telse",
+				"\t\t{",
+				"\t\t\t++x;",
+				"\t\t}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(3, result.endLine());
+		assertEquals(List.of("\t\telse", "\t\t\t++x;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testBraceOnOwnLineForCompactSkip() {
+		final var attempt = fixer.fix(new ArrayList<>(List.of("\tfor(int i = 0; i < 10; ++i)", "\t{")), 0, 0);
+		assertInstanceOf(SkipResult.class, attempt);
+		assertEquals(SkipMessages.CONTROL_FLOW_SKIP, ((SkipResult) attempt).reason());
+	}
+
+	@Test
+	public void testBraceOnOwnLineForSkip() {
+		final var attempt = fixer.fix(new ArrayList<>(List.of("\tfor (int i = 0; i < 10; ++i)", "\t{")), 0, 0);
+		assertInstanceOf(SkipResult.class, attempt);
+		assertEquals(SkipMessages.CONTROL_FLOW_SKIP, ((SkipResult) attempt).reason());
+	}
+
+	@Test
+	public void testBraceOnOwnLineIf() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\tif (x > 0)",
+				"\t\t{",
+				"\t\t\t--x;",
+				"\t\t}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(3, result.endLine());
+		assertEquals(List.of("\t\tif (x > 0)", "\t\t\t--x;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testBraceOnOwnLineIfNoBody() {
+		assertNull(fixer.fix(new ArrayList<>(List.of("\t\tif (x > 0)", "\t\t{")), 0, 0));
+	}
+
+	@Test
+	public void testBraceOnOwnLineIfNoCloseBrace() {
+		assertNull(fixer.fix(new ArrayList<>(List.of("\t\tif (x > 0)", "\t\t{", "\t\t\t--x;", "\t\t++y;")), 0, 0));
+	}
+
+	@Test
+	public void testBraceOnOwnLineIfWithElse() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\tif (x > 0)",
+				"\t\t{",
+				"\t\t\t--x;",
+				"\t\t} else {"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(3, result.endLine());
+		assertEquals(List.of("\t\tif (x > 0)", "\t\t\t--x;", "\t\telse {"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testBraceOnOwnLineIfWithVarDecl() {
+		final var finalVar = new ArrayList<>(List.of("\t\tif (true)", "\t\t{", "\t\t\tfinal var x = 5;", "\t\t}"));
+		assertNull(fixer.fix(finalVar, 0, 0));
+
+		final var plainVar = new ArrayList<>(List.of("\t\tif (true)", "\t\t{", "\t\t\tvar x = 5;", "\t\t}"));
+		assertNull(fixer.fix(plainVar, 0, 0));
+
+		final var typedDecl = new ArrayList<>(List.of("\t\tif (true)", "\t\t{", "\t\t\tint x = 5;", "\t\t}"));
+		assertNull(fixer.fix(typedDecl, 0, 0));
+
+		final var qualifiedType = new ArrayList<>(List.of("\t\tif (true)", "\t\t{", "\t\t\tMap.Entry<String, Integer> e = null;", "\t\t}"));
+		assertNull(fixer.fix(qualifiedType, 0, 0));
+
+		final var annotated = new ArrayList<>(List.of("\t\tif (true)", "\t\t{", "\t\t\t@Nullable String s = null;", "\t\t}"));
+		assertNull(fixer.fix(annotated, 0, 0));
+
+		final var annotatedWithArgs = new ArrayList<>(List.of("\t\tif (true)", "\t\t{", "\t\t\t@SuppressWarnings(\"unused\") int y = 0;", "\t\t}"));
+		assertNull(fixer.fix(annotatedWithArgs, 0, 0));
+
+		final var arrayDecl = new ArrayList<>(List.of("\t\tif (true)", "\t\t{", "\t\t\tint[] arr = new int[5];", "\t\t}"));
+		assertNull(fixer.fix(arrayDecl, 0, 0));
+	}
+
+	@Test
+	public void testBraceOnOwnLineWhile() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\twhile (x > 0)",
+				"\t\t{",
+				"\t\t\t--x;",
+				"\t\t}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(3, result.endLine());
+		assertEquals(List.of("\t\twhile (x > 0)", "\t\t\t--x;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testBraceOnOwnLineWithCommentOnBrace() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\tif (x > 0)",
+				"\t\t{ // important",
+				"\t\t\t--x;",
+				"\t\t}"
+		));
+		assertNull(fixer.fix(lines, 0, 0));
+	}
+
+	@Test
 	public void testDeepIndent() {
 		final var lines = new ArrayList<>(List.of("\t\t\tdo {", "\t\t\t\t--x;", "\t\t\t} while (x > 0);"));
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
@@ -198,6 +385,166 @@ public class ControlFlowBracesFixerTest {
 	@Test
 	public void testLineIndexOutOfBounds() {
 		assertNull(fixer.fix(new ArrayList<>(List.of("\tdo --x; while (x > 0);")), 5, 0));
+	}
+
+	@Test
+	public void testMissingBracesElse() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\telse",
+				"\t\t\tfor (int i = 0; i < x; ++i)",
+				"\t\t\t\tSystem.out.println(i);"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		final var expected = List.of(
+				"\t\telse {",
+				"\t\t\tfor (int i = 0; i < x; ++i)",
+				"\t\t\t\tSystem.out.println(i);",
+				"\t\t}"
+		);
+		assertEquals(expected, result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testMissingBracesFor() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\tfor (int i = 0; i < x; ++i)",
+				"\t\t\tif (i > 0)",
+				"\t\t\t\tSystem.out.println(i);"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		final var expected = List.of(
+				"\t\tfor (int i = 0; i < x; ++i) {",
+				"\t\t\tif (i > 0)",
+				"\t\t\t\tSystem.out.println(i);",
+				"\t\t}"
+		);
+		assertEquals(expected, result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testMissingBracesForEach() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\tfor (var item : list)",
+				"\t\t\tif (item != null)",
+				"\t\t\t\tSystem.out.println(item);"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		final var expected = List.of(
+				"\t\tfor (var item : list) {",
+				"\t\t\tif (item != null)",
+				"\t\t\t\tSystem.out.println(item);",
+				"\t\t}"
+		);
+		assertEquals(expected, result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testMissingBracesIf() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\tif(x > 0)",
+				"\t\t\tfor (int i = 0; i < x; ++i)",
+				"\t\t\t\tSystem.out.println(i);"
+		));
+		final var compactResult = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, compactResult.startLine());
+		assertEquals(2, compactResult.endLine());
+		final var compactExpected = List.of(
+				"\t\tif(x > 0) {",
+				"\t\t\tfor (int i = 0; i < x; ++i)",
+				"\t\t\t\tSystem.out.println(i);",
+				"\t\t}"
+		);
+		assertEquals(compactExpected, compactResult.replacement());
+		assertTrue(compactResult.importsToAdd().isEmpty());
+
+		final var spacedLines = new ArrayList<>(List.of(
+				"\t\tif (x > 0)",
+				"\t\t\tfor (int i = 0; i < x; ++i)",
+				"\t\t\t\tSystem.out.println(i);"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(spacedLines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		final var expected = List.of(
+				"\t\tif (x > 0) {",
+				"\t\t\tfor (int i = 0; i < x; ++i)",
+				"\t\t\t\tSystem.out.println(i);",
+				"\t\t}"
+		);
+		assertEquals(expected, result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testMissingBracesIfNoBodyEnd() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\tif (x > 0)",
+				"\t\t\tfor (int i = 0; i < x; ++i)"
+		));
+		assertNull(fixer.fix(lines, 0, 0));
+	}
+
+	@Test
+	public void testMissingBracesIfNoBodyLines() {
+		assertNull(fixer.fix(new ArrayList<>(List.of("\t\tif (x > 0)")), 0, 0));
+	}
+
+	@Test
+	public void testMissingBracesIfSingleLineBody() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\telse",
+				"\t\t\t--x;"
+		));
+		assertNull(fixer.fix(lines, 0, 0));
+	}
+
+	@Test
+	public void testMissingBracesIfWithTrailingComment() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\tif (x > 0) // guard",
+				"\t\t\tfor (int i = 0; i < x; ++i)",
+				"\t\t\t\tSystem.out.println(i);"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		final var expected = List.of(
+				"\t\tif (x > 0) { // guard",
+				"\t\t\tfor (int i = 0; i < x; ++i)",
+				"\t\t\t\tSystem.out.println(i);",
+				"\t\t}"
+		);
+		assertEquals(expected, result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testMissingBracesWhile() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\twhile (x > 0)",
+				"\t\t\tif (x > 5)",
+				"\t\t\t\t--x;"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		final var expected = List.of(
+				"\t\twhile (x > 0) {",
+				"\t\t\tif (x > 5)",
+				"\t\t\t\t--x;",
+				"\t\t}"
+		);
+		assertEquals(expected, result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
@@ -320,6 +667,16 @@ public class ControlFlowBracesFixerTest {
 	}
 
 	@Test
+	public void testOnDoLineWithTab() {
+		final var lines = new ArrayList<>(List.of("\tdo\t--x;", "\twhile (x > 0);"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(List.of("\tdo --x; while (x > 0);"), result.replacement());
+		assertEquals(0, result.startLine());
+		assertEquals(1, result.endLine());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
 	public void testOwnLineMultiLineBodyAddsBraces() {
 		final var lines = new ArrayList<>(List.of(
 				"\tdo",
@@ -366,6 +723,20 @@ public class ControlFlowBracesFixerTest {
 	}
 
 	@Test
+	public void testSkipBracedForLoop() {
+		final var attempt = fixer.fix(new ArrayList<>(List.of("\tfor (int i = 0; i < 10; ++i) {")), 0, 0);
+		assertInstanceOf(SkipResult.class, attempt);
+		assertEquals(SkipMessages.CONTROL_FLOW_SKIP, ((SkipResult) attempt).reason());
+	}
+
+	@Test
+	public void testSkipBracedForLoopCompact() {
+		final var attempt = fixer.fix(new ArrayList<>(List.of("\tfor(int i = 0; i < 10; ++i) {")), 0, 0);
+		assertInstanceOf(SkipResult.class, attempt);
+		assertEquals(SkipMessages.CONTROL_FLOW_SKIP, ((SkipResult) attempt).reason());
+	}
+
+	@Test
 	public void testSkipForLoop() {
 		final var attempt = fixer.fix(new ArrayList<>(List.of("\tfor (int i = 0; i < 10; ++i) System.out.println(i);")), 0, 0);
 		assertInstanceOf(SkipResult.class, attempt);
@@ -391,5 +762,91 @@ public class ControlFlowBracesFixerTest {
 		final var attempt = fixer.fix(new ArrayList<>(List.of("\twhile (x > 0) --x;")), 0, 0);
 		assertInstanceOf(SkipResult.class, attempt);
 		assertEquals(SkipMessages.CONTROL_FLOW_SKIP, ((SkipResult) attempt).reason());
+	}
+
+	@Test
+	public void testUnnecessaryBracesElse() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\telse {",
+				"\t\t\t--x;",
+				"\t\t}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(List.of("\t\telse", "\t\t\t--x;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testUnnecessaryBracesIf() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\tif (x > 0) {",
+				"\t\t\t--x;",
+				"\t\t}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(List.of("\t\tif (x > 0)", "\t\t\t--x;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testUnnecessaryBracesIfWithElse() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\tif (x > 0) {",
+				"\t\t\t--x;",
+				"\t\t} else {",
+				"\t\t\t++x;",
+				"\t\t}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(List.of("\t\tif (x > 0)", "\t\t\t--x;", "\t\telse {"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testUnnecessaryBracesWhile() {
+		final var lines = new ArrayList<>(List.of(
+				"\t\twhile (x > 0) {",
+				"\t\t\t--x;",
+				"\t\t}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(0, result.startLine());
+		assertEquals(2, result.endLine());
+		assertEquals(List.of("\t\twhile (x > 0)", "\t\t\t--x;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testUnnecessaryBracesWithNoBody() {
+		assertNull(fixer.fix(new ArrayList<>(List.of("\t\tif (true) {")), 0, 0));
+	}
+
+	@Test
+	public void testUnnecessaryBracesWithNoCloseBrace() {
+		assertNull(fixer.fix(new ArrayList<>(List.of("\t\tif (true) {", "\t\t\t--x;")), 0, 0));
+	}
+
+	@Test
+	public void testUnnecessaryBracesWithVarDeclReturnsNull() {
+		final var finalVar = new ArrayList<>(List.of("\t\tif (true) {", "\t\t\tfinal var x = 5;", "\t\t}"));
+		assertNull(fixer.fix(finalVar, 0, 0));
+
+		final var typedDecl = new ArrayList<>(List.of("\t\tif (true) {", "\t\t\tint x = 5;", "\t\t}"));
+		assertNull(fixer.fix(typedDecl, 0, 0));
+
+		final var qualifiedType = new ArrayList<>(List.of("\t\tif (true) {", "\t\t\tMap.Entry<String, Integer> e = null;", "\t\t}"));
+		assertNull(fixer.fix(qualifiedType, 0, 0));
+
+		final var annotated = new ArrayList<>(List.of("\t\tif (true) {", "\t\t\t@Nullable String s = null;", "\t\t}"));
+		assertNull(fixer.fix(annotated, 0, 0));
+
+		final var arrayDecl = new ArrayList<>(List.of("\t\tif (true) {", "\t\t\tint[] arr = new int[5];", "\t\t}"));
+		assertNull(fixer.fix(arrayDecl, 0, 0));
 	}
 }

@@ -2,6 +2,7 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import com.etk2000.checkstyle.AnnotationOwnLineCheck;
 import com.etk2000.checkstyle.AnnotationSameLineCheck;
+import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck;
 import com.etk2000.checkstyle.ControlFlowBracesCheck;
 import com.etk2000.checkstyle.FieldConsolidationCheck;
 import com.etk2000.checkstyle.FieldSortingCheck;
@@ -113,6 +114,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				Map.entry(AnnotationOwnLineCheck.class.getName(), new AnnotationOwnLineFixer()),
 				Map.entry(AnnotationSameLineCheck.class.getName(), new AnnotationSameLineFixer()),
 				Map.entry(AvoidNoArgumentSuperConstructorCallCheck.class.getName(), new AvoidNoArgumentSuperCallFixer()),
+				Map.entry(ConstructorAssignmentOrderCheck.class.getName(), new ConstructorAssignmentOrderFixer()),
 				Map.entry(ControlFlowBracesCheck.class.getName(), new ControlFlowBracesFixer()),
 				Map.entry(ExplicitInitializationCheck.class.getName(), new ExplicitInitializationFixer()),
 				Map.entry(FieldConsolidationCheck.class.getName(), new FieldConsolidationFixer()),

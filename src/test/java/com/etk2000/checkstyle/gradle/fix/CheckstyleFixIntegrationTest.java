@@ -630,6 +630,28 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testBlankLineBeforeClosingBraceDouble() throws Exception {
+		final var file = tempDir.resolve("CloseBrace2.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint x;\n\n\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint x;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testBlankLineBeforeClosingBraceTriple() throws Exception {
+		final var file = tempDir.resolve("CloseBrace3.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint x;\n\n\n\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint x;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testBlankLineBetweenSingleCases() throws Exception {
 		final var file = tempDir.resolve("Switch.java").toFile();
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\t\treturn;\n\n\t\t\tcase 2:\n\t\t\t\treturn;\n\t\t}\n\t}\n}";
@@ -655,6 +677,201 @@ public class CheckstyleFixIntegrationTest {
 				"class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\t\treturn;\n\t\t\tcase 2:\n\t\t\t\treturn;\n\t\t}\n\t}\n}",
 				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testConstructorAssignAlphabetical() throws Exception {
+		final var file = tempDir.resolve("CtorAlpha.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint alpha, beta;\n\n\tT(int alpha, int beta) {\n\t\tthis.beta = beta;\n\t\tthis.alpha = alpha;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tint alpha, beta;\n\n\tT(int alpha, int beta) {\n\t\tthis.alpha = alpha;\n\t\tthis.beta = beta;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testConstructorAssignDependencySwap() throws Exception {
+		final var file = tempDir.resolve("CtorDep.java").toFile();
+		final var input = "class T {\n\tint alpha, beta;\n\n\tT(int alpha) {\n"
+				+ "\t\tthis.beta = this.alpha + 1;\n\t\tthis.alpha = alpha;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "class T {\n\tint alpha, beta;\n\n\tT(int alpha) {\n"
+				+ "\t\tthis.alpha = alpha;\n\t\tthis.beta = this.alpha + 1;\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testConstructorAssignMultiLineBeforeSimple() throws Exception {
+		final var file = tempDir.resolve("CtorMulti.java").toFile();
+		final var input = "class T {\n\tint alpha;\n\tObject beta;\n\n\tT(int alpha, Object beta) {\n"
+				+ "\t\tthis.beta = new Object() {\n\t\t\t@Override\n\t\t\tpublic String toString() {\n"
+				+ "\t\t\t\treturn beta.toString();\n\t\t\t}\n\t\t};\n\t\tthis.alpha = alpha;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "class T {\n\tint alpha;\n\tObject beta;\n\n\tT(int alpha, Object beta) {\n"
+				+ "\t\tthis.alpha = alpha;\n\n"
+				+ "\t\tthis.beta = new Object() {\n\t\t\t@Override\n\t\t\tpublic String toString() {\n"
+				+ "\t\t\t\treturn beta.toString();\n\t\t\t}\n\t\t};\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testConstructorAssignVarBeforeSimple() throws Exception {
+		final var file = tempDir.resolve("CtorVar.java").toFile();
+		final var input = "class T {\n\tint alpha, beta;\n\n\tT(int x) {\n\t\tfinal var computed = x * 2;\n"
+				+ "\t\tthis.alpha = computed;\n\t\tthis.beta = x;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "class T {\n\tint alpha, beta;\n\n\tT(int x) {\n"
+				+ "\t\tthis.beta = x;\n\n\t\tfinal var computed = x * 2;\n\t\tthis.alpha = computed;\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testControlFlowBraceOnOwnLineIf() throws Exception {
+		final var file = tempDir.resolve("CfOwnIf.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int x) {\n\t\tif (x > 0)\n\t\t{\n\t\t\t--x;\n\t\t}\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tvoid f(int x) {\n\t\tif (x > 0)\n\t\t\t--x;\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testControlFlowBraceOnOwnLineWhile() throws Exception {
+		final var file = tempDir.resolve("CfOwnWhile.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int x) {\n\t\twhile (x > 0)\n\t\t{\n\t\t\t--x;\n\t\t}\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tvoid f(int x) {\n\t\twhile (x > 0)\n\t\t\t--x;\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testControlFlowMissingBracesElse() throws Exception {
+		final var file = tempDir.resolve("CfElse.java").toFile();
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tif (x > 0)\n\t\t\t--x;\n"
+				+ "\t\telse\n\t\t\tfor (var i = 0; i < x; ++i)\n\t\t\t\t++x;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "class T {\n\tvoid f(int x) {\n\t\tif (x > 0)\n\t\t\t--x;\n"
+				+ "\t\telse {\n\t\t\tfor (var i = 0; i < x; ++i)\n\t\t\t\t++x;\n\t\t}\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testControlFlowMissingBracesFor() throws Exception {
+		final var file = tempDir.resolve("CfFor.java").toFile();
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tfor (var i = 0; i < x; ++i)\n"
+				+ "\t\t\tif (i > 0)\n\t\t\t\tSystem.out.println(i);\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "class T {\n\tvoid f(int x) {\n\t\tfor (var i = 0; i < x; ++i) {\n"
+				+ "\t\t\tif (i > 0)\n\t\t\t\tSystem.out.println(i);\n\t\t}\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testControlFlowMissingBracesForEach() throws Exception {
+		final var file = tempDir.resolve("CfForEach.java").toFile();
+		final var input = "import java.util.List;\nclass T {\n\tvoid f() {\n"
+				+ "\t\tfor (var item : List.of(\"a\"))\n\t\t\tif (item != null)\n"
+				+ "\t\t\t\tSystem.out.println(item);\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "import java.util.List;\nclass T {\n\tvoid f() {\n"
+				+ "\t\tfor (var item : List.of(\"a\")) {\n\t\t\tif (item != null)\n"
+				+ "\t\t\t\tSystem.out.println(item);\n\t\t}\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testControlFlowMissingBracesIf() throws Exception {
+		final var file = tempDir.resolve("CfIf.java").toFile();
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tif (x > 0)\n"
+				+ "\t\t\tfor (var i = 0; i < x; ++i)\n\t\t\t\tSystem.out.println(i);\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "class T {\n\tvoid f(int x) {\n\t\tif (x > 0) {\n"
+				+ "\t\t\tfor (var i = 0; i < x; ++i)\n\t\t\t\tSystem.out.println(i);\n\t\t}\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testControlFlowMissingBracesWhile() throws Exception {
+		final var file = tempDir.resolve("CfWhile.java").toFile();
+		final var input = "class T {\n\tvoid f(int x) {\n\t\twhile (x > 0)\n"
+				+ "\t\t\tif (x > 5)\n\t\t\t\t--x;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "class T {\n\tvoid f(int x) {\n\t\twhile (x > 0) {\n"
+				+ "\t\t\tif (x > 5)\n\t\t\t\t--x;\n\t\t}\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testControlFlowUnnecessaryBracesElse() throws Exception {
+		final var file = tempDir.resolve("CfUnnElse.java").toFile();
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tif (x > 0)\n\t\t\t++x;\n\t\telse {\n\t\t\t--x;\n\t\t}\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tvoid f(int x) {\n\t\tif (x > 0)\n\t\t\t++x;\n\t\telse\n\t\t\t--x;\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testControlFlowUnnecessaryBracesIf() throws Exception {
+		final var file = tempDir.resolve("CfUnnIf.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int x) {\n\t\tif (x > 0) {\n\t\t\t--x;\n\t\t}\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tvoid f(int x) {\n\t\tif (x > 0)\n\t\t\t--x;\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testControlFlowUnnecessaryBracesWhile() throws Exception {
+		final var file = tempDir.resolve("CfUnnWhile.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int x) {\n\t\twhile (x > 0) {\n\t\t\t--x;\n\t\t}\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tvoid f(int x) {\n\t\twhile (x > 0)\n\t\t\t--x;\n\t}\n}", output.content());
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
@@ -938,10 +1155,10 @@ public class CheckstyleFixIntegrationTest {
 	@Test
 	public void testExplicitInitialization() throws Exception {
 		final var file = tempDir.resolve("Init.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tint x = 0;\n\tObject o = null;\n\tboolean b = false;\n}");
+		Files.writeString(file.toPath(), "class T {\n\tboolean b = false;\n\tint x = 0;\n\tObject o = null;\n}");
 
 		final var output = runFixAndGetResult(file);
-		assertEquals("class T {\n\tint x;\n\tObject o;\n\tboolean b;\n}", output.content());
+		assertEquals("class T {\n\tboolean b;\n\tint x;\n\tObject o;\n}", output.content());
 		assertEquals(3, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
@@ -1185,6 +1402,32 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testFieldSortingChunkOrder() throws Exception {
+		final var file = tempDir.resolve("FldChunk.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint nonFinal;\n\tfinal int finalWithValue = 1;\n\n\tT() {\n\t\tthis.nonFinal = 0;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tfinal int finalWithValue = 1;\n\n\tint nonFinal;\n\n\tT() {\n\t\tthis.nonFinal = 0;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingDependencyOrder() throws Exception {
+		final var file = tempDir.resolve("FldDep.java").toFile();
+		final var input = "class T {\n\tstatic final int B = A + 1;\n\tstatic final int A = 0;\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tstatic final int A = 0;\n\tstatic final int B = A + 1;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testFieldSortingEnumInnerClass() throws Exception {
 		final var file = tempDir.resolve("InnerEnum.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tenum E {\n\t\tBETA,\n\t\tALPHA\n\t}\n}");
@@ -1288,6 +1531,28 @@ public class CheckstyleFixIntegrationTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals("enum T {\n\tALPHA, // a\n\tBETA // b\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingNameOrder() throws Exception {
+		final var file = tempDir.resolve("FldName.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tfinal int z = 1;\n\tfinal int a = 0;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tfinal int a = 0;\n\tfinal int z = 1;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingTypeOrder() throws Exception {
+		final var file = tempDir.resolve("FldType.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tfinal String name = \"x\";\n\tfinal int count = 0;\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tfinal int count = 0;\n\tfinal String name = \"x\";\n}", output.content());
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
@@ -1445,25 +1710,24 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("MixedSameCheck.java").toFile();
 		Files.writeString(
 				file.toPath(),
-				"class T {\n\tenum E {\n\t\tB, A\n\t}\n\tint b;\n\tint a;\n}"
+				"class T {\n\tenum E {\n\t\tB, A\n\t}\n\tint a;\n\tint b;\n}"
 		);
 
 		final var output = runFixAndGetResult(file);
-		assertTrue(output.result().fixCount() > 0);
-		assertTrue(output.result().skippedReasons().containsKey("FieldSortingCheck"));
+		assertEquals(2, output.result().fixCount());
 	}
 
 	@Test
 	public void testMultipleChecksSkipReasons() throws Exception {
 		final var file = tempDir.resolve("MultiCheck.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tint b = 2;\n\tint a = 1;\n\tint x = 0;\n}");
+		Files.writeString(file.toPath(), "class T {\n\tint x = 0;\n\tvoid f(int x) {\n\t\tif (x > 0) --x;\n\t}\n}");
 
 		final var output = runFixAndGetResult(file);
-		assertTrue(output.result().fixCount() > 0);
-		assertTrue(output.result().skippedReasons().containsKey("FieldSortingCheck"));
+		assertEquals(1, output.result().fixCount());
+		assertTrue(output.result().skippedReasons().containsKey("ControlFlowBracesCheck"));
 		assertEquals(
-				SkipMessages.FIELD_SORT_SKIP,
-				output.result().skippedReasons().get("FieldSortingCheck").getFirst()
+				SkipMessages.CONTROL_FLOW_SKIP,
+				output.result().skippedReasons().get("ControlFlowBracesCheck").getFirst()
 		);
 	}
 
@@ -2974,10 +3238,10 @@ public class CheckstyleFixIntegrationTest {
 	@Test
 	public void testRedundantNumericSuffix() throws Exception {
 		final var file = tempDir.resolve("Suffix.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tlong x = 100L;\n\tdouble d = 1.0d;\n}");
+		Files.writeString(file.toPath(), "class T {\n\tdouble d = 1.0d;\n\tlong x = 100L;\n}");
 
 		final var output = runFixAndGetResult(file);
-		assertEquals("class T {\n\tlong x = 100;\n\tdouble d = 1.0;\n}", output.content());
+		assertEquals("class T {\n\tdouble d = 1.0;\n\tlong x = 100;\n}", output.content());
 		assertEquals(2, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
@@ -2985,10 +3249,10 @@ public class CheckstyleFixIntegrationTest {
 	@Test
 	public void testRedundantNumericSuffixHexAndBinaryAndFloat() throws Exception {
 		final var file = tempDir.resolve("SuffixHex.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tlong a = 0xFFL;\n\tfloat b = 100F;\n\tlong c = 0b1010L;\n}");
+		Files.writeString(file.toPath(), "class T {\n\tfloat b = 100F;\n\tlong a = 0xFFL;\n\tlong c = 0b1010L;\n}");
 
 		final var output = runFixAndGetResult(file);
-		assertEquals("class T {\n\tlong a = 0xFF;\n\tfloat b = 100;\n\tlong c = 0b1010;\n}", output.content());
+		assertEquals("class T {\n\tfloat b = 100;\n\tlong a = 0xFF;\n\tlong c = 0b1010;\n}", output.content());
 		assertEquals(3, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
@@ -3150,7 +3414,7 @@ public class CheckstyleFixIntegrationTest {
 	@Test
 	public void testVerifyCleanAcceptsUnfixableViolations() throws Exception {
 		final var file = tempDir.resolve("VerUnfixable.java").toFile();
-		final var content = "class T {\n\tint b = 2;\n\tint a = 1;\n}";
+		final var content = "class T {\n\tvoid f(int x) {\n\t\tif (x > 0) --x;\n\t}\n}";
 		Files.writeString(file.toPath(), content);
 		verifyFixedOutputClean(file, content, String.valueOf(Integer.MAX_VALUE), false);
 	}

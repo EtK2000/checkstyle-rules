@@ -278,14 +278,14 @@ public class CheckstyleFixNoFixTest {
 	@Test
 	public void testAllSkippedHasReasons() throws Exception {
 		final var file = tempDir.resolve("AllSkipped.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tint b = 2;\n\tint a = 1;\n}");
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int x) {\n\t\tif (x > 0) --x;\n\t}\n}");
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(0, output.result().fixCount());
-		assertTrue(output.result().skippedReasons().containsKey("FieldSortingCheck"));
-		final var reasons = output.result().skippedReasons().get("FieldSortingCheck");
+		assertTrue(output.result().skippedReasons().containsKey("ControlFlowBracesCheck"));
+		final var reasons = output.result().skippedReasons().get("ControlFlowBracesCheck");
 		assertFalse(reasons.isEmpty());
-		assertEquals(SkipMessages.FIELD_SORT_SKIP, reasons.getFirst());
+		assertEquals(SkipMessages.CONTROL_FLOW_SKIP, reasons.getFirst());
 	}
 
 	@Test
@@ -376,20 +376,20 @@ public class CheckstyleFixNoFixTest {
 	}
 
 	@Test
-	public void testFieldSortingFieldViolationNotFixed() throws Exception {
+	public void testFieldSortingFieldViolationNowFixed() throws Exception {
 		final var file = tempDir.resolve("FieldOrder.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tstatic final String Z = \"z\";\n\tstatic final int A = 0;\n}");
 
 		final var output = runFixAndGetResult(file);
-		assertEquals("class T {\n\tstatic final String Z = \"z\";\n\tstatic final int A = 0;\n}", output.content());
-		assertEquals(0, output.result().fixCount());
+		assertEquals("class T {\n\tstatic final int A = 0;\n\tstatic final String Z = \"z\";\n}", output.content());
+		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
 	public void testNoViolations() throws Exception {
 		final var file = tempDir.resolve("Clean.java").toFile();
-		final var input = "class Clean {\n\tint[] a = {1, 2};\n\tint x = 100;\n}";
+		final var input = "class Clean {\n\tint x = 100;\n\tint[] a = {1, 2};\n}";
 		Files.writeString(file.toPath(), input);
 
 		final var result = runFixPipeline(file);

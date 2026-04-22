@@ -38,6 +38,7 @@ final class FixableCheckNames {
 	static final Set<String> SOURCE_NAMES = Set.of(
 			"com.etk2000.checkstyle.AnnotationOwnLineCheck",
 			"com.etk2000.checkstyle.AnnotationSameLineCheck",
+			"com.etk2000.checkstyle.ConstructorAssignmentOrderCheck",
 			"com.etk2000.checkstyle.ControlFlowBracesCheck",
 			"com.etk2000.checkstyle.FieldConsolidationCheck",
 			"com.etk2000.checkstyle.FieldSortingCheck",
