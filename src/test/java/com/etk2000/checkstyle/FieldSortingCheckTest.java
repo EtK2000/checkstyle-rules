@@ -11,6 +11,31 @@ public class FieldSortingCheckTest {
 	private static final String DIR = "fieldsorting/";
 
 	@Test
+	public void testAnnotationViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingAnnotationViolation.java");
+		assertEquals(6, violations.size());
+		var i = 0;
+		assertEquals(10, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'plain' (unannotated) must appear before 'annotated' (annotated @Deprecated), same type.", violations.get(i++).getMessage());
+		assertEquals(16, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'alpha' (annotated @Deprecated) must appear before 'beta' (annotated @SuppressWarnings), same type.", violations.get(i++).getMessage());
+		assertEquals(23, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'abField' (annotated @AnnV) must appear before 'bField' (annotated @BnnV), same type.", violations.get(i++).getMessage());
+		assertEquals(32, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'alpha' must appear before 'zebra' (alphabetical order, same type).", violations.get(i++).getMessage());
+		assertEquals(39, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'alpha' (annotated @Deprecated) must appear before 'beta' (annotated @SuppressWarnings), same type.", violations.get(i++).getMessage());
+		assertEquals(46, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'alpha' (annotated @Deprecated) must appear before 'beta' (annotated @SuppressWarnings), same type.", violations.get(i++).getMessage());
+	}
+
+	@Test
 	public void testAnonClassViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingAnonClassViolation.java");
 		assertEquals(2, violations.size());

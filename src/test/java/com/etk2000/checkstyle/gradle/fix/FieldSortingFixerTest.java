@@ -2,6 +2,7 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -98,6 +99,228 @@ public class FieldSortingFixerTest {
 				"}"
 		));
 		assertNull(fixer.fix(lines, 2, 0));
+	}
+
+	@Test
+	public void testFieldAnnotationAlreadySorted() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tString plain;",
+				"\t@Deprecated",
+				"\tString annotated;",
+				"}"
+		));
+		assertNull(fixer.fix(lines, 3, 0));
+	}
+
+	@Test
+	public void testFieldAnnotationConsolidation() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\t@NonNull",
+				"\tfinal String currencyCode;",
+				"\t@Nullable",
+				"\tfinal String engName, engSymbol;",
+				"\t@NonNull",
+				"\tfinal String equityNumber;",
+				"\t@Nullable",
+				"\tfinal String exchange;",
+				"\t@NonNull",
+				"\tfinal String source;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 6, 0));
+		assertEquals(
+				List.of(
+						"\t@NonNull",
+						"\tfinal String currencyCode, equityNumber, source;",
+						"\t@Nullable",
+						"\tfinal String engName, engSymbol, exchange;"
+				),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldAnnotationConsolidationNestedGenericsAborts() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tint z;",
+				"\tMap<String, List<Integer>> map;",
+				"\tint a;",
+				"}"
+		));
+		assertNull(fixer.fix(lines, 3, 0));
+	}
+
+	@Test
+	public void testFieldAnnotationConsolidationSkipsTrailingComment() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tint width; // in pixels",
+				"\tint height;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(List.of("\tint height;", "\tint width; // in pixels"), result.replacement());
+	}
+
+	@Test
+	public void testFieldAnnotationEmptyParensNormalization() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\t@SuppressWarnings(\"unused\")",
+				"\tString beta;",
+				"\t@Deprecated()",
+				"\tString alpha;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 4, 0));
+		assertEquals(
+				List.of("\t@Deprecated()", "\tString alpha;", "\t@SuppressWarnings(\"unused\")", "\tString beta;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldAnnotationIgnoresAtInBlockComment() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tString /* @Nullable */ beta;",
+				"\tString alpha;",
+				"}"
+		));
+		assertNull(fixer.fix(lines, 2, 0));
+	}
+
+	@Test
+	public void testFieldAnnotationIgnoresAtInLineComment() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tString beta; // @Deprecated docs",
+				"\tString alpha;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(List.of("\tString alpha;", "\tString beta; // @Deprecated docs"), result.replacement());
+	}
+
+	@Test
+	public void testFieldAnnotationIgnoresAtInString() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tString beta = \"@Zebra\";",
+				"\tString alpha = \"hello\";",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(
+				List.of("\tString alpha = \"hello\";", "\tString beta = \"@Zebra\";"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldAnnotationNoExceptionOnTrailingDot() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\t@com.example.",
+				"\tString beta;",
+				"\tString alpha;",
+				"}"
+		));
+		final var result = fixer.fix(lines, 3, 0);
+		assertNotNull(result);
+	}
+
+	@Test
+	public void testFieldAnnotationOrder() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\t@Deprecated",
+				"\tString annotated;",
+				"\tString plain;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 3, 0));
+		assertEquals(
+				List.of("\tString plain;", "\t@Deprecated", "\tString annotated;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldAnnotationOrderDifferentAnnotations() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\t@SuppressWarnings(\"unused\")",
+				"\tString beta;",
+				"\t@Deprecated",
+				"\tString alpha;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 4, 0));
+		assertEquals(
+				List.of("\t@Deprecated", "\tString alpha;", "\t@SuppressWarnings(\"unused\")", "\tString beta;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldAnnotationOrderMultiAnnotation() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\t@Bnn",
+				"\tString bField;",
+				"\t@Ann",
+				"\t@Bnn",
+				"\tString abField;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 4, 0));
+		assertEquals(
+				List.of("\t@Ann", "\t@Bnn", "\tString abField;", "\t@Bnn", "\tString bField;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldAnnotationOrderQualified() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\t@java.lang.SuppressWarnings(\"unused\")",
+				"\tString beta;",
+				"\t@java.lang.Deprecated",
+				"\tString alpha;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 4, 0));
+		assertEquals(
+				List.of(
+						"\t@java.lang.Deprecated",
+						"\tString alpha;",
+						"\t@java.lang.SuppressWarnings(\"unused\")",
+						"\tString beta;"
+				),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldAnnotationSameAnnotationNameOrder() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\t@Deprecated",
+				"\tString zebra;",
+				"\t@Deprecated",
+				"\tString alpha;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 4, 0));
+		assertEquals(
+				List.of("\t@Deprecated", "\tString alpha, zebra;"),
+				result.replacement()
+		);
 	}
 
 	@Test

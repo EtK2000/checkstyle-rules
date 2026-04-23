@@ -314,7 +314,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 	}
 
 	/**
-	 * @return {needsSecondPass ? 1 : 0, totalFixed}
+	 * @return {needsSecondPass ? 1 : 0, totalFixed, fixableViolations}
 	 */
 	@VisibleForTesting
 	static int[] doExecute(
@@ -364,6 +364,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 
 		var needsSecondPass = false;
 		var filesFixed = 0;
+		var fixableViolations = 0;
 		var totalFixed = 0;
 		var totalSkipped = 0;
 		final var allSkippedReasons = new LinkedHashMap<String, List<String>>();
@@ -372,6 +373,12 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			final var filePath = Path.of(entry.getKey());
 			final var violations = entry.getValue();
 			final var totalViolations = violations.size();
+
+			for (var v : violations) {
+				if (v.getSeverityLevel() == SeverityLevel.ERROR && resolveFixer(v, FIXERS, MODULE_ID_FIXERS) != null)
+					++fixableViolations;
+			}
+
 			final var lines = new ArrayList<>(Files.readAllLines(filePath));
 			final var result = applyFixes(lines, violations, FIXERS, MODULE_ID_FIXERS);
 
@@ -392,7 +399,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			System.out.println("Fixed " + totalFixed + " violations in " + filesFixed + " files (" + totalSkipped + " skipped)");
 			printSkipSummary(allSkippedReasons);
 		}
-		return new int[]{needsSecondPass ? 1 : 0, totalFixed};
+		return new int[]{needsSecondPass ? 1 : 0, totalFixed, fixableViolations};
 	}
 
 	@CheckReturnValue
@@ -695,7 +702,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 
 			final var result = doExecute(checkerConfig, dryRun, files);
 			if (dryRun) {
-				final var fixable = result[1];
+				final var fixable = result[2];
 				final var total = Math.max(params.getDryRunTotal().getOrElse(fixable), fixable);
 				final var taskName = params.getDryRunTaskName().getOrElse("checkstyleFix");
 				final var hint = formatHintMessage(fixable, total, taskName);

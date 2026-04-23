@@ -240,22 +240,24 @@ main table).
 The fixer parses field declarations in a class body and sorts them by the check's rules.
 Enum constant sorting is handled separately (see main table).
 
-| Violation type              | Input pattern                                 | Auto-fix | Notes                                                   |
-|-----------------------------|-----------------------------------------------|----------|---------------------------------------------------------|
-| Chunk order                 | Non-final before final-with-value             | Yes      | Adds blank lines between chunks                         |
-| Type order (prim vs ref)    | `String name` before `int count`              | Yes      | Primitives sort before reference types                  |
-| Type order (alphabetical)   | `String` before `int` (same chunk)            | Yes      | Alphabetical by base type name                          |
-| Array depth                 | `int[]` before `int`                          | Yes      | Base type first, then arrays                            |
-| Name order                  | `int z` before `int a` (same type)            | Yes      | Case-insensitive alphabetical                           |
-| Field dependencies          | `B = A + 1` before `A = 0`                    | Yes      | Respects dependency: A before B if B uses A             |
-| Multi-line initializers     | Fields with anonymous class or lambda init    | Yes      | Tracks brace/paren depth for field end                  |
-| Annotated fields            | Fields with `@Deprecated` etc. above          | Yes      | Annotation lines move with their field                  |
-| Circular dependencies       | `A = B + 1; B = A + 1`                        | No       | Max-iteration guard stops the loop; best-effort order   |
-| Unparseable field pattern   | Complex generics, multi-variable declarations | No       | Returns null if FIELD_PATTERN doesn't match             |
-| Anonymous class initializer | anon.class field must come before non-anon    | No       | Not implemented in fixer sorting                        |
-| Text blocks in initializers | Field with `"""` initializer containing `{}`  | No       | String parser doesn't handle text blocks                |
-| Nested generics in type     | `Map<String, List<Integer>>` field            | No       | `[^>]*` in FIELD_PATTERN stops at first `>`             |
-| Inline annotation with `()` | `@SuppressWarnings(")")` in field value       | No       | Annotation parser doesn't track string literals in args |
+| Violation type              | Input pattern                                      | Auto-fix | Notes                                                   |
+|-----------------------------|----------------------------------------------------|----------|---------------------------------------------------------|
+| Chunk order                 | Non-final before final-with-value                  | Yes      | Adds blank lines between chunks                         |
+| Type order (prim vs ref)    | `String name` before `int count`                   | Yes      | Primitives sort before reference types                  |
+| Type order (alphabetical)   | `String` before `int` (same chunk)                 | Yes      | Alphabetical by base type name                          |
+| Array depth                 | `int[]` before `int`                               | Yes      | Base type first, then arrays                            |
+| Annotation order            | `@Nullable String` before `@NonNull String`        | Yes      | Unannotated first, then by canonical annotation key     |
+| Annotation consolidation    | Same-type same-annotation fields on separate lines | Yes      | Merges into single declaration after sorting            |
+| Name order                  | `int z` before `int a` (same type)                 | Yes      | Case-insensitive alphabetical                           |
+| Field dependencies          | `B = A + 1` before `A = 0`                         | Yes      | Respects dependency: A before B if B uses A             |
+| Multi-line initializers     | Fields with anonymous class or lambda init         | Yes      | Tracks brace/paren depth for field end                  |
+| Annotated fields            | Fields with `@Deprecated` etc. above               | Yes      | Annotation lines move with their field                  |
+| Circular dependencies       | `A = B + 1; B = A + 1`                             | No       | Max-iteration guard stops the loop; best-effort order   |
+| Unparseable field pattern   | Complex generics, multi-variable declarations      | No       | Returns null if FIELD_PATTERN doesn't match             |
+| Anonymous class initializer | anon.class field must come before non-anon         | No       | Not implemented in fixer sorting                        |
+| Text blocks in initializers | Field with `"""` initializer containing `{}`       | No       | String parser doesn't handle text blocks                |
+| Nested generics in type     | `Map<String, List<Integer>>` field                 | No       | `[^>]*` in FIELD_PATTERN stops at first `>`             |
+| Inline annotation with `()` | `@SuppressWarnings(")")` in field value            | No       | Annotation parser doesn't track string literals in args |
 
 ## Regex checks without fixers
 

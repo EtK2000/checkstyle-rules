@@ -21,6 +21,7 @@ class FieldSortingFixer implements CheckstyleFixer {
 	private record EnumEntry(@Nonnull String name, @Nonnull List<String> leadingLines, @Nonnull List<String> contentLines) {}
 
 	private record FieldEntry(
+			@Nonnull List<String> annotations,
 			@Nonnull String name,
 			@Nonnull String typeName,
 			int chunk,
@@ -31,10 +32,11 @@ class FieldSortingFixer implements CheckstyleFixer {
 
 	private record ParseResult(@Nonnull List<EnumEntry> entries, int blockStart, int blockEnd, @Nonnull String terminal) {}
 
+	private static final int MAX_LINE_LENGTH = 120;
 	private static final Pattern FIELD_PATTERN = Pattern.compile(
 			"^\\s*(?:(?:@\\w+(?:\\([^)]*\\))?\\s+)*)"
 					+ "(?:(?:public|private|protected|static|final|transient|volatile)\\s+)*"
-					+ "((?:boolean|byte|char|double|float|int|long|short|[A-Z]\\w*)(?:<[^>]*>)?(?:\\[\\])*)"
+					+ "((?:boolean|byte|char|double|float|int|long|short|(?:\\w+\\.)*[A-Z]\\w*)(?:<[^>]*>)?(?:\\[\\])*)"
 					+ "\\s+(\\w+)"
 	);
 	private static final Set<String> PRIMITIVES = Set.of(
@@ -82,6 +84,34 @@ class FieldSortingFixer implements CheckstyleFixer {
 			}
 		}
 		return result;
+	}
+
+	@CheckReturnValue
+	private static boolean canConsolidate(@Nonnull FieldEntry entry) {
+		final var declLine = entry.lines.getLast();
+		final var stripped = declLine.stripLeading();
+		return !stripped.contains("=") && entry.lines.size() <= 2
+				&& findTrailingCommentStart(declLine) < 0;
+	}
+
+	@CheckReturnValue
+	private static boolean canMergeWith(@Nonnull FieldEntry base, @Nonnull FieldEntry candidate) {
+		return candidate.chunk == base.chunk
+				&& candidate.typeName.equals(base.typeName)
+				&& candidate.annotations.equals(base.annotations)
+				&& canConsolidate(candidate)
+				&& candidate.dependencies.isEmpty()
+				&& base.dependencies.isEmpty();
+	}
+
+	@CheckReturnValue
+	private static int compareAnnotations(@Nonnull List<String> a, @Nonnull List<String> b) {
+		for (var i = 0; i < Math.min(a.size(), b.size()); ++i) {
+			final var cmp = a.get(i).compareToIgnoreCase(b.get(i));
+			if (cmp != 0)
+				return cmp;
+		}
+		return Integer.compare(a.size(), b.size());
 	}
 
 	@CheckReturnValue
@@ -227,6 +257,118 @@ class FieldSortingFixer implements CheckstyleFixer {
 	}
 
 	@CheckReturnValue
+	@Nonnull
+	private static List<String> extractAllFieldNames(@Nonnull FieldEntry entry) {
+		final var declLine = entry.lines.getLast();
+		final var matcher = FIELD_PATTERN.matcher(declLine);
+		if (!matcher.find())
+			return List.of(entry.name);
+		final var afterType = matcher.end(1);
+		final var names = new ArrayList<String>();
+		var pos = afterType;
+		while (pos < declLine.length()) {
+			while (pos < declLine.length() && !Character.isJavaIdentifierStart(declLine.charAt(pos)))
+				++pos;
+			if (pos >= declLine.length())
+				break;
+			final var start = pos;
+			while (pos < declLine.length() && Character.isJavaIdentifierPart(declLine.charAt(pos)))
+				++pos;
+			names.add(declLine.substring(start, pos));
+			while (pos < declLine.length() && declLine.charAt(pos) != ',' && declLine.charAt(pos) != ';')
+				++pos;
+			if (pos >= declLine.length() || declLine.charAt(pos) == ';')
+				break;
+			++pos;
+		}
+		return names.isEmpty() ? List.of(entry.name) : names;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static List<String> extractAnnotationKeys(@Nonnull List<String> fieldLines) {
+		final var keys = new ArrayList<String>();
+		for (var line : fieldLines) {
+			final var stripped = line.stripLeading();
+			var pos = 0;
+			var inString = false;
+			var inChar = false;
+			while (pos < stripped.length()) {
+				final var c = stripped.charAt(pos);
+				if (inString) {
+					if (c == '"' && !isEscaped(stripped, pos))
+						inString = false;
+					++pos;
+					continue;
+				}
+				if (inChar) {
+					if (c == '\'' && !isEscaped(stripped, pos))
+						inChar = false;
+					++pos;
+					continue;
+				}
+				if (c == '"') {
+					inString = true;
+					++pos;
+					continue;
+				}
+				if (c == '\'') {
+					inChar = true;
+					++pos;
+					continue;
+				}
+				if (c == '/' && pos + 1 < stripped.length() && stripped.charAt(pos + 1) == '/')
+					break;
+				if (c == '/' && pos + 1 < stripped.length() && stripped.charAt(pos + 1) == '*') {
+					final var end = stripped.indexOf("*/", pos + 2);
+					pos = end >= 0 ? end + 2 : stripped.length();
+					continue;
+				}
+				if (c != '@') {
+					++pos;
+					continue;
+				}
+				final var atIdx = pos;
+				var nameEnd = atIdx + 1;
+				while (nameEnd < stripped.length()
+						&& (Character.isJavaIdentifierPart(stripped.charAt(nameEnd)) || stripped.charAt(nameEnd) == '.'))
+					++nameEnd;
+				if (nameEnd <= atIdx + 1) {
+					pos = atIdx + 1;
+					continue;
+				}
+				final var fullName = stripped.substring(atIdx + 1, nameEnd);
+				final var dotIdx = fullName.lastIndexOf('.');
+				final var simpleName = dotIdx >= 0 ? fullName.substring(dotIdx + 1) : fullName;
+				if (simpleName.isEmpty() || !Character.isUpperCase(simpleName.charAt(0))) {
+					pos = nameEnd;
+					continue;
+				}
+				final var sb = new StringBuilder(simpleName);
+				var afterName = nameEnd;
+				while (afterName < stripped.length() && stripped.charAt(afterName) <= ' ')
+					++afterName;
+				if (afterName < stripped.length() && stripped.charAt(afterName) == '(') {
+					final var paramsText = extractParenBalanced(stripped, afterName);
+					if (paramsText != null && !paramsText.equals("()")) {
+						final var inner = paramsText.substring(1, paramsText.length() - 1).strip();
+						if (!inner.contains("="))
+							sb.append("(value=").append(inner).append(')');
+						else
+							sb.append(paramsText);
+					}
+					pos = afterName + (paramsText != null ? paramsText.length() : 1);
+				}
+				else
+					pos = nameEnd;
+				keys.add(sb.toString());
+			}
+		}
+		keys.sort(String.CASE_INSENSITIVE_ORDER);
+		return keys;
+	}
+
+	@CheckReturnValue
 	@Nullable
 	private static String extractConstantName(@Nonnull String trimmed) {
 		if (trimmed.isEmpty() || !Character.isJavaIdentifierStart(trimmed.charAt(0)))
@@ -253,6 +395,46 @@ class FieldSortingFixer implements CheckstyleFixer {
 		if (next == '/' && i + 1 < trimmed.length() && trimmed.charAt(i + 1) == '/')
 			return name;
 
+		return null;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static String extractIndent(@Nonnull String line) {
+		var idx = 0;
+		while (idx < line.length() && (line.charAt(idx) == '\t' || line.charAt(idx) == ' '))
+			++idx;
+		return line.substring(0, idx);
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static String extractParenBalanced(@Nonnull String text, int openParen) {
+		var depth = 0;
+		var inString = false;
+		var inChar = false;
+		for (var i = openParen; i < text.length(); ++i) {
+			final var c = text.charAt(i);
+			if (inString) {
+				if (c == '"' && !isEscaped(text, i))
+					inString = false;
+			}
+			else if (inChar) {
+				if (c == '\'' && !isEscaped(text, i))
+					inChar = false;
+			}
+			else if (c == '"')
+				inString = true;
+			else if (c == '\'')
+				inChar = true;
+			else if (c == '(')
+				++depth;
+			else if (c == ')') {
+				--depth;
+				if (depth == 0)
+					return text.substring(openParen, i + 1);
+			}
+		}
 		return null;
 	}
 
@@ -425,6 +607,7 @@ class FieldSortingFixer implements CheckstyleFixer {
 		sorted.sort(Comparator
 				.comparingInt(FieldEntry::chunk)
 				.thenComparing(FieldEntry::typeName, FieldSortingFixer::compareFieldTypes)
+				.thenComparing(FieldEntry::annotations, FieldSortingFixer::compareAnnotations)
 				.thenComparing(FieldEntry::name, String.CASE_INSENSITIVE_ORDER));
 
 		// apply dependency adjustments, with cycle guard
@@ -472,14 +655,69 @@ class FieldSortingFixer implements CheckstyleFixer {
 			}
 		}
 
-		// build replacement
+		// build replacement with consolidation of same-type same-annotation uninitialized fields
 		final var replacement = new ArrayList<String>();
 		var prevChunk = -1;
-		for (var entry : sorted) {
+		var i2 = 0;
+		while (i2 < sorted.size()) {
+			final var entry = sorted.get(i2);
 			if (!replacement.isEmpty() && entry.chunk != prevChunk)
 				replacement.add("");
-			replacement.addAll(entry.lines);
 			prevChunk = entry.chunk;
+
+			if (!canConsolidate(entry)) {
+				replacement.addAll(entry.lines);
+				++i2;
+				continue;
+			}
+
+			final var groupNames = new ArrayList<>(extractAllFieldNames(entry));
+			var j2 = i2 + 1;
+			while (j2 < sorted.size() && canMergeWith(entry, sorted.get(j2))) {
+				groupNames.addAll(extractAllFieldNames(sorted.get(j2)));
+				++j2;
+			}
+			groupNames.sort(String.CASE_INSENSITIVE_ORDER);
+
+			if (groupNames.size() == 1) {
+				replacement.addAll(entry.lines);
+				++i2;
+				continue;
+			}
+
+			final var declLine = entry.lines.getLast();
+			final var nameStart = declLine.indexOf(entry.name);
+			if (nameStart < 0) {
+				replacement.addAll(entry.lines);
+				++i2;
+				continue;
+			}
+			final var prefix = declLine.substring(0, nameStart);
+			final var suffix = ";";
+			for (var k = 0; k < entry.lines.size() - 1; ++k)
+				replacement.add(entry.lines.get(k));
+
+			final var merged = prefix + String.join(", ", groupNames) + suffix;
+			if (tabExpandedLength(merged) <= MAX_LINE_LENGTH)
+				replacement.add(merged);
+			else {
+				final var baseIndent = extractIndent(declLine);
+				final var contIndent = baseIndent + "\t\t";
+				var line = new StringBuilder(prefix + groupNames.getFirst());
+				for (var k = 1; k < groupNames.size(); ++k) {
+					final var isLast = k == groupNames.size() - 1;
+					final var withName = line + ", " + groupNames.get(k);
+					if (tabExpandedLength(withName + (isLast ? suffix : ",")) > MAX_LINE_LENGTH) {
+						replacement.add(line + ",");
+						line = new StringBuilder(contIndent + groupNames.get(k));
+					}
+					else
+						line = new StringBuilder(withName);
+					if (isLast)
+						replacement.add(line + suffix);
+				}
+			}
+			i2 = j2;
 		}
 
 		// idempotence check
@@ -487,7 +725,26 @@ class FieldSortingFixer implements CheckstyleFixer {
 		if (replacement.equals(original))
 			return null;
 
+		// safety: verify no structural lines were lost (e.g. fields with nested generics
+		// that FIELD_PATTERN couldn't parse)
+		if (hasUnaccountedLines(original, replacement))
+			return null;
+
 		return new FixResult(startIdx, endIdx, replacement);
+	}
+
+	@CheckReturnValue
+	private static boolean hasUnaccountedLines(@Nonnull List<String> original, @Nonnull List<String> replacement) {
+		final var replacementSet = new HashSet<>(replacement);
+		for (var line : original) {
+			final var stripped = line.stripLeading();
+			if (stripped.isEmpty() || stripped.startsWith("//") || stripped.startsWith("/*")
+					|| stripped.startsWith("*") || stripped.startsWith("@"))
+				continue;
+			if (!replacementSet.contains(line) && !isSubsumedByConsolidation(stripped, replacement))
+				return true;
+		}
+		return false;
 	}
 
 	/**
@@ -542,6 +799,18 @@ class FieldSortingFixer implements CheckstyleFixer {
 			     "transient", "try", "var", "void", "volatile", "while", "yield" -> true;
 			default -> false;
 		};
+	}
+
+	private static boolean isSubsumedByConsolidation(@Nonnull String stripped, @Nonnull List<String> replacement) {
+		final var matcher = FIELD_PATTERN.matcher(stripped);
+		if (!matcher.find())
+			return false;
+		final var fieldName = matcher.group(2);
+		for (var rLine : replacement) {
+			if (containsFieldWord(rLine, fieldName))
+				return true;
+		}
+		return false;
 	}
 
 	@CheckReturnValue
@@ -775,7 +1044,8 @@ class FieldSortingFixer implements CheckstyleFixer {
 				}
 			}
 
-			fields.add(new FieldEntry(fieldName, typeName, chunk, isStatic, fieldLines, deps));
+			final var annotations = extractAnnotationKeys(fieldLines);
+			fields.add(new FieldEntry(annotations, fieldName, typeName, chunk, isStatic, fieldLines, deps));
 			i = fieldEnd + 1;
 		}
 		return fields;
@@ -1031,6 +1301,18 @@ class FieldSortingFixer implements CheckstyleFixer {
 				--delta;
 		}
 		return delta;
+	}
+
+	@CheckReturnValue
+	private static int tabExpandedLength(@Nonnull String line) {
+		var len = 0;
+		for (var i = 0; i < line.length(); ++i) {
+			if (line.charAt(i) == '\t')
+				len += 4 - (len % 4);
+			else
+				++len;
+		}
+		return len;
 	}
 
 	@CheckReturnValue

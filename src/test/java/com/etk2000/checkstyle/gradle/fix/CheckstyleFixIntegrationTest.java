@@ -62,6 +62,8 @@ public class CheckstyleFixIntegrationTest {
 		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
 		final var result = CheckstyleFixAction.doExecute(config, false, List.of(file));
 		assertEquals(1, result[0]);
+		assertEquals(1, result[1]);
+		assertEquals(1, result[2]);
 		verifyFixedOutputClean(file, Files.readString(file.toPath()), String.valueOf(Integer.MAX_VALUE), false);
 	}
 
@@ -72,7 +74,9 @@ public class CheckstyleFixIntegrationTest {
 
 		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
 		final var result = CheckstyleFixAction.doExecute(config, false, List.of(file));
-		assertTrue(result[1] > 0);
+		assertEquals(0, result[0]);
+		assertEquals(1, result[1]);
+		assertEquals(1, result[2]);
 		assertFalse(Files.readString(file.toPath()).contains(",}"));
 		verifyFixedOutputClean(file, Files.readString(file.toPath()), String.valueOf(Integer.MAX_VALUE), false);
 	}
@@ -88,7 +92,10 @@ public class CheckstyleFixIntegrationTest {
 		Files.writeString(file1.toPath(), "class T {\n\tint x = 0;\n\tint[] a = {1,};\n\tlong y = 3000000000l;\n}");
 		final var normalResult = CheckstyleFixAction.doExecute(config, false, List.of(file1));
 
-		assertEquals(normalResult[1], dryResult[1]);
+		assertEquals(3, dryResult[1]);
+		assertEquals(3, dryResult[2]);
+		assertEquals(dryResult[1], normalResult[1]);
+		assertEquals(dryResult[2], normalResult[2]);
 		verifyFixedOutputClean(file1, Files.readString(file1.toPath()), String.valueOf(Integer.MAX_VALUE), false);
 	}
 
@@ -1397,6 +1404,65 @@ public class CheckstyleFixIntegrationTest {
 				"class T {\n\tint " + a + ",\n\t\t\t" + b + ";\n}",
 				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingAnnotationConsolidation() throws Exception {
+		final var file = tempDir.resolve("FldAnnotConsol.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n"
+						+ "\t@NonNull\n\tfinal String currencyCode;\n"
+						+ "\t@Nullable\n\tfinal String engName, engSymbol;\n"
+						+ "\t@NonNull\n\tfinal String equityNumber;\n"
+						+ "\t@Nullable\n\tfinal String exchange, hebName, hebSymbol, itemType;\n"
+						+ "\t@NonNull\n\tfinal String source;\n"
+						+ "\t@Nullable\n\tfinal String stockType;\n"
+						+ "\t@NonNull\n\tfinal String subAccount, subAccountName;\n"
+						+ "\n\tT() {\n\t\tthis.currencyCode = null;\n\t\tthis.engName = null;\n"
+						+ "\t\tthis.engSymbol = null;\n\t\tthis.equityNumber = null;\n"
+						+ "\t\tthis.exchange = null;\n\t\tthis.hebName = null;\n"
+						+ "\t\tthis.hebSymbol = null;\n\t\tthis.itemType = null;\n"
+						+ "\t\tthis.source = null;\n\t\tthis.stockType = null;\n"
+						+ "\t\tthis.subAccount = null;\n\t\tthis.subAccountName = null;\n\t}\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertTrue(output.content().contains(
+				"@NonNull\n\tfinal String currencyCode, equityNumber, source, subAccount, subAccountName;\n"
+						+ "\t@Nullable\n\tfinal String engName, engSymbol, exchange, hebName, hebSymbol, itemType, stockType;"
+		));
+	}
+
+	@Test
+	public void testFieldSortingAnnotationDifferentAnnotations() throws Exception {
+		final var file = tempDir.resolve("FldAnnotDiff.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\t@SuppressWarnings(\"unused\")\n\tString beta;\n\t@Deprecated\n\tString alpha;\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\t@Deprecated\n\tString alpha;\n\t@SuppressWarnings(\"unused\")\n\tString beta;\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingAnnotationOrder() throws Exception {
+		final var file = tempDir.resolve("FldAnnot.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\t@Deprecated\n\tString annotated;\n\tString plain;\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tString plain;\n\t@Deprecated\n\tString annotated;\n}", output.content());
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}

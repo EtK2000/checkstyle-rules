@@ -89,6 +89,7 @@
 	<suppress checks="ExplicitInitialization" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="ExplicitInitialization" files="inputs[\\/]redundantsuffix[\\/]" />
 	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
+	<suppress checks="FieldSortingCheck" files="inputs[\\/]annotationsyntax[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]annotationownline[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]multilinecall[\\/]" />

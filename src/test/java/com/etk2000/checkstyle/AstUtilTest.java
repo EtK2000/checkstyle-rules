@@ -305,6 +305,56 @@ public class AstUtilTest {
 		assertEquals("Nonnull", AstUtil.annotationName(fieldAnnotation));
 	}
 
+	@Test
+	public void testCanonicalAnnotationEmptyParens() throws Exception {
+		final var ast = parseSource("@Deprecated() class T {}");
+		final var annotation = findFirst(ast, TokenTypes.ANNOTATION);
+		assertEquals("Deprecated", AstUtil.canonicalAnnotation(annotation, 50));
+	}
+
+	@Test
+	public void testCanonicalAnnotationExplicitValue() throws Exception {
+		final var ast = parseSource("class T { @SuppressWarnings(value = \"unused\") int x; }");
+		final var annotation = findFirst(findFirst(ast, TokenTypes.OBJBLOCK), TokenTypes.ANNOTATION);
+		assertEquals("SuppressWarnings(value=\"unused\")", AstUtil.canonicalAnnotation(annotation, 50));
+	}
+
+	@Test
+	public void testCanonicalAnnotationMarker() throws Exception {
+		final var ast = parseSource("class T { @Deprecated int x; }");
+		final var annotation = findFirst(findFirst(ast, TokenTypes.OBJBLOCK), TokenTypes.ANNOTATION);
+		assertEquals("Deprecated", AstUtil.canonicalAnnotation(annotation, 50));
+	}
+
+	@Test
+	public void testCanonicalAnnotationMaxDepthZero() throws Exception {
+		final var ast = parseSource("class T { @Deprecated int x; }");
+		final var annotation = findFirst(findFirst(ast, TokenTypes.OBJBLOCK), TokenTypes.ANNOTATION);
+		assertEquals("", AstUtil.canonicalAnnotation(annotation, 0));
+	}
+
+	@Test
+	public void testCanonicalAnnotationMultiParam() throws Exception {
+		final var ast = parseSource("@interface M { int b() default 0; int a() default 0; }\nclass T { @M(b = 2, a = 1) int x; }");
+		final var varDef = findFirst(ast, TokenTypes.VARIABLE_DEF);
+		final var annotation = findFirst(varDef, TokenTypes.ANNOTATION);
+		assertEquals("M(a=1,b=2)", AstUtil.canonicalAnnotation(annotation, 50));
+	}
+
+	@Test
+	public void testCanonicalAnnotationQualified() throws Exception {
+		final var ast = parseSource("class T { @java.lang.Deprecated int x; }");
+		final var annotation = findFirst(findFirst(ast, TokenTypes.OBJBLOCK), TokenTypes.ANNOTATION);
+		assertEquals("Deprecated", AstUtil.canonicalAnnotation(annotation, 50));
+	}
+
+	@Test
+	public void testCanonicalAnnotationSingleValue() throws Exception {
+		final var ast = parseSource("class T { @SuppressWarnings(\"unused\") int x; }");
+		final var annotation = findFirst(findFirst(ast, TokenTypes.OBJBLOCK), TokenTypes.ANNOTATION);
+		assertEquals("SuppressWarnings(value=\"unused\")", AstUtil.canonicalAnnotation(annotation, 50));
+	}
+
 	@ParameterizedTest
 	@ValueSource(strings = {"boolean", "byte", "char", "double", "float", "int", "int[]",
 			"int[][]", "java.util.List", "java.util.List[]", "long", "short", "String",
@@ -1424,7 +1474,7 @@ public class AstUtilTest {
 	public void testTypeTextQualified() {
 		final var objBlock = findFirst(root, TokenTypes.OBJBLOCK);
 		var varDef = objBlock.findFirstToken(TokenTypes.VARIABLE_DEF);
-		// skip to qualifiedField (4th VARIABLE_DEF: field, noAnnotationField, primitiveField, qualifiedField)
+		// skip to qualifiedField (4th VARIABLE_DEF: noAnnotationField, primitiveField, field, qualifiedField)
 		for (var i = 0; i < 3; ++i) {
 			varDef = varDef.getNextSibling();
 			while (varDef != null && varDef.getType() != TokenTypes.VARIABLE_DEF)

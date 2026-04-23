@@ -27,9 +27,11 @@ import javax.annotation.Nonnull;
  * Fields of the same type sort alphabetically by name.
  */
 public class FieldSortingCheck extends AbstractCheck {
+	private static final int MAX_ANNOTATION_DEPTH = 50;
 	private static final Set<String> PRIMITIVES = Set.of(
 			"boolean", "byte", "char", "double", "float", "int", "long", "short"
 	);
+	private static final String MSG_ANNOTATION = "field.sort.annotation";
 	private static final String MSG_ANON_CLASS = "field.sort.anon.class";
 	private static final String MSG_CHUNK = "field.sort.chunk";
 	private static final String MSG_DEPENDENCY = "field.sort.dependency";
@@ -37,6 +39,37 @@ public class FieldSortingCheck extends AbstractCheck {
 	private static final String MSG_ENUM_SAME_LINE = "field.sort.enum.same.line";
 	private static final String MSG_NAME = "field.sort.name";
 	private static final String MSG_TYPE = "field.sort.type";
+
+	@CheckReturnValue
+	@Nonnull
+	private static String annotationDescription(@Nonnull List<String> sortedKeys) {
+		if (sortedKeys.isEmpty())
+			return "unannotated";
+		final var key = sortedKeys.getFirst();
+		final var paren = key.indexOf('(');
+		var name = paren >= 0 ? key.substring(0, paren) : key;
+		final var dot = name.lastIndexOf('.');
+		if (dot >= 0)
+			name = name.substring(dot + 1);
+		return "annotated @" + name;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static List<String> annotationKeys(@Nonnull DetailAST varDef) {
+		final var modifiers = varDef.findFirstToken(TokenTypes.MODIFIERS);
+		if (modifiers == null)
+			return List.of();
+		final var keys = new ArrayList<String>();
+		for (var child = modifiers.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.ANNOTATION)
+				keys.add(AstUtil.canonicalAnnotation(child, MAX_ANNOTATION_DEPTH));
+		}
+		if (keys.isEmpty())
+			return List.of();
+		keys.sort(String.CASE_INSENSITIVE_ORDER);
+		return keys;
+	}
 
 	@CheckReturnValue
 	private static int arrayDepth(@Nonnull String typeName) {
@@ -105,6 +138,16 @@ public class FieldSortingCheck extends AbstractCheck {
 				result.add(child.getText());
 			collectIdents(child, result);
 		}
+	}
+
+	@CheckReturnValue
+	private static int compareAnnotations(@Nonnull List<String> a, @Nonnull List<String> b) {
+		for (var i = 0; i < Math.min(a.size(), b.size()); ++i) {
+			final var cmp = a.get(i).compareToIgnoreCase(b.get(i));
+			if (cmp != 0)
+				return cmp;
+		}
+		return Integer.compare(a.size(), b.size());
 	}
 
 	@CheckReturnValue
@@ -268,7 +311,24 @@ public class FieldSortingCheck extends AbstractCheck {
 			if (typeCmp > 0)
 				continue;
 
-			// same type: compare field names
+			final var prevAnnotations = annotationKeys(prev);
+			final var currAnnotations = annotationKeys(curr);
+			final var annotCmp = compareAnnotations(currAnnotations, prevAnnotations);
+
+			if (annotCmp < 0) {
+				log(
+						curr,
+						MSG_ANNOTATION,
+						currName,
+						annotationDescription(currAnnotations),
+						prevName,
+						annotationDescription(prevAnnotations)
+				);
+				continue;
+			}
+			if (annotCmp > 0)
+				continue;
+
 			if (currName.compareToIgnoreCase(prevName) < 0)
 				log(curr, MSG_NAME, currName, prevName);
 		}

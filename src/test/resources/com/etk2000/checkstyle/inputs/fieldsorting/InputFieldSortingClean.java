@@ -210,3 +210,68 @@ enum InputFieldSortingCleanSuppressedConstantBody {
 		int count;
 	}
 }
+
+@interface Ann {}
+
+@interface Bnn {}
+
+class InputFieldSortingCleanAnnotationOrder {
+	@Deprecated
+	int alpha;
+	@SuppressWarnings("unused")
+	int beta;
+
+	@Deprecated
+	long first, second;
+
+	String plain;
+	@Deprecated
+	String annotated;
+}
+
+class InputFieldSortingCleanAnnotationMulti {
+	@Ann
+	@Bnn
+	String abField;
+	@Bnn
+	String bField;
+}
+
+class InputFieldSortingCleanAnnotationConsolidated {
+	@Deprecated
+	String alpha, beta;
+	@SuppressWarnings("unused")
+	String delta, gamma;
+}
+
+class InputFieldSortingCleanAnnotationDifferentTypes {
+	@SuppressWarnings("unused")
+	int count;
+	@Deprecated
+	String name;
+}
+
+class InputFieldSortingCleanAnnotationQualified {
+	String plain;
+	@java.lang.Deprecated
+	String qualified;
+}
+
+class InputFieldSortingCleanAnnotationStatic {
+	static String plain;
+	@Deprecated
+	static String annotated;
+}
+
+@interface ParamAnn {
+	int value() default 0;
+}
+
+class InputFieldSortingCleanAnnotationParams {
+	@ParamAnn
+	int noParams;
+	@ParamAnn(1)
+	int withParam;
+	@ParamAnn(2)
+	int withOtherParam;
+}

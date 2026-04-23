@@ -86,9 +86,9 @@ class InputFieldConsolidationCleanSwappedArrayParam {
 }
 
 class InputFieldConsolidationCleanAnnotationMismatch {
+	int plain;
 	@Deprecated
 	int annotated;
-	int plain;
 }
 
 class InputFieldConsolidationCleanBlockCommentBetween {
@@ -205,9 +205,7 @@ class InputFieldConsolidationCleanNestedGenericMismatch {
 
 class InputFieldConsolidationCleanFqnAnnotation {
 	@java.lang.Deprecated
-	int alpha;
-	@Deprecated
-	int beta;
+	int alpha, beta;
 }
 
 class InputFieldConsolidationCleanUnboundedVsBounded {

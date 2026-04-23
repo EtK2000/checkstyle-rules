@@ -9,9 +9,9 @@ class InputAstUtil {
 	@interface A {}
 	@interface B {}
 
+	int noAnnotationField, primitiveField;
 	@Nonnull
 	int field;
-	int noAnnotationField, primitiveField;
 	java.util.List qualifiedField; // intentional FQN: tested by AstUtilTest.testTypeTextQualified
 
 	InputAstUtil(String ctorParam) {}

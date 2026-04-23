@@ -7,7 +7,6 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 
 import javax.annotation.CheckReturnValue;
@@ -30,7 +29,7 @@ public class FieldConsolidationCheck extends AbstractCheck {
 		if (modifiers != null) {
 			for (var child = modifiers.getFirstChild(); child != null; child = child.getNextSibling()) {
 				if (child.getType() == TokenTypes.ANNOTATION)
-					result.add(canonicalAnnotation(child, MAX_ANNOTATION_DEPTH));
+					result.add(AstUtil.canonicalAnnotation(child, MAX_ANNOTATION_DEPTH));
 			}
 		}
 		result.sort(String::compareTo);
@@ -56,57 +55,6 @@ public class FieldConsolidationCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	@Nonnull
-	private static String canonicalAnnotation(@Nonnull DetailAST annotation, int remainingDepth) {
-		if (remainingDepth <= 0)
-			return "";
-		final var sb = new StringBuilder();
-		for (var child = annotation.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.IDENT) {
-				sb.append(child.getText());
-				break;
-			}
-			if (child.getType() == TokenTypes.DOT) {
-				serializeDot(child, sb);
-				break;
-			}
-		}
-		final var params = new TreeMap<String, String>();
-		for (var child = annotation.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR) {
-				final var key = child.findFirstToken(TokenTypes.IDENT).getText();
-				var value = child.findFirstToken(TokenTypes.EXPR);
-				if (value == null)
-					value = child.findFirstToken(TokenTypes.ANNOTATION_ARRAY_INIT);
-				if (value == null)
-					value = child.findFirstToken(TokenTypes.ANNOTATION);
-				if (value != null) {
-					final var serialized = value.getType() == TokenTypes.ANNOTATION
-							? canonicalAnnotation(value, remainingDepth - 1)
-							: serializeAst(value);
-					params.put(key, serialized);
-				}
-			}
-			else if (child.getType() == TokenTypes.ANNOTATION)
-				params.put("value", canonicalAnnotation(child, remainingDepth - 1));
-			else if (child.getType() == TokenTypes.EXPR || child.getType() == TokenTypes.ANNOTATION_ARRAY_INIT)
-				params.put("value", serializeAst(child));
-		}
-		if (!params.isEmpty()) {
-			sb.append('(');
-			var first = true;
-			for (var entry : params.entrySet()) {
-				if (!first)
-					sb.append(',');
-				sb.append(entry.getKey()).append('=').append(entry.getValue());
-				first = false;
-			}
-			sb.append(')');
-		}
-		return sb.toString();
-	}
-
-	@CheckReturnValue
-	@Nonnull
 	private static String fieldName(@Nonnull DetailAST varDef) {
 		final var ident = varDef.findFirstToken(TokenTypes.IDENT);
 		return ident != null ? ident.getText() : "";
@@ -126,24 +74,13 @@ public class FieldConsolidationCheck extends AbstractCheck {
 		return result;
 	}
 
-	@CheckReturnValue
-	@Nonnull
-	private static String serializeAst(@Nonnull DetailAST ast) {
-		if (ast.getChildCount() == 0)
-			return ast.getText();
-		final var sb = new StringBuilder();
-		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
-			sb.append(serializeAst(child));
-		return sb.toString();
-	}
-
 	private static void serializeBoundChildren(@Nonnull DetailAST bounds, @Nonnull StringBuilder sb) {
 		for (var bc = bounds.getFirstChild(); bc != null; bc = bc.getNextSibling()) {
 			if (bc.getType() == TokenTypes.ANNOTATIONS) {
 				for (var ann = bc.getFirstChild(); ann != null; ann = ann.getNextSibling()) {
 					if (ann.getType() == TokenTypes.ANNOTATION) {
 						sb.append('@');
-						sb.append(canonicalAnnotation(ann, MAX_ANNOTATION_DEPTH));
+						sb.append(AstUtil.canonicalAnnotation(ann, MAX_ANNOTATION_DEPTH));
 						sb.append(' ');
 					}
 				}
@@ -182,7 +119,7 @@ public class FieldConsolidationCheck extends AbstractCheck {
 							for (var ann = tc.getFirstChild(); ann != null; ann = ann.getNextSibling()) {
 								if (ann.getType() == TokenTypes.ANNOTATION) {
 									sb.append('@');
-									sb.append(canonicalAnnotation(ann, MAX_ANNOTATION_DEPTH));
+									sb.append(AstUtil.canonicalAnnotation(ann, MAX_ANNOTATION_DEPTH));
 									sb.append(' ');
 								}
 							}

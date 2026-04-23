@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeMap;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -31,6 +32,61 @@ class AstUtil {
 			return last.getText();
 		}
 		return "";
+	}
+
+	/**
+	 * Returns a canonical string for an ANNOTATION AST node, including its
+	 * name and normalized parameters. Parameter names are sorted alphabetically
+	 * so that {@code @A(b=1, a=2)} and {@code @A(a=2, b=1)} produce the same
+	 * string. Positional values are stored under key "value".
+	 *
+	 * <p>Examples:
+	 * <ul>
+	 *   <li>{@code @Deprecated} and {@code @Deprecated()} both produce {@code "Deprecated"}</li>
+	 *   <li>{@code @A(123)} and {@code @A(value=123)} both produce {@code "A(value=123)"}</li>
+	 * </ul>
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static String canonicalAnnotation(@Nonnull DetailAST annotation, int maxDepth) {
+		if (maxDepth <= 0)
+			return "";
+		final var sb = new StringBuilder(annotationName(annotation));
+		final var params = new TreeMap<String, String>();
+		for (var child = annotation.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR) {
+				final var key = child.findFirstToken(TokenTypes.IDENT).getText();
+				var value = child.findFirstToken(TokenTypes.EXPR);
+				if (value == null)
+					value = child.findFirstToken(TokenTypes.ANNOTATION_ARRAY_INIT);
+				if (value == null)
+					value = child.findFirstToken(TokenTypes.ANNOTATION);
+				if (value != null) {
+					params.put(
+							key,
+							value.getType() == TokenTypes.ANNOTATION
+									? canonicalAnnotation(value, maxDepth - 1)
+									: serializeAst(value)
+					);
+				}
+			}
+			else if (child.getType() == TokenTypes.ANNOTATION)
+				params.put("value", canonicalAnnotation(child, maxDepth - 1));
+			else if (child.getType() == TokenTypes.EXPR || child.getType() == TokenTypes.ANNOTATION_ARRAY_INIT)
+				params.put("value", serializeAst(child));
+		}
+		if (!params.isEmpty()) {
+			sb.append('(');
+			var first = true;
+			for (var entry : params.entrySet()) {
+				if (!first)
+					sb.append(',');
+				sb.append(entry.getKey()).append('=').append(entry.getValue());
+				first = false;
+			}
+			sb.append(')');
+		}
+		return sb.toString();
 	}
 
 	/**
@@ -737,6 +793,29 @@ class AstUtil {
 			}
 		}
 		return null;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static String serializeAst(@Nonnull DetailAST ast) {
+		if (ast.getChildCount() == 0)
+			return ast.getText();
+		final var sb = new StringBuilder();
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(ast);
+		while (!stack.isEmpty()) {
+			final var node = stack.pop();
+			if (node.getChildCount() == 0) {
+				sb.append(node.getText());
+				continue;
+			}
+			final var children = new ArrayList<DetailAST>();
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+				children.add(child);
+			for (var i = children.size() - 1; i >= 0; --i)
+				stack.push(children.get(i));
+		}
+		return sb.toString();
 	}
 
 	@CheckReturnValue

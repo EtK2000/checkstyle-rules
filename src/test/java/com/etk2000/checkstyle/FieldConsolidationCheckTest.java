@@ -27,6 +27,7 @@ public class FieldConsolidationCheckTest {
 
 	@Test
 	public void testCrossCheckFieldSortingViolationsWithOurCheck() throws Exception {
+		assertTrue(BaseCheckTest.runCheck(FieldConsolidationCheck.class, SORT_DIR + "InputFieldSortingAnnotationViolation.java").isEmpty());
 		assertTrue(BaseCheckTest.runCheck(FieldConsolidationCheck.class, SORT_DIR + "InputFieldSortingAnonClassViolation.java").isEmpty());
 		assertTrue(BaseCheckTest.runCheck(FieldConsolidationCheck.class, SORT_DIR + "InputFieldSortingArrayViolation.java").isEmpty());
 		assertTrue(BaseCheckTest.runCheck(FieldConsolidationCheck.class, SORT_DIR + "InputFieldSortingChunkViolation.java").isEmpty());

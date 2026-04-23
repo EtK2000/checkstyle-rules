@@ -79,8 +79,36 @@ public class CheckstyleFixNoFixTest {
 
 		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
-		assertTrue(result[1] > 0);
+		assertEquals(0, result[0]);
+		assertEquals(1, result[1]);
+		assertEquals(1, result[2]);
 		assertEquals(original, Files.readString(file.toPath()));
+	}
+
+	@Test
+	public void doExecuteDryRunFixableButAllSkipped() throws Exception {
+		final var file = tempDir.resolve("DrySkip.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(boolean x) {\n\t\tif (x) return;\n\t}\n}");
+
+		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
+		assertEquals(0, result[0]);
+		assertEquals(0, result[1]);
+		assertEquals(1, result[2]);
+	}
+
+	@Test
+	public void doExecuteDryRunFixableCountMatchesViolations() throws Exception {
+		final var file = tempDir.resolve("DryAnnot.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\t@SuppressWarnings(\"unused\")\n\tString c;\n\t@Deprecated\n\tString b;\n\tint x = 0;\n}"
+		);
+
+		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
+		assertEquals(2, result[1]);
+		assertEquals(3, result[2]);
 	}
 
 	@Test
@@ -90,7 +118,8 @@ public class CheckstyleFixNoFixTest {
 
 		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
-		assertEquals(1, result[1]);
+		assertEquals(2, result[1]);
+		assertEquals(2, result[2]);
 	}
 
 	@Test
@@ -101,7 +130,8 @@ public class CheckstyleFixNoFixTest {
 		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
 		assertEquals(1, result[0]);
-		assertTrue(result[1] > 0);
+		assertEquals(1, result[1]);
+		assertEquals(1, result[2]);
 	}
 
 	@Test
@@ -131,22 +161,19 @@ public class CheckstyleFixNoFixTest {
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
 		assertEquals(0, result[0]);
 		assertEquals(0, result[1]);
+		assertEquals(0, result[2]);
 	}
 
 	@Test
 	public void e2eMixedFixableAndUnfixableViolations() throws Exception {
 		final var file = tempDir.resolve("E2EMixed.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tint b, a;\n\tint[] c = {1, 2,};\n}");
+		Files.writeString(file.toPath(), "class T {\n\tint[] c = {1, 2,};\n\tvoid f() {\n\t\tint a, b;\n\t}\n}");
 
 		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
 
-		final var violations = runChecks(file);
-		final var fixable = result[1];
-		final var total = violations.size();
-
-		assertTrue(fixable > 0);
-		assertTrue(total > fixable);
+		assertEquals(2, result[1]);
+		assertEquals(3, result[2]);
 	}
 
 	@Test
@@ -160,6 +187,7 @@ public class CheckstyleFixNoFixTest {
 		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(f1, f2));
 		assertEquals(2, result[1]);
+		assertEquals(2, result[2]);
 	}
 
 	@Nonnull
