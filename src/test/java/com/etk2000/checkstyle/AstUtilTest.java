@@ -1123,7 +1123,7 @@ public class AstUtilTest {
 	@Test
 	public void testLastLineMultiLine() {
 		final var method = findMethod(root, "multiLine");
-		assertTrue(AstUtil.lastLine(method) > method.getLineNo());
+		assertEquals(42, AstUtil.lastLine(method));
 	}
 
 	@Test

@@ -163,6 +163,9 @@
 		<!-- Custom: Prefer bulk operations over element-by-element loops -->
 		<module name="com.etk2000.checkstyle.PreferBulkOperationCheck" />
 
+		<!-- Custom: Use assertEquals with exact values instead of assertTrue/assertFalse with comparisons -->
+		<module name="com.etk2000.checkstyle.PreferExactAssertionCheck" />
+
 		<!-- Custom: Prefer specific API methods over generic ones -->
 		<module name="com.etk2000.checkstyle.PreferSpecificApiCheck">
 			<property name="minSdk" value="${minSdk}" />

@@ -15,6 +15,7 @@
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]constructorassign[\\/]" />
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]emptybody[\\/]" />
 	<suppress checks="EmptySwitchCheck" files="inputs[\\/]emptyswitch[\\/]" />
+	<suppress checks="PreferExactAssertionCheck" files="inputs[\\/]exactassertion[\\/]" />
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]fieldsorting[\\/]" />
@@ -66,6 +67,8 @@
 
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]preferrecord[\\/]" />
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]regex[\\/]" />
+
+	<suppress checks="PreferExactAssertionCheck" files="inputs[\\/]specificapi[\\/]" />
 
 	<!-- Cross-check suppressions: test inputs for one check that naturally use constructs violating another -->
 	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]annotationsameline[\\/]" />

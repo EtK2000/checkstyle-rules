@@ -283,6 +283,7 @@ Custom checks without auto-fix support and why.
 | MultilineCallFormattingCheck               | Reformatting argument layout across lines with context-dependent indent and grouping rules                     |
 | NoCaseBracesCheck                          | Removing braces requires scope analysis to verify no variable declarations leak                                |
 | OverloadMethodOrderCheck                   | Reordering method overloads requires moving multi-line blocks                                                  |
+| PreferExactAssertionCheck                  | No deterministic fix: the exact expected value depends on domain knowledge the tool cannot infer               |
 | PreferImportCheck                          | Replacing FQN with short name and adding import; must verify no name conflicts                                 |
 | PreferLambdaCheck                          | Structural transformation: anonymous class to lambda, must handle `this` references and field shadowing        |
 | PreferLiteralSuffixCheck                   | Replacing widening cast with literal suffix requires expression context analysis                               |
