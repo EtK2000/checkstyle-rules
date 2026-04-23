@@ -3085,10 +3085,10 @@ public class CheckstyleFixIntegrationTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"class T {\n\tvoid f() {\n\t\tfinal var result = String.join(\",\", new String[]{\"a\", \"b\"});\n\t}\n}",
+				"class T {\n\tvoid f() {\n\t\tfinal var result = String.join(\",\", \"a\", \"b\");\n\t}\n}",
 				output.content()
 		);
-		assertEquals(2, output.result().fixCount());
+		assertEquals(3, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}
 
@@ -3214,6 +3214,50 @@ public class CheckstyleFixIntegrationTest {
 				"import java.io.ByteArrayInputStream;\nclass T {\n\tvoid f() throws Exception {\n\t\ttry (var in = new ByteArrayInputStream(new byte[0])) {\n\t\t\tin.read();\n\t\t}\n\t}\n}",
 				output.content()
 		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRedundantArrayCreation() throws Exception {
+		final var file = tempDir.resolve("VarArgs.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.ArrayList;\nimport java.util.Collections;\n\nclass T {\n\tvoid f() {\n\t\tCollections.addAll(new ArrayList<>(), new String[]{\"a\", \"b\"});\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("import java.util.ArrayList;\nimport java.util.Collections;\n\nclass T {\n\tvoid f() {\n\t\tCollections.addAll(new ArrayList<>(), \"a\", \"b\");\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRedundantArrayCreationConstructor() throws Exception {
+		final var file = tempDir.resolve("VarArgsCtor.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tnew ProcessBuilder(new String[]{\"cmd\", \"arg\"});\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tvoid f() {\n\t\tnew ProcessBuilder(\"cmd\", \"arg\");\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRedundantArrayCreationEmptyArray() throws Exception {
+		final var file = tempDir.resolve("VarArgsEmpty.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.ArrayList;\nimport java.util.Collections;\n\nclass T {\n\tvoid f() {\n\t\tCollections.addAll(new ArrayList<>(), new String[]{});\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("import java.util.ArrayList;\nimport java.util.Collections;\n\nclass T {\n\tvoid f() {\n\t\tCollections.addAll(new ArrayList<>());\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRedundantArrayCreationStringJoin() throws Exception {
+		final var file = tempDir.resolve("VarArgsJoin.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f() {\n\t\tString.join(\",\", new String[]{\"a\", \"b\"});\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tvoid f() {\n\t\tString.join(\",\", \"a\", \"b\");\n\t}\n}", output.content());
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}

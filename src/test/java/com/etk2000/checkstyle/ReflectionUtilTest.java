@@ -150,6 +150,54 @@ public class ReflectionUtilTest {
 	}
 
 	@Test
+	public void testGetVarArgsComponentTypeConstructor() {
+		assertEquals(String.class, ReflectionUtil.getVarArgsComponentType("java.lang.ProcessBuilder", "new", 1));
+	}
+
+	@Test
+	public void testGetVarArgsComponentTypeNegativeArgCount() {
+		assertNull(ReflectionUtil.getVarArgsComponentType("java.util.Arrays", "asList", -1));
+	}
+
+	@Test
+	public void testGetVarArgsComponentTypeNonVarargsArrayOverloadBlocks() {
+		// Arrays.sort(int[]) is non-varargs with array last param; no competing varargs at argCount=1
+		// This tests the isArray() branch: int[].isArray() is true, so it would block if a varargs overload existed
+		// Since no varargs overload exists at argCount=1, componentType stays null and returns null
+		assertNull(ReflectionUtil.getVarArgsComponentType("java.util.Arrays", "sort", 1));
+	}
+
+	@Test
+	public void testGetVarArgsComponentTypeNonVarargsOverloadBlocks() {
+		assertNull(ReflectionUtil.getVarArgsComponentType("java.util.List", "of", 1));
+	}
+
+	@Test
+	public void testGetVarArgsComponentTypeNonVarargsOverloadNonArrayDoesNotBlock() {
+		assertEquals(CharSequence.class, ReflectionUtil.getVarArgsComponentType("java.lang.String", "join", 2));
+	}
+
+	@Test
+	public void testGetVarArgsComponentTypeUnknownClass() {
+		assertNull(ReflectionUtil.getVarArgsComponentType("com.nonexistent.FakeClass", "method", 1));
+	}
+
+	@Test
+	public void testGetVarArgsComponentTypeVarargs() {
+		assertEquals(Object.class, ReflectionUtil.getVarArgsComponentType("java.util.Arrays", "asList", 1));
+	}
+
+	@Test
+	public void testGetVarArgsComponentTypeWrongArgCount() {
+		assertNull(ReflectionUtil.getVarArgsComponentType("java.util.Arrays", "asList", 5));
+	}
+
+	@Test
+	public void testGetVarArgsComponentTypeZeroArgCount() {
+		assertNull(ReflectionUtil.getVarArgsComponentType("java.util.Arrays", "asList", 0));
+	}
+
+	@Test
 	public void testHasGenericReturnTypeClassLevelTypeParam() {
 		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.List", "get"));
 		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.List", "iterator"));

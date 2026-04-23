@@ -34,7 +34,6 @@ class ReflectionUtil {
 	// plain HashMap is fine: TreeWalker is single-threaded, append-only cache
 	private static final Map<String, Class<?>> CLASS_CACHE = new HashMap<>();
 
-	@CheckReturnValue
 	private static void collectMethodLevelTypeVars(@Nonnull Type type, @Nonnull Set<String> result) {
 		switch (type) {
 			case TypeVariable<?> tv when tv.getGenericDeclaration() instanceof Method ->
@@ -138,6 +137,55 @@ class ReflectionUtil {
 				return method.getReturnType().getName();
 		}
 		return null;
+	}
+
+	/**
+	 * If at least one public method (or constructor when {@code methodName}
+	 * is {@code "new"}) with the given name and parameter count is varargs,
+	 * and no competing non-varargs overload exists, returns the component
+	 * type of the varargs array parameter. Otherwise returns {@code null}.
+	 *
+	 * <p>A non-varargs overload "competes" only when its last parameter
+	 * can accept an array argument (e.g. {@code Object} or {@code Object[]}).
+	 * Non-varargs overloads whose last parameter cannot accept arrays
+	 * (e.g. {@code Iterable}, {@code List}) are ignored because the
+	 * compiler cannot select them when the call site passes an explicit
+	 * array.
+	 */
+	@CheckReturnValue
+	@Nullable
+	static Class<?> getVarArgsComponentType(@Nonnull String fqcn, @Nonnull String methodName, int argCount) {
+		if (argCount <= 0)
+			return null;
+
+		final var clazz = loadClass(fqcn);
+		if (clazz == null)
+			return null;
+
+		final var methods = "new".equals(methodName)
+				? clazz.getConstructors()
+				: clazz.getMethods();
+
+		Class<?> componentType = null;
+		for (var method : methods) {
+			if (!"new".equals(methodName) && !method.getName().equals(methodName))
+				continue;
+			if (method.getParameterCount() != argCount)
+				continue;
+
+			final var params = method.getParameterTypes();
+			final var lastParam = params[params.length - 1];
+			if (method.isVarArgs()) {
+				final var lastParamComponent = lastParam.getComponentType();
+				if (componentType == null)
+					componentType = lastParamComponent;
+				else if (componentType != lastParamComponent)
+					return null;
+			}
+			else if (lastParam.isArray() || lastParam.isAssignableFrom(Object[].class))
+				return null;
+		}
+		return componentType;
 	}
 
 	/**

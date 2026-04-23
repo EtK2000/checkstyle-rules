@@ -217,6 +217,9 @@
 		<!-- Custom: Flag redundant annotation syntax (@A() and @A(value = x)) -->
 		<module name="com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck" />
 
+		<!-- Custom: Flag redundant array creation for varargs calls -->
+		<module name="com.etk2000.checkstyle.RedundantArrayCreationCheck" />
+
 		<!-- Custom: Flag redundant numeric suffixes (L, f, d) -->
 		<module name="com.etk2000.checkstyle.RedundantNumericSuffixCheck" />
 

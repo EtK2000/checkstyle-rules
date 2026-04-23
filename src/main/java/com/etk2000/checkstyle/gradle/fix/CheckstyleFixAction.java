@@ -21,6 +21,7 @@ import com.etk2000.checkstyle.PreferStandardCharsetsCheck;
 import com.etk2000.checkstyle.PreferStaticImportCheck;
 import com.etk2000.checkstyle.PreferVarCheck;
 import com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck;
+import com.etk2000.checkstyle.RedundantArrayCreationCheck;
 import com.etk2000.checkstyle.RedundantNumericSuffixCheck;
 import com.puppycrawl.tools.checkstyle.Checker;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
@@ -136,6 +137,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				Map.entry(PreferStaticImportCheck.class.getName(), new PreferStaticImportFixer()),
 				Map.entry(PreferVarCheck.class.getName(), new PreferVarFixer()),
 				Map.entry(RedundantAnnotationSyntaxCheck.class.getName(), new RedundantAnnotationSyntaxFixer()),
+				Map.entry(RedundantArrayCreationCheck.class.getName(), new RedundantArrayCreationFixer()),
 				Map.entry(RedundantImportCheck.class.getName(), deleteLineFixer),
 				Map.entry(RedundantModifierCheck.class.getName(), modifierFixer),
 				Map.entry(RedundantNumericSuffixCheck.class.getName(), new RedundantNumericSuffixFixer()),

@@ -31,6 +31,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | PreferStaticImportCheck                  | PreferStaticImportFixer            | Strips `Class.` prefix from a qualified call and adds an `import static <fqcn>.<method>;`                                                                                   |
 | PreferVarCheck                           | PreferVarFixer                     | Replaces type with `var`; converts explicit array init to implicit; replaces `<Object>` with `<>`                                                                           |
 | RedundantAnnotationSyntaxCheck           | RedundantAnnotationSyntaxFixer     | Removes `()` or `value =`                                                                                                                                                   |
+| RedundantArrayCreationCheck              | RedundantArrayCreationFixer        | Removes `new Type[]{...}` wrapper, extracts elements directly; removes empty array with preceding comma                                                                     |
 | RedundantImportCheck                     | DeleteLineFixer                    | Deletes import line                                                                                                                                                         |
 | RedundantModifierCheck                   | RedundantModifierFixer             | Removes redundant modifier keyword                                                                                                                                          |
 | RedundantNumericSuffixCheck              | RedundantNumericSuffixFixer        | Removes redundant `L`/`f`/`d` suffix                                                                                                                                        |
@@ -170,6 +171,42 @@ returning null (skipping) for patterns that require structural changes.
 | `.get(size() - 1)`    | `.getLast()`     | No (requires receiver match verify) |
 | `.remove(0)`          | `.removeFirst()` | Yes                                 |
 | `.remove(size() - 1)` | `.removeLast()`  | No (requires receiver match verify) |
+
+## RedundantArrayCreationCheck sub-rules
+
+The fixer removes `new Type[]{...}` and replaces it with the elements directly. For empty arrays,
+it also removes the preceding comma if one exists.
+
+### Supported (auto-fixable)
+
+| Pattern                                                | Fix                 | Notes                             |
+|--------------------------------------------------------|---------------------|-----------------------------------|
+| `method(new Type[]{"a", "b"})`                         | `method("a", "b")`  | Only argument                     |
+| `method(arg, new Type[]{"a"})`                         | `method(arg, "a")`  | Last argument with preceding args |
+| `method(new Type[]{})`                                 | `method()`          | Empty array, only argument        |
+| `method(arg, new Type[]{})`                            | `method(arg)`       | Empty array, removes comma        |
+| `new Ctor(new Type[]{"a"})`                            | `new Ctor("a")`     | Constructor varargs               |
+| Elements with nested parens (`foo(1, 2)` inside array) | Correctly extracted | Paren-balanced parsing            |
+| String literals with braces (`"a{b}"` inside array)    | Correctly extracted | String/char literal awareness     |
+
+### Not supported (check fires, fixer returns null)
+
+| Pattern                                           | Reason                                                      |
+|---------------------------------------------------|-------------------------------------------------------------|
+| Multiline array creation (`new Type[]{\n...\n}`)  | Closing `}` not on the same line as opening `{`             |
+| Opening `{` on a different line than `new`        | `line.indexOf('{', column)` returns -1                      |
+| Statically imported varargs (`asList(new T[]{})`) | Check does not fire (no receiver to resolve via reflection) |
+
+### Not flagged by check (correct behavior, not a limitation)
+
+| Pattern                                              | Reason                                                       |
+|------------------------------------------------------|--------------------------------------------------------------|
+| `List.of(new Object[]{"a"})` (non-varargs overload)  | `List.of(E)` is non-varargs with `Object` last param, blocks |
+| `List.of(new int[]{1})` (primitive to reference)     | Removing wrapper would change autoboxing behavior            |
+| `(Object) new String[]{"a"}` (cast wrapping)         | Last arg is TYPECAST, not LITERAL_NEW                        |
+| `(CharSequence[]) new String[]{"a"}` (cast wrapping) | Last arg is TYPECAST, not LITERAL_NEW                        |
+| `method(existingArrayVar)` (variable, not `new`)     | Not an explicit array creation                               |
+| `method(new Type[5])` (explicit size, no init)       | No ARRAY_INIT child on LITERAL_NEW                           |
 
 ## LambdaParameterTypeCheck sub-rules
 
@@ -321,6 +358,8 @@ pattern the fixer intentionally skips because it cannot safely transform the cod
 | FieldConsolidationFixer        | C-style array type mismatch between fields         | null: `int[] a` and `int b` can't merge to one declaration safely                      |
 | AnnotationOwnLineFixer         | Annotation already on own line, just needs sorting | null when already in correct order                                                     |
 | AnnotationSameLineFixer        | Annotation block reaches end of file               | null: no declaration found to join annotations onto                                    |
+| RedundantArrayCreationFixer    | Multiline array creation                           | null: closing `}` not on the same line as opening `{`                                  |
+| RedundantArrayCreationFixer    | No `{` found on the violation line                 | null: opening brace on a different line than `new`                                     |
 
 ## Future fix opportunities
 
