@@ -24,6 +24,7 @@ class FieldSortingFixer implements CheckstyleFixer {
 			@Nonnull List<String> annotations,
 			@Nonnull String name,
 			@Nonnull String typeName,
+			@Nonnull List<List<String>> typeArgAnnotations,
 			int chunk,
 			boolean isStatic,
 			@Nonnull List<String> lines,
@@ -34,7 +35,7 @@ class FieldSortingFixer implements CheckstyleFixer {
 
 	private static final int MAX_LINE_LENGTH = 120;
 	private static final Pattern FIELD_PATTERN = Pattern.compile(
-			"^\\s*(?:(?:@\\w+(?:\\([^)]*\\))?\\s+)*)"
+			"^\\s*(?:(?:@\\w+(?:\\([^()]*(?:\\([^()]*\\)[^()]*)*\\))?\\s+)*)"
 					+ "(?:(?:public|private|protected|static|final|transient|volatile)\\s+)*"
 					+ "((?:boolean|byte|char|double|float|int|long|short|(?:\\w+\\.)*[A-Z]\\w*)(?:<[^>]*>)?(?:\\[\\])*)"
 					+ "\\s+(\\w+)"
@@ -99,6 +100,7 @@ class FieldSortingFixer implements CheckstyleFixer {
 		return candidate.chunk == base.chunk
 				&& candidate.typeName.equals(base.typeName)
 				&& candidate.annotations.equals(base.annotations)
+				&& candidate.typeArgAnnotations.equals(base.typeArgAnnotations)
 				&& canConsolidate(candidate)
 				&& candidate.dependencies.isEmpty()
 				&& base.dependencies.isEmpty();
@@ -125,6 +127,18 @@ class FieldSortingFixer implements CheckstyleFixer {
 		if (aBase.equals(bBase))
 			return Integer.compare(arrayDepthOf(a), arrayDepthOf(b));
 		return aBase.compareToIgnoreCase(bBase);
+	}
+
+	@CheckReturnValue
+	private static int compareTypeArgAnnotations(
+			@Nonnull List<List<String>> a, @Nonnull List<List<String>> b
+	) {
+		for (var i = 0; i < Math.min(a.size(), b.size()); ++i) {
+			final var cmp = compareAnnotations(a.get(i), b.get(i));
+			if (cmp != 0)
+				return cmp;
+		}
+		return Integer.compare(a.size(), b.size());
 	}
 
 	@CheckReturnValue
@@ -288,6 +302,8 @@ class FieldSortingFixer implements CheckstyleFixer {
 	@Nonnull
 	private static List<String> extractAnnotationKeys(@Nonnull List<String> fieldLines) {
 		final var keys = new ArrayList<String>();
+		var angleDepth = 0;
+		var inTextBlock = false;
 		for (var line : fieldLines) {
 			final var stripped = line.stripLeading();
 			var pos = 0;
@@ -295,6 +311,16 @@ class FieldSortingFixer implements CheckstyleFixer {
 			var inChar = false;
 			while (pos < stripped.length()) {
 				final var c = stripped.charAt(pos);
+				if (inTextBlock) {
+					if (c == '"' && !isEscaped(stripped, pos) && pos + 2 < stripped.length()
+							&& stripped.charAt(pos + 1) == '"' && stripped.charAt(pos + 2) == '"') {
+						inTextBlock = false;
+						pos += 3;
+					}
+					else
+						++pos;
+					continue;
+				}
 				if (inString) {
 					if (c == '"' && !isEscaped(stripped, pos))
 						inString = false;
@@ -308,8 +334,15 @@ class FieldSortingFixer implements CheckstyleFixer {
 					continue;
 				}
 				if (c == '"') {
-					inString = true;
-					++pos;
+					if (pos + 2 < stripped.length()
+							&& stripped.charAt(pos + 1) == '"' && stripped.charAt(pos + 2) == '"') {
+						inTextBlock = true;
+						pos += 3;
+					}
+					else {
+						inString = true;
+						++pos;
+					}
 					continue;
 				}
 				if (c == '\'') {
@@ -324,7 +357,19 @@ class FieldSortingFixer implements CheckstyleFixer {
 					pos = end >= 0 ? end + 2 : stripped.length();
 					continue;
 				}
-				if (c != '@') {
+				if (c == '<') {
+					++angleDepth;
+					++pos;
+					continue;
+				}
+				if (c == '>') {
+					--angleDepth;
+					++pos;
+					continue;
+				}
+				if (c == '=' && angleDepth <= 0)
+					break;
+				if (c != '@' || angleDepth > 0) {
 					++pos;
 					continue;
 				}
@@ -439,6 +484,81 @@ class FieldSortingFixer implements CheckstyleFixer {
 	}
 
 	@CheckReturnValue
+	@Nonnull
+	private static List<List<String>> extractTypeArgAnnotationKeys(@Nonnull String typeName) {
+		final var angleStart = typeName.indexOf('<');
+		final var angleEnd = typeName.lastIndexOf('>');
+		if (angleStart < 0 || angleEnd <= angleStart)
+			return List.of();
+
+		final var inner = typeName.substring(angleStart + 1, angleEnd);
+
+		final var args = new ArrayList<String>();
+		var depth = 0;
+		var start = 0;
+		for (var i = 0; i < inner.length(); ++i) {
+			final var c = inner.charAt(i);
+			if (c == '(' || c == '<')
+				++depth;
+			else if (c == ')' || c == '>')
+				--depth;
+			else if (c == ',' && depth == 0) {
+				args.add(inner.substring(start, i).strip());
+				start = i + 1;
+			}
+		}
+		args.add(inner.substring(start).strip());
+
+		final var result = new ArrayList<List<String>>();
+		for (var arg : args) {
+			final var keys = new ArrayList<String>();
+			var pos = 0;
+			while (pos < arg.length()) {
+				if (arg.charAt(pos) != '@') {
+					++pos;
+					continue;
+				}
+				var nameEnd = pos + 1;
+				while (nameEnd < arg.length()
+						&& (Character.isJavaIdentifierPart(arg.charAt(nameEnd)) || arg.charAt(nameEnd) == '.'))
+					++nameEnd;
+				if (nameEnd <= pos + 1) {
+					++pos;
+					continue;
+				}
+				final var fullName = arg.substring(pos + 1, nameEnd);
+				final var dotIdx = fullName.lastIndexOf('.');
+				final var simpleName = dotIdx >= 0 ? fullName.substring(dotIdx + 1) : fullName;
+				if (simpleName.isEmpty() || !Character.isUpperCase(simpleName.charAt(0))) {
+					pos = nameEnd;
+					continue;
+				}
+				final var sb = new StringBuilder(simpleName);
+				var afterName = nameEnd;
+				while (afterName < arg.length() && arg.charAt(afterName) <= ' ')
+					++afterName;
+				if (afterName < arg.length() && arg.charAt(afterName) == '(') {
+					final var paramsText = extractParenBalanced(arg, afterName);
+					if (paramsText != null && !paramsText.equals("()")) {
+						final var paramInner = paramsText.substring(1, paramsText.length() - 1).strip();
+						if (!paramInner.contains("="))
+							sb.append("(value=").append(paramInner).append(')');
+						else
+							sb.append(paramsText);
+					}
+					pos = afterName + (paramsText != null ? paramsText.length() : 1);
+				}
+				else
+					pos = nameEnd;
+				keys.add(sb.toString());
+			}
+			keys.sort(String.CASE_INSENSITIVE_ORDER);
+			result.add(keys);
+		}
+		return result;
+	}
+
+	@CheckReturnValue
 	private static int fieldChunk(@Nonnull String declLine) {
 		final var prefix = declPrefix(declLine.stripLeading());
 		final var hasFinal = containsFieldWord(prefix, "final");
@@ -457,6 +577,7 @@ class FieldSortingFixer implements CheckstyleFixer {
 		var depth = 1;
 		var inBlockComment = false;
 		var inString = false;
+		var inTextBlock = false;
 		var inChar = false;
 		for (var i = afterOpen; i < lines.size(); ++i) {
 			final var line = lines.get(i);
@@ -469,6 +590,14 @@ class FieldSortingFixer implements CheckstyleFixer {
 					}
 					continue;
 				}
+				if (inTextBlock) {
+					if (c == '"' && !isEscaped(line, j) && j + 2 < line.length()
+							&& line.charAt(j + 1) == '"' && line.charAt(j + 2) == '"') {
+						inTextBlock = false;
+						j += 2;
+					}
+					continue;
+				}
 				if (inString) {
 					if (c == '"' && !isEscaped(line, j))
 						inString = false;
@@ -477,8 +606,14 @@ class FieldSortingFixer implements CheckstyleFixer {
 					if (c == '\'' && !isEscaped(line, j))
 						inChar = false;
 				}
-				else if (c == '"')
-					inString = true;
+				else if (c == '"') {
+					if (j + 2 < line.length() && line.charAt(j + 1) == '"' && line.charAt(j + 2) == '"') {
+						inTextBlock = true;
+						j += 2;
+					}
+					else
+						inString = true;
+				}
 				else if (c == '\'')
 					inChar = true;
 				else if (c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '/')
@@ -608,6 +743,7 @@ class FieldSortingFixer implements CheckstyleFixer {
 				.comparingInt(FieldEntry::chunk)
 				.thenComparing(FieldEntry::typeName, FieldSortingFixer::compareFieldTypes)
 				.thenComparing(FieldEntry::annotations, FieldSortingFixer::compareAnnotations)
+				.thenComparing(FieldEntry::typeArgAnnotations, FieldSortingFixer::compareTypeArgAnnotations)
 				.thenComparing(FieldEntry::name, String.CASE_INSENSITIVE_ORDER));
 
 		// apply dependency adjustments, with cycle guard
@@ -984,9 +1120,15 @@ class FieldSortingFixer implements CheckstyleFixer {
 			// skip enum constants, methods, constructors, inner classes, static/instance init blocks
 			// check for ( only in the non-annotation part of the line to avoid
 			// skipping fields with inline annotations like @SuppressWarnings("unchecked") int x;
-			final var afterAnnotations = stripped.startsWith("@")
-					? stripped.replaceAll("^(?:@\\w+(?:\\([^)]*\\))?\\s*)+", "")
+			var afterAnnotations = stripped.startsWith("@")
+					? stripped.replaceAll("^(?:@\\w+(?:\\([^()]*(?:\\([^()]*\\)[^()]*)*\\))?\\s*)+", "")
 					: stripped;
+			final var angleIdx = afterAnnotations.indexOf('<');
+			if (angleIdx >= 0) {
+				final var closeIdx = afterAnnotations.indexOf('>', angleIdx);
+				if (closeIdx >= 0)
+					afterAnnotations = afterAnnotations.substring(0, angleIdx) + afterAnnotations.substring(closeIdx + 1);
+			}
 			if (stripped.startsWith("enum ") || stripped.startsWith("class ")
 					|| stripped.startsWith("interface ") || stripped.startsWith("record ")
 					|| afterAnnotations.contains("(") && !stripped.contains("=")
@@ -1045,7 +1187,8 @@ class FieldSortingFixer implements CheckstyleFixer {
 			}
 
 			final var annotations = extractAnnotationKeys(fieldLines);
-			fields.add(new FieldEntry(annotations, fieldName, typeName, chunk, isStatic, fieldLines, deps));
+			final var typeArgAnnotations = extractTypeArgAnnotationKeys(typeName);
+			fields.add(new FieldEntry(annotations, fieldName, typeName, typeArgAnnotations, chunk, isStatic, fieldLines, deps));
 			i = fieldEnd + 1;
 		}
 		return fields;
@@ -1146,6 +1289,7 @@ class FieldSortingFixer implements CheckstyleFixer {
 		var braceDepth = 0;
 		var inBlockComment = false;
 		var inString = false;
+		var inTextBlock = false;
 		var inChar = false;
 		for (var i = startIdx; i < limit; ++i) {
 			final var line = lines.get(i);
@@ -1158,6 +1302,14 @@ class FieldSortingFixer implements CheckstyleFixer {
 					}
 					continue;
 				}
+				if (inTextBlock) {
+					if (c == '"' && !isEscaped(line, j) && j + 2 < line.length()
+							&& line.charAt(j + 1) == '"' && line.charAt(j + 2) == '"') {
+						inTextBlock = false;
+						j += 2;
+					}
+					continue;
+				}
 				if (inString) {
 					if (c == '"' && !isEscaped(line, j))
 						inString = false;
@@ -1166,8 +1318,14 @@ class FieldSortingFixer implements CheckstyleFixer {
 					if (c == '\'' && !isEscaped(line, j))
 						inChar = false;
 				}
-				else if (c == '"')
-					inString = true;
+				else if (c == '"') {
+					if (j + 2 < line.length() && line.charAt(j + 1) == '"' && line.charAt(j + 2) == '"') {
+						inTextBlock = true;
+						j += 2;
+					}
+					else
+						inString = true;
+				}
 				else if (c == '\'')
 					inChar = true;
 				else if (c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '/')

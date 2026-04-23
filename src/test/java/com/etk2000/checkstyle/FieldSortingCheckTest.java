@@ -174,6 +174,46 @@ public class FieldSortingCheckTest {
 	}
 
 	@Test
+	public void testTypeArgAnnotationViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingTypeArgAnnotationViolation.java");
+		assertEquals(11, violations.size());
+		var i = 0;
+		assertEquals(12, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'plain' (type argument unannotated) must appear before 'annotated' (type argument annotated @TAnnA), same type.", violations.get(i++).getMessage());
+		assertEquals(17, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'aField' (type argument annotated @TAnnA) must appear before 'bField' (type argument annotated @TAnnB), same type.", violations.get(i++).getMessage());
+		assertEquals(22, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'oneAnn' (type argument annotated @TAnnA) must appear before 'twoAnns' (type argument annotated @TAnnA), same type.", violations.get(i++).getMessage());
+		assertEquals(27, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'plain' (type argument unannotated) must appear before 'annotated' (type argument annotated @TAnnA), same type.", violations.get(i++).getMessage());
+		assertEquals(32, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'firstArgUnannotated' (type argument unannotated) must appear before 'firstArgAnnotated' (type argument annotated @TAnnA), same type.", violations.get(i++).getMessage());
+		assertEquals(37, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'aField' (type argument annotated @TAnnA) must appear before 'bField' (type argument annotated @TAnnB), same type.", violations.get(i++).getMessage());
+		assertEquals(46, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'lower' (type argument annotated @TAnnParam) must appear before 'higher' (type argument annotated @TAnnParam), same type.", violations.get(i++).getMessage());
+		assertEquals(52, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'plain' (type argument unannotated) must appear before 'annotated' (type argument annotated @TAnnA), same type.", violations.get(i++).getMessage());
+		assertEquals(57, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'aField' (type argument annotated @TAnnA) must appear before 'bField' (type argument annotated @TAnnB), same type.", violations.get(i++).getMessage());
+		assertEquals(62, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'aField' (type argument annotated @TAnnA) must appear before 'bField' (type argument annotated @TAnnB), same type.", violations.get(i++).getMessage());
+		assertEquals(68, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Field 'alpha' must appear before 'zebra' (alphabetical order, same type).", violations.get(i++).getMessage());
+	}
+
+	@Test
 	public void testTypeViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(FieldSortingCheck.class, DIR + "InputFieldSortingTypeViolation.java");
 		assertEquals(2, violations.size());

@@ -13,7 +13,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | ControlFlowBracesCheck                   | ControlFlowBracesFixer             | Do-while: removes unnecessary braces, fixes one-liners, adds missing braces. Non-do-while: adds braces to multi-line braceless bodies                                       |
 | ExplicitInitializationCheck              | ExplicitInitializationFixer        | Removes `= 0`/`= null`/`= false` etc.                                                                                                                                       |
 | FieldConsolidationCheck                  | FieldConsolidationFixer            | Merges consecutive same-type fields; wraps across lines if >120 chars. See [C-style arrays](c-style-array-fixer.md) and [limitations](#fieldconsolidationfixer-limitations) |
-| FieldSortingCheck                        | FieldSortingFixer                  | Enum constants: sorts alphabetically, splits same-line. Fields: sorts by chunk, type (primitives first), name; handles dependencies                                         |
+| FieldSortingCheck                        | FieldSortingFixer                  | Enum constants: sorts alphabetically, splits same-line. Fields: sorts by chunk, type (primitives first), annotations, type-arg annotations, name; handles dependencies      |
 | FinalLocalVariableCheck                  | FinalLocalVariableFixer            | Adds `final` keyword                                                                                                                                                        |
 | LambdaParameterTypeCheck                 | LambdaParameterTypeFixer           | See sub-rules below                                                                                                                                                         |
 | NoArrayTrailingCommaCheck                | NoArrayTrailingCommaFixer          | Removes trailing comma                                                                                                                                                      |
@@ -277,24 +277,26 @@ main table).
 The fixer parses field declarations in a class body and sorts them by the check's rules.
 Enum constant sorting is handled separately (see main table).
 
-| Violation type              | Input pattern                                      | Auto-fix | Notes                                                   |
-|-----------------------------|----------------------------------------------------|----------|---------------------------------------------------------|
-| Chunk order                 | Non-final before final-with-value                  | Yes      | Adds blank lines between chunks                         |
-| Type order (prim vs ref)    | `String name` before `int count`                   | Yes      | Primitives sort before reference types                  |
-| Type order (alphabetical)   | `String` before `int` (same chunk)                 | Yes      | Alphabetical by base type name                          |
-| Array depth                 | `int[]` before `int`                               | Yes      | Base type first, then arrays                            |
-| Annotation order            | `@Nullable String` before `@NonNull String`        | Yes      | Unannotated first, then by canonical annotation key     |
-| Annotation consolidation    | Same-type same-annotation fields on separate lines | Yes      | Merges into single declaration after sorting            |
-| Name order                  | `int z` before `int a` (same type)                 | Yes      | Case-insensitive alphabetical                           |
-| Field dependencies          | `B = A + 1` before `A = 0`                         | Yes      | Respects dependency: A before B if B uses A             |
-| Multi-line initializers     | Fields with anonymous class or lambda init         | Yes      | Tracks brace/paren depth for field end                  |
-| Annotated fields            | Fields with `@Deprecated` etc. above               | Yes      | Annotation lines move with their field                  |
-| Circular dependencies       | `A = B + 1; B = A + 1`                             | No       | Max-iteration guard stops the loop; best-effort order   |
-| Unparseable field pattern   | Complex generics, multi-variable declarations      | No       | Returns null if FIELD_PATTERN doesn't match             |
-| Anonymous class initializer | anon.class field must come before non-anon         | No       | Not implemented in fixer sorting                        |
-| Text blocks in initializers | Field with `"""` initializer containing `{}`       | No       | String parser doesn't handle text blocks                |
-| Nested generics in type     | `Map<String, List<Integer>>` field                 | No       | `[^>]*` in FIELD_PATTERN stops at first `>`             |
-| Inline annotation with `()` | `@SuppressWarnings(")")` in field value            | No       | Annotation parser doesn't track string literals in args |
+| Violation type              | Input pattern                                                  | Auto-fix | Notes                                                                                                                                                               |
+|-----------------------------|----------------------------------------------------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Chunk order                 | Non-final before final-with-value                              | Yes      | Adds blank lines between chunks                                                                                                                                     |
+| Type order (prim vs ref)    | `String name` before `int count`                               | Yes      | Primitives sort before reference types                                                                                                                              |
+| Type order (alphabetical)   | `String` before `int` (same chunk)                             | Yes      | Alphabetical by base type name                                                                                                                                      |
+| Array depth                 | `int[]` before `int`                                           | Yes      | Base type first, then arrays                                                                                                                                        |
+| Annotation order            | `@Nullable String` before `@NonNull String`                    | Yes      | Unannotated first, then by canonical annotation key                                                                                                                 |
+| Type-arg annotation order   | `List<@B String>` before `List<@A String>`                     | Yes      | Position-aware: compares type arguments left to right, unannotated before annotated, then alphabetical. Extracts annotations from `<...>` in the captured type name |
+| Annotation consolidation    | Same-type same-annotation fields on separate lines             | Yes      | Merges into single declaration after sorting                                                                                                                        |
+| Name order                  | `int z` before `int a` (same type)                             | Yes      | Case-insensitive alphabetical                                                                                                                                       |
+| Field dependencies          | `B = A + 1` before `A = 0`                                     | Yes      | Respects dependency: A before B if B uses A                                                                                                                         |
+| Multi-line initializers     | Fields with anonymous class or lambda init                     | Yes      | Tracks brace/paren depth for field end                                                                                                                              |
+| Annotated fields            | Fields with `@Deprecated` etc. above                           | Yes      | Annotation lines move with their field                                                                                                                              |
+| Circular dependencies       | `A = B + 1; B = A + 1`                                         | No       | Max-iteration guard stops the loop; best-effort order                                                                                                               |
+| Unparseable field pattern   | Complex generics, multi-variable declarations                  | No       | Returns null if FIELD_PATTERN doesn't match                                                                                                                         |
+| Anonymous class initializer | anon.class field must come before non-anon                     | No       | Not implemented in fixer sorting                                                                                                                                    |
+| Text blocks in initializers | Field with `"""` initializer containing `{}`                   | No       | String parser doesn't handle text blocks                                                                                                                            |
+| Nested generics in type     | `Map<String, List<Integer>>` field                             | No       | `[^>]*` in FIELD_PATTERN stops at first `>`                                                                                                                         |
+| Wildcard bound annotations  | `List<? extends @B Number>` before `List<? extends @A Number>` | Yes      | Collects annotations from TYPE_UPPER_BOUNDS/TYPE_LOWER_BOUNDS; fixer scans full type arg text                                                                       |
+| Inline annotation with `()` | `@SuppressWarnings(")")` in field value                        | No       | Annotation parser doesn't track string literals in args                                                                                                             |
 
 ## Regex checks without fixers
 

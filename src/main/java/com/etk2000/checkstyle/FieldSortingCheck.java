@@ -40,18 +40,22 @@ public class FieldSortingCheck extends AbstractCheck {
 	private static final String MSG_NAME = "field.sort.name";
 	private static final String MSG_TYPE = "field.sort.type";
 
+	private static void addAnnotationsFrom(@Nonnull DetailAST parent, @Nonnull List<String> keys) {
+		final var annotations = parent.findFirstToken(TokenTypes.ANNOTATIONS);
+		if (annotations == null)
+			return;
+		for (var ann = annotations.getFirstChild(); ann != null; ann = ann.getNextSibling()) {
+			if (ann.getType() == TokenTypes.ANNOTATION)
+				keys.add(AstUtil.canonicalAnnotation(ann, MAX_ANNOTATION_DEPTH));
+		}
+	}
+
 	@CheckReturnValue
 	@Nonnull
 	private static String annotationDescription(@Nonnull List<String> sortedKeys) {
 		if (sortedKeys.isEmpty())
 			return "unannotated";
-		final var key = sortedKeys.getFirst();
-		final var paren = key.indexOf('(');
-		var name = paren >= 0 ? key.substring(0, paren) : key;
-		final var dot = name.lastIndexOf('.');
-		if (dot >= 0)
-			name = name.substring(dot + 1);
-		return "annotated @" + name;
+		return "annotated @" + annotationSimpleName(sortedKeys.getFirst());
 	}
 
 	@CheckReturnValue
@@ -69,6 +73,17 @@ public class FieldSortingCheck extends AbstractCheck {
 			return List.of();
 		keys.sort(String.CASE_INSENSITIVE_ORDER);
 		return keys;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static String annotationSimpleName(@Nonnull String canonicalKey) {
+		final var paren = canonicalKey.indexOf('(');
+		var name = paren >= 0 ? canonicalKey.substring(0, paren) : canonicalKey;
+		final var dot = name.lastIndexOf('.');
+		if (dot >= 0)
+			name = name.substring(dot + 1);
+		return name;
 	}
 
 	@CheckReturnValue
@@ -151,6 +166,18 @@ public class FieldSortingCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
+	private static int compareTypeArgAnnotations(
+			@Nonnull List<List<String>> a, @Nonnull List<List<String>> b
+	) {
+		for (var i = 0; i < Math.min(a.size(), b.size()); ++i) {
+			final var cmp = compareAnnotations(a.get(i), b.get(i));
+			if (cmp != 0)
+				return cmp;
+		}
+		return Integer.compare(a.size(), b.size());
+	}
+
+	@CheckReturnValue
 	private static int compareTypes(@Nonnull String a, @Nonnull String b) {
 		final var aBase = baseType(a);
 		final var bBase = baseType(b);
@@ -220,6 +247,61 @@ public class FieldSortingCheck extends AbstractCheck {
 	private static boolean isStatic(@Nonnull DetailAST varDef) {
 		final var modifiers = varDef.findFirstToken(TokenTypes.MODIFIERS);
 		return modifiers != null && modifiers.findFirstToken(TokenTypes.LITERAL_STATIC) != null;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static String typeArgAnnotationDescription(@Nonnull List<String> sortedKeys) {
+		if (sortedKeys.isEmpty())
+			return "type argument unannotated";
+		return "type argument annotated @" + annotationSimpleName(sortedKeys.getFirst());
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static List<List<String>> typeArgAnnotationKeys(@Nonnull DetailAST varDef) {
+		final var type = varDef.findFirstToken(TokenTypes.TYPE);
+		if (type == null)
+			return List.of();
+
+		var baseAst = type.getFirstChild();
+		while (baseAst != null && baseAst.getType() == TokenTypes.ARRAY_DECLARATOR)
+			baseAst = baseAst.getFirstChild();
+		if (baseAst == null)
+			return List.of();
+
+		DetailAST typeArgs = null;
+		for (var sibling = baseAst.getNextSibling(); sibling != null; sibling = sibling.getNextSibling()) {
+			if (sibling.getType() == TokenTypes.TYPE_ARGUMENTS) {
+				typeArgs = sibling;
+				break;
+			}
+		}
+		if (typeArgs == null && baseAst.getType() == TokenTypes.DOT)
+			typeArgs = baseAst.findFirstToken(TokenTypes.TYPE_ARGUMENTS);
+
+		if (typeArgs == null)
+			return List.of();
+
+		final var result = new ArrayList<List<String>>();
+		for (var child = typeArgs.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() != TokenTypes.TYPE_ARGUMENT)
+				continue;
+			final var keys = new ArrayList<String>();
+			addAnnotationsFrom(child, keys);
+			for (var tc = child.getFirstChild(); tc != null; tc = tc.getNextSibling()) {
+				if (tc.getType() == TokenTypes.TYPE_UPPER_BOUNDS
+						|| tc.getType() == TokenTypes.TYPE_LOWER_BOUNDS)
+					addAnnotationsFrom(tc, keys);
+			}
+			if (keys.isEmpty())
+				result.add(List.of());
+			else {
+				keys.sort(String.CASE_INSENSITIVE_ORDER);
+				result.add(keys);
+			}
+		}
+		return result;
 	}
 
 	@CheckReturnValue
@@ -327,6 +409,35 @@ public class FieldSortingCheck extends AbstractCheck {
 				continue;
 			}
 			if (annotCmp > 0)
+				continue;
+
+			final var prevTypeArgAnns = typeArgAnnotationKeys(prev);
+			final var currTypeArgAnns = typeArgAnnotationKeys(curr);
+			final var typeArgAnnotCmp = compareTypeArgAnnotations(currTypeArgAnns, prevTypeArgAnns);
+
+			if (typeArgAnnotCmp < 0) {
+				var diffPos = Math.min(currTypeArgAnns.size(), prevTypeArgAnns.size());
+				for (var j = 0; j < diffPos; ++j) {
+					if (compareAnnotations(currTypeArgAnns.get(j), prevTypeArgAnns.get(j)) != 0) {
+						diffPos = j;
+						break;
+					}
+				}
+				final var currAnnsAtPos = diffPos < currTypeArgAnns.size()
+						? currTypeArgAnns.get(diffPos) : List.<String>of();
+				final var prevAnnsAtPos = diffPos < prevTypeArgAnns.size()
+						? prevTypeArgAnns.get(diffPos) : List.<String>of();
+				log(
+						curr,
+						MSG_ANNOTATION,
+						currName,
+						typeArgAnnotationDescription(currAnnsAtPos),
+						prevName,
+						typeArgAnnotationDescription(prevAnnsAtPos)
+				);
+				continue;
+			}
+			if (typeArgAnnotCmp > 0)
 				continue;
 
 			if (currName.compareToIgnoreCase(prevName) < 0)

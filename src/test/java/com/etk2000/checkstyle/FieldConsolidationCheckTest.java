@@ -36,6 +36,7 @@ public class FieldConsolidationCheckTest {
 		assertTrue(BaseCheckTest.runCheck(FieldConsolidationCheck.class, SORT_DIR + "InputFieldSortingEnumSameLineViolation.java").isEmpty());
 		assertTrue(BaseCheckTest.runCheck(FieldConsolidationCheck.class, SORT_DIR + "InputFieldSortingNameViolation.java").isEmpty());
 		assertTrue(BaseCheckTest.runCheck(FieldConsolidationCheck.class, SORT_DIR + "InputFieldSortingTypeViolation.java").isEmpty());
+		assertTrue(BaseCheckTest.runCheck(FieldConsolidationCheck.class, SORT_DIR + "InputFieldSortingTypeArgAnnotationViolation.java").isEmpty());
 	}
 
 	@Test
@@ -55,7 +56,7 @@ public class FieldConsolidationCheckTest {
 	@Test
 	public void testViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(FieldConsolidationCheck.class, DIR + "InputFieldConsolidationViolation.java");
-		assertEquals(44, violations.size());
+		assertEquals(45, violations.size());
 		var i = 0;
 
 		assertEquals(13, violations.get(i).getLine());
@@ -233,5 +234,9 @@ public class FieldConsolidationCheckTest {
 		assertEquals(264, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals("Fields 'beta' and 'alpha' (type 'int') should be declared on one line.", violations.get(i++).getMessage());
+
+		assertEquals(273, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Fields 'beta' and 'alpha' (type 'List<? super @ViolationTypeAnn Number>') should be declared on one line.", violations.get(i++).getMessage());
 	}
 }

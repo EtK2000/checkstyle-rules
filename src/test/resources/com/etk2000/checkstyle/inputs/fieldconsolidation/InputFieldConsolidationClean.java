@@ -260,8 +260,8 @@ class InputFieldConsolidationCleanInnerTypeBetween {
 @interface TypeAnn {}
 
 class InputFieldConsolidationCleanTypeUseAnnotation {
-	List<@TypeAnn String> annotated;
 	List<String> plain;
+	List<@TypeAnn String> annotated;
 }
 
 @interface CleanInner {}
@@ -284,8 +284,13 @@ class InputFieldConsolidationCleanNestedAnnotationDiff {
 }
 
 class InputFieldConsolidationCleanAnnotatedBoundMismatch {
-	List<? extends @TypeAnn Number> annotated;
 	List<? extends Number> plain;
+	List<? extends @TypeAnn Number> annotated;
+}
+
+class InputFieldConsolidationCleanAnnotatedLowerBoundMismatch {
+	List<? super Number> plain;
+	List<? super @TypeAnn Number> annotated;
 }
 
 class InputFieldConsolidationCleanGenericArrayVsPlain {

@@ -114,6 +114,18 @@ public class FieldSortingFixerTest {
 	}
 
 	@Test
+	public void testFieldAnnotationAngleDepthMultiLineAborts() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tMap<String,",
+				"\t\tInteger> beta;",
+				"\tMap<String, Integer> alpha;",
+				"}"
+		));
+		assertNull(fixer.fix(lines, 3, 0));
+	}
+
+	@Test
 	public void testFieldAnnotationConsolidation() {
 		final var lines = new ArrayList<>(List.of(
 				"class T {",
@@ -194,6 +206,21 @@ public class FieldSortingFixerTest {
 	}
 
 	@Test
+	public void testFieldAnnotationIgnoresAtInInitializer() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tObject beta = x > 0 ? new @TypeUse Object() : null;",
+				"\tObject alpha = \"hello\";",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(
+				List.of("\tObject alpha = \"hello\";", "\tObject beta = x > 0 ? new @TypeUse Object() : null;"),
+				result.replacement()
+		);
+	}
+
+	@Test
 	public void testFieldAnnotationIgnoresAtInLineComment() {
 		final var lines = new ArrayList<>(List.of(
 				"class T {",
@@ -216,6 +243,78 @@ public class FieldSortingFixerTest {
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
 		assertEquals(
 				List.of("\tString alpha = \"hello\";", "\tString beta = \"@Zebra\";"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldAnnotationIgnoresAtInTextBlock() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tString beta = \"\"\"",
+				"\t\t@FakeAnnotation",
+				"\t\t\"\"\";",
+				"\tString alpha = \"hello\";",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 4, 0));
+		assertEquals(
+				List.of("\tString alpha = \"hello\";", "\tString beta = \"\"\"", "\t\t@FakeAnnotation", "\t\t\"\"\";"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldAnnotationIgnoresAtInTextBlockEscapedTripleQuote() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tString beta = \"\"\"",
+				"\t\tline with \\\"\"\" and @FakeAnnotation",
+				"\t\tmore content",
+				"\t\t\"\"\";",
+				"\tString alpha = \"hello\";",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 5, 0));
+		assertEquals(
+				List.of(
+						"\tString alpha = \"hello\";",
+						"\tString beta = \"\"\"",
+						"\t\tline with \\\"\"\" and @FakeAnnotation",
+						"\t\tmore content",
+						"\t\t\"\"\";"
+				),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldAnnotationIgnoresAtInTypeArg() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\t@Alpha",
+				"\tList<String> fieldAnnotated;",
+				"\tList<@Zebra String> typeArgAnnotated;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
+		assertEquals(
+				List.of("\tList<@Zebra String> typeArgAnnotated;", "\t@Alpha", "\tList<String> fieldAnnotated;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldAnnotationIgnoresAtInTypeArgWithInitializer() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tList<@Zebra String> beta = List.of();",
+				"\tList<String> alpha = List.of();",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
+		assertEquals(
+				List.of("\tList<String> alpha = List.of();", "\tList<@Zebra String> beta = List.of();"),
 				result.replacement()
 		);
 	}
@@ -451,6 +550,167 @@ public class FieldSortingFixerTest {
 				result.replacement()
 		);
 		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testFieldTypeArgAnnotationConsolidation() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tList<@Ann String> beta;",
+				"\tList<@Ann String> alpha;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(
+				List.of("\tList<@Ann String> alpha, beta;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldTypeArgAnnotationNoConsolidation() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tList<String> alpha;",
+				"\tList<@Ann String> beta;",
+				"}"
+		));
+		assertNull(fixer.fix(lines, 1, 0));
+	}
+
+	@Test
+	public void testFieldTypeArgAnnotationOrder() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tList<@Bnn String> bField;",
+				"\tList<@Ann String> aField;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
+		assertEquals(
+				List.of("\tList<@Ann String> aField;", "\tList<@Bnn String> bField;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldTypeArgAnnotationOrderAnnotatedBeforeUnannotated() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tList<@Ann String> annotated;",
+				"\tList<String> plain;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
+		assertEquals(
+				List.of("\tList<String> plain;", "\tList<@Ann String> annotated;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldTypeArgAnnotationOrderFewerBeforeMore() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tList<@Ann @Bnn String> twoAnns;",
+				"\tList<@Ann String> oneAnn;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
+		assertEquals(
+				List.of("\tList<@Ann String> oneAnn;", "\tList<@Ann @Bnn String> twoAnns;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldTypeArgAnnotationOrderFqnGeneric() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tjava.util.Set<@Bnn String> bField;",
+				"\tjava.util.Set<@Ann String> aField;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
+		assertEquals(
+				List.of("\tjava.util.Set<@Ann String> aField;", "\tjava.util.Set<@Bnn String> bField;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldTypeArgAnnotationOrderLowerBound() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tList<? super @Bnn Number> bField;",
+				"\tList<? super @Ann Number> aField;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
+		assertEquals(
+				List.of("\tList<? super @Ann Number> aField;", "\tList<? super @Bnn Number> bField;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldTypeArgAnnotationOrderParameterized() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tList<@Ann(2) String> higher;",
+				"\tList<@Ann(1) String> lower;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
+		assertEquals(
+				List.of("\tList<@Ann(1) String> lower;", "\tList<@Ann(2) String> higher;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldTypeArgAnnotationOrderPositionAware() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tMap<@Ann String, String> firstArgAnnotated;",
+				"\tMap<String, @Ann String> firstArgUnannotated;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
+		assertEquals(
+				List.of("\tMap<String, @Ann String> firstArgUnannotated;", "\tMap<@Ann String, String> firstArgAnnotated;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldTypeArgAnnotationOrderWildcard() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tList<@Bnn ? extends Number> bField;",
+				"\tList<@Ann ? extends Number> aField;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
+		assertEquals(
+				List.of("\tList<@Ann ? extends Number> aField;", "\tList<@Bnn ? extends Number> bField;"),
+				result.replacement()
+		);
+	}
+
+	@Test
+	public void testFieldTypeArgAnnotationOrderWildcardBound() {
+		final var lines = new ArrayList<>(List.of(
+				"class T {",
+				"\tList<? extends @Bnn Number> bField;",
+				"\tList<? extends @Ann Number> aField;",
+				"}"
+		));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
+		assertEquals(
+				List.of("\tList<? extends @Ann Number> aField;", "\tList<? extends @Bnn Number> bField;"),
+				result.replacement()
+		);
 	}
 
 	@Test

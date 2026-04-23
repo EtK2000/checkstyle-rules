@@ -1468,6 +1468,76 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testFieldSortingAnnotationTypeArgOrder() throws Exception {
+		final var file = tempDir.resolve("FldTAAnnot.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"@interface TA {}\nclass T {\n\tList<@TA String> annotated;\n\tList<String> plain;\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("@interface TA {}\nclass T {\n\tList<String> plain;\n\tList<@TA String> annotated;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingAnnotationTypeArgOrderFqn() throws Exception {
+		final var file = tempDir.resolve("FldTAFqn.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"@interface TA {}\n@SuppressWarnings(\"PreferImport\")\nclass T {\n\tjava.util.Set<@TA String> annotated;\n\tjava.util.Set<String> plain;\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("@interface TA {}\n@SuppressWarnings(\"PreferImport\")\nclass T {\n\tjava.util.Set<String> plain;\n\tjava.util.Set<@TA String> annotated;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingAnnotationTypeArgOrderWildcard() throws Exception {
+		final var file = tempDir.resolve("FldTAWild.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"@interface TA {}\nclass T {\n\tList<@TA ? extends Number> annotated;\n\tList<? extends Number> plain;\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("@interface TA {}\nclass T {\n\tList<? extends Number> plain;\n\tList<@TA ? extends Number> annotated;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingAnnotationTypeArgOrderWildcardBound() throws Exception {
+		final var file = tempDir.resolve("FldTABound.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"@interface TA {}\nclass T {\n\tList<? extends @TA Number> annotated;\n\tList<? extends Number> plain;\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("@interface TA {}\nclass T {\n\tList<? extends Number> plain;\n\tList<? extends @TA Number> annotated;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testFieldSortingAnnotationTypeArgOrderWildcardLowerBound() throws Exception {
+		final var file = tempDir.resolve("FldTALower.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"@interface TA {}\nclass T {\n\tList<? super @TA Number> annotated;\n\tList<? super Number> plain;\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("@interface TA {}\nclass T {\n\tList<? super Number> plain;\n\tList<? super @TA Number> annotated;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testFieldSortingChunkOrder() throws Exception {
 		final var file = tempDir.resolve("FldChunk.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint nonFinal;\n\tfinal int finalWithValue = 1;\n\n\tT() {\n\t\tthis.nonFinal = 0;\n\t}\n}");

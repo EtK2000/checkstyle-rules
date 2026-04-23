@@ -267,3 +267,8 @@ class InputFieldConsolidationViolationAnonymousClass {
 		public void run() {}
 	};
 }
+
+class InputFieldConsolidationViolationAnnotatedLowerBoundMatch {
+	List<? super @ViolationTypeAnn Number> alpha;
+	List<? super @ViolationTypeAnn Number> beta; // violation: Fields 'beta' and 'alpha' (type 'List<? super @ViolationTypeAnn Number>') should be declared on one line.
+}

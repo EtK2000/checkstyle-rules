@@ -275,3 +275,82 @@ class InputFieldSortingCleanAnnotationParams {
 	@ParamAnn(2)
 	int withOtherParam;
 }
+
+class InputFieldSortingCleanTypeArgAnnotation {
+	List<String> plain;
+	List<@Ann String> annotated;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationAlphabetical {
+	List<@Ann String> aAnnotated;
+	List<@Bnn String> bAnnotated;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationCount {
+	List<@Ann String> oneAnn;
+	List<@Ann @Bnn String> twoAnns;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationMultiArg {
+	Map<String, Integer> plain;
+	Map<String, @Ann Integer> annotatedSecond;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationSameFallsToName {
+	List<@Ann String> alpha, beta;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationIdenticalMultiArg {
+	Map<@Ann String, @Bnn Integer> alpha, beta;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationMixedWithFieldAnnotation {
+	List<@Ann String> plain;
+	@Deprecated
+	List<String> fieldAnnotated;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationOverridesName {
+	List<@Ann String> beta;
+	List<@Bnn String> alpha;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationPositionAware {
+	Map<String, @Ann String> firstArgUnannotated;
+	Map<@Ann String, String> firstArgAnnotated;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationArray {
+	List<String>[] plain;
+	List<@Ann String>[] annotated;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationWildcardBound {
+	List<? extends @Ann Number> alpha, beta;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationWildcardBoundDifferent {
+	List<? extends @Ann Number> alpha;
+	List<? extends @Bnn Number> beta;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationLowerBound {
+	List<? super @Ann Number> alpha;
+	List<? super @Bnn Number> beta;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationWildcard {
+	List<@Ann ? extends Number> alpha;
+	List<@Bnn ? extends Number> beta;
+}
+
+class InputFieldSortingCleanTypeArgAnnotationNested {
+	Map<String, List<Integer>> alpha;
+	Map<String, List<@Ann Integer>> beta;
+}
+
+@SuppressWarnings("PreferImport")
+class InputFieldSortingCleanTypeArgAnnotationQualified {
+	java.util.Set<String> plain;
+	java.util.Set<@Ann String> annotated;
+}
