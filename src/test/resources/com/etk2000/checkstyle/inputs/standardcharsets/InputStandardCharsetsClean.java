@@ -74,6 +74,18 @@ class InputStandardCharsetsClean {
 		final var c = URLDecoder.decode("%20", "not-a-charset-name");
 	}
 
+	void nonCharsetStringArrayReceiver() {
+		final String[] arr = {"UTF-8"};
+		final java.lang.String[] qArr = {"UTF-8"};
+		final var a = arr.toString();
+		final var b = qArr.toString();
+	}
+
+	void nonStringReceivers(Object obj, java.lang.Object qObj) {
+		obj.toString();
+		qObj.toString();
+	}
+
 	void standardCharsetsConstants(byte[] data, File file) throws Exception {
 		final var a = "hello".getBytes(StandardCharsets.UTF_8);
 		final var b = new String(data, StandardCharsets.UTF_8);

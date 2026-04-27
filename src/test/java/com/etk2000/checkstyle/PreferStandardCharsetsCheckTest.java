@@ -33,6 +33,32 @@ public class PreferStandardCharsetsCheckTest {
 	}
 
 	@Test
+	public void testFqStringLocal() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferStandardCharsetsCheck.class, VIOLATION_FILE, "minSdk", "19"
+		);
+		final var fqLocal = violations.stream().filter(v -> v.getLine() >= 38 && v.getLine() <= 40).toList();
+		assertEquals(3, fqLocal.size());
+		for (var v : fqLocal) {
+			assertEquals(SeverityLevel.ERROR, v.getSeverityLevel());
+			assertEquals(GENERIC_MSG, v.getMessage());
+		}
+	}
+
+	@Test
+	public void testFqStringParameter() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferStandardCharsetsCheck.class, VIOLATION_FILE, "minSdk", "19"
+		);
+		final var fqParam = violations.stream().filter(v -> v.getLine() >= 44 && v.getLine() <= 46).toList();
+		assertEquals(3, fqParam.size());
+		for (var v : fqParam) {
+			assertEquals(SeverityLevel.ERROR, v.getSeverityLevel());
+			assertEquals(GENERIC_MSG, v.getMessage());
+		}
+	}
+
+	@Test
 	public void testLowMinSdkSuppresses() throws Exception {
 		assertTrue(BaseCheckTest.runCheck(
 				PreferStandardCharsetsCheck.class, VIOLATION_FILE, "minSdk", "18"
@@ -44,7 +70,7 @@ public class PreferStandardCharsetsCheckTest {
 		final var violations = BaseCheckTest.runCheck(
 				PreferStandardCharsetsCheck.class, VIOLATION_FILE, "minSdk", "19"
 		);
-		final var others = violations.stream().filter(v -> v.getLine() >= 37 && v.getLine() <= 43).toList();
+		final var others = violations.stream().filter(v -> v.getLine() >= 50 && v.getLine() <= 56).toList();
 		assertEquals(7, others.size());
 		assertEquals(SeverityLevel.ERROR, others.get(0).getSeverityLevel());
 		assertEquals("Use 'StandardCharsets.ISO_8859_1' instead of \"ISO-8859-1\".", others.get(0).getMessage());
@@ -67,7 +93,7 @@ public class PreferStandardCharsetsCheckTest {
 		final var violations = BaseCheckTest.runCheck(
 				PreferStandardCharsetsCheck.class, VIOLATION_FILE, "minSdk", "19"
 		);
-		final var field = violations.stream().filter(v -> v.getLine() >= 47 && v.getLine() <= 58).toList();
+		final var field = violations.stream().filter(v -> v.getLine() >= 60 && v.getLine() <= 71).toList();
 		assertEquals(12, field.size());
 		for (var v : field) {
 			assertEquals(SeverityLevel.ERROR, v.getSeverityLevel());
@@ -80,7 +106,7 @@ public class PreferStandardCharsetsCheckTest {
 		final var violations = BaseCheckTest.runCheck(
 				PreferStandardCharsetsCheck.class, VIOLATION_FILE, "minSdk", "19"
 		);
-		final var locals = violations.stream().filter(v -> v.getLine() >= 63 && v.getLine() <= 74).toList();
+		final var locals = violations.stream().filter(v -> v.getLine() >= 76 && v.getLine() <= 87).toList();
 		assertEquals(12, locals.size());
 		for (var v : locals) {
 			assertEquals(SeverityLevel.ERROR, v.getSeverityLevel());
@@ -93,7 +119,7 @@ public class PreferStandardCharsetsCheckTest {
 		final var violations = BaseCheckTest.runCheck(
 				PreferStandardCharsetsCheck.class, VIOLATION_FILE, "minSdk", "19"
 		);
-		final var params = violations.stream().filter(v -> v.getLine() >= 78 && v.getLine() <= 89).toList();
+		final var params = violations.stream().filter(v -> v.getLine() >= 91 && v.getLine() <= 102).toList();
 		assertEquals(12, params.size());
 		for (var v : params) {
 			assertEquals(SeverityLevel.ERROR, v.getSeverityLevel());
@@ -106,7 +132,7 @@ public class PreferStandardCharsetsCheckTest {
 		final var violations = BaseCheckTest.runCheck(
 				PreferStandardCharsetsCheck.class, VIOLATION_FILE, "minSdk", "19"
 		);
-		final var utf8 = violations.stream().filter(v -> v.getLine() >= 93).toList();
+		final var utf8 = violations.stream().filter(v -> v.getLine() >= 106).toList();
 		assertEquals(5, utf8.size());
 		assertEquals(SeverityLevel.ERROR, utf8.get(0).getSeverityLevel());
 		assertEquals("Use 'StandardCharsets.UTF_8' instead of \"UTF-8\".", utf8.get(0).getMessage());

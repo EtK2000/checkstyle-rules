@@ -248,6 +248,19 @@ public class AstUtilTest {
 		}
 	}
 
+	static Stream<Arguments> primitiveArrayDeclarationProvider() {
+		return Stream.of(
+				Arguments.of("boolean"),
+				Arguments.of("byte"),
+				Arguments.of("char"),
+				Arguments.of("double"),
+				Arguments.of("float"),
+				Arguments.of("int"),
+				Arguments.of("long"),
+				Arguments.of("short")
+		);
+	}
+
 	static Stream<Arguments> primitiveArrayInitializerProvider() {
 		return Stream.of(
 				Arguments.of("boolean", "new boolean[]{true}"),
@@ -1140,6 +1153,91 @@ public class AstUtilTest {
 		final var ctor = findFirst(objBlock, TokenTypes.CTOR_DEF);
 		final var slist = ctor.findFirstToken(TokenTypes.SLIST);
 		assertEquals("String", AstUtil.resolveVariableType(slist, "ctorParam"));
+	}
+
+	@Test
+	public void testResolveVariableTypeExplicitDeepQualifiedArray() throws Exception {
+		final var ast = parseSource("class T { void f() { java.util.concurrent.atomic.AtomicInteger[] x = null; x.toString(); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.util.concurrent.atomic.AtomicInteger[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeExplicitGenericArray() throws Exception {
+		final var ast = parseSource("class T { void f() { java.util.List<String>[] x = null; x.toString(); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.util.List[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeExplicitGenericMultiDimArray() throws Exception {
+		final var ast = parseSource("class T { void f() { java.util.List<String>[][] x = null; x.toString(); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.util.List[][]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeExplicitMultiDimArray() throws Exception {
+		final var ast = parseSource("class T { void f() { String[][] x = null; x.toString(); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("String[][]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeExplicitPrimitiveArray() throws Exception {
+		final var ast = parseSource("class T { void f() { int[] x = null; x.toString(); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("int[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@MethodSource("primitiveArrayDeclarationProvider")
+	@ParameterizedTest
+	void testResolveVariableTypeExplicitPrimitiveArrayTypes(String type) throws Exception {
+		final var ast = parseSource("class T { void f() { " + type + "[] x = null; x.toString(); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals(type + "[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeExplicitPrimitiveMultiDimArray() throws Exception {
+		final var ast = parseSource("class T { void f() { int[][] x = null; x.toString(); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("int[][]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeExplicitQualifiedArray() throws Exception {
+		final var ast = parseSource("class T { void f() { java.util.List[] x = null; x.toString(); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.util.List[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeExplicitQualifiedMultiDimArray() throws Exception {
+		final var ast = parseSource("class T { void f() { java.util.List[][] x = null; x.toString(); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.util.List[][]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeExplicitQualifiedStringArray() throws Exception {
+		final var ast = parseSource("class T { void f() { java.lang.String[] x = null; x.toString(); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("java.lang.String[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeExplicitStringArray() throws Exception {
+		final var ast = parseSource("class T { void f() { String[] x = null; x.toString(); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("String[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeExplicitTripleDimArray() throws Exception {
+		final var ast = parseSource("class T { void f() { String[][][] x = null; x.toString(); } }");
+		final var slist = findFirst(ast, TokenTypes.METHOD_DEF).findFirstToken(TokenTypes.SLIST);
+		assertEquals("String[][][]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
 	@Test

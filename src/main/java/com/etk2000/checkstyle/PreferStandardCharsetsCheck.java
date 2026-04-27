@@ -104,7 +104,8 @@ public class PreferStandardCharsetsCheck extends AbstractCheck {
 	private static boolean isStringIdent(@Nonnull DetailAST ident) {
 		if (ident.getType() != TokenTypes.IDENT)
 			return false;
-		return "String".equals(AstUtil.resolveVariableType(ident, ident.getText()));
+		final var typeName = AstUtil.resolveVariableType(ident, ident.getText());
+		return "String".equals(typeName) || "java.lang.String".equals(typeName);
 	}
 
 	/**

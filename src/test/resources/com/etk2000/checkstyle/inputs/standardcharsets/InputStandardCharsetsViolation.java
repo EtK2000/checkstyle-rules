@@ -33,6 +33,19 @@ class InputStandardCharsetsViolation {
 		final var o = new <String>ByteArrayOutputStream().toString("UTF-8"); // violation: use StandardCharsets.UTF_8
 	}
 
+	void fqStringLocal(byte[] data) throws Exception {
+		final java.lang.String encoding = "UTF-8";
+		final var a = "hello".getBytes(encoding); // violation: use StandardCharsets constant
+		final var b = new String(data, encoding); // violation: use StandardCharsets constant
+		final var c = URLEncoder.encode("hello", encoding); // violation: use StandardCharsets constant
+	}
+
+	void fqStringParameter(byte[] data, java.lang.String encoding) throws Exception {
+		final var a = "hello".getBytes(encoding); // violation: use StandardCharsets constant
+		final var b = new String(data, encoding); // violation: use StandardCharsets constant
+		final var c = URLDecoder.decode("hello", encoding); // violation: use StandardCharsets constant
+	}
+
 	void otherCharsets() throws Exception {
 		final var a = "test".getBytes("ISO-8859-1"); // violation: use StandardCharsets.ISO_8859_1
 		final var b = "test".getBytes("latin1"); // violation: use StandardCharsets.ISO_8859_1

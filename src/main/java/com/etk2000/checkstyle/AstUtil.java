@@ -1,7 +1,6 @@
 package com.etk2000.checkstyle;
 
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
-import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.ArrayDeque;
@@ -604,29 +603,36 @@ class AstUtil {
 	@CheckReturnValue
 	@Nullable
 	private static String getTypeName(@Nonnull DetailAST typeNode) {
-		// simple type: IDENT (exclude "var" since it's not a real type name)
-		final var ident = typeNode.findFirstToken(TokenTypes.IDENT);
-		if (ident != null)
-			return "var".equals(ident.getText()) ? null : ident.getText();
+		// descend through nested ARRAY_DECLARATORs; some AST shapes nest them
+		// around the base type, others leave them as siblings of the base.
+		var dimensions = 0;
+		var inner = typeNode.getFirstChild();
+		while (inner != null && inner.getType() == TokenTypes.ARRAY_DECLARATOR) {
+			++dimensions;
+			inner = inner.getFirstChild();
+		}
+		if (inner == null)
+			return null;
 
-		// primitive types
-		for (var child = typeNode.getFirstChild(); child != null; child = child.getNextSibling()) {
-			switch (child.getType()) {
-				case TokenTypes.LITERAL_BOOLEAN, TokenTypes.LITERAL_BYTE,
-				     TokenTypes.LITERAL_CHAR, TokenTypes.LITERAL_DOUBLE,
-				     TokenTypes.LITERAL_FLOAT, TokenTypes.LITERAL_INT,
-				     TokenTypes.LITERAL_LONG, TokenTypes.LITERAL_SHORT -> {
-					return null; // primitives can't have methods
-				}
-			}
+		for (var sib = inner.getNextSibling(); sib != null; sib = sib.getNextSibling()) {
+			if (sib.getType() == TokenTypes.ARRAY_DECLARATOR)
+				++dimensions;
 		}
 
-		// qualified type: DOT
-		final var dot = typeNode.findFirstToken(TokenTypes.DOT);
-		if (dot != null)
-			return FullIdent.createFullIdent(dot).getText();
-
-		return null;
+		final var arraySuffix = "[]".repeat(dimensions);
+		return switch (inner.getType()) {
+			// dottedName walks the DOT chain only; FullIdent would also consume
+			// sibling ARRAY_DECLARATOR/TYPE_ARGUMENTS and double-count brackets.
+			case TokenTypes.DOT -> dottedName(inner) + arraySuffix;
+			case TokenTypes.IDENT -> "var".equals(inner.getText()) ? null : inner.getText() + arraySuffix;
+			// primitives have no methods, but primitive arrays are objects
+			case TokenTypes.LITERAL_BOOLEAN, TokenTypes.LITERAL_BYTE,
+			     TokenTypes.LITERAL_CHAR, TokenTypes.LITERAL_DOUBLE,
+			     TokenTypes.LITERAL_FLOAT, TokenTypes.LITERAL_INT,
+			     TokenTypes.LITERAL_LONG, TokenTypes.LITERAL_SHORT ->
+					dimensions == 0 ? null : inner.getText() + arraySuffix;
+			default -> null;
+		};
 	}
 
 	@CheckReturnValue

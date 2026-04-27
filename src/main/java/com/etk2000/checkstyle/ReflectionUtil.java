@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 
@@ -31,8 +32,69 @@ import javax.annotation.Nullable;
  * single thread, so no synchronization is needed.
  */
 class ReflectionUtil {
-	// plain HashMap is fine: TreeWalker is single-threaded, append-only cache
-	private static final Map<String, Class<?>> CLASS_CACHE = new HashMap<>();
+	// caps the right-to-left dot-to-$ substitution loop in resolveAndLoad so
+	// pathologically deep FQNs don't pay O(d) Class.forName failures.
+	private static final int MAX_INNER_CLASS_DEPTH = 10;
+
+	// plain HashMap is fine: TreeWalker is single-threaded, append-only cache.
+	// Optional.empty() represents a known-absent class so retries don't repeat
+	// Class.forName scans for unresolvable names.
+	private static final Map<String, Optional<Class<?>>> CLASS_CACHE = new HashMap<>();
+
+	// test instrumentation: counts Class.forName invocations so tests can
+	// verify the heuristic short-circuits on common cases. Tests reset this
+	// directly; clearCache only wipes the resolution cache.
+	static int classForNameCallCount;
+
+	/**
+	 * Returns {@code fqcn} with dots between adjacent uppercase-starting
+	 * segments (after the first uppercase segment) rewritten to {@code $}.
+	 * Returns {@code fqcn} unchanged if any segment after the first uppercase
+	 * one starts non-uppercase, so the resulting name never reaches outside
+	 * the substitution space the slow-path lowercase guard would consider.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static String applyJavaNamingHeuristic(@Nonnull String fqcn) {
+		// Pass 1: detect the mitigation trigger. Bail out without rewriting if
+		// any segment after the first uppercase segment starts non-uppercase;
+		// otherwise pass 2's substitutions are safe (within slow-path's space).
+		var pastFirstClass = false;
+		for (var i = 0; i < fqcn.length(); ++i) {
+			if (i == 0 || fqcn.charAt(i - 1) == '.') {
+				final var c = fqcn.charAt(i);
+				if (Character.isUpperCase(c))
+					pastFirstClass = true;
+				else if (pastFirstClass)
+					return fqcn;
+			}
+		}
+
+		// Pass 2: emit substitutions. All post-first-class segments are now
+		// known to start uppercase, so every '.' followed by another segment
+		// becomes '$'.
+		final var sb = new StringBuilder(fqcn.length());
+		var seenFirstClass = false;
+		for (var i = 0; i < fqcn.length(); ++i) {
+			final var c = fqcn.charAt(i);
+			if ((i == 0 || fqcn.charAt(i - 1) == '.') && Character.isUpperCase(c))
+				seenFirstClass = true;
+			if (c == '.' && seenFirstClass && i + 1 < fqcn.length()
+					&& Character.isUpperCase(fqcn.charAt(i + 1)))
+				sb.append('$');
+			else
+				sb.append(c);
+		}
+		return sb.toString();
+	}
+
+	/**
+	 * Test instrumentation: clears the resolution cache so a subsequent
+	 * {@link #classForNameCallCount} measurement reflects fresh lookups.
+	 */
+	static void clearCache() {
+		CLASS_CACHE.clear();
+	}
 
 	private static void collectMethodLevelTypeVars(@Nonnull Type type, @Nonnull Set<String> result) {
 		switch (type) {
@@ -314,17 +376,7 @@ class ReflectionUtil {
 	@CheckReturnValue
 	@Nullable
 	private static Class<?> loadClass(@Nonnull String fqcn) {
-		return CLASS_CACHE.computeIfAbsent(
-				fqcn,
-				name -> {
-					try {
-						return Class.forName(name, false, ReflectionUtil.class.getClassLoader());
-					}
-					catch (ClassNotFoundException | NoClassDefFoundError e) {
-						return null;
-					}
-				}
-		);
+		return CLASS_CACHE.computeIfAbsent(fqcn, ReflectionUtil::resolveAndLoad).orElse(null);
 	}
 
 	/**
@@ -350,6 +402,43 @@ class ReflectionUtil {
 	}
 
 	/**
+	 * Resolves an FQN to a {@link Class} accounting for inner-class names that
+	 * use {@code .} in source but {@code $} in JVM form.
+	 * <p>
+	 * Fast path: assume Java naming convention (lowercase segments are
+	 * packages, uppercase segments start classes) and rewrite all dots between
+	 * adjacent uppercase-starting segments to {@code $} in one pass. One
+	 * {@link Class#forName} call covers most top-level and inner-class FQNs.
+	 * <p>
+	 * Slow path: if the heuristic was wrong (rare: class name violates
+	 * convention, or the heuristic substitution doesn't match the actual
+	 * binary name), fall back to right-to-left dot-to-{@code $} substitution
+	 * starting from the original name. Bounded by {@link #MAX_INNER_CLASS_DEPTH}.
+	 */
+	@Nonnull
+	private static Optional<Class<?>> resolveAndLoad(@Nonnull String fqcn) {
+		final var heuristic = applyJavaNamingHeuristic(fqcn);
+		if (!heuristic.equals(fqcn)) {
+			final var loaded = tryLoadClass(heuristic);
+			if (loaded.isPresent())
+				return loaded;
+		}
+
+		var name = fqcn;
+		for (var attempt = 0; attempt <= MAX_INNER_CLASS_DEPTH; ++attempt) {
+			final var loaded = tryLoadClass(name);
+			if (loaded.isPresent())
+				return loaded;
+			final var lastDot = name.lastIndexOf('.');
+			if (lastDot < 0 || lastDot + 1 >= name.length()
+					|| !Character.isUpperCase(name.charAt(lastDot + 1)))
+				return Optional.empty();
+			name = name.substring(0, lastDot) + '$' + name.substring(lastDot + 1);
+		}
+		return Optional.empty();
+	}
+
+	/**
 	 * Resolves a simple class name to a fully qualified class name using
 	 * the provided imports, package name, and java.lang fallback.
 	 *
@@ -358,6 +447,15 @@ class ReflectionUtil {
 	@CheckReturnValue
 	@Nullable
 	static String resolveClassName(@Nonnull String simpleName, @Nullable String packageName, @Nonnull Set<String> imports) {
+		if (simpleName.isEmpty())
+			return null;
+
+		// arrays don't have method overloads our checks care about, and JVM array
+		// notation differs from Java's (`[Ljava.lang.String;` vs `String[]`),
+		// so reject them early instead of letting Class.forName fail.
+		if (simpleName.endsWith("]"))
+			return null;
+
 		// already fully qualified
 		if (simpleName.contains("."))
 			return simpleName;
@@ -390,6 +488,18 @@ class ReflectionUtil {
 			return candidate;
 
 		return null;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static Optional<Class<?>> tryLoadClass(@Nonnull String name) {
+		++classForNameCallCount;
+		try {
+			return Optional.of(Class.forName(name, false, ReflectionUtil.class.getClassLoader()));
+		}
+		catch (ClassNotFoundException | NoClassDefFoundError e) {
+			return Optional.empty();
+		}
 	}
 
 	private ReflectionUtil() {

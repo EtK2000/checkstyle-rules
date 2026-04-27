@@ -116,6 +116,7 @@
 	<suppress checks="PreferImportCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]redundantcast[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]specificapi[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]standardcharsets[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]switchorder[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="PreferRecordCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
