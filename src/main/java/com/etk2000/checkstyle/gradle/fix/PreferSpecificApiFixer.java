@@ -73,6 +73,69 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	}
 
 	/**
+	 * Finds an occurrence of {@code prefix} (a literal like {@code "0 == "}) followed by
+	 * {@code suffix} (a method chain like {@code ".strip().length()"}) where:
+	 * (a) the character before {@code prefix} is not a number/identifier continuation
+	 *     (so the leading digit is standalone, not part of {@code 100} or similar), and
+	 * (b) the text between {@code prefix} and {@code suffix} is a simple receiver
+	 *     (identifier characters and dots only).
+	 * Iterates through occurrences until a valid one is found. Returns
+	 * {@code [prefixIdx, suffixIdx]} or {@code null}.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static int[] findReversedMatch(@Nonnull String line, @Nonnull String prefix, @Nonnull String suffix) {
+		var searchFrom = 0;
+		while (searchFrom < line.length()) {
+			final var idx = line.indexOf(prefix, searchFrom);
+			if (idx < 0)
+				return null;
+			if (idx > 0) {
+				final var prev = line.charAt(idx - 1);
+				if (Character.isJavaIdentifierPart(prev) || prev == '.') {
+					searchFrom = idx + 1;
+					continue;
+				}
+			}
+			final var methodIdx = line.indexOf(suffix, idx + prefix.length());
+			if (methodIdx < 0)
+				return null;
+			final var between = line.substring(idx + prefix.length(), methodIdx);
+			if (!isSimpleReceiver(between)) {
+				searchFrom = idx + 1;
+				continue;
+			}
+			return new int[]{idx, methodIdx};
+		}
+		return null;
+	}
+
+	/**
+	 * Like {@code line.indexOf(pattern, from)} but, when {@code pattern} ends with a digit,
+	 * skips matches where the next character could continue the trailing digit as a numeric
+	 * literal, i.e. any Java identifier part (digits, underscore, hex/binary prefix letters,
+	 * type suffix letters, exponent letters) or a decimal point. This prevents matching
+	 * {@code "< 1"} inside {@code "< 10"}, {@code "< 1L"}, or {@code "< 1.5"}.
+	 * Iterates through occurrences until a valid one is found.
+	 */
+	@CheckReturnValue
+	private static int findStandalonePattern(@Nonnull String line, @Nonnull String pattern, int from) {
+		if (pattern.isEmpty() || !Character.isDigit(pattern.charAt(pattern.length() - 1)))
+			return line.indexOf(pattern, from);
+		var idx = line.indexOf(pattern, from);
+		while (idx >= 0) {
+			final var endPos = idx + pattern.length();
+			if (endPos >= line.length())
+				return idx;
+			final var ch = line.charAt(endPos);
+			if (!Character.isJavaIdentifierPart(ch) && ch != '.')
+				return idx;
+			idx = line.indexOf(pattern, idx + 1);
+		}
+		return -1;
+	}
+
+	/**
 	 * {@code Arrays.asList(...)} -> {@code List.of(...)}.
 	 * Adds the {@code java.util.List} import.
 	 */
@@ -304,7 +367,7 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 				method + " < 1"
 		};
 		for (var pattern : positivePatterns) {
-			final var idx = line.indexOf(pattern);
+			final var idx = findStandalonePattern(line, pattern, 0);
 			if (idx >= 0)
 				return line.substring(0, idx) + ".isEmpty()" + line.substring(idx + pattern.length());
 		}
@@ -316,13 +379,12 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 				{"1 > ", method}
 		};
 		for (var rev : reversedPositive) {
-			final var idx = line.indexOf(rev[0]);
-			if (idx >= 0) {
-				final var methodIdx = line.indexOf(rev[1], idx + rev[0].length());
-				if (methodIdx >= 0) {
-					return line.substring(0, idx) + line.substring(idx + rev[0].length(), methodIdx)
-							+ ".isEmpty()" + line.substring(methodIdx + rev[1].length());
-				}
+			final var match = findReversedMatch(line, rev[0], rev[1]);
+			if (match != null) {
+				final var idx = match[0];
+				final var methodIdx = match[1];
+				return line.substring(0, idx) + line.substring(idx + rev[0].length(), methodIdx)
+						+ ".isEmpty()" + line.substring(methodIdx + rev[1].length());
 			}
 		}
 
@@ -333,7 +395,7 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 				method + " >= 1"
 		};
 		for (var neg : negatedPatterns) {
-			final var idx = line.indexOf(neg);
+			final var idx = findStandalonePattern(line, neg, 0);
 			if (idx >= 0) {
 				final var receiverStart = findReceiverStart(line, idx);
 				if (receiverStart < 0)
@@ -354,14 +416,13 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 				{"1 <= ", method}
 		};
 		for (var rev : reversedNegated) {
-			final var idx = line.indexOf(rev[0]);
-			if (idx >= 0) {
-				final var methodIdx = line.indexOf(rev[1], idx + rev[0].length());
-				if (methodIdx >= 0) {
-					final var receiver = line.substring(idx + rev[0].length(), methodIdx);
-					return line.substring(0, idx) + "!" + receiver
-							+ ".isEmpty()" + line.substring(methodIdx + rev[1].length());
-				}
+			final var match = findReversedMatch(line, rev[0], rev[1]);
+			if (match != null) {
+				final var idx = match[0];
+				final var methodIdx = match[1];
+				final var receiver = line.substring(idx + rev[0].length(), methodIdx);
+				return line.substring(0, idx) + "!" + receiver
+						+ ".isEmpty()" + line.substring(methodIdx + rev[1].length());
 			}
 		}
 
@@ -612,89 +673,113 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	}
 
 	/**
-	 * {@code .trim().isEmpty()} -> {@code .isBlank()},
-	 * {@code .trim().length() == 0} -> {@code .isBlank()},
-	 * {@code 0 == .trim().length()} -> {@code .isBlank()},
-	 * {@code .trim().length() != 0} -> {@code !receiver.isBlank()}.
-	 * Negated forms scan backwards from {@code .trim()} to find the receiver
+	 * {@code .trim().isEmpty()} / {@code .strip().isEmpty()} -> {@code .isBlank()},
+	 * {@code .trim().length() == 0} / {@code .strip().length() == 0} -> {@code .isBlank()},
+	 * {@code 0 == .trim().length()} / {@code 0 == .strip().length()} -> {@code .isBlank()},
+	 * {@code .trim().length() != 0} / {@code .strip().length() != 0} -> {@code !receiver.isBlank()}.
+	 * Negated forms scan backwards from {@code .trim()} / {@code .strip()} to find the receiver
 	 * start (identifiers and dotted names only). Returns null for complex
 	 * receivers (method calls, array access, casts).
 	 */
 	@CheckReturnValue
 	@Nullable
 	private static String fixTrimIsBlank(@Nonnull String line) {
-		var pattern = ".trim().isEmpty()";
+		for (var method : new String[]{".strip()", ".trim()"}) {
+			final var result = fixTrimOrStripIsBlank(line, method);
+			if (result != null)
+				return result;
+		}
+		return null;
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static String fixTrimOrStripIsBlank(@Nonnull String line, @Nonnull String method) {
+		var pattern = method + ".isEmpty()";
 		var idx = line.indexOf(pattern);
 		if (idx >= 0)
 			return line.substring(0, idx) + ".isBlank()" + line.substring(idx + pattern.length());
 
-		// .trim().length() == 0 -> .isBlank()
-		pattern = ".trim().length() == 0";
-		idx = line.indexOf(pattern);
+		pattern = method + ".length() == 0";
+		idx = findStandalonePattern(line, pattern, 0);
 		if (idx >= 0)
 			return line.substring(0, idx) + ".isBlank()" + line.substring(idx + pattern.length());
 
-		// reversed positive forms: 0 == expr.trim().length(), 0 >= ..., 1 > ...
-		final var trimSuffix = ".trim().length()";
+		final var suffix = method + ".length()";
 		final String[][] reversedPositive = {
-				{"0 == ", trimSuffix},
-				{"0 >= ", trimSuffix},
-				{"1 > ", trimSuffix}
+				{"0 == ", suffix},
+				{"0 >= ", suffix},
+				{"1 > ", suffix}
 		};
 		for (var rev : reversedPositive) {
-			idx = line.indexOf(rev[0]);
-			if (idx >= 0) {
-				final var trimIdx = line.indexOf(rev[1], idx + rev[0].length());
-				if (trimIdx >= 0) {
-					return line.substring(0, idx) + line.substring(idx + rev[0].length(), trimIdx)
-							+ ".isBlank()" + line.substring(trimIdx + rev[1].length());
-				}
+			final var match = findReversedMatch(line, rev[0], rev[1]);
+			if (match != null) {
+				final var matchIdx = match[0];
+				final var methodIdx = match[1];
+				return line.substring(0, matchIdx) + line.substring(matchIdx + rev[0].length(), methodIdx)
+						+ ".isBlank()" + line.substring(methodIdx + rev[1].length());
 			}
 		}
 
-		// positive forms that need simple replacement: .trim().length() <= 0
-		pattern = ".trim().length() <= 0";
-		idx = line.indexOf(pattern);
+		pattern = method + ".length() < 1";
+		idx = findStandalonePattern(line, pattern, 0);
 		if (idx >= 0)
 			return line.substring(0, idx) + ".isBlank()" + line.substring(idx + pattern.length());
 
-		// negated non-reversed forms: .trim().length() != 0, > 0, >= 1
+		pattern = method + ".length() <= 0";
+		idx = findStandalonePattern(line, pattern, 0);
+		if (idx >= 0)
+			return line.substring(0, idx) + ".isBlank()" + line.substring(idx + pattern.length());
+
 		final String[] negPatterns = {
-				".trim().length() != 0",
-				".trim().length() > 0",
-				".trim().length() >= 1"
+				method + ".length() != 0",
+				method + ".length() > 0",
+				method + ".length() >= 1"
 		};
 		for (var neg : negPatterns) {
-			idx = line.indexOf(neg);
+			idx = findStandalonePattern(line, neg, 0);
 			if (idx >= 0) {
 				final var receiverStart = findReceiverStart(line, idx);
 				if (receiverStart < 0)
 					return null;
+				if (receiverStart > 0 && line.charAt(receiverStart - 1) == '!') {
+					return line.substring(0, receiverStart - 1) + line.substring(receiverStart, idx)
+							+ ".isBlank()" + line.substring(idx + neg.length());
+				}
 				return line.substring(0, receiverStart) + "!" + line.substring(receiverStart, idx)
 						+ ".isBlank()" + line.substring(idx + neg.length());
 			}
 		}
 
-		// reversed negated forms: 0 != expr.trim().length(), 0 < ..., 1 <= ...
 		final String[][] reversedNegated = {
-				{"0 != ", trimSuffix},
-				{"0 < ", trimSuffix},
-				{"1 <= ", trimSuffix}
+				{"0 != ", suffix},
+				{"0 < ", suffix},
+				{"1 <= ", suffix}
 		};
 		for (var rev : reversedNegated) {
-			idx = line.indexOf(rev[0]);
-			if (idx >= 0) {
-				final var trimIdx = line.indexOf(rev[1], idx + rev[0].length());
-				if (trimIdx >= 0) {
-					final var receiverStart = idx + rev[0].length();
-					final var receiver = line.substring(receiverStart, trimIdx);
-					return line.substring(0, idx) + "!" + receiver
-							+ ".isBlank()" + line.substring(trimIdx + rev[1].length());
-				}
+			final var match = findReversedMatch(line, rev[0], rev[1]);
+			if (match != null) {
+				final var matchIdx = match[0];
+				final var methodIdx = match[1];
+				final var receiver = line.substring(matchIdx + rev[0].length(), methodIdx);
+				return line.substring(0, matchIdx) + "!" + receiver
+						+ ".isBlank()" + line.substring(methodIdx + rev[1].length());
 			}
 		}
 
 		return null;
+	}
+
+	@CheckReturnValue
+	private static boolean isSimpleReceiver(@Nonnull String s) {
+		if (s.isEmpty())
+			return false;
+		for (var i = 0; i < s.length(); ++i) {
+			final var ch = s.charAt(i);
+			if (!Character.isJavaIdentifierPart(ch) && ch != '.')
+				return false;
+		}
+		return true;
 	}
 
 	@CheckReturnValue

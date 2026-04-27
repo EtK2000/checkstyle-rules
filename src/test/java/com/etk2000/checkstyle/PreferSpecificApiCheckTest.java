@@ -526,6 +526,55 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testMinSdkAllowsStripIsBlank() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiStripIsBlankViolation.java", "minSdk", "33"
+		);
+		assertEquals(13, violations.size());
+
+		var i = 0;
+		assertEquals(5, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '1 > .strip().length()'.", violations.get(i++).getMessage());
+		assertEquals(10, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '!.isBlank()' instead of '1 <= .strip().length()'.", violations.get(i++).getMessage());
+		assertEquals(15, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '.strip().isEmpty()'.", violations.get(i++).getMessage());
+		assertEquals(20, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '.strip().length() == 0'.", violations.get(i++).getMessage());
+		assertEquals(25, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '!.isBlank()' instead of '.strip().length() >= 1'.", violations.get(i++).getMessage());
+		assertEquals(30, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '!.isBlank()' instead of '.strip().length() > 0'.", violations.get(i++).getMessage());
+		assertEquals(35, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '.strip().length() <= 0'.", violations.get(i++).getMessage());
+		assertEquals(40, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '.strip().length() < 1'.", violations.get(i++).getMessage());
+		assertEquals(45, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '!.isBlank()' instead of '.strip().length() != 0'.", violations.get(i++).getMessage());
+		assertEquals(50, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '0 == .strip().length()'.", violations.get(i++).getMessage());
+		assertEquals(55, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '.isBlank()' instead of '0 >= .strip().length()'.", violations.get(i++).getMessage());
+		assertEquals(60, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '!.isBlank()' instead of '0 < .strip().length()'.", violations.get(i++).getMessage());
+		assertEquals(65, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use '!.isBlank()' instead of '0 != .strip().length()'.", violations.get(i++).getMessage());
+	}
+
+	@Test
 	public void testMinSdkSuppressesArraysAsList() throws Exception {
 		final var violations = BaseCheckTest.runCheck(
 				PreferSpecificApiCheck.class, DIR + "InputSpecificApiArraysAsListViolation.java", "minSdk", "29"
@@ -611,6 +660,14 @@ public class PreferSpecificApiCheckTest {
 		assertEquals(11, violations.get(1).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
 		assertEquals("Use '!.isEmpty()' instead of '.stream().findFirst().isPresent()'.", violations.get(1).getMessage());
+	}
+
+	@Test
+	public void testMinSdkSuppressesStripIsBlank() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferSpecificApiCheck.class, DIR + "InputSpecificApiStripIsBlankViolation.java", "minSdk", "32"
+		);
+		assertTrue(violations.isEmpty());
 	}
 
 	@Test

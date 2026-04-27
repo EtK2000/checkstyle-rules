@@ -2865,6 +2865,48 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferSpecificApiStripIsBlank() throws Exception {
+		final var file = tempDir.resolve("StripBlank.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean run(String s) {\n\t\treturn s.strip().isEmpty();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean run(String s) {\n\t\treturn s.isBlank();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiStripIsBlankNegated() throws Exception {
+		final var file = tempDir.resolve("StripNotBlank.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean run(String s) {\n\t\treturn s.strip().length() != 0;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean run(String s) {\n\t\treturn !s.isBlank();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiStripLengthLessThanOne() throws Exception {
+		final var file = tempDir.resolve("StripBlankLT.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean run(String s) {\n\t\treturn s.strip().length() < 1;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean run(String s) {\n\t\treturn s.isBlank();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testPreferSpecificApiToArrayNewZero() throws Exception {
 		final var file = tempDir.resolve("ToArr.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tString[] run(List<String> list) {\n\t\treturn list.toArray(new String[0]);\n\t}\n}");
@@ -2900,6 +2942,34 @@ public class CheckstyleFixIntegrationTest {
 		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"class T {\n\tboolean run(String s) {\n\t\treturn !s.isBlank();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiTrimIsBlankReversed() throws Exception {
+		final var file = tempDir.resolve("TrimBlankRev.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean run(String s) {\n\t\treturn 0 == s.trim().length();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean run(String s) {\n\t\treturn s.isBlank();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiTrimLengthLessThanOne() throws Exception {
+		final var file = tempDir.resolve("TrimBlankLT.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean run(String s) {\n\t\treturn s.trim().length() < 1;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean run(String s) {\n\t\treturn s.isBlank();\n\t}\n}",
 				output.content()
 		);
 		assertEquals(1, output.result().fixCount());

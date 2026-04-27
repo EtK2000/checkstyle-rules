@@ -335,6 +335,72 @@ public class PreferSpecificApiFixerTest {
 		assertTrue(result.importsToAdd().isEmpty());
 	}
 
+	@Test
+	public void testLengthIsEmptyEqualsZeroFollowedByLetter() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.length() == 0xF)"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testLengthIsEmptyInCompoundReversedCondition() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 != x && 0 != s.length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (0 != x && !s.isEmpty())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testLengthIsEmptyLessThanFollowedByDigit() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.length() < 10)"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testLengthIsEmptyLessThanOneFollowedByDecimal() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.length() < 1.5)"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testLengthIsEmptyLessThanOneFollowedByUnderscore() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.length() < 1_0)"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testLengthIsEmptyMultipleOccurrencesFirstRejected() {
+		final var lines = new ArrayList<>(List.of("\t\tif (a.length() == 0xF || b.length() == 0)"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (a.length() == 0xF || b.isEmpty())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testLengthIsEmptyReversedAfterDigitsRejected() {
+		final var lines = new ArrayList<>(List.of("\t\tif (300 == s.length())"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testLengthIsEmptyReversedFirstRejectedSecondAccepted() {
+		final var lines = new ArrayList<>(List.of("\t\tif (idx10 == 0 && 0 == s.length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (idx10 == 0 && s.isEmpty())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testLengthIsEmptyReversedMethodReceiverReturnsSkipResult() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 == foo().length())"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
 	@CsvSource({
 			// .length() positive normal
 			"str.length() == 0,    str.isEmpty()",
@@ -527,6 +593,215 @@ public class PreferSpecificApiFixerTest {
 	}
 
 	@Test
+	public void testStripIsBlank() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.strip().isEmpty())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripIsBlankDottedReceiver() {
+		final var lines = new ArrayList<>(List.of("\t\tif (obj.name.strip().isEmpty())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (obj.name.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripIsBlankMethodReceiver() {
+		final var lines = new ArrayList<>(List.of("\t\tif (getText().strip().isEmpty())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (getText().isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthAlreadyNegated() {
+		final var lines = new ArrayList<>(List.of("\t\tif (!s.strip().length() > 0)"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthEqualsZero() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.strip().length() == 0)"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthEqualsZeroFollowedByLetter() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.strip().length() == 0xF)"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testStripLengthGreaterEqualOne() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.strip().length() >= 1)"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (!s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthGreaterThanZero() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.strip().length() > 0)"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (!s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthGreaterThanZeroDottedReceiver() {
+		final var lines = new ArrayList<>(List.of("\t\tif (obj.name.strip().length() > 0)"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (!obj.name.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthGreaterThanZeroMethodReceiverReturnsSkipResult() {
+		final var lines = new ArrayList<>(List.of("\t\tif (getText().strip().length() > 0)"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testStripLengthInCompoundReversedCondition() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 != x && 0 != s.strip().length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (0 != x && !s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthLessEqualZero() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.strip().length() <= 0)"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthLessThanFollowedByDigit() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.strip().length() < 10)"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testStripLengthLessThanOne() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.strip().length() < 1)"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthLessThanOneFollowedByDecimal() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.strip().length() < 1.5)"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testStripLengthLessThanOneFollowedByUnderscore() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.strip().length() < 1_0)"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testStripLengthMultipleOccurrencesFirstRejected() {
+		final var lines = new ArrayList<>(List.of("\t\tif (a.strip().length() == 0xF || b.strip().length() == 0)"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (a.strip().length() == 0xF || b.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthNotEqualsZero() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.strip().length() != 0)"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (!s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthReversedAfterDigitsRejected() {
+		final var lines = new ArrayList<>(List.of("\t\tif (300 == s.strip().length())"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testStripLengthReversedFirstRejectedSecondAccepted() {
+		final var lines = new ArrayList<>(List.of("\t\tif (idx10 == 0 && 0 == s.strip().length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (idx10 == 0 && s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthReversedMethodReceiverReturnsSkipResult() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 == foo().strip().length())"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testStripLengthReversedNegatedLessThan() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 < s.strip().length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (!s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthReversedNegatedNotEquals() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 != s.strip().length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (!s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthReversedNegatedOneLessEqual() {
+		final var lines = new ArrayList<>(List.of("\t\tif (1 <= s.strip().length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (!s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthReversedPositiveGreaterEqual() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 >= s.strip().length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthReversedPositiveOneGreaterThan() {
+		final var lines = new ArrayList<>(List.of("\t\tif (1 > s.strip().length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testStripLengthReversedPositiveZeroEquals() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 == s.strip().length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
 	public void testToArrayMultiDimensionalReturnsSkipResult() {
 		final var lines = new ArrayList<>(List.of("\t\tfinal var arr = list.toArray(new String[0][]);"));
 		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
@@ -557,11 +832,34 @@ public class PreferSpecificApiFixerTest {
 	}
 
 	@Test
+	public void testTrimIsBlankDottedReceiver() {
+		final var lines = new ArrayList<>(List.of("\t\tif (obj.name.trim().isEmpty())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (obj.name.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthAlreadyNegated() {
+		final var lines = new ArrayList<>(List.of("\t\tif (!s.trim().length() > 0)"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
 	public void testTrimLengthEqualsZero() {
 		final var lines = new ArrayList<>(List.of("\t\tif (s.trim().length() == 0)"));
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
 		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthEqualsZeroFollowedByLetter() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.trim().length() == 0xF)"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
 	}
 
 	@Test
@@ -604,10 +902,55 @@ public class PreferSpecificApiFixerTest {
 	}
 
 	@Test
+	public void testTrimLengthInCompoundReversedCondition() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 != x && 0 != s.trim().length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (0 != x && !s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
 	public void testTrimLengthLessEqualZero() {
 		final var lines = new ArrayList<>(List.of("\t\tif (s.trim().length() <= 0)"));
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthLessThanFollowedByDigit() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.trim().length() < 10)"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testTrimLengthLessThanOne() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.trim().length() < 1)"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthLessThanOneFollowedByDecimal() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.trim().length() < 1.5)"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testTrimLengthLessThanOneFollowedByUnderscore() {
+		final var lines = new ArrayList<>(List.of("\t\tif (s.trim().length() < 1_0)"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testTrimLengthMultipleOccurrencesFirstRejected() {
+		final var lines = new ArrayList<>(List.of("\t\tif (a.trim().length() == 0xF || b.trim().length() == 0)"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (a.trim().length() == 0xF || b.isBlank())", result.replacement().getFirst());
 		assertTrue(result.importsToAdd().isEmpty());
 	}
 
@@ -620,6 +963,28 @@ public class PreferSpecificApiFixerTest {
 	}
 
 	@Test
+	public void testTrimLengthReversedAfterDigitsRejected() {
+		final var lines = new ArrayList<>(List.of("\t\tif (300 == s.trim().length())"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
+	public void testTrimLengthReversedFirstRejectedSecondAccepted() {
+		final var lines = new ArrayList<>(List.of("\t\tif (idx10 == 0 && 0 == s.trim().length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (idx10 == 0 && s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthReversedMethodReceiverReturnsSkipResult() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 == foo().trim().length())"));
+		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 0));
+		assertEquals(SkipMessages.PREFER_API_SKIP, result.reason());
+	}
+
+	@Test
 	public void testTrimLengthReversedNegated() {
 		final var lines = new ArrayList<>(List.of("\t\tif (0 != s.trim().length())"));
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
@@ -628,8 +993,32 @@ public class PreferSpecificApiFixerTest {
 	}
 
 	@Test
+	public void testTrimLengthReversedNegatedLessThan() {
+		final var lines = new ArrayList<>(List.of("\t\tif (0 < s.trim().length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (!s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthReversedNegatedOneLessEqual() {
+		final var lines = new ArrayList<>(List.of("\t\tif (1 <= s.trim().length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (!s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
 	public void testTrimLengthReversedPositive() {
 		final var lines = new ArrayList<>(List.of("\t\tif (0 >= s.trim().length())"));
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
+		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testTrimLengthReversedPositiveOneGreaterThan() {
+		final var lines = new ArrayList<>(List.of("\t\tif (1 > s.trim().length())"));
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals("\t\tif (s.isBlank())", result.replacement().getFirst());
 		assertTrue(result.importsToAdd().isEmpty());

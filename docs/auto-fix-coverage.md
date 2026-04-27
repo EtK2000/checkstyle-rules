@@ -148,14 +148,19 @@ returning null (skipping) for patterns that require structural changes.
 
 ### API 33+ (MIN_SDK_IS_BLANK / MIN_SDK_TO_ARRAY_GENERATOR)
 
-| Pattern                          | Replacement             | Auto-fix                                                     |
-|----------------------------------|-------------------------|--------------------------------------------------------------|
-| `.toArray(new Type[0])`          | `.toArray(Type[]::new)` | Yes (skips multi-dimensional and annotated types)            |
-| `.trim().isEmpty()`              | `.isBlank()`            | Yes                                                          |
-| `.trim().length() == 0`          | `.isBlank()`            | Yes (including reversed `0 == ...` form)                     |
-| `.trim().length() <= 0`          | `.isBlank()`            | Yes                                                          |
-| `.trim().length() != 0` / `> 0`  | `!receiver.isBlank()`   | Simple receivers only (identifiers, dotted names)            |
-| Reversed forms (`0 != ...` etc.) | `.isBlank()` or negated | Yes (positive reversed); simple receivers (negated reversed) |
+| Pattern                                | Replacement             | Auto-fix                                                     |
+|----------------------------------------|-------------------------|--------------------------------------------------------------|
+| `.toArray(new Type[0])`                | `.toArray(Type[]::new)` | Yes (skips multi-dimensional and annotated types)            |
+| `.strip().isEmpty()`                   | `.isBlank()`            | Yes                                                          |
+| `.strip().length() == 0`               | `.isBlank()`            | Yes (including reversed `0 == ...` form)                     |
+| `.strip().length() <= 0`               | `.isBlank()`            | Yes                                                          |
+| `.strip().length() != 0` / `> 0`       | `!receiver.isBlank()`   | Simple receivers only (identifiers, dotted names)            |
+| Reversed strip forms (`0 != ...` etc.) | `.isBlank()` or negated | Yes (positive reversed); simple receivers (negated reversed) |
+| `.trim().isEmpty()`                    | `.isBlank()`            | Yes                                                          |
+| `.trim().length() == 0`                | `.isBlank()`            | Yes (including reversed `0 == ...` form)                     |
+| `.trim().length() <= 0`                | `.isBlank()`            | Yes                                                          |
+| `.trim().length() != 0` / `> 0`        | `!receiver.isBlank()`   | Simple receivers only (identifiers, dotted names)            |
+| Reversed trim forms (`0 != ...` etc.)  | `.isBlank()` or negated | Yes (positive reversed); simple receivers (negated reversed) |
 
 ### API 34+ (MIN_SDK_FORMATTED)
 

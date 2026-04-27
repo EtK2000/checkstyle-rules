@@ -314,9 +314,33 @@ class InputSpecificApiClean {
 			System.out.println("empty without trim");
 	}
 
-	void stripIsEmpty(String s) {
-		if (s.strip().isEmpty())
-			System.out.println("strip empty");
+	void stripAlone(String s) {
+		final var stripped = s.strip();
+	}
+
+	void stripEqualsNotEmpty(String s) {
+		if (s.strip().equals("x"))
+			System.out.println("equals x");
+	}
+
+	void stripLeadingIsEmpty(String s) {
+		if (s.stripLeading().isEmpty())
+			System.out.println("leading stripped empty");
+	}
+
+	void stripLengthEqualsOne(String s) {
+		if (s.strip().length() == 1)
+			System.out.println("single char");
+	}
+
+	void stripLengthGreaterThanOne(String s) {
+		if (s.strip().length() > 1)
+			System.out.println("more than one char after strip");
+	}
+
+	void stripTrailingIsEmpty(String s) {
+		if (s.stripTrailing().isEmpty())
+			System.out.println("trailing stripped empty");
 	}
 
 	void toArrayAlreadyCorrect(List<String> list) {
@@ -362,5 +386,10 @@ class InputSpecificApiClean {
 	void trimLengthEqualsOne(String s) {
 		if (s.trim().length() == 1)
 			System.out.println("single char");
+	}
+
+	void trimLengthGreaterThanOne(String s) {
+		if (s.trim().length() > 1)
+			System.out.println("more than one char after trim");
 	}
 }

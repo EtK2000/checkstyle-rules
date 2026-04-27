@@ -49,6 +49,8 @@ import javax.annotation.Nullable;
  *     <li>{@code .stream().findFirst().isPresent()} -> use {@code !.isEmpty()}</li>
  *     <li>{@code .stream().forEach(...)} -> use {@code .forEach(...)} (API 24+)</li>
  *     <li>{@code .toArray(new Type[0])} -> use {@code .toArray(Type[]::new)} (API 33+)</li>
+ *     <li>{@code .strip().isEmpty()} -> use {@code .isBlank()} (API 33+)</li>
+ *     <li>{@code .strip().length() == 0} -> use {@code .isBlank()} (API 33+)</li>
  *     <li>{@code .trim().isEmpty()} -> use {@code .isBlank()} (API 33+)</li>
  *     <li>{@code .trim().length() == 0} -> use {@code .isBlank()} (API 33+)</li>
  *     <li>{@code .values().contains(v)} -> use {@code .containsValue(v)}</li>
@@ -369,8 +371,9 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 	}
 
 	/**
-	 * Collects both {@code .trim().isEmpty()} METHOD_CALL nodes and
-	 * comparison nodes (EQUAL, NOT_EQUAL, etc.) matching {@code .trim().length() == 0}.
+	 * Collects both {@code .trim().isEmpty()} / {@code .strip().isEmpty()} METHOD_CALL nodes and
+	 * comparison nodes (EQUAL, NOT_EQUAL, etc.) matching {@code .trim().length() == 0} or
+	 * {@code .strip().length() == 0}.
 	 */
 	private static void collectTrimIsBlankCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (ast.getType() == TokenTypes.METHOD_CALL && isTrimIsEmptyCall(ast))
@@ -780,10 +783,10 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		if (elist != null && elist.getChildCount() > 0)
 			return false;
 
-		// skip .trim().length() — handled by isBlank detection
+		// skip .trim/.strip().length(), handled by isBlank detection
 		if ("length".equals(last.getText())) {
 			final var receiver = dot.getFirstChild();
-			if (receiver != null && receiver.getType() == TokenTypes.METHOD_CALL && isTrimCall(receiver))
+			if (receiver != null && receiver.getType() == TokenTypes.METHOD_CALL && isTrimOrStripCall(receiver))
 				return false;
 		}
 		return true;
@@ -1000,27 +1003,9 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 	}
 
 	/**
-	 * Checks whether the METHOD_CALL is a {@code .trim()} call with no arguments.
-	 */
-	@CheckReturnValue
-	private static boolean isTrimCall(@Nonnull DetailAST methodCall) {
-		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
-		if (dot == null)
-			return false;
-
-		var last = dot.getFirstChild();
-		while (last.getNextSibling() != null)
-			last = last.getNextSibling();
-		if (!"trim".equals(last.getText()))
-			return false;
-
-		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
-		return elist == null || elist.getChildCount() == 0;
-	}
-
-	/**
-	 * Checks whether the METHOD_CALL is {@code receiver.trim().isEmpty()},
-	 * i.e. an {@code isEmpty()} call whose receiver is a {@code .trim()} call.
+	 * Checks whether the METHOD_CALL is {@code receiver.trim().isEmpty()} or
+	 * {@code receiver.strip().isEmpty()}, i.e. an {@code isEmpty()} call whose
+	 * receiver is a {@code .trim()} or {@code .strip()} call.
 	 */
 	@CheckReturnValue
 	private static boolean isTrimIsEmptyCall(@Nonnull DetailAST methodCall) {
@@ -1039,12 +1024,12 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			return false;
 
 		final var receiver = dot.getFirstChild();
-		return receiver != null && receiver.getType() == TokenTypes.METHOD_CALL && isTrimCall(receiver);
+		return receiver != null && receiver.getType() == TokenTypes.METHOD_CALL && isTrimOrStripCall(receiver);
 	}
 
 	/**
-	 * Like {@link #isSizeCall(DetailAST)} but checks for {@code .trim().length()}
-	 * specifically. Used by the isBlank detection.
+	 * Like {@link #isSizeCall(DetailAST)} but checks for {@code .trim().length()} or
+	 * {@code .strip().length()} specifically. Used by the isBlank detection.
 	 */
 	@CheckReturnValue
 	private static boolean isTrimLengthCall(@Nonnull DetailAST ast) {
@@ -1067,7 +1052,27 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			return false;
 
 		final var receiver = dot.getFirstChild();
-		return receiver != null && receiver.getType() == TokenTypes.METHOD_CALL && isTrimCall(receiver);
+		return receiver != null && receiver.getType() == TokenTypes.METHOD_CALL && isTrimOrStripCall(receiver);
+	}
+
+	/**
+	 * Checks whether the METHOD_CALL is a {@code .trim()} or {@code .strip()} call
+	 * with no arguments.
+	 */
+	@CheckReturnValue
+	private static boolean isTrimOrStripCall(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return false;
+
+		var last = dot.getFirstChild();
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		if (!"strip".equals(last.getText()) && !"trim".equals(last.getText()))
+			return false;
+
+		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
+		return elist == null || elist.getChildCount() == 0;
 	}
 
 	@CheckReturnValue
@@ -1193,8 +1198,8 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 
 	/**
 	 * Detects comparisons equivalent to isBlank/!isBlank using trim().length()
-	 * and returns {@code ".isBlank()"} or {@code "!.isBlank()"} accordingly,
-	 * or {@code null} if the AST is not a trim().length() comparison.
+	 * or strip().length() and returns {@code ".isBlank()"} or {@code "!.isBlank()"}
+	 * accordingly, or {@code null} if the AST is not a trim/strip().length() comparison.
 	 */
 	@CheckReturnValue
 	@Nullable
@@ -1247,6 +1252,30 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			}
 			default -> null;
 		};
+	}
+
+	/**
+	 * Given a node detected by {@link #collectTrimIsBlankCalls}, returns the
+	 * actual method name ({@code "trim"} or {@code "strip"}) for use in
+	 * violation messages.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static String trimOrStripName(@Nonnull DetailAST detectedNode) {
+		final DetailAST trimOrStripCall;
+		if (detectedNode.getType() == TokenTypes.METHOD_CALL)
+			trimOrStripCall = detectedNode.findFirstToken(TokenTypes.DOT).getFirstChild();
+		else {
+			final var left = detectedNode.getFirstChild();
+			final var side = isTrimLengthCall(left) ? left : left.getNextSibling();
+			final var inner = side.getType() == TokenTypes.EXPR ? side.getFirstChild() : side;
+			trimOrStripCall = inner.findFirstToken(TokenTypes.DOT).getFirstChild();
+		}
+		final var dot = trimOrStripCall.findFirstToken(TokenTypes.DOT);
+		var last = dot.getFirstChild();
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		return last.getText();
 	}
 
 	private final Set<String> imports = new HashSet<>();
@@ -1704,8 +1733,9 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		final var calls = new ArrayList<DetailAST>();
 		collectTrimIsBlankCalls(ast, calls);
 		for (var node : calls) {
+			final var methodName = trimOrStripName(node);
 			if (node.getType() == TokenTypes.METHOD_CALL)
-				log(node, MSG_METHOD, ".isBlank()", ".trim().isEmpty()");
+				log(node, MSG_METHOD, ".isBlank()", "." + methodName + "().isEmpty()");
 			else {
 				final var replacement = trimLengthZeroReplacement(node);
 				final var left = node.getFirstChild();
@@ -1722,9 +1752,10 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 				final var trimLengthOnLeft = isTrimLengthCall(left);
 				final var literalSide = trimLengthOnLeft ? right : left;
 				final var literalText = childText(literalSide);
+				final var lengthSuffix = "." + methodName + "().length()";
 				final var actual = trimLengthOnLeft
-						? ".trim().length() " + op + " " + literalText
-						: literalText + " " + op + " " + ".trim().length()";
+						? lengthSuffix + " " + op + " " + literalText
+						: literalText + " " + op + " " + lengthSuffix;
 				log(node, MSG_METHOD, replacement, actual);
 			}
 		}
