@@ -70,21 +70,21 @@ public class JitInefficiencyCheckTest {
 		assertViolation(violations, i++, 72, "Boxed accumulator 'count' (type 'Integer') is autoboxed in a loop, prefer the primitive type.");
 		assertViolation(violations, i++, 81, "Boxed accumulator 'total' (type 'Double') is autoboxed in a loop, prefer the primitive type.");
 		assertViolation(violations, i++, 88, "Boxed accumulator 'fSum' (type 'Float') is autoboxed in a loop, prefer the primitive type.");
-		assertViolation(violations, i++, 96, "'Color.values()' allocates a new array each call; cache to a static final field outside the loop.");
-		assertViolation(violations, i++, 104, "'Color.values()' allocates a new array each call; cache to a static final field outside the loop.");
-		assertViolation(violations, i++, 112, "'.matches(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
-		assertViolation(violations, i++, 120, "'.split(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
-		assertViolation(violations, i++, 128, "String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
-		assertViolation(violations, i++, 134, "String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
-		assertViolation(violations, i++, 140, "'Color.values()' allocates a new array each call; cache to a static final field outside the loop.");
-		assertViolation(violations, i++, 147, "Use an enhanced 'for' loop instead of an explicit 'Iterator.hasNext()/next()' loop.");
-		assertViolation(violations, i++, 154, "Iterate '.entrySet()' instead of '.keySet()' + '.get(...)' (avoids double lookup).");
-		assertViolation(violations, i++, 162, "'.matches(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
-		assertViolation(violations, i++, 170, "'.replaceAll(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
-		assertViolation(violations, i++, 176, "Use an enhanced 'for' loop instead of an explicit 'Iterator.hasNext()/next()' loop.");
-		assertViolation(violations, i++, 178, "'.split(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
-		assertViolation(violations, i++, 186, "String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
-		assertViolation(violations, i++, 193, "String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
+		assertViolation(violations, i++, 97, "'Color.values()' allocates a new array each call; cache to a static final field outside the loop.");
+		assertViolation(violations, i++, 105, "'Color.values()' allocates a new array each call; cache to a static final field outside the loop.");
+		assertViolation(violations, i++, 113, "'.matches(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
+		assertViolation(violations, i++, 121, "'.split(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
+		assertViolation(violations, i++, 129, "String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
+		assertViolation(violations, i++, 135, "String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
+		assertViolation(violations, i++, 142, "'Color.values()' allocates a new array each call; cache to a static final field outside the loop.");
+		assertViolation(violations, i++, 149, "Use an enhanced 'for' loop instead of an explicit 'Iterator.hasNext()/next()' loop.");
+		assertViolation(violations, i++, 156, "Iterate '.entrySet()' instead of '.keySet()' + '.get(...)' (avoids double lookup).");
+		assertViolation(violations, i++, 164, "'.matches(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
+		assertViolation(violations, i++, 172, "'.replaceAll(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
+		assertViolation(violations, i++, 178, "Use an enhanced 'for' loop instead of an explicit 'Iterator.hasNext()/next()' loop.");
+		assertViolation(violations, i++, 180, "'.split(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
+		assertViolation(violations, i++, 188, "String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
+		assertViolation(violations, i++, 195, "String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
 	}
 
 	@Test

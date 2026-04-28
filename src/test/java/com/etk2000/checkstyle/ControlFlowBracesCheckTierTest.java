@@ -67,16 +67,49 @@ public class ControlFlowBracesCheckTierTest {
 
 	static Stream<Arguments> tierProvider() {
 		return Stream.of(
-				Arguments.of("do --x; while (x > 0);", ControlFlowBracesCheck.TIER_1),
-				Arguments.of("do x--; while (x > 0);", ControlFlowBracesCheck.TIER_1),
-				Arguments.of("do x++; while (x > 0);", ControlFlowBracesCheck.TIER_1),
+				Arguments.of("do --x; while (x > 0);", ControlFlowBracesCheck.TIER_2),
+				Arguments.of("do x--; while (x > 0);", ControlFlowBracesCheck.TIER_2),
+				Arguments.of("do x++; while (x > 0);", ControlFlowBracesCheck.TIER_2),
 				Arguments.of("do --x; while (x > 0 && x < 100);", ControlFlowBracesCheck.TIER_2),
 				Arguments.of("do --x; while (x > 0 || x < 100);", ControlFlowBracesCheck.TIER_2),
 				Arguments.of("do System.out.println(x); while (x > 0);", ControlFlowBracesCheck.TIER_2),
 				Arguments.of("do x = System.out.hashCode(); while (x > 0);", ControlFlowBracesCheck.TIER_2),
+				Arguments.of("do x = a.b.c; while (x > 0);", ControlFlowBracesCheck.TIER_2),
+				Arguments.of("do a.b.c(); while (x > 0);", ControlFlowBracesCheck.TIER_2),
+				Arguments.of("do x = a.b().c(); while (x > 0);", ControlFlowBracesCheck.TIER_2),
 				Arguments.of("do x = x + y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = x - y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = x * y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = x / y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = x % y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = x & y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = x | y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = x ^ y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = x << y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = x >> y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = x >>> y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = a == b ? 1 : 2; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = a < b ? 1 : 2; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = a > b ? 1 : 2; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = a <= b ? 1 : 2; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = a >= b ? 1 : 2; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = a != b ? 1 : 2; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = a && b ? 1 : 2; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x = a || b ? 1 : 2; while (x > 0);", ControlFlowBracesCheck.TIER_3),
 				Arguments.of("do x += 5 * y; while (x > 0);", ControlFlowBracesCheck.TIER_3),
-				Arguments.of("do new Object(); while (x > 0);", ControlFlowBracesCheck.TIER_3)
+				Arguments.of("do x -= a + b; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x *= a + b; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x /= a + b; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x %= a + b; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x &= a + b; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x |= a + b; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x ^= a + b; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x <<= a + b; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x >>= a + b; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do x >>>= a + b; while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do new Object(); while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do a.b().c.d(); while (x > 0);", ControlFlowBracesCheck.TIER_3),
+				Arguments.of("do this.helper().chain(); while (x > 0);", ControlFlowBracesCheck.TIER_3)
 		);
 	}
 
@@ -115,6 +148,6 @@ public class ControlFlowBracesCheckTierTest {
 	@ParameterizedTest
 	void testTierClassification(String doWhileCode, int expectedTier) throws Exception {
 		final var doAst = findDoNode(doWhileCode);
-		assertEquals(expectedTier, ControlFlowBracesCheck.determineTier(doAst.getFirstChild(), doAst));
+		assertEquals(expectedTier, ControlFlowBracesCheck.determineTier(doAst.getFirstChild()));
 	}
 }

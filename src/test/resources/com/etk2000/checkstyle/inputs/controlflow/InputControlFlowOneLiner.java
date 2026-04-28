@@ -5,6 +5,7 @@ import java.util.List;
 class InputControlFlowOneLiner {
 	void doWhileTier2WhileOnSameLine(int x) {
 		final var list = List.of("a");
+		do --x; while (x > 0); // violation: Do-while while clause must be on its own line.
 		do list.add("b"); while (list.size() < 10); // violation: Do-while while clause must be on its own line.
 		do System.out.println(x); while (x > 0); // violation: Do-while while clause must be on its own line.
 		do --x; while (x > 0 && x < 100); // violation: Do-while while clause must be on its own line.

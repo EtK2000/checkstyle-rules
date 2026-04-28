@@ -16,19 +16,16 @@ import javax.annotation.Nonnull;
  * </ul>
  * Do-while has tier-based formatting:
  * <ul>
- *     <li>Tier 1 (simple body, no dot, simple while): all on one line</li>
- *     <li>Tier 2 (simple body with dot, or compound while): body on do line, while on next</li>
+ *     <li>Tier 2 (simple body): body on do line, while on next</li>
  *     <li>Tier 3 (non-simple body): body on own line (standard rules)</li>
  * </ul>
  * Each nesting level is evaluated independently.
  */
 public class ControlFlowBracesCheck extends AbstractCheck {
-	static final int TIER_1 = 1;
 	static final int TIER_2 = 2;
 	static final int TIER_3 = 3;
 
 	private static final String MSG_DO_WHILE_BODY_ON_DO_LINE = "control.flow.do.while.body.on.do.line";
-	private static final String MSG_DO_WHILE_ONE_LINE = "control.flow.do.while.one.line";
 	private static final String MSG_DO_WHILE_WHILE_NEXT_LINE = "control.flow.do.while.while.next.line";
 	private static final String MSG_MISSING_BRACES = "control.flow.missing.braces";
 	private static final String MSG_ONE_LINER = "control.flow.one.liner";
@@ -71,31 +68,6 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 	}
 
 	/**
-	 * Checks whether the subtree contains a DOT node.
-	 */
-	@CheckReturnValue
-	private static boolean containsDot(@Nonnull DetailAST node) {
-		if (node.getType() == TokenTypes.DOT)
-			return true;
-		for (var child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (containsDot(child))
-				return true;
-		}
-		return false;
-	}
-
-	@CheckReturnValue
-	private static boolean containsLandLor(@Nonnull DetailAST node) {
-		if (node.getType() == TokenTypes.LAND || node.getType() == TokenTypes.LOR)
-			return true;
-		for (var child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (containsLandLor(child))
-				return true;
-		}
-		return false;
-	}
-
-	/**
 	 * Checks whether the DOT subtree contains a METHOD_CALL node,
 	 * indicating method chaining (e.g. {@code a.b().c()}).
 	 */
@@ -113,24 +85,15 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 	/**
 	 * Determines the formatting tier for a do-while body.
 	 * <ul>
-	 *     <li>Tier 1: all on one line (simple body, no dot, simple while condition)</li>
-	 *     <li>Tier 2: body on do line, while on next (simple body, but dot or compound while)</li>
+	 *     <li>Tier 2: body on do line, while on next (simple body)</li>
 	 *     <li>Tier 3: body on own line (non-simple body)</li>
 	 * </ul>
 	 */
 	@CheckReturnValue
-	static int determineTier(@Nonnull DetailAST body, @Nonnull DetailAST doAst) {
+	static int determineTier(@Nonnull DetailAST body) {
 		if (!isDoWhileLineEligible(body))
 			return TIER_3;
-
-		final var expr = body.getFirstChild();
-		if (containsDot(expr))
-			return TIER_2;
-
-		if (isCompoundCondition(doAst))
-			return TIER_2;
-
-		return TIER_1;
+		return TIER_2;
 	}
 
 	@CheckReturnValue
@@ -145,7 +108,7 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 
 	/**
 	 * Returns whether the RHS of an assignment/compound-assignment contains
-	 * a binary operator, making the expression too complex for tier 1.
+	 * a binary operator, making the expression too complex for tier 2.
 	 */
 	@CheckReturnValue
 	private static boolean hasComplexRhs(@Nonnull DetailAST expr) {
@@ -162,26 +125,9 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 	}
 
 	/**
-	 * Returns whether the while condition in a do-while contains compound
-	 * operators ({@code &&}, {@code ||}), making it too complex for tier 1.
-	 */
-	@CheckReturnValue
-	private static boolean isCompoundCondition(@Nonnull DetailAST doAst) {
-		// find the condition EXPR after DO_WHILE in LITERAL_DO's children
-		var foundWhile = false;
-		for (var child = doAst.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.DO_WHILE)
-				foundWhile = true;
-			else if (foundWhile && child.getType() == TokenTypes.EXPR)
-				return containsLandLor(child);
-		}
-		return false;
-	}
-
-	/**
 	 * Returns whether the body qualifies to be on the {@code do} line
-	 * (tiers 1 and 2). The body must be a simple expression without
-	 * chained method calls or complex RHS.
+	 * (tier 2). The body must be a simple expression without chained
+	 * method calls or complex RHS.
 	 */
 	@CheckReturnValue
 	static boolean isDoWhileLineEligible(@Nonnull DetailAST body) {
@@ -254,7 +200,7 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 	}
 
 	private void checkDoWhile(@Nonnull DetailAST keyword, @Nonnull DetailAST body) {
-		final var tier = determineTier(body, keyword);
+		final var tier = determineTier(body);
 		final var bodyOnDoLine = isOneLiner(keyword, body);
 		final var whileAst = keyword.findFirstToken(TokenTypes.DO_WHILE);
 		final var bodyLastLine = AstUtil.lastLine(body);
@@ -274,10 +220,6 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 		}
 
 		switch (tier) {
-			case TIER_1 -> {
-				if (!bodyOnDoLine || !whileOnBodyLine)
-					log(keyword, MSG_DO_WHILE_ONE_LINE);
-			}
 			case TIER_2 -> {
 				if (!bodyOnDoLine)
 					log(keyword, MSG_DO_WHILE_BODY_ON_DO_LINE);

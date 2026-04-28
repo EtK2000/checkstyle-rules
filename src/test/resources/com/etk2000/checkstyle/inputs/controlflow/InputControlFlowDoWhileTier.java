@@ -7,24 +7,19 @@ class InputControlFlowDoWhileTier {
 		return x - 1;
 	}
 
-	void tier1BodyOnOwnLine(int x) {
-		do // violation: Simple do-while must be on a single line.
+	void tier2BodyOnOwnLine(int x) {
+		do // violation: Do-while body must be on the do line.
 			--x;
 		while (x > 0);
-	}
 
-	void tier1WhileOnNextLine(int x) {
-		do --x; // violation: Simple do-while must be on a single line.
+		do // violation: Do-while body must be on the do line.
+			next(x);
 		while (x > 0);
 
-		do next(x); // violation: Simple do-while must be on a single line.
-		while (x > 0);
-
-		do x += 5; // violation: Simple do-while must be on a single line.
+		do // violation: Do-while body must be on the do line.
+			x += 5;
 		while (x < 100);
-	}
 
-	void tier2BodyOnOwnLine(int x) {
 		do // violation: Do-while body must be on the do line.
 			System.out.println(x);
 		while (x > 0);

@@ -150,14 +150,13 @@ When a check classifies inputs into categories (e.g., tiers, severity levels, fo
 enforces a specific format per category, build an NxN permutation matrix: actual category vs.
 formatted-as category. Every cell must be tested.
 
-Example: `ControlFlowBracesCheck` has 3 do-while tiers (tier 1 = all one line, tier 2 = body on do
-line + while split, tier 3 = body on own line). The matrix is:
+Example: `ControlFlowBracesCheck` has 2 do-while tiers (tier 2 = body on do line + while on next
+line, tier 3 = body on own line). The matrix is:
 
-| Actual \ Written as | Tier 1    | Tier 2    | Tier 3    |
-|---------------------|-----------|-----------|-----------|
-| **Tier 1**          | Clean     | Violation | Violation |
-| **Tier 2**          | Violation | Clean     | Violation |
-| **Tier 3**          | Violation | Violation | Clean     |
+| Actual \ Written as | Tier 2    | Tier 3    |
+|---------------------|-----------|-----------|
+| **Tier 2**          | Clean     | Violation |
+| **Tier 3**          | Violation | Clean     |
 
 The diagonal is clean (correct format). Every off-diagonal cell is a violation. **Every cell needs
 three layers of coverage:**
@@ -215,8 +214,8 @@ as proof of coverage.
 has check test + fixer unit test + integration test.
 
 **Step 4: Boundary pair trace.** For every dimension that causes a category transition (e.g., "has
-DOT" flips tier 1 to tier 2), verify both sides of the boundary are tested: a clean case just
-inside the boundary and a violation/clean case just outside.
+chained call" flips tier 2 to tier 3), verify both sides of the boundary are tested: a clean case
+just inside the boundary and a violation/clean case just outside.
 
 **Step 5: Fixer return path trace.** For every `return null` and every `return new FixResult(...)`
 in the fixer, name the unit test that exercises it. Skip only paths that are provably unreachable

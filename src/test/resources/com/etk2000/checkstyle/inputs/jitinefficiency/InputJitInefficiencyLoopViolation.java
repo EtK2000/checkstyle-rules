@@ -86,7 +86,8 @@ class InputJitInefficiencyLoopViolation {
 
 	void boxedAccumulatorDoWhile() {
 		Float fSum = 0f; // violation: Boxed accumulator 'fSum' (type 'Float') is autoboxed in a loop, prefer the primitive type.
-		do fSum += 1f; while (fSum < 10f);
+		do fSum += 1f;
+		while (fSum < 10f);
 		System.out.println(fSum);
 	}
 
@@ -131,7 +132,8 @@ class InputJitInefficiencyLoopViolation {
 
 	void stringConcatInDoWhile() {
 		String s = "";
-		do s += "x"; while (s.length() < 5); // violation: String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.
+		do s += "x"; // violation: String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.
+		while (s.length() < 5);
 		System.out.println(s);
 	}
 

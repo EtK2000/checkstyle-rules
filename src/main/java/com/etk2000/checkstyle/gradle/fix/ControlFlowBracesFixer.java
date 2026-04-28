@@ -13,7 +13,6 @@ import javax.annotation.Nullable;
  * Determines the formatting tier from line content and produces the
  * correct form:
  * <ul>
- *     <li>Tier 1: {@code do body; while (cond);} (all one line)</li>
  *     <li>Tier 2: body on do line, while on next line</li>
  *     <li>Tier 3: body on own line, while after</li>
  * </ul>
@@ -27,7 +26,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 					"[\\w.]+\\([^)]*\\))$"
 	);
 
-	@Nonnull
+	@Nullable
 	private static FixResult buildTierResult(
 			@Nonnull String bodyText,
 			@Nonnull String whileClause,
@@ -35,16 +34,31 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 			int endLine,
 			@Nonnull String indent
 	) {
-		final var tier = determineTierFromText(bodyText, extractWhileCondition(whileClause));
+		// body with no real statement (comment-only, possibly with empty `;`); refuse to fix
+		if (isCommentOnly(bodyText))
+			return null;
+
+		// no-comment view to decide if `;` is needed; isCommentOnly already filtered
+		// out unterminated cases, but be explicit defensively in case that invariant changes
+		final var withoutBlocks = stripBlockComments(bodyText);
+		if (withoutBlocks == null)
+			return null;
+		final var bodyNoComment = stripTrailingLineComment(withoutBlocks).strip();
+
+		// non-empty body without a real `;` is malformed (or disjoint source); refuse to fix
+		if (!bodyNoComment.isEmpty() && !bodyNoComment.endsWith(";"))
+			return null;
+
+		final var tier = determineTierFromText(bodyText);
 		final var result = new ArrayList<String>();
 		switch (tier) {
-			case 1 -> result.add(indent + "do " + bodyText + " " + whileClause);
 			case 2 -> {
 				result.add(indent + "do " + bodyText);
 				result.add(indent + whileClause);
 			}
 			default -> {
-				final var body = bodyText.endsWith(";") ? bodyText : bodyText + ";";
+				// tier-3 needs an explicit `;` if the body's no-comment view doesn't supply one
+				final var body = bodyNoComment.endsWith(";") ? bodyText : bodyText + ";";
 				result.add(indent + "do");
 				result.add(indent + "\t" + body);
 				result.add(indent + whileClause);
@@ -54,10 +68,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	}
 
 	@CheckReturnValue
-	private static int determineTierFromText(
-			@Nonnull String bodyText,
-			@Nonnull String whileCondition
-	) {
+	private static int determineTierFromText(@Nonnull String bodyText) {
 		final var text = bodyText.endsWith(";")
 				? bodyText.substring(0, bodyText.length() - 1).strip()
 				: bodyText.strip();
@@ -71,12 +82,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		if (!SIMPLE_BODY_PATTERN.matcher(text).matches())
 			return 3;
 
-		if (text.contains("."))
-			return 2;
-		if (whileCondition.contains("&&") || whileCondition.contains("||"))
-			return 2;
-
-		return 1;
+		return 2;
 	}
 
 	@CheckReturnValue
@@ -86,16 +92,6 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		while (i < line.length() && (line.charAt(i) == '\t' || line.charAt(i) == ' '))
 			++i;
 		return line.substring(0, i);
-	}
-
-	@CheckReturnValue
-	@Nonnull
-	private static String extractWhileCondition(@Nonnull String whileClause) {
-		final var open = whileClause.indexOf('(');
-		final var close = whileClause.lastIndexOf(')');
-		if (open >= 0 && close > open)
-			return whileClause.substring(open + 1, close);
-		return whileClause;
 	}
 
 	/**
@@ -157,8 +153,16 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	private static int findTrailingComment(@Nonnull String line) {
 		var inString = false;
 		var inChar = false;
+		var inBlockComment = false;
 		for (var i = 0; i < line.length(); ++i) {
 			final var c = line.charAt(i);
+			if (inBlockComment) {
+				if (c == '*' && i + 1 < line.length() && line.charAt(i + 1) == '/') {
+					inBlockComment = false;
+					++i;
+				}
+				continue;
+			}
 			if (inString) {
 				if (c == '"' && !isEscaped(line, i))
 					inString = false;
@@ -171,6 +175,10 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 				inString = true;
 			else if (c == '\'')
 				inChar = true;
+			else if (c == '/' && i + 1 < line.length() && line.charAt(i + 1) == '*') {
+				inBlockComment = true;
+				++i;
+			}
 			else if (c == '/' && i + 1 < line.length() && line.charAt(i + 1) == '/')
 				return i;
 		}
@@ -220,6 +228,10 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		for (var i = lineIndex + 1; i < closeBraceLine; ++i)
 			bodyLines.add(lines.get(i));
 
+		// empty body has no statement to keep; emitting `do\n\twhile(...)` would be invalid Java
+		if (bodyLines.isEmpty())
+			return null;
+
 		final var closeLineStripped = lines.get(closeBraceLine).stripLeading();
 		final var whileIdx = closeLineStripped.indexOf("while");
 		if (whileIdx < 0) {
@@ -227,8 +239,12 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 			if (nextWhile < 0)
 				return null;
 			final var whileClauseFromNext = lines.get(nextWhile).stripLeading();
-			if (bodyLines.size() == 1)
-				return buildTierResult(bodyLines.getFirst().stripLeading(), whileClauseFromNext, lineIndex, nextWhile, indent);
+			if (bodyLines.size() == 1) {
+				final var bodyStripped = bodyLines.getFirst().stripLeading();
+				if (isVariableDeclaration(bodyStripped))
+					return null;
+				return buildTierResult(bodyStripped, whileClauseFromNext, lineIndex, nextWhile, indent);
+			}
 			final var r = new ArrayList<String>();
 			r.add(indent + "do");
 			r.addAll(bodyLines);
@@ -237,8 +253,12 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		}
 		final var whileClause = closeLineStripped.substring(whileIdx);
 
-		if (bodyLines.size() == 1)
-			return buildTierResult(bodyLines.getFirst().stripLeading(), whileClause, lineIndex, closeBraceLine, indent);
+		if (bodyLines.size() == 1) {
+			final var bodyStripped = bodyLines.getFirst().stripLeading();
+			if (isVariableDeclaration(bodyStripped))
+				return null;
+			return buildTierResult(bodyStripped, whileClause, lineIndex, closeBraceLine, indent);
+		}
 
 		final var result = new ArrayList<String>();
 		result.add(indent + "do");
@@ -438,7 +458,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		return buildTierResult(bodyText, whileClause, lineIndex, whileLine, indent);
 	}
 
-	@Nonnull
+	@Nullable
 	private static FixResult fixOnDoLineWhileSameLine(
 			@Nonnull String afterDo,
 			int whileIdx,
@@ -460,6 +480,9 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 			return null;
 
 		final var bodyText = lines.get(lineIndex + 1).stripLeading();
+		if (bodyText.isEmpty())
+			return null;
+
 		final var whileLine = findWhileLine(lines, lineIndex);
 		if (whileLine < 0)
 			return null;
@@ -469,6 +492,30 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 
 		final var whileClause = lines.get(whileLine).stripLeading();
 		return buildTierResult(bodyText, whileClause, lineIndex, whileLine, indent);
+	}
+
+	/**
+	 * Returns whether the body has no real statement (comment-only, possibly with a
+	 * trailing empty {@code ;}). Catches line-comment-only, block-comment-only, mixed
+	 * comments, block-comment-with-empty-statement, and unterminated block comments
+	 * (whether at the start or mid-line).
+	 */
+	@CheckReturnValue
+	private static boolean isCommentOnly(@Nonnull String bodyText) {
+		final var stripped = bodyText.strip();
+		if (stripped.isEmpty())
+			return false;
+
+		// strip completed block comments; null means an unterminated /* was found,
+		// which the fixer cannot safely fix from a single body line
+		final var withoutBlocks = stripBlockComments(stripped);
+		if (withoutBlocks == null)
+			return true;
+
+		// strip trailing line comment; if nothing real remains (or only an empty `;`),
+		// it's effectively comment-only
+		final var withoutLine = stripTrailingLineComment(withoutBlocks).strip();
+		return withoutLine.isEmpty() || withoutLine.equals(";");
 	}
 
 	@CheckReturnValue
@@ -555,6 +602,70 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 						&& i + 1 < s.length() && Character.isJavaIdentifierStart(s.charAt(i + 1));
 			}
 		};
+	}
+
+	/**
+	 * Removes all completed {@code /* ... *}{@code /} block comments, tracking string,
+	 * char literal, and {@code //} line-comment state so comment delimiters inside
+	 * literals or inside line comments are not mistaken for real block comments.
+	 * Returns {@code null} if an unterminated block comment is found — callers should
+	 * treat that as "refuse to fix".
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String stripBlockComments(@Nonnull String s) {
+		final var sb = new StringBuilder();
+		var inString = false;
+		var inChar = false;
+		var i = 0;
+		while (i < s.length()) {
+			final var c = s.charAt(i);
+			if (inString) {
+				sb.append(c);
+				if (c == '"' && !isEscaped(s, i))
+					inString = false;
+				++i;
+			}
+			else if (inChar) {
+				sb.append(c);
+				if (c == '\'' && !isEscaped(s, i))
+					inChar = false;
+				++i;
+			}
+			else if (c == '"') {
+				inString = true;
+				sb.append(c);
+				++i;
+			}
+			else if (c == '\'') {
+				inChar = true;
+				sb.append(c);
+				++i;
+			}
+			else if (i + 1 < s.length() && c == '/' && s.charAt(i + 1) == '/') {
+				// line comment runs to end-of-string; preserve it untouched and stop scanning
+				sb.append(s, i, s.length());
+				break;
+			}
+			else if (i + 1 < s.length() && c == '/' && s.charAt(i + 1) == '*') {
+				final var end = s.indexOf("*/", i + 2);
+				if (end < 0)
+					return null;
+				i = end + 2;
+			}
+			else {
+				sb.append(c);
+				++i;
+			}
+		}
+		return sb.toString();
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static String stripTrailingLineComment(@Nonnull String s) {
+		final var idx = findTrailingComment(s);
+		return idx < 0 ? s : s.substring(0, idx);
 	}
 
 	@Nullable

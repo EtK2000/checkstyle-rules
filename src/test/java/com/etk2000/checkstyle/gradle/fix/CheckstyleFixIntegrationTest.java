@@ -906,14 +906,29 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
-	public void testDoWhileBracedTier1() throws Exception {
-		final var file = tempDir.resolve("DoTier1.java").toFile();
+	public void testDoWhileBracedSimpleBody() throws Exception {
+		final var file = tempDir.resolve("DoBracedSimple.java").toFile();
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo {\n\t\t\t--x;\n\t\t} while (x > 0);\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"class T {\n\tvoid f(int x) {\n\t\tdo --x; while (x > 0);\n\t}\n}",
+				"class T {\n\tvoid f(int x) {\n\t\tdo --x;\n\t\twhile (x > 0);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testDoWhileBracedSimpleBodyCompoundWhile() throws Exception {
+		final var file = tempDir.resolve("DoBracedSimpleCompound.java").toFile();
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo {\n\t\t\t--x;\n\t\t} while (x > 0 && x < 100);\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid f(int x) {\n\t\tdo --x;\n\t\twhile (x > 0 && x < 100);\n\t}\n}",
 				output.content()
 		);
 		assertEquals(1, output.result().fixCount());
@@ -966,6 +981,21 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testDoWhileBracedTier3ThisChainedCall() throws Exception {
+		final var file = tempDir.resolve("DoTier3This.java").toFile();
+		final var input = "class T {\n\tT helper() { return this; }\n\tT chain() { return this; }\n\tvoid f(int x) {\n\t\tdo {\n\t\t\tthis.helper().chain();\n\t\t} while (x > 0);\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tT helper() { return this; }\n\tT chain() { return this; }\n\tvoid f(int x) {\n\t\tdo\n\t\t\thelper().chain();\n\t\twhile (x > 0);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(2, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testDoWhileMissingBraces() throws Exception {
 		final var file = tempDir.resolve("DoMissing.java").toFile();
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo\n\t\t\tif (x > 0)\n\t\t\t\t--x;\n\t\twhile (x > 0);\n\t}\n}";
@@ -981,14 +1011,14 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
-	public void testDoWhileOwnLineTier1() throws Exception {
-		final var file = tempDir.resolve("DoOwn1.java").toFile();
+	public void testDoWhileOwnLineSimpleBody() throws Exception {
+		final var file = tempDir.resolve("DoOwnSimple.java").toFile();
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo\n\t\t\t--x;\n\t\twhile (x > 0);\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"class T {\n\tvoid f(int x) {\n\t\tdo --x; while (x > 0);\n\t}\n}",
+				"class T {\n\tvoid f(int x) {\n\t\tdo --x;\n\t\twhile (x > 0);\n\t}\n}",
 				output.content()
 		);
 		assertEquals(1, output.result().fixCount());
@@ -1011,14 +1041,14 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
-	public void testDoWhileTier1SplitJoins() throws Exception {
-		final var file = tempDir.resolve("DoT1Split.java").toFile();
-		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo --x;\n\t\twhile (x > 0);\n\t}\n}";
+	public void testDoWhileSimpleBodyOneLinerSplits() throws Exception {
+		final var file = tempDir.resolve("DoSimpleOne.java").toFile();
+		final var input = "class T {\n\tvoid f(int x) {\n\t\tdo --x; while (x > 0);\n\t}\n}";
 		Files.writeString(file.toPath(), input);
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(
-				"class T {\n\tvoid f(int x) {\n\t\tdo --x; while (x > 0);\n\t}\n}",
+				"class T {\n\tvoid f(int x) {\n\t\tdo --x;\n\t\twhile (x > 0);\n\t}\n}",
 				output.content()
 		);
 		assertEquals(1, output.result().fixCount());

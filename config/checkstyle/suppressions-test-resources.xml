@@ -24,7 +24,6 @@
 	<suppress checks="JitInefficiencyCheck" files="inputs[\\/]jitinefficiency[\\/]" />
 	<suppress checks="JitInefficiencyCheck" files="inputs[\\/]specificapi[\\/]" />
 	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]jitinefficiency[\\/]" />
-	<suppress checks="OneStatementPerLine" files="inputs[\\/]jitinefficiency[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]jitinefficiency[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]jitinefficiency[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]jitinefficiency[\\/]" />
@@ -113,7 +112,7 @@
 	<suppress checks="InstanceofBeforeCastCheck" files="inputs[\\/]patterninstanceof[\\/]" />
 	<suppress checks="NoBlankLineBetweenSingleCasesCheck" files="inputs[\\/]switchorder[\\/]" />
 	<suppress checks="NumericalPrefixesInfixesSuffixesCharacterCase" files="inputs[\\/]redundantsuffix[\\/]" />
-	<suppress checks="OneStatementPerLine" files="inputs[\\/]controlflow[\\/]" />
+	<suppress checks="OneStatementPerLine" files="InputControlFlowOneLiner\.java" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]astutil[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]collectioninterface[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]fieldconsolidation[\\/]" />

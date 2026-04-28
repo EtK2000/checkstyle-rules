@@ -16,34 +16,18 @@ class InputControlFlowClean {
 
 	void doWhileNested(int x) {
 		do {
-			do --x; while (x > 5);
+			do --x;
+			while (x > 5);
 			++x;
 		} while (x > 0);
 	}
 
 	void doWhileNestedInFor(int x) {
 		for (int i = 0; i < x; ++i) {
-			do --x; while (x > 5);
+			do --x;
+			while (x > 5);
 			System.out.println(i);
 		}
-	}
-
-	void doWhileTier1(int x) {
-		do --x; while (x > 0);
-		do ++x; while (x < 10);
-		do x += 5; while (x < 100);
-		do x -= 1; while (x > 0);
-		do x *= 2; while (x < 100);
-		do x /= 2; while (x > 1);
-		do x %= 3; while (x > 0);
-		do x &= 0xFF; while (x > 0);
-		do x |= 1; while (x == 0);
-		do x ^= 1; while (x > 0);
-		do x <<= 1; while (x < 100);
-		do x >>= 1; while (x > 0);
-		do x >>>= 1; while (x > 0);
-		do x = 0; while (x > 0);
-		do next(x); while (x > 0);
 	}
 
 	void doWhileTier2CompoundWhile(int x) {
@@ -74,6 +58,53 @@ class InputControlFlowClean {
 
 	void doWhileTier2FieldAccessRhs(int x) {
 		do x = System.out.hashCode();
+		while (x > 0);
+	}
+
+	void doWhileTier2SimpleBody(int x) {
+		do --x;
+		while (x > 0);
+
+		do ++x;
+		while (x < 10);
+
+		do x += 5;
+		while (x < 100);
+
+		do x -= 1;
+		while (x > 0);
+
+		do x *= 2;
+		while (x < 100);
+
+		do x /= 2;
+		while (x > 1);
+
+		do x %= 3;
+		while (x > 0);
+
+		do x &= 0xFF;
+		while (x > 0);
+
+		do x |= 1;
+		while (x == 0);
+
+		do x ^= 1;
+		while (x > 0);
+
+		do x <<= 1;
+		while (x < 100);
+
+		do x >>= 1;
+		while (x > 0);
+
+		do x >>>= 1;
+		while (x > 0);
+
+		do x = 0;
+		while (x > 0);
+
+		do next(x);
 		while (x > 0);
 	}
 
