@@ -15,6 +15,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | FieldConsolidationCheck                  | FieldConsolidationFixer            | Merges consecutive same-type fields; wraps across lines if >120 chars. See [C-style arrays](c-style-array-fixer.md) and [limitations](#fieldconsolidationfixer-limitations) |
 | FieldSortingCheck                        | FieldSortingFixer                  | Enum constants: sorts alphabetically, splits same-line. Fields: sorts by chunk, type (primitives first), annotations, type-arg annotations, name; handles dependencies      |
 | FinalLocalVariableCheck                  | FinalLocalVariableFixer            | Adds `final` keyword                                                                                                                                                        |
+| JitInefficiencyCheck                     | JitInefficiencyFixer               | See sub-rules below                                                                                                                                                         |
 | LambdaParameterTypeCheck                 | LambdaParameterTypeFixer           | See sub-rules below                                                                                                                                                         |
 | NoArrayTrailingCommaCheck                | NoArrayTrailingCommaFixer          | Removes trailing comma                                                                                                                                                      |
 | NoBlankLineBetweenSingleCasesCheck       | NoBlankLineBetweenSingleCasesFixer | Removes blank line                                                                                                                                                          |
@@ -48,6 +49,31 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | NoDoubleBlankLines            | DoubleBlankLineFixer             | Removes extra blank line                                       |
 | NoTrailingNewline             | TrailingNewlineFixer             | Removes trailing blank lines at EOF                            |
 | NoTrailingWhitespace          | TrailingWhitespaceFixer          | Trims trailing whitespace                                      |
+
+## JitInefficiencyCheck sub-rules
+
+The fixer handles textual rewrites for the simpler patterns; check-only patterns
+(loop-bound and structural cases) are detected but not auto-fixed.
+
+| Pattern                                                                                                                                       | Replacement                              | Auto-fix |
+|-----------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------|----------|
+| `"" + x` / `x + ""`                                                                                                                           | `String.valueOf(x)`                      | Yes      |
+| `new String("literal")`                                                                                                                       | `"literal"`                              | Yes      |
+| `new String(stringVar)`                                                                                                                       | `stringVar`                              | Yes      |
+| `new StringBuffer(...)` (local)                                                                                                               | `new StringBuilder(...)`                 | Yes      |
+| `new Boolean(true)` / `new Boolean(false)`                                                                                                    | `Boolean.TRUE` / `Boolean.FALSE`         | Yes      |
+| `new Boolean(expr)` (non-literal)                                                                                                             | `Boolean.valueOf(expr)`                  | Yes      |
+| `new Integer/Long/Double/Float/Short/Byte/Character(x)`                                                                                       | `T.valueOf(x)`                           | Yes      |
+| `.toArray(new T[size])` (size != 0, single-dim)                                                                                               | `.toArray(new T[0])`                     | Yes      |
+| `sb.append(a + b + ...)` (with String operand)                                                                                                | `sb.append(a).append(b).append(...)`     | Yes      |
+| String `+=` inside a loop                                                                                                                     | (manual: introduce `StringBuilder`)      | No       |
+| `.matches(...)` / `.replaceAll(...)` / `.split(...)` in loop                                                                                  | (manual: hoist `Pattern.compile`)        | No       |
+| `Map.keySet()` for-each + `map.get(key)` body                                                                                                 | (manual: iterate `.entrySet()`)          | No       |
+| `Enum.values()` in loop                                                                                                                       | (manual: cache to static final)          | No       |
+| Double-brace initialization                                                                                                                   | (manual: use `List.of(...)`/constructor) | No       |
+| `Pattern.compile / DateTimeFormatter.ofPattern / new SimpleDateFormat / Gson / ObjectMapper / DecimalFormat` with constant arg in method body | (manual: hoist to static final)          | No       |
+| Boxed numeric accumulator modified in loop                                                                                                    | (manual: change type to primitive)       | No       |
+| Explicit iterator `while (it.hasNext())`                                                                                                      | (manual: convert to enhanced `for`)      | No       |
 
 ## PreferBulkOperationCheck sub-rules
 
@@ -110,6 +136,7 @@ returning null (skipping) for patterns that require structural changes.
 | `.collect(Collectors.toUnmodifiableList())`      | `.toList()`                                | Yes                                 |
 | `.equals("")`                                    | `.isEmpty()`                               | Yes                                 |
 | `.indexOf(str) != -1` / `>= 0` etc.              | `.contains(str)` / `!.contains(str)`       | No                                  |
+| `.indexOf("x")` / `.lastIndexOf("x")` (length-1) | `.indexOf('x')` / `.lastIndexOf('x')`      | Yes (escape-safe rewrite)           |
 | `.keySet().contains(k)`                          | `.containsKey(k)`                          | Yes                                 |
 | `.replaceAll("literal", x)`                      | `.replace("literal", x)`                   | Yes                                 |
 | `.size() == 0` / `.length() == 0` etc.           | `.isEmpty()` / `!.isEmpty()`               | Yes (negated needs simple receiver) |

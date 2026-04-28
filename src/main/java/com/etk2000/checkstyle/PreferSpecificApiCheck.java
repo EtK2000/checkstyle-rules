@@ -219,6 +219,13 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			collectGetCalls(child, results);
 	}
 
+	private static void collectIndexOfCharCalls(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
+		if (ast.getType() == TokenTypes.METHOD_CALL && isIndexOfSingleCharStringCall(ast))
+			results.add(ast);
+		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
+			collectIndexOfCharCalls(child, results);
+	}
+
 	private static void collectIndexOfContainsComparisons(@Nonnull DetailAST ast, @Nonnull List<DetailAST> results) {
 		if (indexOfContainsReplacement(ast) != null)
 			results.add(ast);
@@ -382,6 +389,52 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 			results.add(ast);
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
 			collectTrimIsBlankCalls(child, results);
+	}
+
+	@CheckReturnValue
+	private static int decodedJavaStringLength(@Nonnull String literalText) {
+		if (literalText.length() < 2 || literalText.charAt(0) != '"'
+				|| literalText.charAt(literalText.length() - 1) != '"')
+			return -1;
+		final var content = literalText.substring(1, literalText.length() - 1);
+		var len = 0;
+		var i = 0;
+		while (i < content.length()) {
+			final var c = content.charAt(i);
+			if (c == '\\') {
+				if (i + 1 >= content.length())
+					return -1;
+				final var next = content.charAt(i + 1);
+				if (next == '"' || next == '\'' || next == '\\' || next == 'b' || next == 'f'
+						|| next == 'n' || next == 'r' || next == 's' || next == 't')
+					i += 2;
+				else if (next == 'u') {
+					if (i + 6 > content.length())
+						return -1;
+					for (var j = i + 2; j < i + 6; ++j) {
+						final var hex = content.charAt(j);
+						if (!isHexDigit(hex))
+							return -1;
+					}
+					i += 6;
+				}
+				else if (next >= '0' && next <= '7') {
+					// JLS octal escape: \0-\377, so 3-digit form requires first digit in 0-3
+					final var maxDigits = next <= '3' ? 3 : 2;
+					var j = i + 2;
+					while (j < content.length() && j - i - 1 < maxDigits
+							&& content.charAt(j) >= '0' && content.charAt(j) <= '7')
+						++j;
+					i = j;
+				}
+				else
+					return -1;
+			}
+			else
+				++i;
+			++len;
+		}
+		return len;
 	}
 
 	/**
@@ -659,6 +712,40 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		while (last.getNextSibling() != null)
 			last = last.getNextSibling();
 		return "get".equals(last.getText());
+	}
+
+	@CheckReturnValue
+	private static boolean isHexDigit(char c) {
+		return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+	}
+
+	/**
+	 * Checks whether the call is {@code .indexOf(str)} or {@code .lastIndexOf(str)}
+	 * (also 2-arg overloads) where the first argument is a STRING_LITERAL whose
+	 * raw textual length is exactly one character. The check uses Java escape
+	 * decoding to ensure {@code "\n"} (length-1 escape sequence) is recognised.
+	 */
+	@CheckReturnValue
+	private static boolean isIndexOfSingleCharStringCall(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
+		if (dot == null)
+			return false;
+		var last = dot.getFirstChild();
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		final var name = last.getText();
+		if (!"indexOf".equals(name) && !"lastIndexOf".equals(name))
+			return false;
+		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
+		if (elist == null)
+			return false;
+		final var firstArg = elist.getFirstChild();
+		if (firstArg == null)
+			return false;
+		final var inner = firstArg.getType() == TokenTypes.EXPR ? firstArg.getFirstChild() : firstArg;
+		if (inner == null || inner.getType() != TokenTypes.STRING_LITERAL)
+			return false;
+		return decodedJavaStringLength(inner.getText()) == 1;
 	}
 
 	/**
@@ -1136,6 +1223,21 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		return right != null && right.getType() == TokenTypes.EXPR ? right.getFirstChild() : right;
 	}
 
+	@CheckReturnValue
+	@Nullable
+	private static String stringLiteralToCharLiteral(@Nonnull String stringLiteral) {
+		if (stringLiteral.length() < 3)
+			return null;
+		final var content = stringLiteral.substring(1, stringLiteral.length() - 1);
+		// special cases: single quote needs escaping in char; \" escape in string -> plain " in char
+		if ("'".equals(content))
+			return "'\\''";
+		if ("\\\"".equals(content))
+			return "'\"'";
+		// any other escape sequence works as-is in a char literal
+		return "'" + content + "'";
+	}
+
 	/**
 	 * Returns the array element type name from a {@code .toArray(new Type[0])} call,
 	 * or {@code null} if the METHOD_CALL is not a matching toArray call.
@@ -1455,6 +1557,26 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		}
 	}
 
+	private void visitIndexOfChar(@Nonnull DetailAST ast) {
+		final var calls = new ArrayList<DetailAST>();
+		collectIndexOfCharCalls(ast, calls);
+		for (var call : calls) {
+			final var dot = call.findFirstToken(TokenTypes.DOT);
+			var methodIdent = dot.getFirstChild();
+			while (methodIdent.getNextSibling() != null)
+				methodIdent = methodIdent.getNextSibling();
+			final var methodName = methodIdent.getText();
+			final var elist = call.findFirstToken(TokenTypes.ELIST);
+			final var firstArg = elist.getFirstChild();
+			final var inner = firstArg.getType() == TokenTypes.EXPR ? firstArg.getFirstChild() : firstArg;
+			final var literalText = inner.getText();
+			final var charLiteral = stringLiteralToCharLiteral(literalText);
+			if (charLiteral == null)
+				continue;
+			log(call, MSG_METHOD, methodName + "(" + charLiteral + ")", methodName + "(" + literalText + ")");
+		}
+	}
+
 	private void visitIndexOfContains(@Nonnull DetailAST ast) {
 		final var comparisons = new ArrayList<DetailAST>();
 		collectIndexOfContainsComparisons(ast, comparisons);
@@ -1505,6 +1627,7 @@ public class PreferSpecificApiCheck extends AbstractCheck {
 		visitAssertions(ast);
 		visitCollectToList(ast);
 		visitEqualsEmptyString(ast);
+		visitIndexOfChar(ast);
 		visitIndexOfContains(ast);
 		visitMapChain(ast);
 		visitReplaceAllLiteral(ast);

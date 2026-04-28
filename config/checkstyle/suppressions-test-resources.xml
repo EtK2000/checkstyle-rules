@@ -21,6 +21,14 @@
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="InfiniteEmptyLoopCheck" files="inputs[\\/]emptybody[\\/]" />
 	<suppress checks="InstanceofBeforeCastCheck" files="inputs[\\/]instanceofbeforecast[\\/]" />
+	<suppress checks="JitInefficiencyCheck" files="inputs[\\/]jitinefficiency[\\/]" />
+	<suppress checks="JitInefficiencyCheck" files="inputs[\\/]specificapi[\\/]" />
+	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]jitinefficiency[\\/]" />
+	<suppress checks="OneStatementPerLine" files="inputs[\\/]jitinefficiency[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]jitinefficiency[\\/]" />
+	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]jitinefficiency[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]jitinefficiency[\\/]" />
+	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]jitinefficiency[\\/]" />
 	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]methodorder[\\/]" />
 	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]overload[\\/]" />
 	<suppress checks="MultilineCallFormattingCheck" files="inputs[\\/]multilinecall[\\/]" />

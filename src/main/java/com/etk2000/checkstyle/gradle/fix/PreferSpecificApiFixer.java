@@ -76,9 +76,9 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 * Finds an occurrence of {@code prefix} (a literal like {@code "0 == "}) followed by
 	 * {@code suffix} (a method chain like {@code ".strip().length()"}) where:
 	 * (a) the character before {@code prefix} is not a number/identifier continuation
-	 *     (so the leading digit is standalone, not part of {@code 100} or similar), and
+	 * (so the leading digit is standalone, not part of {@code 100} or similar), and
 	 * (b) the text between {@code prefix} and {@code suffix} is a simple receiver
-	 *     (identifier characters and dots only).
+	 * (identifier characters and dots only).
 	 * Iterates through occurrences until a valid one is found. Returns
 	 * {@code [prefixIdx, suffixIdx]} or {@code null}.
 	 */
@@ -463,6 +463,56 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	}
 
 	/**
+	 * {@code .indexOf("x")} / {@code .lastIndexOf("x")} (single-char string literal)
+	 * -> {@code .indexOf('x')} / {@code .lastIndexOf('x')}. Also handles 2-arg overloads.
+	 * Returns null when the string content cannot be safely re-emitted as a char literal
+	 * (e.g. unrecognized escape, multi-line construct).
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixIndexOfChar(@Nonnull String line, int column) {
+		// the violation column points at the LPAREN of the METHOD_CALL when emitted
+		// from log(call, ...). Try lastIndexOf (LPAREN-anchored) first; if the match's
+		// LPAREN does NOT line up with `column`, fall back to indexOf (receiver-anchored)
+		// which matches when the column points at the receiver chain instead.
+		final var safeColumn = Math.max(0, column);
+		for (var name : new String[]{".indexOf(", ".lastIndexOf("}) {
+			var idx = line.lastIndexOf(name, safeColumn);
+			// if lastIndexOf hit, prefer it only when its LPAREN aligns with column (or
+			// the column is past the LPAREN by a small offset for receiver-anchored callers)
+			if (idx < 0 || idx + name.length() - 1 < safeColumn - 1)
+				idx = line.indexOf(name, safeColumn);
+			if (idx < 0)
+				continue;
+			final var openParen = idx + name.length() - 1;
+			final var argStart = openParen + 1;
+			if (argStart >= line.length() || line.charAt(argStart) != '"')
+				continue;
+			var end = argStart + 1;
+			while (end < line.length()) {
+				final var c = line.charAt(end);
+				if (c == '\\') {
+					if (end + 1 >= line.length())
+						return null;
+					end += 2;
+					continue;
+				}
+				if (c == '"')
+					break;
+				++end;
+			}
+			if (end >= line.length())
+				return null;
+			final var content = line.substring(argStart + 1, end);
+			final var charLiteral = stringContentToCharLiteralContent(content);
+			if (charLiteral == null)
+				continue;
+			return line.substring(0, argStart) + "'" + charLiteral + "'" + line.substring(end + 1);
+		}
+		return null;
+	}
+
+	/**
 	 * {@code .length() == 0} -> {@code .isEmpty()},
 	 * {@code .size() > 0} -> {@code !receiver.isEmpty()}, etc.
 	 * Handles all 6 comparison operators in both normal and reversed form,
@@ -784,6 +834,52 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 
 	@CheckReturnValue
 	@Nullable
+	private static String stringContentToCharLiteralContent(@Nonnull String content) {
+		if (content.isEmpty())
+			return null;
+		// `'` in a string becomes `\'` in a char literal
+		if ("'".equals(content))
+			return "\\'";
+		// `\"` escape in a string becomes plain `"` in a char literal
+		if ("\\\"".equals(content))
+			return "\"";
+		if (content.length() == 1 && content.charAt(0) != '\\' && content.charAt(0) != '\'')
+			return content;
+		if (content.length() >= 2 && content.charAt(0) == '\\') {
+			if (content.length() == 2) {
+				final var n = content.charAt(1);
+				if (n == '"' || n == '\'' || n == '0' || n == '\\' || n == 'b' || n == 'f'
+						|| n == 'n' || n == 'r' || n == 's' || n == 't')
+					return content;
+			}
+			if (content.length() == 6 && content.charAt(1) == 'u') {
+				for (var i = 2; i < 6; ++i) {
+					final var c = content.charAt(i);
+					if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')))
+						return null;
+				}
+				return content;
+			}
+			if (content.length() <= 4) {
+				var allOctal = true;
+				for (var i = 1; i < content.length(); ++i) {
+					if (content.charAt(i) < '0' || content.charAt(i) > '7') {
+						allOctal = false;
+						break;
+					}
+				}
+				// per JLS: 3-digit octal escape requires first digit 0..3 (max value \377)
+				if (allOctal && content.length() == 4 && content.charAt(1) > '3')
+					return null;
+				if (allOctal && content.length() >= 2)
+					return content;
+			}
+		}
+		return null;
+	}
+
+	@CheckReturnValue
+	@Nullable
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
@@ -803,6 +899,8 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 			result = fixEqualsEmpty(line);
 		if (result == null)
 			result = fixGetOrRemoveFirst(line);
+		if (result == null)
+			result = fixIndexOfChar(line, column);
 		if (result == null)
 			result = fixMapChain(line);
 		if (result == null)

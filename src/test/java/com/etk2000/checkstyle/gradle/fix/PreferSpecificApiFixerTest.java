@@ -305,11 +305,119 @@ public class PreferSpecificApiFixerTest {
 	}
 
 	@Test
+	public void testIndexOfCharBackslash() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.indexOf(\"\\\\\");"));
+		final var col = lines.getFirst().indexOf("s.indexOf");
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, col));
+		assertEquals("\t\tfinal var i = s.indexOf('\\\\');", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testIndexOfCharColumnAtLparen() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.indexOf(\"x\");"));
+		final var col = lines.getFirst().indexOf('(');
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, col));
+		assertEquals("\t\tfinal var i = s.indexOf('x');", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testIndexOfCharDoubleQuote() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.indexOf(\"\\\"\");"));
+		final var col = lines.getFirst().indexOf("s.indexOf");
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, col));
+		assertEquals("\t\tfinal var i = s.indexOf('\"');", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testIndexOfCharEmptyStringFallsThrough() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.indexOf(\"\");"));
+		final var col = lines.getFirst().indexOf("s.indexOf");
+		assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, col));
+	}
+
+	@Test
+	public void testIndexOfCharMultiCharFallsThrough() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.indexOf(\"foo\");"));
+		final var col = lines.getFirst().indexOf("s.indexOf");
+		assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, col));
+	}
+
+	@Test
+	public void testIndexOfCharNewline() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.indexOf(\"\\n\");"));
+		final var col = lines.getFirst().indexOf("s.indexOf");
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, col));
+		assertEquals("\t\tfinal var i = s.indexOf('\\n');", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testIndexOfCharOctalEscape() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.indexOf(\"\\077\");"));
+		final var col = lines.getFirst().indexOf("s.indexOf");
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, col));
+		assertEquals("\t\tfinal var i = s.indexOf('\\077');", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testIndexOfCharRefusesInvalidEscape() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.indexOf(\"\\z\");"));
+		final var col = lines.getFirst().indexOf("s.indexOf");
+		assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, col));
+	}
+
+	@Test
+	public void testIndexOfCharRefusesInvalidUnicodeEscape() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.indexOf(\"\\uABCG\");"));
+		final var col = lines.getFirst().indexOf("s.indexOf");
+		assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, col));
+	}
+
+	@Test
+	public void testIndexOfCharSimple() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.indexOf(\"x\");"));
+		final var col = lines.getFirst().indexOf("s.indexOf");
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, col));
+		assertEquals("\t\tfinal var i = s.indexOf('x');", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testIndexOfCharSingleQuoteEscape() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.indexOf(\"'\");"));
+		final var col = lines.getFirst().indexOf("s.indexOf");
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, col));
+		assertEquals("\t\tfinal var i = s.indexOf('\\'');", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testIndexOfCharTwoArg() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.indexOf(\"x\", 5);"));
+		final var col = lines.getFirst().indexOf("s.indexOf");
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, col));
+		assertEquals("\t\tfinal var i = s.indexOf('x', 5);", result.replacement().getFirst());
+	}
+
+	@Test
+	public void testIndexOfCharUnicodeEscape() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.indexOf(\"\\u00e9\");"));
+		final var col = lines.getFirst().indexOf("s.indexOf");
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, col));
+		assertEquals("\t\tfinal var i = s.indexOf('\\u00e9');", result.replacement().getFirst());
+	}
+
+	@Test
 	public void testKeySetContains() {
 		final var lines = new ArrayList<>(List.of("\t\tif (map.keySet().contains(\"key\"))"));
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
 		assertEquals("\t\tif (map.containsKey(\"key\"))", result.replacement().getFirst());
 		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testLastIndexOfCharSlash() {
+		final var lines = new ArrayList<>(List.of("\t\tfinal var i = s.lastIndexOf(\"/\");"));
+		final var col = lines.getFirst().indexOf("s.lastIndexOf");
+		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, col));
+		assertEquals("\t\tfinal var i = s.lastIndexOf('/');", result.replacement().getFirst());
 	}
 
 	@Test

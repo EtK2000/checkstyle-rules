@@ -251,6 +251,34 @@ public class PreferSpecificApiCheckTest {
 	}
 
 	@Test
+	public void testIndexOfCharViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiIndexOfCharViolation.java");
+		assertEquals(7, violations.size());
+		var i = 0;
+		assertEquals(26, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'indexOf('\"')' instead of 'indexOf(\"\\\"\")'.", violations.get(i++).getMessage());
+		assertEquals(31, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'indexOf('\\\\')' instead of 'indexOf(\"\\\\\")'.", violations.get(i++).getMessage());
+		assertEquals(36, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'indexOf('\\n')' instead of 'indexOf(\"\\n\")'.", violations.get(i++).getMessage());
+		assertEquals(41, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'indexOf('x')' instead of 'indexOf(\"x\")'.", violations.get(i++).getMessage());
+		assertEquals(46, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'indexOf('x')' instead of 'indexOf(\"x\")'.", violations.get(i++).getMessage());
+		assertEquals(51, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'lastIndexOf('/')' instead of 'lastIndexOf(\"/\")'.", violations.get(i++).getMessage());
+		assertEquals(56, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals("Use 'indexOf('\\'')' instead of 'indexOf(\"'\")'.", violations.get(i++).getMessage());
+	}
+
+	@Test
 	public void testIndexOfContainsViolation() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferSpecificApiCheck.class, DIR + "InputSpecificApiIndexOfViolation.java");
 		assertEquals(12, violations.size());

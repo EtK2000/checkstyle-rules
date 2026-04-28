@@ -109,6 +109,9 @@
 		<!-- Custom: Empty infinite loops are errors (for(;;), while(true), do;while(true)) -->
 		<module name="com.etk2000.checkstyle.InfiniteEmptyLoopCheck" />
 
+		<!-- Custom: JIT-unfriendly patterns and unnecessary allocations -->
+		<module name="com.etk2000.checkstyle.JitInefficiencyCheck" />
+
 		<!-- Custom: Lambda parameters should use implicit types (or var with annotations) -->
 		<module name="com.etk2000.checkstyle.LambdaParameterTypeCheck" />
 

@@ -34,6 +34,9 @@ class FieldSortingFixer implements CheckstyleFixer {
 	private record ParseResult(@Nonnull List<EnumEntry> entries, int blockStart, int blockEnd, @Nonnull String terminal) {}
 
 	private static final int MAX_LINE_LENGTH = 120;
+	private static final Pattern ANNOTATION_PREFIX_PATTERN = Pattern.compile(
+			"^(?:@\\w+(?:\\([^()]*(?:\\([^()]*\\)[^()]*)*\\))?\\s*)+"
+	);
 	private static final Pattern FIELD_PATTERN = Pattern.compile(
 			"^\\s*(?:(?:@\\w+(?:\\([^()]*(?:\\([^()]*\\)[^()]*)*\\))?\\s+)*)"
 					+ "(?:(?:public|private|protected|static|final|transient|volatile)\\s+)*"
@@ -1121,7 +1124,7 @@ class FieldSortingFixer implements CheckstyleFixer {
 			// check for ( only in the non-annotation part of the line to avoid
 			// skipping fields with inline annotations like @SuppressWarnings("unchecked") int x;
 			var afterAnnotations = stripped.startsWith("@")
-					? stripped.replaceAll("^(?:@\\w+(?:\\([^()]*(?:\\([^()]*\\)[^()]*)*\\))?\\s*)+", "")
+					? ANNOTATION_PREFIX_PATTERN.matcher(stripped).replaceAll("")
 					: stripped;
 			final var angleIdx = afterAnnotations.indexOf('<');
 			if (angleIdx >= 0) {

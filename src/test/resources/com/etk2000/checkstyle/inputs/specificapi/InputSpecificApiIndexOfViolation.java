@@ -12,12 +12,12 @@ class InputSpecificApiIndexOfViolation {
 	}
 
 	void indexOfGreaterNegOne(String s) {
-		if (s.indexOf("e") > -1) // violation: use .contains(...)
+		if (s.indexOf("ee") > -1) // violation: use .contains(...)
 			System.out.println("found");
 	}
 
 	void indexOfLessEqualNegOne(String s) {
-		if (s.indexOf("f") <= -1) // violation: use !.contains(...)
+		if (s.indexOf("ff") <= -1) // violation: use !.contains(...)
 			System.out.println("not found");
 	}
 
@@ -32,32 +32,32 @@ class InputSpecificApiIndexOfViolation {
 	}
 
 	void negOneEqualIndexOf(String s) {
-		if (-1 == s.indexOf("b")) // violation: use !.contains(...)
+		if (-1 == s.indexOf("bb")) // violation: use !.contains(...)
 			System.out.println("not found");
 	}
 
 	void negOneGreaterEqualIndexOf(String s) {
-		if (-1 >= s.indexOf("h")) // violation: use !.contains(...)
+		if (-1 >= s.indexOf("hh")) // violation: use !.contains(...)
 			System.out.println("not found");
 	}
 
 	void negOneLessThanIndexOf(String s) {
-		if (-1 < s.indexOf("g")) // violation: use .contains(...)
+		if (-1 < s.indexOf("gg")) // violation: use .contains(...)
 			System.out.println("found");
 	}
 
 	void negOneNotEqualIndexOf(String s) {
-		if (-1 != s.indexOf("a")) // violation: use .contains(...)
+		if (-1 != s.indexOf("aa")) // violation: use .contains(...)
 			System.out.println("found");
 	}
 
 	void zeroGreaterIndexOf(String s) {
-		if (0 > s.indexOf("d")) // violation: use !.contains(...)
+		if (0 > s.indexOf("dd")) // violation: use !.contains(...)
 			System.out.println("not found");
 	}
 
 	void zeroLessEqualIndexOf(String s) {
-		if (0 <= s.indexOf("c")) // violation: use .contains(...)
+		if (0 <= s.indexOf("cc")) // violation: use .contains(...)
 			System.out.println("found");
 	}
 }

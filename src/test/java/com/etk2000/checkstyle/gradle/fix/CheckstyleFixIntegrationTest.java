@@ -1806,6 +1806,90 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testJitInefficiencyAppendConcat() throws Exception {
+		final var file = tempDir.resolve("JitAppend.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(StringBuilder sb, String v) {\n\t\tsb.append(\"key=\" + v);\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid f(StringBuilder sb, String v) {\n\t\tsb.append(\"key=\").append(v);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyBoxedConstructor() throws Exception {
+		final var file = tempDir.resolve("JitBoxed.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tInteger value() {\n\t\treturn new Integer(42);\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tInteger value() {\n\t\treturn Integer.valueOf(42);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyEmptyStringConcat() throws Exception {
+		final var file = tempDir.resolve("JitEmpty.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tString f(int x) {\n\t\treturn \"\" + x;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tString f(int x) {\n\t\treturn String.valueOf(x);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyNewString() throws Exception {
+		final var file = tempDir.resolve("JitNewStr.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tString f() {\n\t\treturn new String(\"hello\");\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tString f() {\n\t\treturn \"hello\";\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyStringBuffer() throws Exception {
+		final var file = tempDir.resolve("JitBuffer.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tString f() {\n\t\tfinal var sb = new StringBuffer(\"hi\");\n\t\treturn sb.toString();\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tString f() {\n\t\tfinal var sb = new StringBuilder(\"hi\");\n\t\treturn sb.toString();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyToArraySized() throws Exception {
+		final var file = tempDir.resolve("JitToArr.java").toFile();
+		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tString[] f(List<String> list) {\n\t\treturn list.toArray(new String[5]);\n\t}\n}");
+
+		final var output = runFixAndGetResult(file, "29");
+		assertEquals(
+				"import java.util.List;\nclass T {\n\tString[] f(List<String> list) {\n\t\treturn list.toArray(new String[0]);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testMinSdkGatesCollectionsSort() throws Exception {
 		final var file = tempDir.resolve("MinSort.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tvoid run(List<String> list) {\n\t\tCollections.sort(list);\n\t}\n}");
@@ -2677,6 +2761,20 @@ public class CheckstyleFixIntegrationTest {
 		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.util.List;\nclass T {\n\tString run(List<String> list) {\n\t\treturn list.getFirst();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferSpecificApiIndexOfChar() throws Exception {
+		final var file = tempDir.resolve("PrefIdxChar.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint f(String s) {\n\t\treturn s.indexOf(\"x\");\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tint f(String s) {\n\t\treturn s.indexOf('x');\n\t}\n}",
 				output.content()
 		);
 		assertEquals(1, output.result().fixCount());

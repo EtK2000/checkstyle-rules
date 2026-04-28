@@ -24,6 +24,26 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 public class CheckstylePluginTest {
+	private static final Pattern ALLOWED_METHODS_PATTERN = Pattern.compile(
+			"<property\\s+name=\"allowedMethods\"\\s+value=\"([^\"]+)\""
+	);
+	private static final Pattern ID_PATTERN = Pattern.compile(
+			"<property\\s+name=\"id\"\\s+value=\"([^\"]+)\"",
+			Pattern.MULTILINE
+	);
+	private static final Pattern MODULE_PATTERN = Pattern.compile(
+			"<module\\s+name=\"Regexp(?:Multiline|Singleline)\">(.*?)</module>",
+			Pattern.DOTALL
+	);
+	private static final Pattern MSG_PATTERN = Pattern.compile(
+			"<property\\s+name=\"message\"[^>]*value=\"([^\"]+)\"",
+			Pattern.DOTALL
+	);
+	private static final Pattern PREFER_VAR_MODULE_PATTERN = Pattern.compile(
+			"<module\\s+name=\"com\\.etk2000\\.checkstyle\\.PreferVarCheck\">"
+					+ "(.*?)</module>",
+			Pattern.DOTALL
+	);
 	private static final Set<String> FIXABLE_MESSAGES = FixableCheckNames.FIXABLE_MESSAGES;
 	private static final Set<String> FIXABLE_NAMES = FixableCheckNames.all();
 
@@ -503,25 +523,12 @@ public class CheckstylePluginTest {
 		}
 
 		// extract id/message pairs from regexp modules in checkstyle.xml
-		final var idPattern = Pattern.compile(
-				"<property\\s+name=\"id\"\\s+value=\"([^\"]+)\"",
-				Pattern.MULTILINE
-		);
-		final var modulePattern = Pattern.compile(
-				"<module\\s+name=\"Regexp(?:Multiline|Singleline)\">(.*?)</module>",
-				Pattern.DOTALL
-		);
-		final var msgPattern = Pattern.compile(
-				"<property\\s+name=\"message\"[^>]*value=\"([^\"]+)\"",
-				Pattern.DOTALL
-		);
-
 		final var messagesFromXml = new HashSet<String>();
-		final var moduleMatcher = modulePattern.matcher(xml);
+		final var moduleMatcher = MODULE_PATTERN.matcher(xml);
 		while (moduleMatcher.find()) {
 			final var body = moduleMatcher.group(1);
-			final var idMatcher = idPattern.matcher(body);
-			final var messageMatcher = msgPattern.matcher(body);
+			final var idMatcher = ID_PATTERN.matcher(body);
+			final var messageMatcher = MSG_PATTERN.matcher(body);
 			if (idMatcher.find() && messageMatcher.find()) {
 				final var id = idMatcher.group(1);
 				if (FixableCheckNames.MODULE_IDS.contains(id))
@@ -543,19 +550,10 @@ public class CheckstylePluginTest {
 			xml = new String(in.readAllBytes());
 		}
 
-		final var pattern = Pattern.compile(
-				"<module\\s+name=\"com\\.etk2000\\.checkstyle\\.PreferVarCheck\">"
-						+ "(.*?)</module>",
-				Pattern.DOTALL
-		);
-		final var propPattern = Pattern.compile(
-				"<property\\s+name=\"allowedMethods\"\\s+value=\"([^\"]+)\""
-		);
-
-		final var moduleMatcher = pattern.matcher(xml);
+		final var moduleMatcher = PREFER_VAR_MODULE_PATTERN.matcher(xml);
 		assertTrue(moduleMatcher.find(), "PreferVarCheck module not found in checkstyle.xml");
 
-		final var propMatcher = propPattern.matcher(moduleMatcher.group(1));
+		final var propMatcher = ALLOWED_METHODS_PATTERN.matcher(moduleMatcher.group(1));
 		assertTrue(propMatcher.find(), "allowedMethods property not found on PreferVarCheck");
 		assertEquals(CheckstyleFixAction.fixerAllowedMethods(), propMatcher.group(1));
 	}

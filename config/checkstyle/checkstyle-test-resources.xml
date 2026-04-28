@@ -88,6 +88,7 @@
 		<module name="com.etk2000.checkstyle.FieldSortingCheck" />
 		<module name="com.etk2000.checkstyle.InfiniteEmptyLoopCheck" />
 		<module name="com.etk2000.checkstyle.InstanceofBeforeCastCheck" />
+		<module name="com.etk2000.checkstyle.JitInefficiencyCheck" />
 		<module name="com.etk2000.checkstyle.MethodAlphabeticalOrderCheck" />
 		<module name="com.etk2000.checkstyle.MultilineCallFormattingCheck" />
 		<module name="com.etk2000.checkstyle.NoFinalParametersCheck" />

@@ -6,6 +6,7 @@ import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck;
 import com.etk2000.checkstyle.ControlFlowBracesCheck;
 import com.etk2000.checkstyle.FieldConsolidationCheck;
 import com.etk2000.checkstyle.FieldSortingCheck;
+import com.etk2000.checkstyle.JitInefficiencyCheck;
 import com.etk2000.checkstyle.LambdaParameterTypeCheck;
 import com.etk2000.checkstyle.NoArrayTrailingCommaCheck;
 import com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck;
@@ -121,6 +122,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				Map.entry(FieldConsolidationCheck.class.getName(), new FieldConsolidationFixer()),
 				Map.entry(FieldSortingCheck.class.getName(), new FieldSortingFixer()),
 				Map.entry(FinalLocalVariableCheck.class.getName(), new FinalLocalVariableFixer()),
+				Map.entry(JitInefficiencyCheck.class.getName(), new JitInefficiencyFixer()),
 				Map.entry(LambdaParameterTypeCheck.class.getName(), new LambdaParameterTypeFixer()),
 				Map.entry(NoArrayTrailingCommaCheck.class.getName(), commaFixer),
 				Map.entry(NoFinalParametersCheck.class.getName(), modifierFixer),
