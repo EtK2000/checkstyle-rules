@@ -60,6 +60,7 @@ final class FixableCheckNames {
 			"com.etk2000.checkstyle.PreferVarCheck",
 			"com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck",
 			"com.etk2000.checkstyle.RedundantArrayCreationCheck",
+			"com.etk2000.checkstyle.RedundantEqualityBranchCheck",
 			"com.etk2000.checkstyle.RedundantNumericSuffixCheck",
 			"com.puppycrawl.tools.checkstyle.checks.UpperEllCheck",
 			"com.puppycrawl.tools.checkstyle.checks.coding.AvoidNoArgumentSuperConstructorCallCheck",

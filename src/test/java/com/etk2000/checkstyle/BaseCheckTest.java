@@ -28,6 +28,33 @@ class BaseCheckTest {
 			@Nonnull String inputPath,
 			@Nonnull String... properties
 	) throws Exception {
+		final var url = BaseCheckTest.class.getResource("/com/etk2000/checkstyle/inputs/" + inputPath);
+		requireNonNull(url, "Test input file not found: " + inputPath);
+		return runCheckOnFile(checkClass, new File(url.toURI()), properties);
+	}
+
+	@Nonnull
+	static List<AuditEvent> runCheckInline(
+			@Nonnull Class<? extends AbstractCheck> checkClass,
+			@Nonnull String content,
+			@Nonnull String... properties
+	) throws Exception {
+		final var tempFile = File.createTempFile("checkstyle-inline-test", ".java");
+		try {
+			Files.writeString(tempFile.toPath(), content);
+			return runCheckOnFile(checkClass, tempFile, properties);
+		}
+		finally {
+			tempFile.delete();
+		}
+	}
+
+	@Nonnull
+	private static List<AuditEvent> runCheckOnFile(
+			@Nonnull Class<? extends AbstractCheck> checkClass,
+			@Nonnull File file,
+			@Nonnull String... properties
+	) throws Exception {
 		final var checkConfig = new DefaultConfiguration(checkClass.getName());
 		for (var i = 0; i < properties.length; i += 2)
 			checkConfig.addProperty(properties[i], properties[i + 1]);
@@ -71,10 +98,7 @@ class BaseCheckTest {
 				}
 			});
 
-			final var url = BaseCheckTest.class.getResource("/com/etk2000/checkstyle/inputs/" + inputPath);
-			requireNonNull(url, "Test input file not found: " + inputPath);
-
-			checker.process(List.of(new File(url.toURI())));
+			checker.process(List.of(file));
 		}
 		finally {
 			checker.destroy();

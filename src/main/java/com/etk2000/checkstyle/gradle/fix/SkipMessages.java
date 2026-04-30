@@ -26,6 +26,7 @@ final class SkipMessages {
 	static final String FIX_SUPPRESSED = get("fix.suppressed");
 	static final String LAMBDA_PARAM_SKIP = get("lambda.param.skip");
 	static final String MATH_METHOD_SKIP = get("prefer.math.method.skip");
+	static final String MATH_METHOD_SKIP_IF = get("prefer.math.method.skip.if");
 	static final String PREFER_API_SKIP = get("prefer.api.skip");
 	static final String PREFER_BULK_SKIP = get("prefer.bulk.skip");
 	static final String PREFER_STANDARD_CHARSETS_SKIP = get("prefer.standard.charsets.skip");

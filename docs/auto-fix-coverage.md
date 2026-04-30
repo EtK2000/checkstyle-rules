@@ -34,6 +34,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | PreferVarCheck                           | PreferVarFixer                     | Replaces type with `var`; converts explicit array init to implicit; replaces `<Object>` with `<>`                                                                           |
 | RedundantAnnotationSyntaxCheck           | RedundantAnnotationSyntaxFixer     | Removes `()` or `value =`                                                                                                                                                   |
 | RedundantArrayCreationCheck              | RedundantArrayCreationFixer        | Removes `new Type[]{...}` wrapper, extracts elements directly; removes empty array with preceding comma                                                                     |
+| RedundantEqualityBranchCheck             | RedundantEqualityBranchFixer       | Collapses redundant if-else with `==`/`!=` condition. See [sub-rules below](#redundantequalitybranchcheck-sub-rules)                                                        |
 | RedundantImportCheck                     | DeleteLineFixer                    | Deletes import line                                                                                                                                                         |
 | RedundantModifierCheck                   | RedundantModifierFixer             | Removes redundant modifier keyword                                                                                                                                          |
 | RedundantNumericSuffixCheck              | RedundantNumericSuffixFixer        | Removes redundant `L`/`f`/`d` suffix                                                                                                                                        |
@@ -60,7 +61,7 @@ the original comments and surrounding whitespace.
 
 ### Supported (auto-fixable)
 
-| Pattern                                               | Fix output                          | Notes                                      |
+| Pattern                                               | Fix                                 | Notes                                      |
 |-------------------------------------------------------|-------------------------------------|--------------------------------------------|
 | `int x[];`                                            | `int[] x;`                          | Field, local, parameter, record component  |
 | `int x[][];`                                          | `int[][] x;`                        | Compound C-style                           |
@@ -164,7 +165,8 @@ nested cases (unclosed parens or a `->` in the prefix).
 
 ## PreferMathMethodCheck sub-rules
 
-The fixer uses regex for ternary patterns and paren-balanced parsing for clamp patterns.
+The fixer uses regex for ternary patterns, paren-balanced parsing for clamp patterns, and
+multi-line line-text restructuring for if-shape patterns.
 
 ### Ternary (max/min/abs)
 
@@ -185,6 +187,20 @@ The fixer uses regex for ternary patterns and paren-balanced parsing for clamp p
 | `Math.min(hi, Math.max(lo, val))`       | `Math.clamp(val, lo, hi)`       | Yes                  |
 | Reversed arg order (inner call first)   | `Math.clamp(val, lo, hi)`       | Yes                  |
 | Nested calls in args (e.g. `foo(a, b)`) | `Math.clamp(foo(a, b), lo, hi)` | Yes (paren-balanced) |
+
+### If-else (max/min/abs)
+
+| Pattern                                                                                                                    | Replacement               | Auto-fix                                               |
+|----------------------------------------------------------------------------------------------------------------------------|---------------------------|--------------------------------------------------------|
+| `if (a > b) r += a; else r += b;` (compound assign: `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `\|=`, `^=`, `<<=`, `>>=`, `>>>=`) | `r += Math.max(a, b);`    | Yes                                                    |
+| `var r = b; if (a > b) r = a; return r;` (init-overwrite + trailing return)                                                | `return Math.max(a, b);`  | Yes                                                    |
+| `var r = b; if (a > b) r = a;` (init-overwrite, no trailing return)                                                        | `var r = Math.max(a, b);` | Yes                                                    |
+| `int r; if (a > b) r = a; else r = b; return r;` (decl + assign + return)                                                  | `return Math.max(a, b);`  | Yes                                                    |
+| `if (a > b) r = a; else r = b;` (bare assign, no decl/return)                                                              | `r = Math.max(a, b);`     | Yes                                                    |
+| `if (a > b) return a; else return b;` (if-else return)                                                                     | `return Math.max(a, b);`  | Yes                                                    |
+| `if (a > b) return a; return b;` (trailing return, no else)                                                                | `return Math.max(a, b);`  | Yes                                                    |
+| `int r = a, s = b; if (a > b) r = a; ...` (multi-decl above the if)                                                        | n/a                       | No (skipped: pattern rejects multi-decls for safety)   |
+| Field/array assignment target (`this.x`, `arr[i]`)                                                                         | same as above             | No (target-shape not yet supported by line-text fixer) |
 
 ## PreferSpecificApiCheck sub-rules
 
@@ -305,6 +321,21 @@ it also removes the preceding comma if one exists.
 | `(CharSequence[]) new String[]{"a"}` (cast wrapping) | Last arg is TYPECAST, not LITERAL_NEW                        |
 | `method(existingArrayVar)` (variable, not `new`)     | Not an explicit array creation                               |
 | `method(new Type[5])` (explicit size, no init)       | No ARRAY_INIT child on LITERAL_NEW                           |
+
+## RedundantEqualityBranchCheck sub-rules
+
+The fixer detects four shapes via line-text regex parsing of the if-line and adjacent
+lines. For `==` the surviving value is the else-branch's; for `!=` it's the then-branch's.
+
+| Pattern                                                          | Replacement     | Auto-fix                |
+|------------------------------------------------------------------|-----------------|-------------------------|
+| `final int r; if (a == b) r = a; else r = b; return r;`          | `return b;`     | Yes                     |
+| `if (a == b) r = a; else r = b;` (no decl/return: bare collapse) | `r = b;`        | Yes                     |
+| `if (a == b) return a; else return b;`                           | `return b;`     | Yes                     |
+| `if (a == b) return a; return b;` (trailing return)              | `return b;`     | Yes                     |
+| `if (a != b) ...` (`!=` instead of `==`)                         | uses then-value | Yes                     |
+| Branches use a third operand (e.g. `r = c;`)                     | n/a             | No (check doesn't fire) |
+| Operands or branch values impure (method calls, increments)      | n/a             | No (check doesn't fire) |
 
 ## LambdaParameterTypeCheck sub-rules
 

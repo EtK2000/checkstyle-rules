@@ -2573,6 +2573,108 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferMathMethodIfCompoundAssign() throws Exception {
+		final var file = tempDir.resolve("MathCompound.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tint f(int r, int a, int b) {\n\t\tif (a > b)\n\t\t\tr += a;\n\t\telse\n\t\t\tr += b;\n\t\treturn r;\n\t}\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tint f(int r, int a, int b) {\n\t\tr += Math.max(a, b);\n\t\treturn r;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferMathMethodIfDeclAssignReturn() throws Exception {
+		final var file = tempDir.resolve("MathDeclAssignReturn.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tint f(int a, int b) {\n\t\tfinal int r;\n\t\tif (a > b)\n\t\t\tr = a;\n\t\telse\n\t\t\tr = b;\n\t\treturn r;\n\t}\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tint f(int a, int b) {\n\t\treturn Math.max(a, b);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferMathMethodIfElseReturn() throws Exception {
+		final var file = tempDir.resolve("MathIfElseReturn.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tint f(int a, int b) {\n\t\tif (a > b)\n\t\t\treturn a;\n\t\telse\n\t\t\treturn b;\n\t}\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tint f(int a, int b) {\n\t\treturn Math.max(a, b);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferMathMethodIfInitOverwrite() throws Exception {
+		final var file = tempDir.resolve("MathInitOverwrite.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tint f(int a, int b) {\n\t\tvar r = b;\n\t\tif (a > b)\n\t\t\tr = a;\n\t\treturn r;\n\t}\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tint f(int a, int b) {\n\t\treturn Math.max(a, b);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferMathMethodIfPlainAssignBare() throws Exception {
+		final var file = tempDir.resolve("MathPlainAssignBare.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tvoid f(int r, int a, int b) {\n\t\tif (a > b)\n\t\t\tr = a;\n\t\telse\n\t\t\tr = b;\n\t\tSystem.out.println(r);\n\t}\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid f(int r, int a, int b) {\n\t\tr = Math.max(a, b);\n\t\tSystem.out.println(r);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferMathMethodIfTrailingReturn() throws Exception {
+		final var file = tempDir.resolve("MathTrailingReturn.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tint f(int a, int b) {\n\t\tif (a > b)\n\t\t\treturn a;\n\t\treturn b;\n\t}\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tint f(int a, int b) {\n\t\treturn Math.max(a, b);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testPreferMathMethodMax() throws Exception {
 		final var file = tempDir.resolve("MathMax.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint f(int a, int b) {\n\t\treturn a > b ? a : b;\n\t}\n}");
@@ -3618,6 +3720,74 @@ public class CheckstyleFixIntegrationTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals("class T {\n\tvoid f() {\n\t\tString.join(\",\", \"a\", \"b\");\n\t}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRedundantEqualityBranchAssignBareCollapse() throws Exception {
+		final var file = tempDir.resolve("EqAssignBare.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tvoid f(int r, int a, int b) {\n\t\tif (a == b)\n\t\t\tr = a;\n\t\telse\n\t\t\tr = b;\n\t\tSystem.out.println(r);\n\t}\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid f(int r, int a, int b) {\n\t\tr = b;\n\t\tSystem.out.println(r);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRedundantEqualityBranchAssignWithDeclAndReturn() throws Exception {
+		final var file = tempDir.resolve("EqAssignDecl.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tint f(int a, int b) {\n\t\tfinal int r;\n\t\tif (a == b)\n\t\t\tr = a;\n\t\telse\n\t\t\tr = b;\n\t\treturn r;\n\t}\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tint f(int a, int b) {\n\t\treturn b;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRedundantEqualityBranchNotEqual() throws Exception {
+		final var file = tempDir.resolve("EqNotEqual.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tint f(int a, int b) {\n\t\tfinal int r;\n\t\tif (a != b)\n\t\t\tr = a;\n\t\telse\n\t\t\tr = b;\n\t\treturn r;\n\t}\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tint f(int a, int b) {\n\t\treturn a;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRedundantEqualityBranchTrailingReturn() throws Exception {
+		final var file = tempDir.resolve("EqTrailing.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"class T {\n\tint f(int a, int b) {\n\t\tif (a == b)\n\t\t\treturn a;\n\t\treturn b;\n\t}\n}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tint f(int a, int b) {\n\t\treturn b;\n\t}\n}",
+				output.content()
+		);
 		assertEquals(1, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
 	}

@@ -8,8 +8,30 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 class PreferMathMethodFixer implements CheckstyleFixer {
+	private static final Pattern ASSIGN_BODY_PATTERN = Pattern.compile(
+			"^\\s*([\\w.\\[\\]]+)\\s*=\\s*(.+?)\\s*;\\s*$"
+	);
+	private static final Pattern COMPOUND_ASSIGN_BODY_PATTERN = Pattern.compile(
+			"^\\s*([\\w.\\[\\]]+)\\s*([+\\-*/%&|^]=|<<=|>>>?=)\\s*(.+?)\\s*;\\s*$"
+	);
+	private static final Pattern DECL_LINE_PATTERN = Pattern.compile(
+			"^\\s*(?:final\\s+)?\\S+\\s+(\\w+)\\s*;\\s*$"
+	);
+	private static final Pattern ELSE_LINE_PATTERN = Pattern.compile("^\\s*else\\s*$");
+	private static final Pattern IF_COMPARISON_PATTERN = Pattern.compile(
+			"^(\\s*)if\\s*\\(\\s*(.+?)\\s*(>=?|<=?)\\s*(.+?)\\s*\\)\\s*$"
+	);
+	private static final Pattern IF_LINE_PATTERN = Pattern.compile(
+			"^\\s*(?:\\}\\s*)?(?:else\\s+)?if\\s*\\("
+	);
+	private static final Pattern RETURN_BODY_PATTERN = Pattern.compile("^\\s*return\\s+(.+?)\\s*;\\s*$");
+	private static final Pattern RETURN_VAR_PATTERN = Pattern.compile("^\\s*return\\s+(\\w+)\\s*;\\s*$");
 	private static final Pattern TERNARY_PATTERN = Pattern.compile(
-			"((?:\\+\\+|--)?(?:-\\s*)?[\\w.\\[\\]]+)\\s*(>=?|<=?)\\s*((?:\\+\\+|--)?(?:-\\s*)?[\\w.\\[\\]]+)\\s*\\?\\s*((?:-\\s*)?[\\w.\\[\\]]+)\\s*:\\s*((?:-\\s*)?[\\w.\\[\\]]+)"
+			"((?:\\+\\+|--)?(?:[+\\-]\\s*)?[\\w.\\[\\]]+)\\s*(>=?|<=?)\\s*((?:\\+\\+|--)?(?:[+\\-]\\s*)?[\\w.\\[\\]]+)\\s*\\?\\s*((?:[+\\-]\\s*)?[\\w.\\[\\]]+)\\s*:\\s*((?:[+\\-]\\s*)?[\\w.\\[\\]]+)"
+	);
+	// init capture excludes ',' to reject multi-decls like `int r = a, s = b;`
+	private static final Pattern VAR_DECL_INIT_PATTERN = Pattern.compile(
+			"^(\\s*)(?:final\\s+)?(?:\\w+(?:\\s*\\[\\s*\\])*\\s+)(\\w+)\\s*=\\s*([^,]+?)\\s*;\\s*$"
 	);
 
 	@CheckReturnValue
@@ -29,6 +51,28 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 		else
 			replacement = "Math.clamp(" + innerArg2 + ", " + innerArg1 + ", " + outerArg + ")";
 		return line.substring(0, outerStart) + replacement + line.substring(outerClose + 1);
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static String computeMathExpr(
+			@Nonnull String left,
+			@Nonnull String op,
+			@Nonnull String right,
+			@Nonnull String thenValue,
+			@Nonnull String elseValue
+	) {
+		if (isZero(right)) {
+			final var abs = tryFixAbs(left, op, thenValue, elseValue);
+			if (abs != null)
+				return abs;
+		}
+		if (isZero(left)) {
+			final var abs = tryFixAbsZeroLeft(right, op, thenValue, elseValue);
+			if (abs != null)
+				return abs;
+		}
+		return tryFixMaxMin(left, op, right, thenValue, elseValue);
 	}
 
 	/**
@@ -85,9 +129,99 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 
 	@CheckReturnValue
 	@Nullable
-	private static String fixTernary(@Nonnull String line) {
+	private static FixAttempt fixIfShape(@Nonnull List<String> lines, int lineIndex) {
+		final var ifMatch = IF_COMPARISON_PATTERN.matcher(lines.get(lineIndex));
+		if (!ifMatch.matches())
+			return null;
+		final var indent = ifMatch.group(1);
+		final var leftOp = ifMatch.group(2).strip();
+		final var op = ifMatch.group(3);
+		final var rightOp = ifMatch.group(4).strip();
+
+		if (lineIndex + 1 >= lines.size())
+			return null;
+		final var thenLine = lines.get(lineIndex + 1);
+
+		final var thenCompound = COMPOUND_ASSIGN_BODY_PATTERN.matcher(thenLine);
+		if (thenCompound.matches()) {
+			return tryCompoundAssignShape(
+					lines,
+					lineIndex,
+					indent,
+					leftOp,
+					op,
+					rightOp,
+					thenCompound.group(1),
+					thenCompound.group(2),
+					thenCompound.group(3).strip()
+			);
+		}
+
+		final var thenAssign = ASSIGN_BODY_PATTERN.matcher(thenLine);
+		if (thenAssign.matches()) {
+			final var plainResult = tryPlainAssignShape(
+					lines,
+					lineIndex,
+					indent,
+					leftOp,
+					op,
+					rightOp,
+					thenAssign.group(1),
+					thenAssign.group(2).strip()
+			);
+			if (plainResult != null)
+				return plainResult;
+			if (lineIndex >= 1) {
+				return tryInitOverwriteShape(
+						lines,
+						lineIndex,
+						indent,
+						leftOp,
+						op,
+						rightOp,
+						thenAssign.group(1),
+						thenAssign.group(2).strip()
+				);
+			}
+		}
+
+		final var thenReturn = RETURN_BODY_PATTERN.matcher(thenLine);
+		if (thenReturn.matches()) {
+			return tryReturnShape(
+					lines,
+					lineIndex,
+					indent,
+					leftOp,
+					op,
+					rightOp,
+					thenReturn.group(1).strip()
+			);
+		}
+
+		return null;
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static String fixTernary(@Nonnull String line, int column) {
 		final var m = TERNARY_PATTERN.matcher(line);
-		if (!m.find())
+		// when the violation column is known (> 0), pick the regex match whose
+		// [start, end) contains it so multi-ternary lines pick the right one;
+		// when column == 0 (unit-test default), fall back to the first match
+		final boolean found;
+		if (column <= 0)
+			found = m.find();
+		else {
+			var matchContainingColumn = false;
+			while (m.find()) {
+				if (m.start() <= column && column < m.end()) {
+					matchContainingColumn = true;
+					break;
+				}
+			}
+			found = matchContainingColumn;
+		}
+		if (!found)
 			return null;
 
 		final var left = m.group(1).strip();
@@ -156,6 +290,41 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 		if (operand.startsWith("++") || operand.startsWith("--"))
 			return operand.substring(2);
 		return operand;
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static FixAttempt tryCompoundAssignShape(
+			@Nonnull List<String> lines,
+			int lineIndex,
+			@Nonnull String indent,
+			@Nonnull String leftOp,
+			@Nonnull String op,
+			@Nonnull String rightOp,
+			@Nonnull String thenTarget,
+			@Nonnull String thenAssignOp,
+			@Nonnull String thenValue
+	) {
+		if (lineIndex + 3 >= lines.size())
+			return null;
+		if (!ELSE_LINE_PATTERN.matcher(lines.get(lineIndex + 2)).matches())
+			return null;
+		final var elseMatch = COMPOUND_ASSIGN_BODY_PATTERN.matcher(lines.get(lineIndex + 3));
+		if (!elseMatch.matches())
+			return null;
+		if (!thenTarget.equals(elseMatch.group(1)) || !thenAssignOp.equals(elseMatch.group(2)))
+			return null;
+		final var elseValue = elseMatch.group(3).strip();
+
+		final var math = computeMathExpr(leftOp, op, rightOp, thenValue, elseValue);
+		if (math == null)
+			return null;
+
+		return new FixResult(
+				lineIndex,
+				lineIndex + 3,
+				List.of(indent + thenTarget + " " + thenAssignOp + " " + math + ";")
+		);
 	}
 
 	@CheckReturnValue
@@ -268,6 +437,139 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 		return (isMax ? "Math.max(" : "Math.min(") + left + ", " + right + ")";
 	}
 
+	@CheckReturnValue
+	@Nullable
+	private static FixAttempt tryInitOverwriteShape(
+			@Nonnull List<String> lines,
+			int lineIndex,
+			@Nonnull String indent,
+			@Nonnull String leftOp,
+			@Nonnull String op,
+			@Nonnull String rightOp,
+			@Nonnull String thenTarget,
+			@Nonnull String thenValue
+	) {
+		final var declMatch = VAR_DECL_INIT_PATTERN.matcher(lines.get(lineIndex - 1));
+		if (!declMatch.matches() || !thenTarget.equals(declMatch.group(2)))
+			return null;
+		final var elseValue = declMatch.group(3).strip();
+
+		final var math = computeMathExpr(leftOp, op, rightOp, thenValue, elseValue);
+		if (math == null)
+			return null;
+
+		if (lineIndex + 2 < lines.size()) {
+			final var trailingReturn = RETURN_VAR_PATTERN.matcher(lines.get(lineIndex + 2));
+			if (trailingReturn.matches() && thenTarget.equals(trailingReturn.group(1))) {
+				return new FixResult(
+						lineIndex - 1,
+						lineIndex + 2,
+						List.of(indent + "return " + math + ";")
+				);
+			}
+		}
+
+		final var declLine = lines.get(lineIndex - 1);
+		final var newDecl = declLine.substring(0, declLine.indexOf('=')) + "= " + math + ";";
+		return new FixResult(lineIndex - 1, lineIndex + 1, List.of(newDecl));
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static FixAttempt tryPlainAssignShape(
+			@Nonnull List<String> lines,
+			int lineIndex,
+			@Nonnull String indent,
+			@Nonnull String leftOp,
+			@Nonnull String op,
+			@Nonnull String rightOp,
+			@Nonnull String thenTarget,
+			@Nonnull String thenValue
+	) {
+		if (lineIndex + 3 >= lines.size())
+			return null;
+		if (!ELSE_LINE_PATTERN.matcher(lines.get(lineIndex + 2)).matches())
+			return null;
+		final var elseMatch = ASSIGN_BODY_PATTERN.matcher(lines.get(lineIndex + 3));
+		if (!elseMatch.matches())
+			return null;
+		if (!thenTarget.equals(elseMatch.group(1)))
+			return null;
+		final var elseValue = elseMatch.group(2).strip();
+
+		final var math = computeMathExpr(leftOp, op, rightOp, thenValue, elseValue);
+		if (math == null)
+			return null;
+
+		final var declIndex = lineIndex - 1;
+		final var trailingReturnIndex = lineIndex + 4;
+		if (declIndex >= 0 && trailingReturnIndex < lines.size()) {
+			final var declMatch = DECL_LINE_PATTERN.matcher(lines.get(declIndex));
+			final var returnVarMatch = RETURN_VAR_PATTERN.matcher(lines.get(trailingReturnIndex));
+			if (declMatch.matches()
+					&& returnVarMatch.matches()
+					&& thenTarget.equals(declMatch.group(1))
+					&& thenTarget.equals(returnVarMatch.group(1))) {
+				return new FixResult(
+						declIndex,
+						trailingReturnIndex,
+						List.of(indent + "return " + math + ";")
+				);
+			}
+		}
+
+		return new FixResult(
+				lineIndex,
+				lineIndex + 3,
+				List.of(indent + thenTarget + " = " + math + ";")
+		);
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static FixAttempt tryReturnShape(
+			@Nonnull List<String> lines,
+			int lineIndex,
+			@Nonnull String indent,
+			@Nonnull String leftOp,
+			@Nonnull String op,
+			@Nonnull String rightOp,
+			@Nonnull String thenValue
+	) {
+		if (lineIndex + 3 < lines.size()
+				&& ELSE_LINE_PATTERN.matcher(lines.get(lineIndex + 2)).matches()) {
+			final var elseReturnMatch = RETURN_BODY_PATTERN.matcher(lines.get(lineIndex + 3));
+			if (elseReturnMatch.matches()) {
+				final var elseValue = elseReturnMatch.group(1).strip();
+				final var math = computeMathExpr(leftOp, op, rightOp, thenValue, elseValue);
+				if (math == null)
+					return null;
+				return new FixResult(
+						lineIndex,
+						lineIndex + 3,
+						List.of(indent + "return " + math + ";")
+				);
+			}
+		}
+
+		if (lineIndex + 2 < lines.size()) {
+			final var trailingReturnMatch = RETURN_BODY_PATTERN.matcher(lines.get(lineIndex + 2));
+			if (trailingReturnMatch.matches()) {
+				final var elseValue = trailingReturnMatch.group(1).strip();
+				final var math = computeMathExpr(leftOp, op, rightOp, thenValue, elseValue);
+				if (math == null)
+					return null;
+				return new FixResult(
+						lineIndex,
+						lineIndex + 2,
+						List.of(indent + "return " + math + ";")
+				);
+			}
+		}
+
+		return null;
+	}
+
 	@Nullable
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
@@ -275,10 +577,16 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 
 		var result = fixClamp(line);
 		if (result == null)
-			result = fixTernary(line);
-		if (result == null)
-			return new SkipResult(SkipMessages.MATH_METHOD_SKIP);
+			result = fixTernary(line, column);
+		if (result != null)
+			return new FixResult(lineIndex, lineIndex, List.of(result));
 
-		return new FixResult(lineIndex, lineIndex, List.of(result));
+		final var ifShapeResult = fixIfShape(lines, lineIndex);
+		if (ifShapeResult != null)
+			return ifShapeResult;
+
+		if (IF_LINE_PATTERN.matcher(line).find())
+			return new SkipResult(SkipMessages.MATH_METHOD_SKIP_IF);
+		return new SkipResult(SkipMessages.MATH_METHOD_SKIP);
 	}
 }

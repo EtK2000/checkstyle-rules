@@ -65,6 +65,8 @@
 	<suppress checks="PreferStaticImportCheck" files="inputs[\\/]preferstaticimport[\\/]" />
 	<suppress checks="RedundantArrayCreationCheck" files="inputs[\\/]redundantarraycreation[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]redundantarraycreation[\\/]" />
+	<suppress checks="RedundantEqualityBranchCheck" files="inputs[\\/]redundantequality[\\/]" />
+	<suppress checks="PreferMathMethodCheck" files="inputs[\\/]redundantequality[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]annotationsyntax[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]fieldsorting[\\/]" />

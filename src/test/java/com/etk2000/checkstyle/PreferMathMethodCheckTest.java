@@ -6,9 +6,84 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.stream.Stream;
 
 public class PreferMathMethodCheckTest {
 	private static final String DIR = "mathmethod/";
+
+	private static Stream<Arguments> ifViolationProvider() {
+		return Stream.of(
+				Arguments.of(9, "Use 'Math.abs(a)' here."),
+				Arguments.of(18, "Use 'Math.abs(a)' here."),
+				Arguments.of(27, "Use 'Math.abs(a)' here."),
+				Arguments.of(36, "Use 'Math.abs(a)' here."),
+				Arguments.of(45, "Use 'Math.abs(a)' here."),
+				Arguments.of(54, "Use 'Math.abs(a)' here."),
+				Arguments.of(63, "Use 'Math.abs(a)' here."),
+				Arguments.of(72, "Use 'Math.abs(a)' here."),
+				Arguments.of(81, "Use 'Math.abs(a)' here."),
+				Arguments.of(89, "Use 'Math.abs(a)' here."),
+				Arguments.of(97, "Use 'Math.abs(a)' here."),
+				Arguments.of(104, "Use 'Math.abs(a)' here."),
+				Arguments.of(111, "Use 'Math.abs(a)' here."),
+				Arguments.of(118, "Use 'Math.abs(a)' here."),
+				Arguments.of(125, "Use 'Math.abs(a)' here."),
+				Arguments.of(132, "Use 'Math.abs(a)' here."),
+				Arguments.of(139, "Use 'Math.abs(a)' here."),
+				Arguments.of(146, "Use 'Math.abs(a)' here."),
+				Arguments.of(153, "Use 'Math.abs(a)' here."),
+				Arguments.of(159, "Use 'Math.abs(a)' here."),
+				Arguments.of(165, "Use 'Math.abs(a)' here."),
+				Arguments.of(171, "Use 'Math.abs(a)' here."),
+				Arguments.of(177, "Use 'Math.abs(a)' here."),
+				Arguments.of(183, "Use 'Math.abs(a)' here."),
+				Arguments.of(189, "Use 'Math.abs(a)' here."),
+				Arguments.of(195, "Use 'Math.abs(a)' here."),
+				Arguments.of(202, "Use 'Math.min(a, b)' here."),
+				Arguments.of(210, "Use 'Math.max(a, b)' here."),
+				Arguments.of(218, "Use 'Math.max(a, b)' here."),
+				Arguments.of(226, "Use 'Math.max(a, b)' here."),
+				Arguments.of(234, "Use 'Math.max(a, b)' here."),
+				Arguments.of(243, "Use 'Math.max(a, b)' here."),
+				Arguments.of(252, "Use 'Math.max(a, b)' here."),
+				Arguments.of(261, "Use 'Math.max(a, b)' here."),
+				Arguments.of(270, "Use 'Math.max(a, b)' here."),
+				Arguments.of(279, "Use 'Math.max(--a, b)' here."),
+				Arguments.of(288, "Use 'Math.max(++a, b)' here."),
+				Arguments.of(297, "Use 'Math.max(a, ++b)' here."),
+				Arguments.of(305, "Use 'Math.max(a, b)' here."),
+				Arguments.of(313, "Use 'Math.max(a, b)' here."),
+				Arguments.of(320, "Use 'Math.max(a, b)' here."),
+				Arguments.of(327, "Use 'Math.max(a, b)' here."),
+				Arguments.of(334, "Use 'Math.max(a, b)' here."),
+				Arguments.of(341, "Use 'Math.max(++a, b)' here."),
+				Arguments.of(349, "Use 'Math.max(a, b)' here."),
+				Arguments.of(356, "Use 'Math.max(a, b)' here."),
+				Arguments.of(367, "Use 'Math.max(a, b)' here."),
+				Arguments.of(374, "Use 'Math.max(a, b)' here."),
+				Arguments.of(382, "Use 'Math.max(a, b)' here."),
+				Arguments.of(388, "Use 'Math.max(a, b)' here."),
+				Arguments.of(394, "Use 'Math.max(a, b)' here."),
+				Arguments.of(400, "Use 'Math.max(a, b)' here."),
+				Arguments.of(407, "Use 'Math.min(a, b)' here."),
+				Arguments.of(416, "Use 'Math.min(a, b)' here."),
+				Arguments.of(425, "Use 'Math.min(a, b)' here."),
+				Arguments.of(434, "Use 'Math.min(a, b)' here."),
+				Arguments.of(442, "Use 'Math.min(a, b)' here."),
+				Arguments.of(449, "Use 'Math.min(a, b)' here."),
+				Arguments.of(456, "Use 'Math.min(a, b)' here."),
+				Arguments.of(463, "Use 'Math.min(a, b)' here."),
+				Arguments.of(470, "Use 'Math.min(a, b)' here."),
+				Arguments.of(478, "Use 'Math.min(a, b)' here."),
+				Arguments.of(484, "Use 'Math.min(a, b)' here."),
+				Arguments.of(490, "Use 'Math.min(a, b)' here."),
+				Arguments.of(496, "Use 'Math.min(a, b)' here.")
+		);
+	}
 
 	@Test
 	public void testClampGatedByMinSdk() throws Exception {
@@ -50,6 +125,84 @@ public class PreferMathMethodCheckTest {
 	@Test
 	public void testClean() throws Exception {
 		assertTrue(BaseCheckTest.runCheck(PreferMathMethodCheck.class, DIR + "InputPreferMathMethodClean.java").isEmpty());
+	}
+
+	@MethodSource("ifViolationProvider")
+	@ParameterizedTest
+	public void testIfViolations(int expectedLine, String expectedMessage) throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferMathMethodCheck.class,
+				DIR + "InputPreferMathMethodIfViolation.java"
+		);
+		final var match = violations.stream()
+				.filter(v -> v.getLine() == expectedLine)
+				.findFirst()
+				.orElseThrow(() -> new AssertionError("No violation at line " + expectedLine));
+		assertEquals(SeverityLevel.ERROR, match.getSeverityLevel());
+		assertEquals(expectedMessage, match.getMessage());
+	}
+
+	@Test
+	public void testIfViolationsCount() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				PreferMathMethodCheck.class,
+				DIR + "InputPreferMathMethodIfViolation.java"
+		);
+		assertEquals(65, violations.size());
+	}
+
+	@Test
+	public void testIfWithBracedSingleStatementSlistFires() throws Exception {
+		final var source = "class T {\n"
+				+ "\tint f(int a, int b) {\n"
+				+ "\t\tif (a > b) {\n"
+				+ "\t\t\treturn a;\n"
+				+ "\t\t}\n"
+				+ "\t\telse {\n"
+				+ "\t\t\treturn b;\n"
+				+ "\t\t}\n"
+				+ "\t}\n"
+				+ "}\n";
+		final var violations = BaseCheckTest.runCheckInline(PreferMathMethodCheck.class, source);
+		assertEquals(1, violations.size());
+		assertEquals(3, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
+		assertEquals("Use 'Math.max(a, b)' here.", violations.getFirst().getMessage());
+	}
+
+	@Test
+	public void testIfWithEmptySlistDoesNotFire() throws Exception {
+		final var source = "class T {\n"
+				+ "\tint f(int a, int b) {\n"
+				+ "\t\tif (a > b) {}\n"
+				+ "\t\telse {\n"
+				+ "\t\t\treturn a;\n"
+				+ "\t\t}\n"
+				+ "\t\treturn b;\n"
+				+ "\t}\n"
+				+ "}\n";
+		final var violations = BaseCheckTest.runCheckInline(PreferMathMethodCheck.class, source);
+		assertTrue(violations.isEmpty());
+	}
+
+	@Test
+	public void testRedundantEqualityBranchCheckDoesNotFireOnMathResources() throws Exception {
+		assertTrue(BaseCheckTest.runCheck(
+				RedundantEqualityBranchCheck.class,
+				DIR + "InputPreferMathMethodIfViolation.java"
+		).isEmpty());
+		assertTrue(BaseCheckTest.runCheck(
+				RedundantEqualityBranchCheck.class,
+				DIR + "InputPreferMathMethodTernaryViolation.java"
+		).isEmpty());
+		assertTrue(BaseCheckTest.runCheck(
+				RedundantEqualityBranchCheck.class,
+				DIR + "InputPreferMathMethodClampViolation.java"
+		).isEmpty());
+		assertTrue(BaseCheckTest.runCheck(
+				RedundantEqualityBranchCheck.class,
+				DIR + "InputPreferMathMethodClean.java"
+		).isEmpty());
 	}
 
 	@Test
