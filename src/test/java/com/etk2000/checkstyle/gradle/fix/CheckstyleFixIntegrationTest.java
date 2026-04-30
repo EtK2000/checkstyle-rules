@@ -563,6 +563,95 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testArrayTypeStyleCompoundLocal() throws Exception {
+		final var file = tempDir.resolve("ArrTypeStyleCompound.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid m() {\n\t\tfinal int x[][] = {{1}};\n\t\tx[0][0] = 1;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid m() {\n\t\tfinal int[][] x = {{1}};\n\t\tx[0][0] = 1;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testArrayTypeStyleCStyleField() throws Exception {
+		final var file = tempDir.resolve("ArrTypeStyle.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint x[];\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint[] x;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testArrayTypeStyleMethodMultiParam() throws Exception {
+		final var file = tempDir.resolve("ArrTypeStyleMultiParam.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid m(int x[], int y) {\n\t\tx[0] = y;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid m(int[] x, int y) {\n\t\tx[0] = y;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testArrayTypeStyleMethodParameter() throws Exception {
+		final var file = tempDir.resolve("ArrTypeStyleParam.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid m(int x[]) {\n\t\tx[0] = 1;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid m(int[] x) {\n\t\tx[0] = 1;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testArrayTypeStyleMethodReturnType() throws Exception {
+		final var file = tempDir.resolve("ArrTypeStyleRet.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint m()[] {\n\t\treturn null;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tint[] m() {\n\t\treturn null;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testArrayTypeStyleMixedJavaAndC() throws Exception {
+		final var file = tempDir.resolve("ArrTypeStyleMixed.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint[] x[];\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\tint[][] x;\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testArrayTypeStyleRecordComponent() throws Exception {
+		final var file = tempDir.resolve("ArrTypeStyleRec.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\trecord R(int x[]) {}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("class T {\n\trecord R(int[] x) {}\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testBlankLineAfterBreak() throws Exception {
 		final var file = tempDir.resolve("Break.java").toFile();
 		final var input = "class T {\n\tvoid f(int x) {\n\t\tswitch (x) {\n\t\t\tcase 1:\n\t\t\t\tdoSomething();\n\t\t\t\tbreak;\n\t\t\tcase 2:\n\t\t\t\tbreak;\n\t\t\tdefault:\n\t\t\t\tbreak;\n\t\t}\n\t}\n\tvoid doSomething() {}\n}";
@@ -1247,29 +1336,25 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("FieldConsBothC.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint alpha[];\n\tint beta[];\n}");
 
-		final var output = runFixAndGetResult(file);
-		assertEquals("class T {\n\tint alpha[], beta[];\n}", output.content());
-		assertEquals(1, output.result().fixCount());
-		assertFalse(output.result().needsSecondPass());
+		final var content = runFixMultiPass(file);
+		assertEquals("class T {\n\tint[] alpha, beta;\n}", content);
 	}
 
 	@Test
 	public void testFieldConsolidationBothCStyleArrayWrapping() throws Exception {
-		final var a = "a".repeat(53);
-		final var b = "b".repeat(53);
+		final var a = "a".repeat(54);
+		final var b = "b".repeat(54);
 		final var file = tempDir.resolve("FieldConsBothCWrap.java").toFile();
 		Files.writeString(
 				file.toPath(),
 				"class T {\n\tint " + a + "[];\n\tint " + b + "[];\n}"
 		);
 
-		final var output = runFixAndGetResult(file);
+		final var content = runFixMultiPass(file);
 		assertEquals(
-				"class T {\n\tint " + a + "[],\n\t\t\t" + b + "[];\n}",
-				output.content()
+				"class T {\n\tint[] " + a + ",\n\t\t\t" + b + ";\n}",
+				content
 		);
-		assertEquals(1, output.result().fixCount());
-		assertFalse(output.result().needsSecondPass());
 	}
 
 	@Test
@@ -1291,10 +1376,17 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("FieldConsCCurrJPrev.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint[] alpha;\n\tint beta[];\n}");
 
-		final var output = runFixAndGetResult(file);
-		assertEquals("class T {\n\tint[] alpha, beta;\n}", output.content());
-		assertEquals(1, output.result().fixCount());
-		assertFalse(output.result().needsSecondPass());
+		final var content = runFixMultiPass(file);
+		assertEquals("class T {\n\tint[] alpha, beta;\n}", content);
+	}
+
+	@Test
+	public void testFieldConsolidationCStylePrevJavaCurr() throws Exception {
+		final var file = tempDir.resolve("FieldConsCPrevJCurr.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tint alpha[];\n\tint[] beta;\n}");
+
+		final var content = runFixMultiPass(file);
+		assertEquals("class T {\n\tint[] alpha, beta;\n}", content);
 	}
 
 	@Test

@@ -8,6 +8,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 |------------------------------------------|------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | AnnotationOwnLineCheck                   | AnnotationOwnLineFixer             | Splits stacked/embedded annotations to own lines, removes blank lines, sorts alphabetically                                                                                 |
 | AnnotationSameLineCheck                  | AnnotationSameLineFixer            | Joins annotations onto declaration line, sorts inline annotations alphabetically                                                                                            |
+| ArrayTypeStyleCheck                      | ArrayTypeStyleFixer                | Moves C-style brackets to the type position. See [sub-rules below](#arraytypestylecheck-sub-rules)                                                                          |
 | AvoidNoArgumentSuperConstructorCallCheck | AvoidNoArgumentSuperCallFixer      | Removes `super()` call                                                                                                                                                      |
 | ConstructorAssignmentOrderCheck          | ConstructorAssignmentOrderFixer    | Sorts `this.xxx = ...` assignments by group (simple, multi-line, var-dependent) then alphabetically; handles dependencies                                                   |
 | ControlFlowBracesCheck                   | ControlFlowBracesFixer             | Do-while: removes unnecessary braces, fixes one-liners, adds missing braces. Non-do-while: adds braces to multi-line braceless bodies                                       |
@@ -49,6 +50,71 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | NoDoubleBlankLines            | DoubleBlankLineFixer             | Removes extra blank line                                       |
 | NoTrailingNewline             | TrailingNewlineFixer             | Removes trailing blank lines at EOF                            |
 | NoTrailingWhitespace          | TrailingWhitespaceFixer          | Trims trailing whitespace                                      |
+
+## ArrayTypeStyleCheck sub-rules
+
+The fixer moves C-style brackets from after the variable name to the type position. It blanks
+comments before scanning (so punctuation inside `/* */` and `//` is ignored) and walks across lines
+when the bracket sits on a different line from the rest of the declaration. The output preserves
+the original comments and surrounding whitespace.
+
+### Supported (auto-fixable)
+
+| Pattern                                               | Fix output                          | Notes                                      |
+|-------------------------------------------------------|-------------------------------------|--------------------------------------------|
+| `int x[];`                                            | `int[] x;`                          | Field, local, parameter, record component  |
+| `int x[][];`                                          | `int[][] x;`                        | Compound C-style                           |
+| `int[] x[];`                                          | `int[][] x;`                        | Mixed Java + C-style                       |
+| `int x[] = {1};`                                      | `int[] x = {1};`                    | With initializer                           |
+| `int x [];`                                           | `int[] x;`                          | Whitespace between name and `[`            |
+| `int x[ ];`                                           | `int[ ] x;`                         | Whitespace inside brackets preserved       |
+| `final int x[];`                                      | `final int[] x;`                    | With modifiers                             |
+| `public static final int x[];`                        | `public static final int[] x;`      | Multiple modifiers                         |
+| `@Deprecated int x[];`                                | `@Deprecated int[] x;`              | Declaration annotations preserved          |
+| `int @TypeAnno [] x;`                                 | (clean — no violation)              | Type-use annotation in Java-style position |
+| `List<String> x[];`                                   | `List<String>[] x;`                 | Generic type                               |
+| `List<? extends Number> x[];`                         | `List<? extends Number>[] x;`       | Wildcard generic                           |
+| `Map<K, V> x[];`                                      | `Map<K, V>[] x;`                    | Multiple type args                         |
+| `Map<String, List<Integer>> x[];`                     | `Map<String, List<Integer>>[] x;`   | Nested generics                            |
+| `void m(int x[])`                                     | `void m(int[] x)`                   | Method parameter                           |
+| `void m(int a[], int b)`                              | `void m(int[] a, int b)`            | Multi-param, C-style on first              |
+| `void m(int x, int y[])`                              | `void m(int x, int[] y)`            | Multi-param, C-style on last               |
+| `void m(int a, int b[], int c)`                       | `void m(int a, int[] b, int c)`     | Multi-param, C-style in middle             |
+| `(int a[], int b) -> {}` (lambda)                     | `(int[] a, int b) -> {}`            | Multi-param lambda                         |
+| `record R(int x[]) {}`                                | `record R(int[] x) {}`              | Record component                           |
+| `record R<T>(int x[], String s) {}`                   | `record R<T>(int[] x, String s) {}` | Generic record component                   |
+| `record R<T extends List<String>>(int x[], int y) {}` | (corresponding fix)                 | Nested type-param bounds                   |
+| `int m()[] { return null; }`                          | `int[] m() { return null; }`        | Method return type                         |
+| `int m()[][]`                                         | `int[][] m()`                       | Compound method return                     |
+| `int[] m()[]`                                         | `int[][] m()`                       | Java + C-style method return               |
+| `int m()[] throws X { ... }`                          | `int[] m() throws X { ... }`        | Method return + throws                     |
+| `int m()[];`                                          | `int[] m();`                        | Abstract method                            |
+| `<T> T m()[]`                                         | `<T> T[] m()`                       | Generic method                             |
+| `List<String> m()[]`                                  | `List<String>[] m()`                | Generic return type                        |
+| `int x\n[];` (multi-line)                             | `int[] x\n;`                        | Bracket on next line                       |
+| `int m()\n[]\n{...}` (multi-line return)              | `int[] m()\n{...}`                  | Method return, bracket-only line removed   |
+| `int x[] /* note */ = a;`                             | `int[] x /* note */ = a;`           | Comments after `]` preserved               |
+| `int x[] = a; // hello, world`                        | `int[] x = a; // hello, world`      | Comma in trailing comment ignored          |
+| `/* doc */ final int x[];`                            | `/* doc */ final int[] x;`          | Leading block comment preserved            |
+
+### Not supported (check fires, fixer returns null)
+
+| Pattern                                                           | Reason                                                                      |
+|-------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| Multi-variable single-line (`int a[], b;` / `int a, b[];`)        | Moving brackets would retype the sibling; depth-aware comma scan bails      |
+| Multi-var with initializer (`int x[] = {1}, y = 0;`)              | Comma after `]` (depth 0, before `;`) detected by multi-line scan           |
+| Multi-var across lines (`int x\n[], y;` / `int x\n[]\n, y;`)      | Multi-line forward scan tracks depth + literals across lines                |
+| Multi-var spanning paren initializer (`int x[] = foo(a,\nb), y;`) | Multi-line scan continues past unclosed paren on bracket line               |
+| C-style with type-use annotation on bracket (`int x @Anno []`)    | Walk-back from `[` lands on `@`; preserving the annotation is ambiguous     |
+| Comment between IDENT and `[` (`int x /* note */ [];`)            | Dropping or preserving the gap comment is ambiguous                         |
+| For-loop multi-var init (`for (int x[] = a, y = 1; ...)`)         | Keyword denylist (`for`/`if`/`while`/...) prevents treating as param list   |
+| Method-return as expression-context bracket (`x = bar()[]`)       | Char before method ident is `=`/operator, not a type-end char               |
+| Method-return type-use annotation (`int m() @A []`)               | Conservative bail; preserving annotation through the move is unsafe         |
+| Junk after method-return brackets (`int m()[] foo`)               | Tightened next-char check requires `{`, `;`, or exact `throws` keyword      |
+| Multi-line declaration first line (no prev line)                  | Walk-back has no preceding declaration to insert brackets into              |
+| Multi-line with empty/whitespace-only prev line                   | No identifier or `)` to anchor the type-end                                 |
+| Multi-line with method-call argument list on prev line            | Returns null when the prev line ends in non-ident/`)` (e.g. `}`, `;`)       |
+| Unclosed bracket (`int x[abc];` or `int x[`)                      | `findBracketsEnd` requires `[` immediately followed by optional ws then `]` |
 
 ## JitInefficiencyCheck sub-rules
 
@@ -379,21 +445,22 @@ Continuation lines use base indent + 2 tabs.
 Known cases where fixers return null or SkipResult. These are not bugs; each represents a
 pattern the fixer intentionally skips because it cannot safely transform the code.
 
-| Fixer                          | Skipped case                                       | Reason                                                                                 |
-|--------------------------------|----------------------------------------------------|----------------------------------------------------------------------------------------|
-| RedundantAnnotationSyntaxFixer | Multiline annotation with `()` or `value =`        | Skip: regex can't reliably detect annotation boundary across lines                     |
-| PreferVarFixer                 | Multi-variable declaration (`int a, b;`)           | Skip: can't replace type with `var` when multiple variables share the declaration      |
-| PreferVarFixer                 | No `new` after `=` in explicit array init          | null: pattern requires `= new Type[]{}` structure                                      |
-| PreferVarFixer                 | Non-Object generic type args (`<String>`)          | null: diamond `<>` only replaces `<Object>`, not other explicit types                  |
-| PreferCollectionInterfaceFixer | Class not resolvable or not a standard collection  | Skip: concrete-to-interface mapping requires class resolution at runtime               |
-| LambdaParameterTypeFixer       | Arrow `->` not found from violation column         | Skip: fixer operates on text from the column; if arrow is on a different line, skipped |
-| LambdaParameterTypeFixer       | Opening paren not found for lambda params          | Skip: single naked param without parens in unusual positions                           |
-| FieldConsolidationFixer        | Block comment between field names                  | null: comment would be lost or misplaced during merge                                  |
-| FieldConsolidationFixer        | C-style array type mismatch between fields         | null: `int[] a` and `int b` can't merge to one declaration safely                      |
-| AnnotationOwnLineFixer         | Annotation already on own line, just needs sorting | null when already in correct order                                                     |
-| AnnotationSameLineFixer        | Annotation block reaches end of file               | null: no declaration found to join annotations onto                                    |
-| RedundantArrayCreationFixer    | Multiline array creation                           | null: closing `}` not on the same line as opening `{`                                  |
-| RedundantArrayCreationFixer    | No `{` found on the violation line                 | null: opening brace on a different line than `new`                                     |
+| Fixer                          | Skipped case                                                        | Reason                                                                                 |
+|--------------------------------|---------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| RedundantAnnotationSyntaxFixer | Multiline annotation with `()` or `value =`                         | Skip: regex can't reliably detect annotation boundary across lines                     |
+| PreferVarFixer                 | Multi-variable declaration (`int a, b;`)                            | Skip: can't replace type with `var` when multiple variables share the declaration      |
+| PreferVarFixer                 | No `new` after `=` in explicit array init                           | null: pattern requires `= new Type[]{}` structure                                      |
+| PreferVarFixer                 | Non-Object generic type args (`<String>`)                           | null: diamond `<>` only replaces `<Object>`, not other explicit types                  |
+| PreferCollectionInterfaceFixer | Class not resolvable or not a standard collection                   | Skip: concrete-to-interface mapping requires class resolution at runtime               |
+| LambdaParameterTypeFixer       | Arrow `->` not found from violation column                          | Skip: fixer operates on text from the column; if arrow is on a different line, skipped |
+| LambdaParameterTypeFixer       | Opening paren not found for lambda params                           | Skip: single naked param without parens in unusual positions                           |
+| FieldConsolidationFixer        | Block comment between field names                                   | null: comment would be lost or misplaced during merge                                  |
+| FieldConsolidationFixer        | C-style array type mismatch between fields                          | null: `int[] a` and `int b` can't merge to one declaration safely                      |
+| AnnotationOwnLineFixer         | Annotation already on own line, just needs sorting                  | null when already in correct order                                                     |
+| AnnotationSameLineFixer        | Annotation block reaches end of file                                | null: no declaration found to join annotations onto                                    |
+| RedundantArrayCreationFixer    | Multiline array creation                                            | null: closing `}` not on the same line as opening `{`                                  |
+| RedundantArrayCreationFixer    | No `{` found on the violation line                                  | null: opening brace on a different line than `new`                                     |
+| ArrayTypeStyleFixer            | See [ArrayTypeStyleCheck sub-rules](#arraytypestylecheck-sub-rules) | Skipped patterns are listed there alongside supported patterns                         |
 
 ## Future fix opportunities
 

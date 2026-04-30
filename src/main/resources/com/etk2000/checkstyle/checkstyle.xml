@@ -75,6 +75,9 @@
 		<!-- Custom: Stacked annotation formatting (own line, no blank lines, alphabetical) -->
 		<module name="com.etk2000.checkstyle.AnnotationOwnLineCheck" />
 
+		<!-- Custom: Java-style array declarations (int[] x, not int x[]) -->
+		<module name="com.etk2000.checkstyle.ArrayTypeStyleCheck" />
+
 		<!-- Custom: Inline annotation formatting (same line, alphabetical) -->
 		<module name="com.etk2000.checkstyle.AnnotationSameLineCheck" />
 

@@ -5,6 +5,14 @@
 <suppressions>
 	<!-- Suppress each check in the directory whose test inputs intentionally violate it -->
 	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]annotationownline[\\/]" />
+	<suppress checks="ArrayTypeStyleCheck" files="inputs[\\/]arraytypestyle[\\/]" />
+	<suppress checks="ArrayTypeStyleCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
+	<suppress checks="ArrayTypeStyleCheck" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]arraytypestyle[\\/]" />
+	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]arraytypestyle[\\/]" />
+	<suppress checks="FieldSortingCheck" files="inputs[\\/]arraytypestyle[\\/]" />
+	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]arraytypestyle[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]arraytypestyle[\\/]" />
 	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
 	<suppress checks="AnnotationSameLineCheck" files="inputs[\\/]annotationsameline[\\/]" />

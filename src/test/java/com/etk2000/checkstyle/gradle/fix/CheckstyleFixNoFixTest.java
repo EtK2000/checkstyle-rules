@@ -335,6 +335,17 @@ public class CheckstyleFixNoFixTest {
 	}
 
 	@Test
+	public void testArrayTypeStyleMultiVarWithInitializerSkipped() throws Exception {
+		final var file = tempDir.resolve("ArrTypeStyleMultiVarInit.java").toFile();
+		final var input = "class T {\n\tvoid m() {\n\t\tfinal int gamma[] = {1}, delta = 0;\n\t\tgamma[0] = delta;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(input, output.content());
+		assertEquals(0, output.result().fixCount());
+	}
+
+	@Test
 	public void testCleanFileNoViolationsNoReasons() throws Exception {
 		final var file = tempDir.resolve("Clean.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid method() {}\n}");
@@ -363,16 +374,6 @@ public class CheckstyleFixNoFixTest {
 
 		final var output = runFixAndGetResult(file);
 		assertEquals(content, output.content());
-		assertEquals(0, output.result().fixCount());
-	}
-
-	@Test
-	public void testFieldConsolidationCStylePrevJavaCurrSkipped() throws Exception {
-		final var file = tempDir.resolve("FieldConsCPrevJCurr.java").toFile();
-		Files.writeString(file.toPath(), "class T {\n\tint alpha[];\n\tint[] beta;\n}");
-
-		final var output = runFixAndGetResult(file);
-		assertEquals("class T {\n\tint alpha[];\n\tint[] beta;\n}", output.content());
 		assertEquals(0, output.result().fixCount());
 	}
 
