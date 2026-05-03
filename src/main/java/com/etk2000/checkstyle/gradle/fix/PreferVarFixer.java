@@ -208,10 +208,9 @@ class PreferVarFixer implements CheckstyleFixer {
 
 		// skip annotations: @Name, @Name(args), @pkg.Name, with whitespace
 		while (pos < line.length() && line.charAt(pos) == '@') {
-			++pos;
 			// scan annotation name (identifier chars + dots)
-			while (pos < line.length() && (Character.isJavaIdentifierPart(line.charAt(pos)) || line.charAt(pos) == '.'))
-				++pos;
+			do ++pos;
+			while (pos < line.length() && (Character.isJavaIdentifierPart(line.charAt(pos)) || line.charAt(pos) == '.'));
 			// skip parenthesized arguments if present
 			if (pos < line.length() && line.charAt(pos) == '(') {
 				var depth = 1;

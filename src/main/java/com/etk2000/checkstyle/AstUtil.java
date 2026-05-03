@@ -34,6 +34,38 @@ class AstUtil {
 	}
 
 	/**
+	 * Returns true if two AST subtrees are structurally identical: same
+	 * token type, same text, same number of children, and recursively
+	 * equal children in order. Uses a parallel iterative walk to avoid
+	 * StackOverflowError on deeply nested expressions.
+	 */
+	@CheckReturnValue
+	static boolean astStructuralEquals(@Nonnull DetailAST a, @Nonnull DetailAST b) {
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(a);
+		stack.push(b);
+		while (!stack.isEmpty()) {
+			final var nb = stack.pop();
+			final var na = stack.pop();
+			if (na.getType() != nb.getType())
+				return false;
+			if (!na.getText().equals(nb.getText()))
+				return false;
+			if (na.getChildCount() != nb.getChildCount())
+				return false;
+			var ca = na.getFirstChild();
+			var cb = nb.getFirstChild();
+			while (ca != null && cb != null) {
+				stack.push(ca);
+				stack.push(cb);
+				ca = ca.getNextSibling();
+				cb = cb.getNextSibling();
+			}
+		}
+		return true;
+	}
+
+	/**
 	 * Returns a canonical string for an ANNOTATION AST node, including its
 	 * name and normalized parameters. Parameter names are sorted alphabetically
 	 * so that {@code @A(b=1, a=2)} and {@code @A(a=2, b=1)} produce the same

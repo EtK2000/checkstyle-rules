@@ -53,6 +53,9 @@
 	<suppress checks="OverloadMethodOrderCheck" files="inputs[\\/]overload[\\/]" />
 	<suppress checks="PreferBulkOperationCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
 	<suppress checks="PreferCollectionInterfaceCheck" files="inputs[\\/]collectioninterface[\\/]" />
+	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]preferdowhile[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]preferdowhile[\\/]" />
+	<suppress checks="PreferDoWhileCheck" files="inputs[\\/]preferdowhile[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]preferimport[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]preferlambda[\\/]" />
 	<suppress checks="PreferLiteralSuffixCheck" files="inputs[\\/]literalsuffix[\\/]" />

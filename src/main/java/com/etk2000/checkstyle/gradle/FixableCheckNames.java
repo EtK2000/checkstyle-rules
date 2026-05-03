@@ -52,6 +52,7 @@ final class FixableCheckNames {
 			"com.etk2000.checkstyle.NoUnnecessaryThisCheck",
 			"com.etk2000.checkstyle.PreferBulkOperationCheck",
 			"com.etk2000.checkstyle.PreferCollectionInterfaceCheck",
+			"com.etk2000.checkstyle.PreferDoWhileCheck",
 			"com.etk2000.checkstyle.PreferMathMethodCheck",
 			"com.etk2000.checkstyle.PreferPrefixIncrementCheck",
 			"com.etk2000.checkstyle.PreferSpecificApiCheck",

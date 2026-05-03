@@ -27,10 +27,9 @@ class AnnotationFixerUtil {
 
 		var pos = 0;
 		while (pos < stripped.length() && stripped.charAt(pos) == '@') {
-			++pos;
+			do ++pos;
 			while (pos < stripped.length()
-					&& (Character.isJavaIdentifierPart(stripped.charAt(pos)) || stripped.charAt(pos) == '.'))
-				++pos;
+					&& (Character.isJavaIdentifierPart(stripped.charAt(pos)) || stripped.charAt(pos) == '.'));
 
 			if (pos < stripped.length() && stripped.charAt(pos) == '(') {
 				var depth = 1;
@@ -73,12 +72,11 @@ class AnnotationFixerUtil {
 
 		while (pos < content.length() && content.charAt(pos) == '@') {
 			final var start = pos;
-			++pos;
 
 			// read annotation name (possibly qualified with dots)
+			do ++pos;
 			while (pos < content.length()
-					&& (Character.isJavaIdentifierPart(content.charAt(pos)) || content.charAt(pos) == '.'))
-				++pos;
+					&& (Character.isJavaIdentifierPart(content.charAt(pos)) || content.charAt(pos) == '.'));
 
 			// read params if present (balanced parens)
 			if (pos < content.length() && content.charAt(pos) == '(') {

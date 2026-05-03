@@ -186,9 +186,8 @@ class ArrayTypeStyleFixer implements CheckstyleFixer {
 				++pos;
 			if (pos >= line.length() || line.charAt(pos) != '[')
 				break;
-			++pos;
-			while (pos < line.length() && Character.isWhitespace(line.charAt(pos)))
-				++pos;
+			do ++pos;
+			while (pos < line.length() && Character.isWhitespace(line.charAt(pos)));
 			if (pos >= line.length() || line.charAt(pos) != ']')
 				return -1;
 			++pos;

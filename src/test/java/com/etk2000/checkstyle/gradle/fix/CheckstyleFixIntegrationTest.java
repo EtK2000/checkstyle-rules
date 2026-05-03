@@ -2545,6 +2545,20 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferDoWhileUnbracedBody() throws Exception {
+		final var file = tempDir.resolve("DoWhileUnbraced.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tvoid f(int i) {\n\t\t++i;\n\t\twhile (i < 10)\n\t\t\t++i;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tvoid f(int i) {\n\t\tdo ++i;\n\t\twhile (i < 10);\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testPreferMathMethodAbs() throws Exception {
 		final var file = tempDir.resolve("MathAbs.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint f(int a) {\n\t\treturn a < 0 ? -a : a;\n\t}\n}");

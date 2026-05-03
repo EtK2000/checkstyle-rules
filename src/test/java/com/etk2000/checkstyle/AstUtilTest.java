@@ -319,6 +319,48 @@ public class AstUtilTest {
 	}
 
 	@Test
+	public void testAstStructuralEqualsChildCountMismatch() throws Exception {
+		final var a = parseExprFirstChild("class T { Object x = f(a); }");
+		final var b = parseExprFirstChild("class T { Object x = f(a, b); }");
+		assertFalse(AstUtil.astStructuralEquals(a, b));
+	}
+
+	@Test
+	public void testAstStructuralEqualsDottedChain() throws Exception {
+		final var a = parseExprFirstChild("class T { Object x = a.b.c.d.e.f.g.h.i.j; }");
+		final var b = parseExprFirstChild("class T { Object x = a.b.c.d.e.f.g.h.i.j; }");
+		assertTrue(AstUtil.astStructuralEquals(a, b));
+	}
+
+	@Test
+	public void testAstStructuralEqualsIdentical() throws Exception {
+		final var a = parseExprFirstChild("class T { Object x = ++i; }");
+		final var b = parseExprFirstChild("class T { Object x = ++i; }");
+		assertTrue(AstUtil.astStructuralEquals(a, b));
+	}
+
+	@Test
+	public void testAstStructuralEqualsSiblingOrder() throws Exception {
+		final var a = parseExprFirstChild("class T { Object x = a + b; }");
+		final var b = parseExprFirstChild("class T { Object x = b + a; }");
+		assertFalse(AstUtil.astStructuralEquals(a, b));
+	}
+
+	@Test
+	public void testAstStructuralEqualsTextMismatch() throws Exception {
+		final var a = parseExprFirstChild("class T { Object x = a; }");
+		final var b = parseExprFirstChild("class T { Object x = b; }");
+		assertFalse(AstUtil.astStructuralEquals(a, b));
+	}
+
+	@Test
+	public void testAstStructuralEqualsTypeMismatch() throws Exception {
+		final var a = parseExprFirstChild("class T { Object x = ++i; }");
+		final var b = parseExprFirstChild("class T { Object x = --i; }");
+		assertFalse(AstUtil.astStructuralEquals(a, b));
+	}
+
+	@Test
 	public void testCanonicalAnnotationEmptyParens() throws Exception {
 		final var ast = parseSource("@Deprecated() class T {}");
 		final var annotation = findFirst(ast, TokenTypes.ANNOTATION);
@@ -1574,9 +1616,8 @@ public class AstUtilTest {
 		var varDef = objBlock.findFirstToken(TokenTypes.VARIABLE_DEF);
 		// skip to qualifiedField (4th VARIABLE_DEF: noAnnotationField, primitiveField, field, qualifiedField)
 		for (var i = 0; i < 3; ++i) {
-			varDef = varDef.getNextSibling();
-			while (varDef != null && varDef.getType() != TokenTypes.VARIABLE_DEF)
-				varDef = varDef.getNextSibling();
+			do varDef = varDef.getNextSibling();
+			while (varDef != null && varDef.getType() != TokenTypes.VARIABLE_DEF);
 		}
 		final var type = varDef.findFirstToken(TokenTypes.TYPE);
 		assertEquals("javautilList", AstUtil.typeText(type));

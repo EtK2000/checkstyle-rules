@@ -26,6 +26,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | NoUnnecessaryThisCheck                   | NoUnnecessaryThisFixer             | Removes `this.` prefix                                                                                                                                                      |
 | PreferBulkOperationCheck                 | PreferBulkOperationFixer           | See sub-rules below                                                                                                                                                         |
 | PreferCollectionInterfaceCheck           | PreferCollectionInterfaceFixer     | Replaces concrete collection type with interface (e.g. `ArrayList` to `List`)                                                                                               |
+| PreferDoWhileCheck                       | PreferDoWhileFixer                 | Collapses pre-loop statement + `while` into a tier-2 `do-while`                                                                                                             |
 | PreferMathMethodCheck                    | PreferMathMethodFixer              | See sub-rules below                                                                                                                                                         |
 | PreferPrefixIncrementCheck               | PreferPrefixIncrementFixer         | Moves `++`/`--` to prefix position                                                                                                                                          |
 | PreferSpecificApiCheck                   | PreferSpecificApiFixer             | See sub-rules below                                                                                                                                                         |
@@ -492,6 +493,11 @@ pattern the fixer intentionally skips because it cannot safely transform the cod
 | RedundantArrayCreationFixer    | Multiline array creation                                            | null: closing `}` not on the same line as opening `{`                                  |
 | RedundantArrayCreationFixer    | No `{` found on the violation line                                  | null: opening brace on a different line than `new`                                     |
 | ArrayTypeStyleFixer            | See [ArrayTypeStyleCheck sub-rules](#arraytypestylecheck-sub-rules) | Skipped patterns are listed there alongside supported patterns                         |
+| PreferDoWhileFixer             | Comment on pre-statement or body line                               | Skip: comment preservation in the collapsed do-while is non-trivial                    |
+| PreferDoWhileFixer             | Pre-statement / body indent mismatch                                | Skip: defensive — happy path requires same indent                                      |
+| PreferDoWhileFixer             | Braced body has multi-statement or unusual closing                  | Skip: only single-statement braced bodies are collapsed                                |
+| PreferDoWhileFixer             | While line not in expected single-line format                       | Skip: fixer regex requires `while (cond)` (or `{`) on one line                         |
+| PreferDoWhileFixer             | Pre-statement and body not textually equal after stripping          | Skip: defensive — check fired but text differs (e.g. whitespace artifacts)             |
 
 ## Future fix opportunities
 

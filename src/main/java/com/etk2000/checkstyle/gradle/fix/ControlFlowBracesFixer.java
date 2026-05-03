@@ -579,9 +579,8 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 				// after the type name, skip dot-separated qualifiers (e.g., Map.Entry)
 				var i = end;
 				while (i < s.length() && s.charAt(i) == '.') {
-					++i;
-					while (i < s.length() && Character.isJavaIdentifierPart(s.charAt(i)))
-						++i;
+					do ++i;
+					while (i < s.length() && Character.isJavaIdentifierPart(s.charAt(i)));
 				}
 				// skip optional generics and array brackets, then check for identifier
 				if (i < s.length() && s.charAt(i) == '<') {

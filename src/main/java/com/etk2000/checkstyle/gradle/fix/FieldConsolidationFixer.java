@@ -73,9 +73,8 @@ class FieldConsolidationFixer implements CheckstyleFixer {
 
 			if (pos < line.length() && line.charAt(pos) == ',') {
 				sb.append(", ");
-				++pos;
-				while (pos < line.length() && Character.isWhitespace(line.charAt(pos)))
-					++pos;
+				do ++pos;
+				while (pos < line.length() && Character.isWhitespace(line.charAt(pos)));
 			}
 			else
 				break;
