@@ -703,7 +703,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		try {
 			final var params = getParameters();
 			final var checkerConfig = createCheckerConfig(params.getMinSdk().get());
-			final var dryRun = Boolean.TRUE.equals(params.getDryRun().getOrElse(false));
+			final var dryRun = params.getDryRun().getOrElse(false).booleanValue();
 
 			final var files = new ArrayList<File>();
 			collectJavaFiles(params.getSource().get().getAsFile().toPath(), files);

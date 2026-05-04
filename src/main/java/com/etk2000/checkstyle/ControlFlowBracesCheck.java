@@ -137,10 +137,7 @@ public class ControlFlowBracesCheck extends AbstractCheck {
 		final var expr = body.getFirstChild();
 
 		// assignments with complex RHS are tier 3
-		if (hasComplexRhs(expr))
-			return false;
-
-		return true;
+		return !hasComplexRhs(expr);
 	}
 
 	@CheckReturnValue

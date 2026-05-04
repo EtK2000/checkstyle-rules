@@ -31,11 +31,13 @@ public class CheckstylePlugin implements Plugin<Project> {
 		@TaskAction
 		public void extract() {
 			final var outputFile = getOutputFile().get().getAsFile();
-			outputFile.getParentFile().mkdirs();
 			try (var in = CheckstylePlugin.class.getResourceAsStream("/com/etk2000/checkstyle/checkstyle.xml")) {
 				if (in == null)
 					throw new IllegalStateException("Bundled checkstyle.xml not found in plugin JAR");
 
+				final var parent = outputFile.getParentFile();
+				if (parent != null)
+					Files.createDirectories(parent.toPath());
 				try (var out = Files.newOutputStream(outputFile.toPath())) {
 					in.transferTo(out);
 				}

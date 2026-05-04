@@ -56,9 +56,7 @@ public class PreferPrefixIncrementCheck extends AbstractCheck {
 		if (grandparent.getType() == TokenTypes.LITERAL_DO && grandparent.getFirstChild() == parent)
 			return true;
 		// braceless else body: EXPR -> LITERAL_ELSE (no RPAREN)
-		if (grandparent.getType() == TokenTypes.LITERAL_ELSE)
-			return true;
-		return false;
+		return grandparent.getType() == TokenTypes.LITERAL_ELSE;
 	}
 
 	@Nonnull

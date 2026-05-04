@@ -112,6 +112,28 @@ public class JitInefficiencyFixerTest {
 	}
 
 	@Test
+	public void emptyStringConcatCharLiteral() {
+		final var fixer = new JitInefficiencyFixer();
+		final var line = "\t\tfinal var s = \"\" + 'x';";
+		final var col = line.indexOf('+');
+		final var attempt = fixer.fix(List.of(line), 0, col);
+		final var result = (FixResult) attempt;
+		assertNotNull(result);
+		assertEquals("\t\tfinal var s = String.valueOf('x');", result.replacement().getFirst());
+	}
+
+	@Test
+	public void emptyStringConcatEscapedQuoteCharLiteral() {
+		final var fixer = new JitInefficiencyFixer();
+		final var line = "\t\tfinal var s = \"\" + f('\\'');";
+		final var col = line.indexOf('+');
+		final var attempt = fixer.fix(List.of(line), 0, col);
+		final var result = (FixResult) attempt;
+		assertNotNull(result);
+		assertEquals("\t\tfinal var s = String.valueOf(f('\\''));", result.replacement().getFirst());
+	}
+
+	@Test
 	public void emptyStringConcatLeft() {
 		final var fixer = new JitInefficiencyFixer();
 		final var line = "\t\tfinal var s = \"\" + x;";
@@ -120,6 +142,17 @@ public class JitInefficiencyFixerTest {
 		final var result = (FixResult) attempt;
 		assertNotNull(result);
 		assertEquals("\t\tfinal var s = String.valueOf(x);", result.replacement().getFirst());
+	}
+
+	@Test
+	public void emptyStringConcatPlusInsideCharLiteral() {
+		final var fixer = new JitInefficiencyFixer();
+		final var line = "\t\tfinal var s = \"\" + f('+');";
+		final var col = line.indexOf('+');
+		final var attempt = fixer.fix(List.of(line), 0, col);
+		final var result = (FixResult) attempt;
+		assertNotNull(result);
+		assertEquals("\t\tfinal var s = String.valueOf(f('+'));", result.replacement().getFirst());
 	}
 
 	@Test

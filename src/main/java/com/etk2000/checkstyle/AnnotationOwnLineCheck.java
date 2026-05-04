@@ -126,7 +126,7 @@ public class AnnotationOwnLineCheck extends AbstractCheck {
 		}
 
 		// check blank lines between consecutive annotations, and between last annotation and declaration
-		final var fileLines = getFileContents().getLines();
+		final var fileLines = getLines();
 		for (var i = 0; i < annotations.size(); ++i) {
 			final var annotation = annotations.get(i);
 			final var startLine = annotation.getLineNo();

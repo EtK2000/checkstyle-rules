@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -19,7 +20,6 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		while (i < s.length()) {
 			final var ch = s.charAt(i);
 			if (ch == '"' || ch == '\'') {
-				final var quote = ch;
 				++i;
 				while (i < s.length()) {
 					final var c = s.charAt(i);
@@ -27,7 +27,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 						i += 2;
 						continue;
 					}
-					if (c == quote) {
+					if (c == ch) {
 						++i;
 						break;
 					}
@@ -105,7 +105,6 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		while (i < line.length()) {
 			final var ch = line.charAt(i);
 			if (ch == '"' || ch == '\'') {
-				final var quote = ch;
 				++i;
 				while (i < line.length()) {
 					final var c = line.charAt(i);
@@ -113,7 +112,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 						i += 2;
 						continue;
 					}
-					if (c == quote) {
+					if (c == ch) {
 						++i;
 						break;
 					}
@@ -399,7 +398,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nullable
 	private static List<String> splitTopLevelPlus(@Nonnull String s) {
-		final var parts = new java.util.ArrayList<String>();
+		final var parts = new ArrayList<String>();
 		var depth = 0;
 		var lastSplit = 0;
 		var i = 0;

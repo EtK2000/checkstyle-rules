@@ -3,7 +3,9 @@ package com.etk2000.checkstyle.gradle;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.etk2000.checkstyle.gradle.fix.CheckstyleFixAction;
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -669,13 +672,77 @@ public class CheckstylePluginTest {
 				CheckstylePlugin.ExtractCheckstyleConfig.class,
 				t -> t.getOutputFile().set(outputFile)
 		);
+
+		assertFalse(outputFile.getParentFile().exists());
+		task.get().extract();
+		assertTrue(outputFile.exists());
+
+		final byte[] expectedBytes;
+		try (var in = CheckstylePlugin.class.getResourceAsStream("/com/etk2000/checkstyle/checkstyle.xml")) {
+			assertNotNull(in);
+			expectedBytes = in.readAllBytes();
+		}
+		assertArrayEquals(expectedBytes, Files.readAllBytes(outputFile.toPath()));
+	}
+
+	@Test
+	public void testExtractCheckstyleConfigDirCreateFailure() throws Exception {
+		final var projectDir = Files.createDirectory(tempDir.resolve("dirCreateFail")).toFile();
+		final var project = ProjectBuilder.builder().withProjectDir(projectDir).build();
+		final var blocker = new File(projectDir, "blocker");
+		Files.writeString(blocker.toPath(), "");
+		final var outputFile = new File(blocker, "sub/checkstyle.xml");
+		final var task = project.getTasks().register(
+				"extractConfigDirFail",
+				CheckstylePlugin.ExtractCheckstyleConfig.class,
+				t -> t.getOutputFile().set(outputFile)
+		);
+
+		final var ex = assertThrows(RuntimeException.class, () -> task.get().extract());
+		assertEquals("Failed to extract checkstyle.xml", ex.getMessage());
+		assertInstanceOf(IOException.class, ex.getCause());
+		assertTrue(ex.getCause().getMessage().contains(blocker.toString()));
+		assertFalse(outputFile.exists());
+		assertFalse(outputFile.getParentFile().exists());
+		assertTrue(blocker.isFile());
+	}
+
+	@Test
+	public void testExtractCheckstyleConfigIdempotent() throws Exception {
+		final var projectDir = Files.createDirectory(tempDir.resolve("idempotent")).toFile();
+		final var project = ProjectBuilder.builder().withProjectDir(projectDir).build();
+		final var outputFile = new File(projectDir, "build/checkstyle.xml");
+		final var task = project.getTasks().register(
+				"extractConfigIdempotent",
+				CheckstylePlugin.ExtractCheckstyleConfig.class,
+				t -> t.getOutputFile().set(outputFile)
+		);
+		task.get().extract();
+		final var firstContent = Files.readString(outputFile.toPath());
+		Files.writeString(outputFile.toPath(), "GARBAGE");
 		task.get().extract();
 
 		assertTrue(outputFile.exists());
+		assertEquals(firstContent, Files.readString(outputFile.toPath()));
+	}
 
-		final var content = Files.readString(outputFile.toPath());
-		assertTrue(content.startsWith("<?xml"));
-		assertTrue(content.contains("<module name=\"Checker\">"));
+	@Test
+	public void testExtractCheckstyleConfigOutputFileIsDirectory() throws Exception {
+		final var projectDir = Files.createDirectory(tempDir.resolve("outputIsDir")).toFile();
+		final var project = ProjectBuilder.builder().withProjectDir(projectDir).build();
+		final var outputFile = new File(projectDir, "build/checkstyle.xml");
+		Files.createDirectories(outputFile.toPath());
+		final var task = project.getTasks().register(
+				"extractConfigOutputIsDir",
+				CheckstylePlugin.ExtractCheckstyleConfig.class,
+				t -> t.getOutputFile().set(outputFile)
+		);
+
+		final var ex = assertThrows(RuntimeException.class, () -> task.get().extract());
+		assertEquals("Failed to extract checkstyle.xml", ex.getMessage());
+		assertInstanceOf(IOException.class, ex.getCause());
+		assertTrue(ex.getCause().getMessage().contains(outputFile.toString()));
+		assertTrue(outputFile.isDirectory());
 	}
 
 	@Test

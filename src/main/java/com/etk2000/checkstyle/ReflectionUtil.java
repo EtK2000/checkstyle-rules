@@ -408,7 +408,7 @@ class ReflectionUtil {
 	 * Fast path: assume Java naming convention (lowercase segments are
 	 * packages, uppercase segments start classes) and rewrite all dots between
 	 * adjacent uppercase-starting segments to {@code $} in one pass. One
-	 * {@link Class#forName} call covers most top-level and inner-class FQNs.
+	 * {@link Class#forName(String)} call covers most top-level and inner-class FQNs.
 	 * <p>
 	 * Slow path: if the heuristic was wrong (rare: class name violates
 	 * convention, or the heuristic substitution doesn't match the actual
