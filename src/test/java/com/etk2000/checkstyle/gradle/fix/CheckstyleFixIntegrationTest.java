@@ -2559,6 +2559,133 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferExactAssertionFalseInstanceOf() throws Exception {
+		final var file = tempDir.resolve("ExactAssertFalse.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"import static org.junit.jupiter.api.Assertions.assertFalse;\n"
+						+ "class T {\n"
+						+ "\tvoid f(Object o) {\n"
+						+ "\t\tassertFalse(o instanceof Integer);\n"
+						+ "\t}\n"
+						+ "}"
+		);
+
+		final var content = runFixMultiPass(file);
+		assertEquals(
+				"import static org.junit.jupiter.api.Assertions.assertNotInstanceOf;\n"
+						+ "class T {\n"
+						+ "\tvoid f(Object o) {\n"
+						+ "\t\tassertNotInstanceOf(Integer.class, o);\n"
+						+ "\t}\n"
+						+ "}",
+				content
+		);
+	}
+
+	@Test
+	public void testPreferExactAssertionJunit5MessageLast() throws Exception {
+		final var file = tempDir.resolve("ExactAssertMsg.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"import static org.junit.jupiter.api.Assertions.assertTrue;\n"
+						+ "class T {\n"
+						+ "\tvoid f(Object o) {\n"
+						+ "\t\tassertTrue(o instanceof String, \"should be a string\");\n"
+						+ "\t}\n"
+						+ "}"
+		);
+
+		final var content = runFixMultiPass(file);
+		assertEquals(
+				"import static org.junit.jupiter.api.Assertions.assertInstanceOf;\n"
+						+ "class T {\n"
+						+ "\tvoid f(Object o) {\n"
+						+ "\t\tassertInstanceOf(String.class, o, \"should be a string\");\n"
+						+ "\t}\n"
+						+ "}",
+				content
+		);
+	}
+
+	@Test
+	public void testPreferExactAssertionNegated() throws Exception {
+		final var file = tempDir.resolve("ExactAssertNegated.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"import static org.junit.jupiter.api.Assertions.assertTrue;\n"
+						+ "class T {\n"
+						+ "\tvoid f(Object o) {\n"
+						+ "\t\tassertTrue(!(o instanceof String));\n"
+						+ "\t}\n"
+						+ "}"
+		);
+
+		final var content = runFixMultiPass(file);
+		assertEquals(
+				"import static org.junit.jupiter.api.Assertions.assertNotInstanceOf;\n"
+						+ "class T {\n"
+						+ "\tvoid f(Object o) {\n"
+						+ "\t\tassertNotInstanceOf(String.class, o);\n"
+						+ "\t}\n"
+						+ "}",
+				content
+		);
+	}
+
+	@Test
+	public void testPreferExactAssertionQualifiedCall() throws Exception {
+		final var file = tempDir.resolve("ExactAssertQualified.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"import org.junit.jupiter.api.Assertions;\n"
+						+ "class T {\n"
+						+ "\tvoid f(Object o) {\n"
+						+ "\t\tAssertions.assertTrue(o instanceof String);\n"
+						+ "\t}\n"
+						+ "}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import org.junit.jupiter.api.Assertions;\n"
+						+ "class T {\n"
+						+ "\tvoid f(Object o) {\n"
+						+ "\t\tAssertions.assertInstanceOf(String.class, o);\n"
+						+ "\t}\n"
+						+ "}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferExactAssertionTrueInstanceOf() throws Exception {
+		final var file = tempDir.resolve("ExactAssertTrue.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"import static org.junit.jupiter.api.Assertions.assertTrue;\n"
+						+ "class T {\n"
+						+ "\tvoid f(Object o) {\n"
+						+ "\t\tassertTrue(o instanceof String);\n"
+						+ "\t}\n"
+						+ "}"
+		);
+
+		final var content = runFixMultiPass(file);
+		assertEquals(
+				"import static org.junit.jupiter.api.Assertions.assertInstanceOf;\n"
+						+ "class T {\n"
+						+ "\tvoid f(Object o) {\n"
+						+ "\t\tassertInstanceOf(String.class, o);\n"
+						+ "\t}\n"
+						+ "}",
+				content
+		);
+	}
+
+	@Test
 	public void testPreferMathMethodAbs() throws Exception {
 		final var file = tempDir.resolve("MathAbs.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tint f(int a) {\n\t\treturn a < 0 ? -a : a;\n\t}\n}");

@@ -27,6 +27,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | PreferBulkOperationCheck                 | PreferBulkOperationFixer           | See sub-rules below                                                                                                                                                         |
 | PreferCollectionInterfaceCheck           | PreferCollectionInterfaceFixer     | Replaces concrete collection type with interface (e.g. `ArrayList` to `List`)                                                                                               |
 | PreferDoWhileCheck                       | PreferDoWhileFixer                 | Collapses pre-loop statement + `while` into a tier-2 `do-while`                                                                                                             |
+| PreferExactAssertionCheck                | PreferExactAssertionFixer          | Converts `assertTrue/assertFalse(x instanceof Y)` to `assertInstanceOf/assertNotInstanceOf(Y.class, x)`. Comparison-operator violations remain unfixable (domain-dependent) |
 | PreferMathMethodCheck                    | PreferMathMethodFixer              | See sub-rules below                                                                                                                                                         |
 | PreferPrefixIncrementCheck               | PreferPrefixIncrementFixer         | Moves `++`/`--` to prefix position                                                                                                                                          |
 | PreferSpecificApiCheck                   | PreferSpecificApiFixer             | See sub-rules below                                                                                                                                                         |
@@ -439,28 +440,28 @@ Enum constant sorting is handled separately (see main table).
 
 Custom checks without auto-fix support and why.
 
-| Check                                      | Reason                                                                                                         |
-|--------------------------------------------|----------------------------------------------------------------------------------------------------------------|
-| ClassStructureOrderCheck                   | Reordering class members requires moving multi-line blocks with dependency analysis                            |
-| ControlFlowBracesCheck (one-liner)         | Body on same line as keyword; moving to own line requires re-indentation context                               |
-| EmptyBodyCheck                             | Ambiguous: removing the statement may discard intentional no-ops; adding a body requires context               |
-| EmptySwitchCheck                           | Same as EmptyBodyCheck                                                                                         |
-| FieldSortingCheck (dependency, anon.class) | Dependency and anonymous class ordering violations may return null if the fixer can't parse the pattern        |
-| InfiniteEmptyLoopCheck                     | Flags bugs (infinite empty loops), not a stylistic issue with a deterministic fix                              |
-| InstanceofBeforeCastCheck                  | Reordering sub-expressions in compound boolean conditions while preserving short-circuit semantics             |
-| MethodAlphabeticalOrderCheck               | Reordering methods requires moving multi-line blocks                                                           |
-| MultilineCallFormattingCheck               | Reformatting argument layout across lines with context-dependent indent and grouping rules                     |
-| NoCaseBracesCheck                          | Removing braces requires scope analysis to verify no variable declarations leak                                |
-| OverloadMethodOrderCheck                   | Reordering method overloads requires moving multi-line blocks                                                  |
-| PreferExactAssertionCheck                  | No deterministic fix: the exact expected value depends on domain knowledge the tool cannot infer               |
-| PreferImportCheck                          | Replacing FQN with short name and adding import; must verify no name conflicts                                 |
-| PreferLambdaCheck                          | Structural transformation: anonymous class to lambda, must handle `this` references and field shadowing        |
-| PreferLiteralSuffixCheck                   | Replacing widening cast with literal suffix requires expression context analysis                               |
-| PreferPatternMatchingInstanceofCheck       | Restructuring instanceof + subsequent cast into pattern matching across multiple statements                    |
-| PreferRecordCheck                          | Multi-line structural transformation: must rewrite class header, remove fields/constructor, adjust annotations |
-| RedundantCastCheck                         | Removing a cast may change method overload resolution or widen the expression type                             |
-| SwitchCaseOrderCheck                       | Reordering switch cases requires moving multi-line blocks with fall-through analysis                           |
-| ThreadAnnotationCheck                      | Cannot determine which thread annotation (`@MainThread`, `@AnyThread`, etc.) to add                            |
+| Check                                       | Reason                                                                                                         |
+|---------------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| ClassStructureOrderCheck                    | Reordering class members requires moving multi-line blocks with dependency analysis                            |
+| ControlFlowBracesCheck (one-liner)          | Body on same line as keyword; moving to own line requires re-indentation context                               |
+| EmptyBodyCheck                              | Ambiguous: removing the statement may discard intentional no-ops; adding a body requires context               |
+| EmptySwitchCheck                            | Same as EmptyBodyCheck                                                                                         |
+| FieldSortingCheck (dependency, anon.class)  | Dependency and anonymous class ordering violations may return null if the fixer can't parse the pattern        |
+| InfiniteEmptyLoopCheck                      | Flags bugs (infinite empty loops), not a stylistic issue with a deterministic fix                              |
+| InstanceofBeforeCastCheck                   | Reordering sub-expressions in compound boolean conditions while preserving short-circuit semantics             |
+| MethodAlphabeticalOrderCheck                | Reordering methods requires moving multi-line blocks                                                           |
+| MultilineCallFormattingCheck                | Reformatting argument layout across lines with context-dependent indent and grouping rules                     |
+| NoCaseBracesCheck                           | Removing braces requires scope analysis to verify no variable declarations leak                                |
+| OverloadMethodOrderCheck                    | Reordering method overloads requires moving multi-line blocks                                                  |
+| PreferExactAssertionCheck (comparison form) | No deterministic fix for `assertTrue(a > b)`-style: the exact expected value depends on domain knowledge       |
+| PreferImportCheck                           | Replacing FQN with short name and adding import; must verify no name conflicts                                 |
+| PreferLambdaCheck                           | Structural transformation: anonymous class to lambda, must handle `this` references and field shadowing        |
+| PreferLiteralSuffixCheck                    | Replacing widening cast with literal suffix requires expression context analysis                               |
+| PreferPatternMatchingInstanceofCheck        | Restructuring instanceof + subsequent cast into pattern matching across multiple statements                    |
+| PreferRecordCheck                           | Multi-line structural transformation: must rewrite class header, remove fields/constructor, adjust annotations |
+| RedundantCastCheck                          | Removing a cast may change method overload resolution or widen the expression type                             |
+| SwitchCaseOrderCheck                        | Reordering switch cases requires moving multi-line blocks with fall-through analysis                           |
+| ThreadAnnotationCheck                       | Cannot determine which thread annotation (`@MainThread`, `@AnyThread`, etc.) to add                            |
 
 ## FieldConsolidationFixer limitations
 

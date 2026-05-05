@@ -10,6 +10,10 @@ public class PreferExactAssertionCheckTest {
 	private static final String DIR = "exactassertion/";
 	private static final String MSG_PREFIX = "Use a dedicated assertion (e.g. 'assertEquals') instead of '";
 
+	private static String instanceOfMsg(String original, String replacement) {
+		return "Use '" + replacement + "' instead of '" + original + "' with 'instanceof'.";
+	}
+
 	@Test
 	public void testClean() throws Exception {
 		assertTrue(BaseCheckTest.runCheck(PreferExactAssertionCheck.class, DIR + "InputPreferExactAssertionClean.java").isEmpty());
@@ -41,88 +45,140 @@ public class PreferExactAssertionCheckTest {
 	@Test
 	public void testViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(PreferExactAssertionCheck.class, DIR + "InputPreferExactAssertionViolation.java");
-		assertEquals(20, violations.size());
+		assertEquals(33, violations.size());
 
 		var i = 0;
 
-		assertEquals(9, violations.get(i).getLine());
+		assertEquals(17, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals(MSG_PREFIX + "assertFalse' with '=='.", violations.get(i++).getMessage());
 
-		assertEquals(13, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(MSG_PREFIX + "assertFalse' with '>='.", violations.get(i++).getMessage());
-
-		assertEquals(17, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(MSG_PREFIX + "assertFalse' with '>'.", violations.get(i++).getMessage());
-
 		assertEquals(21, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(MSG_PREFIX + "assertFalse' with '<='.", violations.get(i++).getMessage());
+		assertEquals(MSG_PREFIX + "assertFalse' with '>='.", violations.get(i++).getMessage());
 
 		assertEquals(25, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(MSG_PREFIX + "assertFalse' with '<'.", violations.get(i++).getMessage());
+		assertEquals(MSG_PREFIX + "assertFalse' with '>'.", violations.get(i++).getMessage());
 
-		assertEquals(29, violations.get(i).getLine());
+		assertEquals(30, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(MSG_PREFIX + "assertFalse' with '!='.", violations.get(i++).getMessage());
+		assertEquals(instanceOfMsg("assertFalse", "assertNotInstanceOf"), violations.get(i++).getMessage());
 
-		assertEquals(33, violations.get(i).getLine());
+		assertEquals(35, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(MSG_PREFIX + "assertTrue' with '=='.", violations.get(i++).getMessage());
+		assertEquals(instanceOfMsg("assertFalse", "assertNotInstanceOf"), violations.get(i++).getMessage());
 
-		assertEquals(37, violations.get(i).getLine());
+		assertEquals(40, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(MSG_PREFIX + "assertTrue' with '>='.", violations.get(i++).getMessage());
-
-		assertEquals(41, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(MSG_PREFIX + "assertTrue' with '>'.", violations.get(i++).getMessage());
+		assertEquals(instanceOfMsg("assertFalse", "assertInstanceOf"), violations.get(i++).getMessage());
 
 		assertEquals(45, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(instanceOfMsg("assertFalse", "assertNotInstanceOf"), violations.get(i++).getMessage());
+
+		assertEquals(50, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(instanceOfMsg("assertFalse", "assertNotInstanceOf"), violations.get(i++).getMessage());
+
+		assertEquals(54, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(MSG_PREFIX + "assertFalse' with '<='.", violations.get(i++).getMessage());
+
+		assertEquals(58, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(MSG_PREFIX + "assertFalse' with '<'.", violations.get(i++).getMessage());
+
+		assertEquals(62, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(MSG_PREFIX + "assertFalse' with '!='.", violations.get(i++).getMessage());
+
+		assertEquals(67, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(instanceOfMsg("assertTrue", "assertInstanceOf"), violations.get(i++).getMessage());
+
+		assertEquals(71, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(MSG_PREFIX + "assertTrue' with '=='.", violations.get(i++).getMessage());
+
+		assertEquals(75, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(MSG_PREFIX + "assertTrue' with '>='.", violations.get(i++).getMessage());
+
+		assertEquals(79, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(MSG_PREFIX + "assertTrue' with '>'.", violations.get(i++).getMessage());
+
+		assertEquals(84, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(instanceOfMsg("assertTrue", "assertInstanceOf"), violations.get(i++).getMessage());
+
+		assertEquals(89, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(instanceOfMsg("assertTrue", "assertInstanceOf"), violations.get(i++).getMessage());
+
+		assertEquals(94, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(instanceOfMsg("assertTrue", "assertNotInstanceOf"), violations.get(i++).getMessage());
+
+		assertEquals(99, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(instanceOfMsg("assertTrue", "assertInstanceOf"), violations.get(i++).getMessage());
+
+		assertEquals(104, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(instanceOfMsg("assertTrue", "assertInstanceOf"), violations.get(i++).getMessage());
+
+		assertEquals(108, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals(MSG_PREFIX + "assertTrue' with '<='.", violations.get(i++).getMessage());
 
-		assertEquals(49, violations.get(i).getLine());
+		assertEquals(112, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals(MSG_PREFIX + "assertTrue' with '<'.", violations.get(i++).getMessage());
 
-		assertEquals(53, violations.get(i).getLine());
+		assertEquals(116, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals(MSG_PREFIX + "assertTrue' with '!='.", violations.get(i++).getMessage());
 
-		assertEquals(57, violations.get(i).getLine());
+		assertEquals(120, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals(MSG_PREFIX + "assertFalse' with '>'.", violations.get(i++).getMessage());
 
-		assertEquals(61, violations.get(i).getLine());
+		assertEquals(124, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals(MSG_PREFIX + "assertTrue' with '>'.", violations.get(i++).getMessage());
 
-		assertEquals(65, violations.get(i).getLine());
+		assertEquals(128, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals(MSG_PREFIX + "assertFalse' with '>'.", violations.get(i++).getMessage());
 
-		assertEquals(69, violations.get(i).getLine());
+		assertEquals(132, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals(MSG_PREFIX + "assertTrue' with '>'.", violations.get(i++).getMessage());
 
-		assertEquals(73, violations.get(i).getLine());
+		assertEquals(136, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals(MSG_PREFIX + "assertFalse' with '>='.", violations.get(i++).getMessage());
 
-		assertEquals(77, violations.get(i).getLine());
+		assertEquals(140, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals(MSG_PREFIX + "assertTrue' with '>'.", violations.get(i++).getMessage());
 
-		assertEquals(81, violations.get(i).getLine());
+		assertEquals(145, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(instanceOfMsg("assertTrue", "assertInstanceOf"), violations.get(i++).getMessage());
+
+		assertEquals(149, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
 		assertEquals(MSG_PREFIX + "assertFalse' with '>='.", violations.get(i++).getMessage());
 
-		assertEquals(85, violations.get(i).getLine());
+		assertEquals(153, violations.get(i).getLine());
 		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(MSG_PREFIX + "assertTrue' with '>'.", violations.get(i).getMessage());
+		assertEquals(MSG_PREFIX + "assertTrue' with '>'.", violations.get(i++).getMessage());
+
+		assertEquals(158, violations.get(i).getLine());
+		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
+		assertEquals(instanceOfMsg("assertTrue", "assertInstanceOf"), violations.get(i).getMessage());
 	}
 }

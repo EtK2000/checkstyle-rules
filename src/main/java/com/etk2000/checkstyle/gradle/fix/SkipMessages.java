@@ -28,6 +28,7 @@ final class SkipMessages {
 	static final String MATH_METHOD_SKIP = get("prefer.math.method.skip");
 	static final String MATH_METHOD_SKIP_IF = get("prefer.math.method.skip.if");
 	static final String PREFER_API_SKIP = get("prefer.api.skip");
+	static final String PREFER_ASSERT_SKIP = get("prefer.assert.skip");
 	static final String PREFER_BULK_SKIP = get("prefer.bulk.skip");
 	static final String PREFER_STANDARD_CHARSETS_SKIP = get("prefer.standard.charsets.skip");
 	static final String PREFER_STATIC_IMPORT_SKIP = get("prefer.static.import.skip");

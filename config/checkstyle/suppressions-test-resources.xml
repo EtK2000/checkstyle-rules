@@ -24,6 +24,7 @@
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]emptybody[\\/]" />
 	<suppress checks="EmptySwitchCheck" files="inputs[\\/]emptyswitch[\\/]" />
 	<suppress checks="PreferExactAssertionCheck" files="inputs[\\/]exactassertion[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]exactassertion[\\/]" />
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]fieldsorting[\\/]" />

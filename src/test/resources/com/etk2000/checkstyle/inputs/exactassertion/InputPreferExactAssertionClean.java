@@ -11,6 +11,10 @@ import static org.junit.Assert.assertTrue;
 
 @SuppressWarnings("unused")
 class InputPreferExactAssertionClean {
+	private static Object anyObject() {
+		return "x";
+	}
+
 	void assertEqualsNotFlagged() {
 		assertEquals(5, 3 + 2);
 	}
@@ -26,6 +30,16 @@ class InputPreferExactAssertionClean {
 		assertTrue(a > 0 || b < 5);
 		assertFalse(a >= 0 && b <= 10);
 		assertFalse(a == 1 || b != 2);
+	}
+
+	void assertTrueInstanceOfPatternBinding() {
+		final var o = anyObject();
+		assertTrue(o instanceof String s && s.length() > 0);
+	}
+
+	void assertTrueInstanceOfPatternBindingJunit4MessageFirst() {
+		final var o = anyObject();
+		assertTrue("msg", o instanceof String s && s.length() > 0);
 	}
 
 	void assertTrueMethodCall() {
