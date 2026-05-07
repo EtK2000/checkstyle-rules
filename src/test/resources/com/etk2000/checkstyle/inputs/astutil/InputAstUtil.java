@@ -53,6 +53,10 @@ class InputAstUtil {
 		};
 	}
 
+	void varCharLiteralLocal() {
+		final var x = ' ';
+	}
+
 	void varGenericAnonymousClassLocal() {
 		final var x = new ArrayList<String>() {};
 	}
@@ -67,12 +71,24 @@ class InputAstUtil {
 		final var x = "hello";
 	}
 
+	void varMethodCallInitDottedReceiver() {
+		final var x = "hello".toUpperCase();
+	}
+
 	Object varMethodCallInitHelper() {
 		return null;
 	}
 
 	void varMethodCallInitLocal() {
 		final var x = varMethodCallInitHelper();
+	}
+
+	void varMethodCallOverloadAmbiguousLocal() {
+		final var x = varOverloadHelper(42);
+	}
+
+	void varMethodCallOverloadZeroArgLocal() {
+		final var x = varOverloadHelper();
 	}
 
 	void varNewArrayInitializerLocal() {
@@ -192,5 +208,17 @@ class InputAstUtil {
 
 	void varNewTypeAnnotatedArrayLocal() {
 		final var x = new @A String[10];
+	}
+
+	void varNullLiteralLocal() {
+		final var x = (Object) null;
+	}
+
+	String varOverloadHelper() {
+		return "x";
+	}
+
+	int varOverloadHelper(int n) {
+		return n;
 	}
 }

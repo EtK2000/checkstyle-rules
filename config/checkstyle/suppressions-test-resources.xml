@@ -30,6 +30,7 @@
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="InfiniteEmptyLoopCheck" files="inputs[\\/]emptybody[\\/]" />
 	<suppress checks="InstanceofBeforeCastCheck" files="inputs[\\/]instanceofbeforecast[\\/]" />
+	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]jitinefficiency[\\/]" />
 	<suppress checks="JitInefficiencyCheck" files="inputs[\\/]jitinefficiency[\\/]" />
 	<suppress checks="JitInefficiencyCheck" files="inputs[\\/]specificapi[\\/]" />
 	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]jitinefficiency[\\/]" />
@@ -50,6 +51,7 @@
 	<suppress checks="NoFinalParametersCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="NoFinalParametersCheck" files="inputs[\\/]regex[\\/]" />
 	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]jitinefficiency[\\/]" />
 	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]unnecessarythis[\\/]" />
 	<suppress checks="OverloadMethodOrderCheck" files="inputs[\\/]overload[\\/]" />
 	<suppress checks="PreferBulkOperationCheck" files="inputs[\\/]preferbulkoperation[\\/]" />

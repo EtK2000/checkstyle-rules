@@ -54,6 +54,43 @@ public class JitInefficiencyCheckTest {
 	}
 
 	@Test
+	public void testExplicitFormClean() throws Exception {
+		assertTrue(BaseCheckTest.runCheck(JitInefficiencyCheck.class, DIR + "InputJitInefficiencyExplicitFormClean.java").isEmpty());
+	}
+
+	@Test
+	public void testExplicitFormViolations() throws Exception {
+		final var violations = BaseCheckTest.runCheck(JitInefficiencyCheck.class, DIR + "InputJitInefficiencyExplicitFormViolation.java");
+		assertEquals(24, violations.size());
+		final var msg = "String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.";
+		var i = 0;
+		assertViolation(violations, i++, 20, msg);
+		assertViolation(violations, i++, 26, msg);
+		assertViolation(violations, i++, 33, msg);
+		assertViolation(violations, i++, 39, msg);
+		assertViolation(violations, i++, 45, msg);
+		assertViolation(violations, i++, 51, msg);
+		assertViolation(violations, i++, 58, msg);
+		assertViolation(violations, i++, 65, msg);
+		assertViolation(violations, i++, 73, msg);
+		assertViolation(violations, i++, 80, msg);
+		assertViolation(violations, i++, 87, msg);
+		assertViolation(violations, i++, 94, msg);
+		assertViolation(violations, i++, 101, msg);
+		assertViolation(violations, i++, 110, msg);
+		assertViolation(violations, i++, 117, msg);
+		assertViolation(violations, i++, 123, msg);
+		assertViolation(violations, i++, 129, msg);
+		assertViolation(violations, i++, 137, msg);
+		assertViolation(violations, i++, 143, msg);
+		assertViolation(violations, i++, 149, msg);
+		assertViolation(violations, i++, 156, msg);
+		assertViolation(violations, i++, 163, msg);
+		assertViolation(violations, i++, 171, msg);
+		assertViolation(violations, i++, 179, msg);
+	}
+
+	@Test
 	public void testLoopViolations() throws Exception {
 		final var violations = BaseCheckTest.runCheck(JitInefficiencyCheck.class, DIR + "InputJitInefficiencyLoopViolation.java");
 		assertEquals(27, violations.size());
@@ -74,8 +111,8 @@ public class JitInefficiencyCheckTest {
 		assertViolation(violations, i++, 105, "'Color.values()' allocates a new array each call; cache to a static final field outside the loop.");
 		assertViolation(violations, i++, 113, "'.matches(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
 		assertViolation(violations, i++, 121, "'.split(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
-		assertViolation(violations, i++, 129, "String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
-		assertViolation(violations, i++, 135, "String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
+		assertViolation(violations, i++, 129, "String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
+		assertViolation(violations, i++, 135, "String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
 		assertViolation(violations, i++, 142, "'Color.values()' allocates a new array each call; cache to a static final field outside the loop.");
 		assertViolation(violations, i++, 149, "Use an enhanced 'for' loop instead of an explicit 'Iterator.hasNext()/next()' loop.");
 		assertViolation(violations, i++, 156, "Iterate '.entrySet()' instead of '.keySet()' + '.get(...)' (avoids double lookup).");
@@ -83,8 +120,8 @@ public class JitInefficiencyCheckTest {
 		assertViolation(violations, i++, 172, "'.replaceAll(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
 		assertViolation(violations, i++, 178, "Use an enhanced 'for' loop instead of an explicit 'Iterator.hasNext()/next()' loop.");
 		assertViolation(violations, i++, 180, "'.split(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.");
-		assertViolation(violations, i++, 188, "String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
-		assertViolation(violations, i++, 195, "String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
+		assertViolation(violations, i++, 188, "String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
+		assertViolation(violations, i++, 195, "String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.");
 	}
 
 	@Test

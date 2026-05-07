@@ -270,6 +270,16 @@ class AstUtil {
 	 * expressions.
 	 */
 	@CheckReturnValue
+	private static int countParameters(@Nonnull DetailAST parameters) {
+		var count = 0;
+		for (var child = parameters.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.PARAMETER_DEF)
+				++count;
+		}
+		return count;
+	}
+
+	@CheckReturnValue
 	@Nonnull
 	static String displayText(@Nonnull DetailAST ast) {
 		final var sb = new StringBuilder();
@@ -502,6 +512,70 @@ class AstUtil {
 	 */
 	@CheckReturnValue
 	@Nullable
+	private static DetailAST findEnclosingClassDef(@Nonnull DetailAST node) {
+		for (var p = node.getParent(); p != null; p = p.getParent()) {
+			final var t = p.getType();
+			if (t == TokenTypes.CLASS_DEF || t == TokenTypes.INTERFACE_DEF
+					|| t == TokenTypes.ENUM_DEF || t == TokenTypes.RECORD_DEF)
+				return p;
+		}
+		return null;
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static DetailAST findInnerClassDef(@Nonnull DetailAST classDef, @Nonnull String className) {
+		final var objBlock = classDef.findFirstToken(TokenTypes.OBJBLOCK);
+		if (objBlock == null)
+			return null;
+		for (var child = objBlock.getFirstChild(); child != null; child = child.getNextSibling()) {
+			final var t = child.getType();
+			if (t != TokenTypes.CLASS_DEF && t != TokenTypes.INTERFACE_DEF
+					&& t != TokenTypes.ENUM_DEF && t != TokenTypes.RECORD_DEF)
+				continue;
+			final var ident = child.findFirstToken(TokenTypes.IDENT);
+			if (ident != null && className.equals(ident.getText()))
+				return child;
+		}
+		return null;
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static String findMethodReturnTypeInClass(@Nonnull DetailAST classDef, @Nonnull String methodName, int arity) {
+		final var objBlock = classDef.findFirstToken(TokenTypes.OBJBLOCK);
+		if (objBlock == null)
+			return null;
+		String matched = null;
+		var matchCount = 0;
+		for (var child = objBlock.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() != TokenTypes.METHOD_DEF)
+				continue;
+			final var ident = child.findFirstToken(TokenTypes.IDENT);
+			if (ident == null || !methodName.equals(ident.getText()))
+				continue;
+			final var params = child.findFirstToken(TokenTypes.PARAMETERS);
+			final var paramCount = params == null ? 0 : countParameters(params);
+			if (paramCount != arity)
+				continue;
+			final var typeNode = child.findFirstToken(TokenTypes.TYPE);
+			if (typeNode == null)
+				continue;
+			final var typeName = getTypeName(typeNode);
+			if (typeName == null)
+				continue;
+			if (matched != null && !matched.equals(typeName))
+				return null;
+			matched = typeName;
+			++matchCount;
+		}
+		// Multiple overloads with the same return type: still safe to use.
+		// Multiple with different types: bailed above. Zero matches: null.
+		return matchCount > 0 ? matched : null;
+	}
+
+	@CheckReturnValue
+	@Nullable
 	static String findNewClassName(@Nonnull DetailAST literalNew) {
 		for (var child = literalNew.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() == TokenTypes.DOT)
@@ -542,6 +616,34 @@ class AstUtil {
 	/**
 	 * Extracts the method name from the last child of a METHOD_CALL's DOT.
 	 */
+	@CheckReturnValue
+	@Nullable
+	private static DetailAST findSameFileClassDef(@Nonnull DetailAST node, @Nonnull String className) {
+		// Mirror Java name resolution: walk outward from `node` through enclosing
+		// CLASS_DEF / INTERFACE_DEF / ENUM_DEF / RECORD_DEF, and at each level look
+		// for a sibling/inner type with the matching simple name. Falls back to
+		// top-level types in the compilation unit only if no enclosing scope
+		// declares the name.
+		for (var enclosing = findEnclosingClassDef(node); enclosing != null; enclosing = findEnclosingClassDef(enclosing)) {
+			final var found = findInnerClassDef(enclosing, className);
+			if (found != null)
+				return found;
+		}
+		var root = node;
+		while (root.getParent() != null)
+			root = root.getParent();
+		for (var child = root.getFirstChild(); child != null; child = child.getNextSibling()) {
+			final var t = child.getType();
+			if (t == TokenTypes.CLASS_DEF || t == TokenTypes.INTERFACE_DEF
+					|| t == TokenTypes.ENUM_DEF || t == TokenTypes.RECORD_DEF) {
+				final var ident = child.findFirstToken(TokenTypes.IDENT);
+				if (ident != null && className.equals(ident.getText()))
+					return child;
+			}
+		}
+		return null;
+	}
+
 	@CheckReturnValue
 	@Nullable
 	private static String getMethodName(@Nonnull DetailAST dot) {
@@ -806,6 +908,52 @@ class AstUtil {
 		return last;
 	}
 
+	/**
+	 * Resolve the type of a field declared on a same-file class definition.
+	 * If {@code className} is null, walks up to the enclosing CLASS_DEF /
+	 * INTERFACE_DEF / ENUM_DEF / RECORD_DEF and looks for a field named
+	 * {@code fieldName}; otherwise locates the named type within the same
+	 * compilation unit and resolves the field there.
+	 */
+	@CheckReturnValue
+	@Nullable
+	static String resolveSameFileFieldType(@Nonnull DetailAST scope, @Nullable String className, @Nonnull String fieldName) {
+		final var classDef = className == null ? findEnclosingClassDef(scope) : findSameFileClassDef(scope, className);
+		if (classDef == null)
+			return null;
+		final var objBlock = classDef.findFirstToken(TokenTypes.OBJBLOCK);
+		if (objBlock == null)
+			return null;
+		for (var child = objBlock.getFirstChild(); child != null; child = child.getNextSibling()) {
+			final var typeName = variableTypeName(child, fieldName);
+			if (typeName != null)
+				return typeName;
+		}
+		return null;
+	}
+
+	/**
+	 * Resolve the declared return type of a method named {@code methodName}
+	 * with parameter count {@code arity} on any enclosing same-file class.
+	 * Returns null if zero or more than one overload at that arity exists, to
+	 * avoid corrupting downstream type inference when overloads return
+	 * different types.
+	 */
+	@CheckReturnValue
+	@Nullable
+	static String resolveSameFileMethodReturnType(@Nonnull DetailAST scope, @Nonnull String methodName, int arity) {
+		for (var ancestor = scope.getParent(); ancestor != null; ancestor = ancestor.getParent()) {
+			final var t = ancestor.getType();
+			if (t == TokenTypes.CLASS_DEF || t == TokenTypes.INTERFACE_DEF
+					|| t == TokenTypes.ENUM_DEF || t == TokenTypes.RECORD_DEF) {
+				final var found = findMethodReturnTypeInClass(ancestor, methodName, arity);
+				if (found != null)
+					return found;
+			}
+		}
+		return null;
+	}
+
 	@CheckReturnValue
 	@Nullable
 	static String resolveVariableType(@Nonnull DetailAST from, @Nonnull String varName) {
@@ -897,7 +1045,26 @@ class AstUtil {
 			if (assignChild == null)
 				return null;
 			final var init = assignChild.getType() == TokenTypes.EXPR ? assignChild.getFirstChild() : assignChild;
-			if (init == null || init.getType() != TokenTypes.LITERAL_NEW)
+			if (init == null)
+				return null;
+			if (init.getType() == TokenTypes.STRING_LITERAL)
+				return "String";
+			if (init.getType() == TokenTypes.METHOD_CALL) {
+				final var receiver = init.getFirstChild();
+				if (receiver != null && receiver.getType() == TokenTypes.IDENT) {
+					final var elist = init.findFirstToken(TokenTypes.ELIST);
+					var arity = 0;
+					if (elist != null) {
+						for (var c = elist.getFirstChild(); c != null; c = c.getNextSibling()) {
+							if (c.getType() != TokenTypes.COMMA)
+								++arity;
+						}
+					}
+					return resolveSameFileMethodReturnType(node, receiver.getText(), arity);
+				}
+				return null;
+			}
+			if (init.getType() != TokenTypes.LITERAL_NEW)
 				return null;
 
 			var dimensions = 0;

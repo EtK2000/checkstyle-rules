@@ -125,25 +125,71 @@ the original comments and surrounding whitespace.
 The fixer handles textual rewrites for the simpler patterns; check-only patterns
 (loop-bound and structural cases) are detected but not auto-fixed.
 
-| Pattern                                                                                                                                       | Replacement                              | Auto-fix |
-|-----------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------|----------|
-| `"" + x` / `x + ""`                                                                                                                           | `String.valueOf(x)`                      | Yes      |
-| `new String("literal")`                                                                                                                       | `"literal"`                              | Yes      |
-| `new String(stringVar)`                                                                                                                       | `stringVar`                              | Yes      |
-| `new StringBuffer(...)` (local)                                                                                                               | `new StringBuilder(...)`                 | Yes      |
-| `new Boolean(true)` / `new Boolean(false)`                                                                                                    | `Boolean.TRUE` / `Boolean.FALSE`         | Yes      |
-| `new Boolean(expr)` (non-literal)                                                                                                             | `Boolean.valueOf(expr)`                  | Yes      |
-| `new Integer/Long/Double/Float/Short/Byte/Character(x)`                                                                                       | `T.valueOf(x)`                           | Yes      |
-| `.toArray(new T[size])` (size != 0, single-dim)                                                                                               | `.toArray(new T[0])`                     | Yes      |
-| `sb.append(a + b + ...)` (with String operand)                                                                                                | `sb.append(a).append(b).append(...)`     | Yes      |
-| String `+=` inside a loop                                                                                                                     | (manual: introduce `StringBuilder`)      | No       |
-| `.matches(...)` / `.replaceAll(...)` / `.split(...)` in loop                                                                                  | (manual: hoist `Pattern.compile`)        | No       |
-| `Map.keySet()` for-each + `map.get(key)` body                                                                                                 | (manual: iterate `.entrySet()`)          | No       |
-| `Enum.values()` in loop                                                                                                                       | (manual: cache to static final)          | No       |
-| Double-brace initialization                                                                                                                   | (manual: use `List.of(...)`/constructor) | No       |
-| `Pattern.compile / DateTimeFormatter.ofPattern / new SimpleDateFormat / Gson / ObjectMapper / DecimalFormat` with constant arg in method body | (manual: hoist to static final)          | No       |
-| Boxed numeric accumulator modified in loop                                                                                                    | (manual: change type to primitive)       | No       |
-| Explicit iterator `while (it.hasNext())`                                                                                                      | (manual: convert to enhanced `for`)      | No       |
+| Pattern                                                                                                                                       | Replacement                              | Auto-fix            |
+|-----------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------|---------------------|
+| `"" + x` / `x + ""`                                                                                                                           | `String.valueOf(x)`                      | Yes                 |
+| `new String("literal")`                                                                                                                       | `"literal"`                              | Yes                 |
+| `new String(stringVar)`                                                                                                                       | `stringVar`                              | Yes                 |
+| `new StringBuffer(...)` (local)                                                                                                               | `new StringBuilder(...)`                 | Yes                 |
+| `new Boolean(true)` / `new Boolean(false)`                                                                                                    | `Boolean.TRUE` / `Boolean.FALSE`         | Yes                 |
+| `new Boolean(expr)` (non-literal)                                                                                                             | `Boolean.valueOf(expr)`                  | Yes                 |
+| `new Integer/Long/Double/Float/Short/Byte/Character(x)`                                                                                       | `T.valueOf(x)`                           | Yes                 |
+| `.toArray(new T[size])` (size != 0, single-dim)                                                                                               | `.toArray(new T[0])`                     | Yes                 |
+| `sb.append(a + b + ...)` (with String operand)                                                                                                | `sb.append(a).append(b).append(...)`     | Yes                 |
+| String `+=` / `s = s + ...` inside a loop                                                                                                     | multi-line `StringBuilder` rewrite       | Yes (see sub-rules) |
+| `.matches(...)` / `.replaceAll(...)` / `.split(...)` in loop                                                                                  | (manual: hoist `Pattern.compile`)        | No                  |
+| `Map.keySet()` for-each + `map.get(key)` body                                                                                                 | (manual: iterate `.entrySet()`)          | No                  |
+| `Enum.values()` in loop                                                                                                                       | (manual: cache to static final)          | No                  |
+| Double-brace initialization                                                                                                                   | (manual: use `List.of(...)`/constructor) | No                  |
+| `Pattern.compile / DateTimeFormatter.ofPattern / new SimpleDateFormat / Gson / ObjectMapper / DecimalFormat` with constant arg in method body | (manual: hoist to static final)          | No                  |
+| Boxed numeric accumulator modified in loop                                                                                                    | (manual: change type to primitive)       | No                  |
+| Explicit iterator `while (it.hasNext())`                                                                                                      | (manual: convert to enhanced `for`)      | No                  |
+
+### String-concat-in-loop fixer detail
+
+The multi-line `StringBuilder` rewrite handles all of the following shapes
+beyond the canonical `String s = ""; for (...) s += x; return s;`. Output
+uses `final var <name> = sb.toString();` (or `<this.f|obj.f> = sb.toString();`
+for field LHS) to satisfy `PreferVarCheck` and `FinalLocalVariableCheck`.
+
+| Shape                                                                      | Output                                                      | Auto-fix |
+|----------------------------------------------------------------------------|-------------------------------------------------------------|----------|
+| Canonical `String s = ""; for (...) s += x;`                               | `final var sb = new StringBuilder(); ...`                   | Yes      |
+| `String s = "prefix"; ...` (any non-empty initializer expression)          | `sb.append(<initExpr>);` after SB construction              | Yes      |
+| Decl with unrelated stmts between decl and loop top (no `s` use)           | middle lines pass through unchanged                         | Yes      |
+| `for (...) if (cond) s = s + x;` (single-if loop body)                     | `if (cond) sb.append(x);`                                   | Yes      |
+| Multi-stmt loop body with the assignment buried (possibly nested if)       | sibling stmts pass through; only assign rewrites            | Yes      |
+| Reverse `s = x + s` / mid `s = a + s + b`                                  | `sb.insert(0, ...)` / `sb.insert(0, a).append(b)`           | Yes      |
+| `this.<field>` LHS                                                         | seeded `sb.append(this.f); ... this.f = sb.toString();`     | Yes      |
+| `obj.<field>` LHS (qualified, non-`this`, simple receiver chain)           | seeded `sb.append(obj.f); ... obj.f = sb.toString();`       | Yes      |
+| `this.a.b` / deeper field access (simple receiver chain)                   | seeded `sb.append(this.a.b); ... this.a.b = sb.toString();` | Yes      |
+| `arr[i]` / `arr[0]` / `this.arr[k]` / `arr[i][j]` LHS, indices loop-stable | seeded `sb.append(arr[i]); ... arr[i] = sb.toString();`     | Yes      |
+| Mid-loop reads of `s.length()` / `s.charAt(0)` / etc. (allowlist)          | rewritten to `sb.<method>(...)`                             | Yes      |
+| Tier-2 do-while (`do <body>; while(...);`), incl. array LHS                | tier-2 if body becomes single non-chained call, else tier-3 | Yes      |
+
+| Bail (no fix; check still fires)                                                                                                                | Reason                                                                                                                |
+|-------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| `arr[i]` where index is the loop iteration variable                                                                                             | Each iteration writes a different slot — single-StringBuilder accumulation is wrong                                   |
+| `arr[i]` where index variable is mutated in the loop body                                                                                       | Index changes during the loop, same aliasing concern as above                                                         |
+| `arr[k.field]` / `arr[k + 1]` (non-trivial index expression)                                                                                    | Index analysis only handles single IDENT or integer-literal indices                                                   |
+| Method-call array receiver (e.g. `getArr()[i]`)                                                                                                 | Receiver could have side effects                                                                                      |
+| Array variable / chain mutated inside the loop (incl. via method call args)                                                                     | `arr` reassigned, or passed to a mutator like `Arrays.fill(arr, ...)`                                                 |
+| Any dotted-receiver prefix mutated in the loop (e.g. `obj = newObj()`, `this.matrix = newMatrix()` for `obj.f[i]` / `this.matrix.cells[i]` LHS) | Reassignment of any prefix — including the leftmost segment — invalidates the post-loop write                         |
+| Index identifier appears on any line of the for-header (for-init / for-each binding, including multi-line headers)                              | Index would be undefined outside the loop where the post-rewrite reassignment runs                                    |
+| Body line packs multiple statements that mutate the array, an index variable, or any dotted receiver prefix                                     | Mutation on the same line as the LHS still bails; covers `arr[k] += x; ++k;` and `this.m.c[i] += x; this.m = newM();` |
+| Unparseable for-header (e.g. unclosed block comment in header) for a classic-for loop                                                           | Validator fails closed since binding semantics can't be verified                                                      |
+| Receiver chain contains a method call (e.g. `getSelf().f`)                                                                                      | Receiver could have side effects                                                                                      |
+| `s = s + s` (LHS appears > once in chain)                                                                                                       | Pathological / ambiguous                                                                                              |
+| `String s = "", t = "x";` (multi-variable decl)                                                                                                 | Splitting the decl is unsafe                                                                                          |
+| Decl with intervening `s` use between decl and loop                                                                                             | Pre-loop read/write not preserved by rewrite                                                                          |
+| Decl in a different brace scope from the loop (e.g. another method)                                                                             | Cross-scope rewrite would corrupt unrelated code                                                                      |
+| `if/else` around the assign                                                                                                                     | Else branch handling would require non-trivial flow analysis                                                          |
+| Mid-loop unsafe-method call on `s` (`equals`, `replace`, `substring`, etc.)                                                                     | StringBuilder semantics differ                                                                                        |
+| Operand contains unsafe-method call on `s` (e.g. `s + s.replace(...)`)                                                                          | Same — would compile-fail or change semantics                                                                         |
+| Text block (`"""..."""`) in loop body                                                                                                           | Line-based fixer can't reason about multi-line literals                                                               |
+| Block comment (`/* ... */`) in the gap between decl and loop top                                                                                | Multi-line literal/comment tracking not done at the gap-scan layer                                                    |
+| `var s = method()` returning non-String                                                                                                         | Same-file method return-type inference handles `String`-returning helpers; rest bail                                  |
+| `String[] s` (and other non-String-typed `s`)                                                                                                   | Defensive bail in fixer; check shouldn't fire                                                                         |
 
 ## PreferBulkOperationCheck sub-rules
 

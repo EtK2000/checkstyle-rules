@@ -4,6 +4,7 @@ import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
+import java.util.ArrayDeque;
 import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
@@ -159,6 +160,27 @@ public class JitInefficiencyCheck extends AbstractCheck {
 		return null;
 	}
 
+	/**
+	 * Returns true if {@code lhs} is a valid assignment target shape for the
+	 * concat-in-loop check: a bare IDENT, a DOT chain ending in an IDENT
+	 * (including {@code this.f}, {@code obj.f}, {@code this.a.b}, etc.), or
+	 * an array element {@code arr[i]} / {@code this.arr[i]} / chained
+	 * {@code arr[i][j]} where the array receiver is itself a valid
+	 * IDENT/DOT shape.
+	 */
+	@CheckReturnValue
+	private static boolean isAssignableLhsShape(@Nonnull DetailAST lhs) {
+		var node = lhs;
+		// For `arr[i][j]`, the AST is INDEX_OP(INDEX_OP(arr, i), j).
+		while (node.getType() == TokenTypes.INDEX_OP) {
+			final var array = node.getFirstChild();
+			if (array == null)
+				return false;
+			node = array;
+		}
+		return isReceiverChainShape(node);
+	}
+
 	@CheckReturnValue
 	private static boolean isAssignReadingSelf(@Nonnull DetailAST assign, @Nonnull String varName) {
 		final var first = assign.getFirstChild();
@@ -177,6 +199,19 @@ public class JitInefficiencyCheck extends AbstractCheck {
 		final var inner = node.getType() == TokenTypes.EXPR ? node.getFirstChild() : node;
 		return inner != null && inner.getType() == TokenTypes.STRING_LITERAL
 				&& "\"\"".equals(inner.getText());
+	}
+
+	@CheckReturnValue
+	private static boolean isReceiverChainShape(@Nonnull DetailAST node) {
+		var n = node;
+		while (n.getType() == TokenTypes.DOT) {
+			final var first = n.getFirstChild();
+			final var last = first != null ? first.getNextSibling() : null;
+			if (last == null || last.getType() != TokenTypes.IDENT || last.getNextSibling() != null)
+				return false;
+			n = first;
+		}
+		return n.getType() == TokenTypes.IDENT || n.getType() == TokenTypes.LITERAL_THIS;
 	}
 
 	@CheckReturnValue
@@ -294,6 +329,93 @@ public class JitInefficiencyCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
+	private static boolean plusChainContainsBareLhs(@Nonnull DetailAST plus, @Nonnull DetailAST lhs) {
+		// Walk the chain spine: PLUS(PLUS(a, b), c) -> operands [a, b, c].
+		var node = plus;
+		while (node != null && node.getType() == TokenTypes.PLUS) {
+			final var left = node.getFirstChild();
+			final var right = left != null ? left.getNextSibling() : null;
+			if (right != null && AstUtil.astStructuralEquals(right, lhs))
+				return true;
+			node = left;
+		}
+		return node != null && AstUtil.astStructuralEquals(node, lhs);
+	}
+
+	/**
+	 * Resolve the static type of an LHS node (IDENT, DOT chain, or INDEX_OP,
+	 * possibly chained for multi-dim arrays). For each INDEX_OP nesting
+	 * level, one `[]` is stripped from the receiver's type.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String resolveLhsType(@Nonnull DetailAST lhs) {
+		var node = lhs;
+		var indexDepth = 0;
+		while (node.getType() == TokenTypes.INDEX_OP) {
+			++indexDepth;
+			final var array = node.getFirstChild();
+			if (array == null)
+				return null;
+			node = array;
+		}
+		if (indexDepth == 0)
+			return resolveReceiverChainType(node);
+		final var receiverType = resolveReceiverChainType(node);
+		if (receiverType == null)
+			return null;
+		var stripped = receiverType;
+		for (var k = 0; k < indexDepth; ++k) {
+			if (!stripped.endsWith("[]"))
+				return null;
+			stripped = stripped.substring(0, stripped.length() - 2);
+		}
+		return stripped;
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static String resolveReceiverChainType(@Nonnull DetailAST chain) {
+		// Collect the chain bottom-up: dots' field-IDENTs get pushed, then the
+		// leftmost receiver. We then resolve left-to-right.
+		final var fieldNames = new ArrayDeque<String>();
+		var node = chain;
+		while (node.getType() == TokenTypes.DOT) {
+			final var first = node.getFirstChild();
+			final var fieldIdent = first != null ? first.getNextSibling() : null;
+			if (fieldIdent == null || fieldIdent.getType() != TokenTypes.IDENT)
+				return null;
+			fieldNames.push(fieldIdent.getText());
+			node = first;
+		}
+		final String startType;
+		if (node.getType() == TokenTypes.LITERAL_THIS)
+			startType = null;
+		else if (node.getType() == TokenTypes.IDENT)
+			startType = AstUtil.resolveVariableType(node, node.getText());
+		else
+			return null;
+		var currentType = startType;
+		var first = true;
+		for (var fieldName : fieldNames) {
+			if (first && startType == null) {
+				// receiver is `this`; resolve in enclosing class.
+				currentType = AstUtil.resolveSameFileFieldType(chain, null, fieldName);
+			}
+			else {
+				if (currentType == null)
+					return null;
+				currentType = AstUtil.resolveSameFileFieldType(chain, currentType, fieldName);
+			}
+			first = false;
+		}
+		// If there were no DOT segments, currentType is the IDENT's resolution.
+		if (fieldNames.isEmpty())
+			return startType;
+		return currentType;
+	}
+
+	@CheckReturnValue
 	@Nullable
 	private static DetailAST singleArgInner(@Nonnull DetailAST methodCall) {
 		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
@@ -334,6 +456,25 @@ public class JitInefficiencyCheck extends AbstractCheck {
 				&& !"StringBuffer".equals(receiverType))
 			return;
 		log(methodCall, MSG_APPEND_CONCAT);
+	}
+
+	private void checkAssignPlusStringInLoop(@Nonnull DetailAST assign) {
+		final var lhs = assign.getFirstChild();
+		if (lhs == null)
+			return;
+		if (!isAssignableLhsShape(lhs))
+			return;
+		final var rhs = lhs.getNextSibling();
+		if (rhs == null || rhs.getType() != TokenTypes.PLUS)
+			return;
+		if (!plusChainContainsBareLhs(rhs, lhs))
+			return;
+		final var typeName = resolveLhsType(lhs);
+		if (!isStringTypeName(typeName))
+			return;
+		if (!ancestorIsLoop(assign))
+			return;
+		log(assign, MSG_STRING_CONCAT_IN_LOOP);
 	}
 
 	private void checkBoxedAccumulator(@Nonnull DetailAST variableDef) {
@@ -636,6 +777,7 @@ public class JitInefficiencyCheck extends AbstractCheck {
 	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{
+				TokenTypes.ASSIGN,
 				TokenTypes.LITERAL_FOR,
 				TokenTypes.LITERAL_NEW,
 				TokenTypes.LITERAL_WHILE,
@@ -680,6 +822,7 @@ public class JitInefficiencyCheck extends AbstractCheck {
 	@Override
 	public void visitToken(@Nonnull DetailAST ast) {
 		switch (ast.getType()) {
+			case TokenTypes.ASSIGN -> checkAssignPlusStringInLoop(ast);
 			case TokenTypes.LITERAL_FOR -> checkForEachKeySetGet(ast);
 			case TokenTypes.LITERAL_NEW -> visitLiteralNew(ast);
 			case TokenTypes.LITERAL_WHILE -> checkIteratorWhile(ast);

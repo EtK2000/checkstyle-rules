@@ -126,13 +126,13 @@ class InputJitInefficiencyLoopViolation {
 	void stringConcatInClassicFor(int n) {
 		String result = "";
 		for (var i = 0; i < n; ++i)
-			result += i; // violation: String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.
+			result += i; // violation: String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.
 		System.out.println(result);
 	}
 
 	void stringConcatInDoWhile() {
 		String s = "";
-		do s += "x"; // violation: String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.
+		do s += "x"; // violation: String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.
 		while (s.length() < 5);
 		System.out.println(s);
 	}
@@ -185,14 +185,14 @@ class InputJitInefficiencyLoopViolation {
 	void stringConcatInForEach(List<String> list) {
 		String result = "";
 		for (var x : list)
-			result += x; // violation: String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.
+			result += x; // violation: String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.
 		System.out.println(result);
 	}
 
 	void stringConcatInWhile(boolean cond) {
 		String result = "";
 		while (cond) {
-			result += getNext(); // violation: String '+=' inside a loop allocates a new String per iteration; use a 'StringBuilder'.
+			result += getNext(); // violation: String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.
 			cond = result.length() < 5;
 		}
 		System.out.println(result);

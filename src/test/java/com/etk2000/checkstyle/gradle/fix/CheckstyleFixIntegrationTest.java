@@ -1998,6 +1998,138 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testJitInefficiencyStringConcatInLoopArrayLhs() throws Exception {
+		final var file = tempDir.resolve("JitConcatArr.java").toFile();
+		final var input = "import java.util.List;\nclass T {\n\tString[] arr = new String[1];\n\tT(List<String> list) {\n\t\tarr[0] = \"\";\n\t\tfor (var x : list)\n\t\t\tarr[0] = arr[0] + x;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "import java.util.List;\nclass T {\n\tString[] arr = new String[1];\n\tT(List<String> list) {\n\t\tarr[0] = \"\";\n\t\tfinal var sb = new StringBuilder();\n\t\tsb.append(arr[0]);\n\t\tfor (var x : list)\n\t\t\tsb.append(x);\n\t\tarr[0] = sb.toString();\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyStringConcatInLoopBuriedInIf() throws Exception {
+		final var file = tempDir.resolve("JitConcatBuried.java").toFile();
+		final var input = "import java.util.List;\nclass T {\n\tString f(List<String> list) {\n\t\tString names = list.get(0);\n\t\tlog(\"start\");\n\t\tfor (var i = 1; i < list.size(); ++i) {\n\t\t\tfinal var x = list.get(i);\n\t\t\tif (x != null && !x.isEmpty())\n\t\t\t\tnames = names + \", \" + x;\n\t\t}\n\t\treturn names;\n\t}\n\n\tvoid log(String s) {}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "import java.util.List;\nclass T {\n\tString f(List<String> list) {\n\t\tfinal var sb = new StringBuilder();\n\t\tsb.append(list.get(0));\n\t\tlog(\"start\");\n\t\tfor (var i = 1; i < list.size(); ++i) {\n\t\t\tfinal var x = list.get(i);\n\t\t\tif (x != null && !x.isEmpty())\n\t\t\t\tsb.append(\", \").append(x);\n\t\t}\n\t\tfinal var names = sb.toString();\n\t\treturn names;\n\t}\n\n\tvoid log(String s) {}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyStringConcatInLoopDeclWithGap() throws Exception {
+		final var file = tempDir.resolve("JitConcatGap.java").toFile();
+		final var input = "import java.util.List;\nclass T {\n\tString f(List<String> list, int seed) {\n\t\tString s = \"\";\n\t\tfinal var n = seed * 2;\n\t\tfor (var x : list)\n\t\t\ts = s + x;\n\t\treturn s + n;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "import java.util.List;\nclass T {\n\tString f(List<String> list, int seed) {\n\t\tfinal var sb = new StringBuilder();\n\t\tfinal var n = seed * 2;\n\t\tfor (var x : list)\n\t\t\tsb.append(x);\n\t\tfinal var s = sb.toString();\n\t\treturn s + n;\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyStringConcatInLoopExplicitChained() throws Exception {
+		final var file = tempDir.resolve("JitConcatChained.java").toFile();
+		final var input = "import java.util.List;\nclass T {\n\tString f(List<String> list) {\n\t\tString s = \"\";\n\t\tfor (var x : list)\n\t\t\ts = s + \", \" + x;\n\t\treturn s;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "import java.util.List;\nclass T {\n\tString f(List<String> list) {\n\t\tfinal var sb = new StringBuilder();\n\t\tfor (var x : list)\n\t\t\tsb.append(\", \").append(x);\n\t\tfinal var s = sb.toString();\n\t\treturn s;\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyStringConcatInLoopFieldThis() throws Exception {
+		// Constructor parameter `f` shadows the field, so `this.f` is required
+		// (NoUnnecessaryThisCheck preserves it). This isolates the JIT fixer behavior.
+		final var file = tempDir.resolve("JitConcatField.java").toFile();
+		final var input = "import java.util.List;\nclass T {\n\tString f;\n\tT(List<String> list, String f) {\n\t\tthis.f = f;\n\t\tfor (var x : list)\n\t\t\tthis.f = this.f + x;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "import java.util.List;\nclass T {\n\tString f;\n\tT(List<String> list, String f) {\n\t\tthis.f = f;\n\t\tfinal var sb = new StringBuilder();\n\t\tsb.append(this.f);\n\t\tfor (var x : list)\n\t\t\tsb.append(x);\n\t\tthis.f = sb.toString();\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyStringConcatInLoopForLoop() throws Exception {
+		final var file = tempDir.resolve("JitConcatFor.java").toFile();
+		final var input = "import java.util.List;\nclass T {\n\tString f(List<String> list) {\n\t\tString s = \"\";\n\t\tfor (var x : list)\n\t\t\ts += x;\n\t\treturn s;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "import java.util.List;\nclass T {\n\tString f(List<String> list) {\n\t\tfinal var sb = new StringBuilder();\n\t\tfor (var x : list)\n\t\t\tsb.append(x);\n\t\tfinal var s = sb.toString();\n\t\treturn s;\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyStringConcatInLoopMidLoopRead() throws Exception {
+		final var file = tempDir.resolve("JitConcatMidRead.java").toFile();
+		final var input = "import java.util.List;\nclass T {\n\tString f(List<String> list) {\n\t\tString s = \"\";\n\t\tfor (var x : list) {\n\t\t\tif (s.length() < 100)\n\t\t\t\ts = s + x;\n\t\t}\n\t\treturn s;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "import java.util.List;\nclass T {\n\tString f(List<String> list) {\n\t\tfinal var sb = new StringBuilder();\n\t\tfor (var x : list) {\n\t\t\tif (sb.length() < 100)\n\t\t\t\tsb.append(x);\n\t\t}\n\t\tfinal var s = sb.toString();\n\t\treturn s;\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyStringConcatInLoopNonEmptyInit() throws Exception {
+		final var file = tempDir.resolve("JitConcatInit.java").toFile();
+		final var input = "import java.util.List;\nclass T {\n\tString f(List<String> list) {\n\t\tString s = \"prefix:\";\n\t\tfor (var x : list)\n\t\t\ts = s + x;\n\t\treturn s;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "import java.util.List;\nclass T {\n\tString f(List<String> list) {\n\t\tfinal var sb = new StringBuilder();\n\t\tsb.append(\"prefix:\");\n\t\tfor (var x : list)\n\t\t\tsb.append(x);\n\t\tfinal var s = sb.toString();\n\t\treturn s;\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyStringConcatInLoopReverseForm() throws Exception {
+		final var file = tempDir.resolve("JitConcatReverse.java").toFile();
+		final var input = "import java.util.List;\nclass T {\n\tString f(List<String> list) {\n\t\tString s = \"\";\n\t\tfor (var x : list)\n\t\t\ts = x + s;\n\t\treturn s;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "import java.util.List;\nclass T {\n\tString f(List<String> list) {\n\t\tfinal var sb = new StringBuilder();\n\t\tfor (var x : list)\n\t\t\tsb.insert(0, x);\n\t\tfinal var s = sb.toString();\n\t\treturn s;\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testJitInefficiencyStringConcatInLoopTier2DoWhile() throws Exception {
+		final var file = tempDir.resolve("JitConcatTier2.java").toFile();
+		final var input = "class T {\n\tString f() {\n\t\tString s = \"\";\n\t\tdo s += \"y\";\n\t\twhile (s.length() < 5);\n\t\treturn s;\n\t}\n}";
+		Files.writeString(file.toPath(), input);
+
+		final var output = runFixAndGetResult(file);
+		final var expected = "class T {\n\tString f() {\n\t\tfinal var sb = new StringBuilder();\n\t\tdo sb.append(\"y\");\n\t\twhile (sb.length() < 5);\n\t\tfinal var s = sb.toString();\n\t\treturn s;\n\t}\n}";
+		assertEquals(expected, output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testJitInefficiencyToArraySized() throws Exception {
 		final var file = tempDir.resolve("JitToArr.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\nclass T {\n\tString[] f(List<String> list) {\n\t\treturn list.toArray(new String[5]);\n\t}\n}");

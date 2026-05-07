@@ -1328,7 +1328,7 @@ public class AstUtilTest {
 	public void testResolveVariableTypeVar() {
 		final var method = findMethod(root, "varLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
-		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+		assertEquals("String", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
 	@Test
@@ -1336,6 +1336,13 @@ public class AstUtilTest {
 		final var method = findMethod(root, "varAnonymousClassLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
 		assertEquals("Thread", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarCharLiteral() {
+		final var method = findMethod(root, "varCharLiteralLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
 	@Test
@@ -1353,10 +1360,35 @@ public class AstUtilTest {
 	}
 
 	@Test
+	public void testResolveVariableTypeVarMethodCallDottedReceiver() {
+		final var method = findMethod(root, "varMethodCallInitDottedReceiver");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
 	public void testResolveVariableTypeVarMethodCallInit() {
 		final var method = findMethod(root, "varMethodCallInitLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("Object", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarMethodCallOverloadDisambiguated() {
+		// Two overloads; arity 1 matches the `int` overload. getTypeName returns
+		// null for bare primitive type names, so resolution returns null, but
+		// crucially NOT "String" (the wrong overload). This prevents the JIT
+		// check from falsely firing on the int variant.
+		final var method = findMethod(root, "varMethodCallOverloadAmbiguousLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
 		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarMethodCallOverloadZeroArg() {
+		final var method = findMethod(root, "varMethodCallOverloadZeroArgLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertEquals("String", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
 	@Test
@@ -1599,6 +1631,13 @@ public class AstUtilTest {
 		final var method = findMethod(root, "varNewTypeAnnotatedArrayLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
 		assertEquals("String[]", AstUtil.resolveVariableType(slist.getLastChild(), "x"));
+	}
+
+	@Test
+	public void testResolveVariableTypeVarNullLiteral() {
+		final var method = findMethod(root, "varNullLiteralLocal");
+		final var slist = method.findFirstToken(TokenTypes.SLIST);
+		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
 	}
 
 	@Test

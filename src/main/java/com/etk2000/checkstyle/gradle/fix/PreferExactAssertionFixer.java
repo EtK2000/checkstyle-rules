@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import javax.annotation.CheckReturnValue;
@@ -200,7 +201,7 @@ class PreferExactAssertionFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	private static boolean hasImportedClassNamed(
 			@Nonnull List<String> lines,
-			@Nonnull java.util.function.Predicate<String> classMatcher
+			@Nonnull Predicate<String> classMatcher
 	) {
 		for (var existing : lines) {
 			final var parsed = parseImport(existing);
@@ -346,7 +347,7 @@ class PreferExactAssertionFixer implements CheckstyleFixer {
 			return null;
 
 		final var args = splitTopLevelArgs(argsText);
-		if (args.size() < 1 || args.size() > 2)
+		if (args.isEmpty() || args.size() > 2)
 			return null;
 
 		// find the arg containing top-level " instanceof ", possibly through a `!(...)` wrap
