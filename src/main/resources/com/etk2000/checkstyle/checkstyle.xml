@@ -194,6 +194,9 @@
 		<!-- Custom: Prefer collection interface types over concrete types in method/constructor signatures -->
 		<module name="com.etk2000.checkstyle.PreferCollectionInterfaceCheck" />
 
+		<!-- Custom: Replace if returning boolean literals with direct return of the condition -->
+		<module name="com.etk2000.checkstyle.PreferDirectBooleanReturnCheck" />
+
 		<!-- Custom: Prefer do-while when a statement is duplicated before a while loop -->
 		<module name="com.etk2000.checkstyle.PreferDoWhileCheck" />
 

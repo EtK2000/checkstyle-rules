@@ -2545,6 +2545,100 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferDirectBooleanReturnBracedBothBranches() throws Exception {
+		final var file = tempDir.resolve("DirectBoolBraced.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean f(boolean flag) {\n\t\tif (flag) {\n\t\t\treturn true;\n\t\t}\n\t\telse {\n\t\t\treturn false;\n\t\t}\n\t}\n}");
+
+		final var content = runFixMultiPass(file);
+		assertEquals(
+				"class T {\n\tboolean f(boolean flag) {\n\t\treturn flag;\n\t}\n}",
+				content
+		);
+	}
+
+	@Test
+	public void testPreferDirectBooleanReturnBracedThenTrailing() throws Exception {
+		final var file = tempDir.resolve("DirectBoolBracedTrailing.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean f(boolean flag) {\n\t\tif (flag) {\n\t\t\treturn true;\n\t\t}\n\t\treturn false;\n\t}\n}");
+
+		final var content = runFixMultiPass(file);
+		assertEquals(
+				"class T {\n\tboolean f(boolean flag) {\n\t\treturn flag;\n\t}\n}",
+				content
+		);
+	}
+
+	@Test
+	public void testPreferDirectBooleanReturnChainSecondFires() throws Exception {
+		final var file = tempDir.resolve("DirectBoolChain.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean f(int x, int y) {\n\t\tif (x > 0)\n\t\t\treturn true;\n\t\tif (y > 0)\n\t\t\treturn true;\n\t\treturn false;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean f(int x, int y) {\n\t\tif (x > 0)\n\t\t\treturn true;\n\t\treturn y > 0;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferDirectBooleanReturnInlineForward() throws Exception {
+		final var file = tempDir.resolve("DirectBoolInline.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean f(boolean flag) {\n\t\tif (flag) return true;\n\t\treturn false;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean f(boolean flag) {\n\t\treturn flag;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferDirectBooleanReturnMethodCallCondition() throws Exception {
+		final var file = tempDir.resolve("DirectBoolMethodCall.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean f(String s) {\n\t\tif (s.isEmpty())\n\t\t\treturn false;\n\t\treturn true;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean f(String s) {\n\t\treturn !s.isEmpty();\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferDirectBooleanReturnNextLineWithElse() throws Exception {
+		final var file = tempDir.resolve("DirectBoolElse.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean f(boolean flag) {\n\t\tif (flag)\n\t\t\treturn false;\n\t\telse\n\t\t\treturn true;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean f(boolean flag) {\n\t\treturn !flag;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferDirectBooleanReturnNotIdentDoubleNeg() throws Exception {
+		final var file = tempDir.resolve("DirectBoolNotIdent.java").toFile();
+		Files.writeString(file.toPath(), "class T {\n\tboolean f(boolean flag) {\n\t\tif (!flag)\n\t\t\treturn false;\n\t\treturn true;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"class T {\n\tboolean f(boolean flag) {\n\t\treturn flag;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testPreferDoWhileUnbracedBody() throws Exception {
 		final var file = tempDir.resolve("DoWhileUnbraced.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f(int i) {\n\t\t++i;\n\t\twhile (i < 10)\n\t\t\t++i;\n\t}\n}");

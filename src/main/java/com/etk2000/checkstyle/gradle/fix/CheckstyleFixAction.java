@@ -16,6 +16,7 @@ import com.etk2000.checkstyle.NoFinalParametersCheck;
 import com.etk2000.checkstyle.NoUnnecessaryThisCheck;
 import com.etk2000.checkstyle.PreferBulkOperationCheck;
 import com.etk2000.checkstyle.PreferCollectionInterfaceCheck;
+import com.etk2000.checkstyle.PreferDirectBooleanReturnCheck;
 import com.etk2000.checkstyle.PreferDoWhileCheck;
 import com.etk2000.checkstyle.PreferExactAssertionCheck;
 import com.etk2000.checkstyle.PreferMathMethodCheck;
@@ -137,6 +138,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				Map.entry(NoUnnecessaryThisCheck.class.getName(), new NoUnnecessaryThisFixer()),
 				Map.entry(PreferBulkOperationCheck.class.getName(), new PreferBulkOperationFixer()),
 				Map.entry(PreferCollectionInterfaceCheck.class.getName(), new PreferCollectionInterfaceFixer()),
+				Map.entry(PreferDirectBooleanReturnCheck.class.getName(), new PreferDirectBooleanReturnFixer()),
 				Map.entry(PreferDoWhileCheck.class.getName(), new PreferDoWhileFixer()),
 				Map.entry(PreferExactAssertionCheck.class.getName(), new PreferExactAssertionFixer()),
 				Map.entry(PreferMathMethodCheck.class.getName(), new PreferMathMethodFixer()),

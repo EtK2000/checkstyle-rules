@@ -54,6 +54,9 @@
 	<suppress checks="OverloadMethodOrderCheck" files="inputs[\\/]overload[\\/]" />
 	<suppress checks="PreferBulkOperationCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
 	<suppress checks="PreferCollectionInterfaceCheck" files="inputs[\\/]collectioninterface[\\/]" />
+	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]directbooleanreturn[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]directbooleanreturn[\\/]" />
+	<suppress checks="PreferDirectBooleanReturnCheck" files="inputs[\\/]directbooleanreturn[\\/]" />
 	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]preferdowhile[\\/]" />
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]preferdowhile[\\/]" />
 	<suppress checks="PreferDoWhileCheck" files="inputs[\\/]preferdowhile[\\/]" />
