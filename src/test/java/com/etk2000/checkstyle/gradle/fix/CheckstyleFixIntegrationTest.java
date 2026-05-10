@@ -63,7 +63,6 @@ public class CheckstyleFixIntegrationTest {
 		final var result = CheckstyleFixAction.doExecute(config, false, List.of(file));
 		assertEquals(1, result[0]);
 		assertEquals(1, result[1]);
-		assertEquals(1, result[2]);
 		verifyFixedOutputClean(file, Files.readString(file.toPath()), String.valueOf(Integer.MAX_VALUE), false);
 	}
 
@@ -76,7 +75,6 @@ public class CheckstyleFixIntegrationTest {
 		final var result = CheckstyleFixAction.doExecute(config, false, List.of(file));
 		assertEquals(0, result[0]);
 		assertEquals(1, result[1]);
-		assertEquals(1, result[2]);
 		assertFalse(Files.readString(file.toPath()).contains(",}"));
 		verifyFixedOutputClean(file, Files.readString(file.toPath()), String.valueOf(Integer.MAX_VALUE), false);
 	}
@@ -93,9 +91,7 @@ public class CheckstyleFixIntegrationTest {
 		final var normalResult = CheckstyleFixAction.doExecute(config, false, List.of(file1));
 
 		assertEquals(3, dryResult[1]);
-		assertEquals(3, dryResult[2]);
 		assertEquals(dryResult[1], normalResult[1]);
-		assertEquals(dryResult[2], normalResult[2]);
 		verifyFixedOutputClean(file1, Files.readString(file1.toPath()), String.valueOf(Integer.MAX_VALUE), false);
 	}
 

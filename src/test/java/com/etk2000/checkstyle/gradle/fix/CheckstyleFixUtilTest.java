@@ -32,6 +32,56 @@ public class CheckstyleFixUtilTest {
 	}
 
 	@Test
+	public void computeHintClampsStaleTotalUpToFixable() {
+		assertEquals(
+				"Run ./gradlew checkstyleFix to auto-fix all 5 violations.",
+				CheckstyleFixAction.computeHint(5, 3, "checkstyleFix")
+		);
+	}
+
+	@Test
+	public void computeHintEqualTotalNoClamp() {
+		assertEquals(
+				"Run ./gradlew checkstyleFix to auto-fix all 4 violations.",
+				CheckstyleFixAction.computeHint(4, 4, "checkstyleFix")
+		);
+	}
+
+	@Test
+	public void computeHintLargerTotalNoClamp() {
+		assertEquals(
+				"Run ./gradlew checkstyleFix to auto-fix 2 of 7 violations.",
+				CheckstyleFixAction.computeHint(2, 7, "checkstyleFix")
+		);
+	}
+
+	@Test
+	public void computeHintNegativeDryRunTotalClamps() {
+		assertEquals(
+				"Run ./gradlew checkstyleFix to auto-fix all 3 violations.",
+				CheckstyleFixAction.computeHint(3, -1, "checkstyleFix")
+		);
+	}
+
+	@Test
+	public void computeHintNegativeFixableReturnsNull() {
+		assertNull(CheckstyleFixAction.computeHint(-1, 5, "checkstyleFix"));
+	}
+
+	@Test
+	public void computeHintSingleFixable() {
+		assertEquals(
+				"Run ./gradlew checkstyleFix to auto-fix all 1 violations.",
+				CheckstyleFixAction.computeHint(1, 0, "checkstyleFix")
+		);
+	}
+
+	@Test
+	public void computeHintZeroFixableReturnsNull() {
+		assertNull(CheckstyleFixAction.computeHint(0, 5, "checkstyleFix"));
+	}
+
+	@Test
 	public void formatHintMessageAllFixable() {
 		assertEquals(
 				"Run ./gradlew checkstyleFix to auto-fix all 5 violations.",

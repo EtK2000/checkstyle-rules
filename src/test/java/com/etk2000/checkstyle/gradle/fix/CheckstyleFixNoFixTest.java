@@ -81,7 +81,6 @@ public class CheckstyleFixNoFixTest {
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
 		assertEquals(0, result[0]);
 		assertEquals(1, result[1]);
-		assertEquals(1, result[2]);
 		assertEquals(original, Files.readString(file.toPath()));
 	}
 
@@ -94,7 +93,6 @@ public class CheckstyleFixNoFixTest {
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
 		assertEquals(0, result[0]);
 		assertEquals(0, result[1]);
-		assertEquals(1, result[2]);
 	}
 
 	@Test
@@ -108,7 +106,6 @@ public class CheckstyleFixNoFixTest {
 		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
 		assertEquals(2, result[1]);
-		assertEquals(3, result[2]);
 	}
 
 	@Test
@@ -119,7 +116,6 @@ public class CheckstyleFixNoFixTest {
 		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
 		assertEquals(2, result[1]);
-		assertEquals(2, result[2]);
 	}
 
 	@Test
@@ -131,7 +127,6 @@ public class CheckstyleFixNoFixTest {
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
 		assertEquals(1, result[0]);
 		assertEquals(1, result[1]);
-		assertEquals(1, result[2]);
 	}
 
 	@Test
@@ -161,7 +156,6 @@ public class CheckstyleFixNoFixTest {
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
 		assertEquals(0, result[0]);
 		assertEquals(0, result[1]);
-		assertEquals(0, result[2]);
 	}
 
 	@Test
@@ -173,7 +167,6 @@ public class CheckstyleFixNoFixTest {
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(file));
 
 		assertEquals(2, result[1]);
-		assertEquals(3, result[2]);
 	}
 
 	@Test
@@ -187,7 +180,6 @@ public class CheckstyleFixNoFixTest {
 		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
 		final var result = CheckstyleFixAction.doExecute(config, true, List.of(f1, f2));
 		assertEquals(2, result[1]);
-		assertEquals(2, result[2]);
 	}
 
 	@Nonnull

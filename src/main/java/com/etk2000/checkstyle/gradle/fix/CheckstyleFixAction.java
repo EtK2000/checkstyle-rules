@@ -264,6 +264,19 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		}
 	}
 
+	/**
+	 * Computes the dry-run hint string. Clamps {@code dryRunTotal} up to
+	 * {@code fixable} so the denominator is never less than the numerator
+	 * (a stale {@code dryRunTotal} from an earlier {@code check} run can
+	 * legitimately be lower than the current fix count).
+	 */
+	@CheckReturnValue
+	@Nullable
+	@VisibleForTesting
+	static String computeHint(int fixable, int dryRunTotal, @Nonnull String taskName) {
+		return formatHintMessage(fixable, Math.max(dryRunTotal, fixable), taskName);
+	}
+
 	@CheckReturnValue
 	@Nonnull
 	@VisibleForTesting
@@ -328,7 +341,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 	}
 
 	/**
-	 * @return {needsSecondPass ? 1 : 0, totalFixed, fixableViolations}
+	 * @return {needsSecondPass ? 1 : 0, totalFixed}
 	 */
 	@VisibleForTesting
 	static int[] doExecute(
@@ -378,7 +391,6 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 
 		var needsSecondPass = false;
 		var filesFixed = 0;
-		var fixableViolations = 0;
 		var totalFixed = 0;
 		var totalSkipped = 0;
 		final var allSkippedReasons = new LinkedHashMap<String, List<String>>();
@@ -387,11 +399,6 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			final var filePath = Path.of(entry.getKey());
 			final var violations = entry.getValue();
 			final var totalViolations = violations.size();
-
-			for (var v : violations) {
-				if (v.getSeverityLevel() == SeverityLevel.ERROR && resolveFixer(v, FIXERS, MODULE_ID_FIXERS) != null)
-					++fixableViolations;
-			}
 
 			final var lines = new ArrayList<>(Files.readAllLines(filePath));
 			final var result = applyFixes(lines, violations, FIXERS, MODULE_ID_FIXERS);
@@ -413,7 +420,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			System.out.println("Fixed " + totalFixed + " violations in " + filesFixed + " files (" + totalSkipped + " skipped)");
 			printSkipSummary(allSkippedReasons);
 		}
-		return new int[]{needsSecondPass ? 1 : 0, totalFixed, fixableViolations};
+		return new int[]{needsSecondPass ? 1 : 0, totalFixed};
 	}
 
 	@CheckReturnValue
@@ -716,10 +723,12 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 
 			final var result = doExecute(checkerConfig, dryRun, files);
 			if (dryRun) {
-				final var fixable = result[2];
-				final var total = Math.max(params.getDryRunTotal().getOrElse(fixable), fixable);
-				final var taskName = params.getDryRunTaskName().getOrElse("checkstyleFix");
-				final var hint = formatHintMessage(fixable, total, taskName);
+				final var fixable = result[1];
+				final var hint = computeHint(
+						fixable,
+						params.getDryRunTotal().getOrElse(fixable),
+						params.getDryRunTaskName().getOrElse("checkstyleFix")
+				);
 				if (hint != null)
 					System.out.println(hint);
 			}
