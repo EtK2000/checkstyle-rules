@@ -28,7 +28,7 @@ Which checks and sub-rules have auto-fix support via `checkstyleFix`/`checkstyle
 | PreferCollectionInterfaceCheck           | PreferCollectionInterfaceFixer     | Replaces concrete collection type with interface (e.g. `ArrayList` to `List`)                                                                                               |
 | PreferDirectBooleanReturnCheck           | PreferDirectBooleanReturnFixer     | Collapses `if (cond) return BOOL_LIT;` paired with opposite-literal return into `return cond;` / `return !cond;`. Applies `!!X` -> `X` simplification                       |
 | PreferDoWhileCheck                       | PreferDoWhileFixer                 | Collapses pre-loop statement + `while` into a tier-2 `do-while`                                                                                                             |
-| PreferExactAssertionCheck                | PreferExactAssertionFixer          | Converts `assertTrue/assertFalse(x instanceof Y)` to `assertInstanceOf/assertNotInstanceOf(Y.class, x)`. Comparison-operator violations remain unfixable (domain-dependent) |
+| PreferExactAssertionCheck                | PreferExactAssertionFixer          | Converts `assertTrue/assertFalse(x instanceof Y)` to `assertInstanceOf/assertNotInstanceOf(Y.class, x)`. See [sub-rules below](#preferexactassertioncheck-sub-rules)        |
 | PreferMathMethodCheck                    | PreferMathMethodFixer              | See sub-rules below                                                                                                                                                         |
 | PreferPrefixIncrementCheck               | PreferPrefixIncrementFixer         | Moves `++`/`--` to prefix position                                                                                                                                          |
 | PreferSpecificApiCheck                   | PreferSpecificApiFixer             | See sub-rules below                                                                                                                                                         |
@@ -211,6 +211,64 @@ nested cases (unclosed parens or a `->` in the prefix).
 | `for (var i = 0; i < arr.length; ++i) arr[i] = value`                  | `Arrays.fill(arr, value)`                      | Yes      |
 | Single-line block-body lambda (e.g. `-> { target.put(k, v); }`)        | `target.putAll(source)`                        | Yes      |
 | Multi-line block-body lambda (`-> {` line + body + `});` line)         | `target.putAll(source)`                        | Yes      |
+
+## PreferExactAssertionCheck sub-rules
+
+The check fires on `assertTrue`/`assertFalse` whose argument is a comparison operator or
+`instanceof` expression. The `instanceof` form is framework-gated: JUnit 4's `Assert` has no
+`assertInstanceOf`/`assertNotInstanceOf`, so the check suppresses the violation when the call
+resolves to JUnit 4. Resolution rule: a qualified call decides on the receiver's simple name
+(`Assert` -> suppress, `Assertions` -> fire); an unqualified call requires a static import of
+`Assertions` with no static import of `Assert`. Only static imports count; non-static type
+imports don't enable unqualified method resolution and are ignored.
+
+### Supported (auto-fixable)
+
+| Pattern                                                       | Fix                                                             | Notes                                                                                                                               |
+|---------------------------------------------------------------|-----------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `assertTrue(x instanceof Y)`                                  | `assertInstanceOf(Y.class, x)`                                  | Unqualified, JUnit 5 static import in scope                                                                                         |
+| `assertFalse(x instanceof Y)`                                 | `assertNotInstanceOf(Y.class, x)`                               | Polarity flip                                                                                                                       |
+| `assertTrue(!(x instanceof Y))`                               | `assertNotInstanceOf(Y.class, x)`                               | Single negation cancels with `assertTrue`                                                                                           |
+| `assertFalse(!(x instanceof Y))`                              | `assertInstanceOf(Y.class, x)`                                  | Single negation cancels with `assertFalse`                                                                                          |
+| `assertTrue(!!(x instanceof Y))`                              | `assertInstanceOf(Y.class, x)`                                  | Double-negation parity                                                                                                              |
+| `assertTrue(o instanceof java.lang.String)`                   | `assertInstanceOf(java.lang.String.class, o)`                   | Fully-qualified type preserved                                                                                                      |
+| `assertTrue(o instanceof java.util.Map.Entry)`                | `assertInstanceOf(java.util.Map.Entry.class, o)`                | Nested type                                                                                                                         |
+| `assertTrue(ex.getCause() instanceof RuntimeException)`       | `assertInstanceOf(RuntimeException.class, ex.getCause())`       | Complex LHS preserved                                                                                                               |
+| `assertTrue("msg", o instanceof Y)`                           | `assertInstanceOf(Y.class, o, "msg")`                           | JUnit 4 message-first form                                                                                                          |
+| `assertTrue(o instanceof Y, "msg")`                           | `assertInstanceOf(Y.class, o, "msg")`                           | JUnit 5 message-last form                                                                                                           |
+| `Assertions.assertTrue(o instanceof Y)`                       | `Assertions.assertInstanceOf(Y.class, o)`                       | Qualifier preserved, no import added                                                                                                |
+| `org.junit.jupiter.api.Assertions.assertTrue(o instanceof Y)` | `org.junit.jupiter.api.Assertions.assertInstanceOf(Y.class, o)` | Fully-qualified qualifier preserved                                                                                                 |
+| `assertTrue((o instanceof Y))`                                | `assertInstanceOf(Y.class, o)`                                  | Outer parens stripped before classification                                                                                         |
+| `assertTrue((!(o instanceof Y)))`                             | `assertNotInstanceOf(Y.class, o)`                               | Parens around negation                                                                                                              |
+| `assertTrue(\n  o instanceof Y\n);` (multi-line call)         | `assertInstanceOf(Y.class, o);`                                 | Collapses multi-line shape. Supports `(` and/or `;` on their own lines                                                              |
+| `assertTrue("""text""", o instanceof Y)` (text-block message) | `assertInstanceOf(Y.class, o, """text""")`                      | Text block preserved verbatim. Final layout TBD — see [text-block formatting TODO](prefer-exact-assertion-text-block-formatting.md) |
+
+### Not supported (check fires, fixer returns null)
+
+| Pattern                                                           | Reason                                                                                    |
+|-------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
+| `assertTrue(o instanceof Y y)` (pattern binding)                  | Binding semantics can't be preserved through `.class`-literal rewrite                     |
+| `assertTrue(o instanceof List<X>)` (generic type)                 | Generics can't appear in a `.class` literal                                               |
+| `assertTrue(o instanceof Y, "msg", "extra")` (3+ args)            | Beyond the JUnit 4/5 1- and 2-arg shapes                                                  |
+| Unqualified call, no static import of `Assertions`                | Rewrite to unqualified `assertInstanceOf` wouldn't resolve                                |
+| Unqualified call, static import of both `Assert` and `Assertions` | Original `assertTrue` may resolve through JUnit 4; rewrite would silently swap frameworks |
+
+### Not flagged by check (correct behavior, not a limitation)
+
+| Pattern                                                            | Reason                                                                         |
+|--------------------------------------------------------------------|--------------------------------------------------------------------------------|
+| `Assert.assertTrue(o instanceof Y)` (qualifier `Assert`)           | JUnit 4 has no `assertInstanceOf` — suppress instead of emit an unfixable hint |
+| Unqualified `assertTrue(o instanceof Y)` under JUnit 4 static only | Same — resolves through JUnit 4                                                |
+| Chained-receiver `helper().assertTrue(o instanceof Y)`             | Receiver's runtime type is unknown; suppress conservatively                    |
+| `assertTrue(o instanceof Y y && y.length() > 0)` (pattern binding) | Pattern binding skip                                                           |
+| `assertTrue(a > 0 && b > 0)` (compound boolean)                    | Top-level is `&&`/`\|\|`, not a comparison or `instanceof`                     |
+
+### Comparison form (not fixable)
+
+`assertTrue(a == b)`, `assertTrue(a > b)`, etc. — the exact expected value depends on domain
+knowledge (`assertEquals` needs the expected literal; `assertTrue(a > b)` could mean any of
+`assertEquals(b + 1, a)`, `assertEquals(specificValue, a)`, etc.). The check fires under any
+framework (JUnit 4 also has `assertEquals`/`assertSame`/etc.) but no auto-fix is provided.
 
 ## PreferMathMethodCheck sub-rules
 
@@ -525,27 +583,28 @@ Continuation lines use base indent + 2 tabs.
 Known cases where fixers return null or SkipResult. These are not bugs; each represents a
 pattern the fixer intentionally skips because it cannot safely transform the code.
 
-| Fixer                          | Skipped case                                                        | Reason                                                                                 |
-|--------------------------------|---------------------------------------------------------------------|----------------------------------------------------------------------------------------|
-| RedundantAnnotationSyntaxFixer | Multiline annotation with `()` or `value =`                         | Skip: regex can't reliably detect annotation boundary across lines                     |
-| PreferVarFixer                 | Multi-variable declaration (`int a, b;`)                            | Skip: can't replace type with `var` when multiple variables share the declaration      |
-| PreferVarFixer                 | No `new` after `=` in explicit array init                           | null: pattern requires `= new Type[]{}` structure                                      |
-| PreferVarFixer                 | Non-Object generic type args (`<String>`)                           | null: diamond `<>` only replaces `<Object>`, not other explicit types                  |
-| PreferCollectionInterfaceFixer | Class not resolvable or not a standard collection                   | Skip: concrete-to-interface mapping requires class resolution at runtime               |
-| LambdaParameterTypeFixer       | Arrow `->` not found from violation column                          | Skip: fixer operates on text from the column; if arrow is on a different line, skipped |
-| LambdaParameterTypeFixer       | Opening paren not found for lambda params                           | Skip: single naked param without parens in unusual positions                           |
-| FieldConsolidationFixer        | Block comment between field names                                   | null: comment would be lost or misplaced during merge                                  |
-| FieldConsolidationFixer        | C-style array type mismatch between fields                          | null: `int[] a` and `int b` can't merge to one declaration safely                      |
-| AnnotationOwnLineFixer         | Annotation already on own line, just needs sorting                  | null when already in correct order                                                     |
-| AnnotationSameLineFixer        | Annotation block reaches end of file                                | null: no declaration found to join annotations onto                                    |
-| RedundantArrayCreationFixer    | Multiline array creation                                            | null: closing `}` not on the same line as opening `{`                                  |
-| RedundantArrayCreationFixer    | No `{` found on the violation line                                  | null: opening brace on a different line than `new`                                     |
-| ArrayTypeStyleFixer            | See [ArrayTypeStyleCheck sub-rules](#arraytypestylecheck-sub-rules) | Skipped patterns are listed there alongside supported patterns                         |
-| PreferDoWhileFixer             | Comment on pre-statement or body line                               | Skip: comment preservation in the collapsed do-while is non-trivial                    |
-| PreferDoWhileFixer             | Pre-statement / body indent mismatch                                | Skip: defensive — happy path requires same indent                                      |
-| PreferDoWhileFixer             | Braced body has multi-statement or unusual closing                  | Skip: only single-statement braced bodies are collapsed                                |
-| PreferDoWhileFixer             | While line not in expected single-line format                       | Skip: fixer regex requires `while (cond)` (or `{`) on one line                         |
-| PreferDoWhileFixer             | Pre-statement and body not textually equal after stripping          | Skip: defensive — check fired but text differs (e.g. whitespace artifacts)             |
+| Fixer                          | Skipped case                                                                    | Reason                                                                                 |
+|--------------------------------|---------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| RedundantAnnotationSyntaxFixer | Multiline annotation with `()` or `value =`                                     | Skip: regex can't reliably detect annotation boundary across lines                     |
+| PreferVarFixer                 | Multi-variable declaration (`int a, b;`)                                        | Skip: can't replace type with `var` when multiple variables share the declaration      |
+| PreferVarFixer                 | No `new` after `=` in explicit array init                                       | null: pattern requires `= new Type[]{}` structure                                      |
+| PreferVarFixer                 | Non-Object generic type args (`<String>`)                                       | null: diamond `<>` only replaces `<Object>`, not other explicit types                  |
+| PreferCollectionInterfaceFixer | Class not resolvable or not a standard collection                               | Skip: concrete-to-interface mapping requires class resolution at runtime               |
+| LambdaParameterTypeFixer       | Arrow `->` not found from violation column                                      | Skip: fixer operates on text from the column; if arrow is on a different line, skipped |
+| LambdaParameterTypeFixer       | Opening paren not found for lambda params                                       | Skip: single naked param without parens in unusual positions                           |
+| FieldConsolidationFixer        | Block comment between field names                                               | null: comment would be lost or misplaced during merge                                  |
+| FieldConsolidationFixer        | C-style array type mismatch between fields                                      | null: `int[] a` and `int b` can't merge to one declaration safely                      |
+| AnnotationOwnLineFixer         | Annotation already on own line, just needs sorting                              | null when already in correct order                                                     |
+| AnnotationSameLineFixer        | Annotation block reaches end of file                                            | null: no declaration found to join annotations onto                                    |
+| RedundantArrayCreationFixer    | Multiline array creation                                                        | null: closing `}` not on the same line as opening `{`                                  |
+| RedundantArrayCreationFixer    | No `{` found on the violation line                                              | null: opening brace on a different line than `new`                                     |
+| ArrayTypeStyleFixer            | See [ArrayTypeStyleCheck sub-rules](#arraytypestylecheck-sub-rules)             | Skipped patterns are listed there alongside supported patterns                         |
+| PreferExactAssertionFixer      | See [PreferExactAssertionCheck sub-rules](#preferexactassertioncheck-sub-rules) | Skipped patterns are listed there alongside supported patterns                         |
+| PreferDoWhileFixer             | Comment on pre-statement or body line                                           | Skip: comment preservation in the collapsed do-while is non-trivial                    |
+| PreferDoWhileFixer             | Pre-statement / body indent mismatch                                            | Skip: defensive — happy path requires same indent                                      |
+| PreferDoWhileFixer             | Braced body has multi-statement or unusual closing                              | Skip: only single-statement braced bodies are collapsed                                |
+| PreferDoWhileFixer             | While line not in expected single-line format                                   | Skip: fixer regex requires `while (cond)` (or `{`) on one line                         |
+| PreferDoWhileFixer             | Pre-statement and body not textually equal after stripping                      | Skip: defensive — check fired but text differs (e.g. whitespace artifacts)             |
 
 ## Future fix opportunities
 

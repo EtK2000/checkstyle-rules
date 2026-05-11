@@ -11,6 +11,11 @@ import static org.junit.Assert.assertTrue;
 
 @SuppressWarnings("unused")
 class InputPreferExactAssertionClean {
+	private static class TestHelper {
+		void assertTrue(boolean cond) {
+		}
+	}
+
 	private static Object anyObject() {
 		return "x";
 	}
@@ -46,6 +51,12 @@ class InputPreferExactAssertionClean {
 		assertTrue("hello".isEmpty());
 	}
 
+	void assertTrueNegatedNonInstanceOf() {
+		final var o = anyObject();
+		assertTrue(!o.toString().isEmpty());
+		assertFalse(!"hello".isEmpty());
+	}
+
 	void assertTrueNoComparison() {
 		assertTrue(true);
 	}
@@ -53,8 +64,49 @@ class InputPreferExactAssertionClean {
 	private void customAssertTrue(boolean flag) {
 	}
 
-	void noFireOnParenthesizedComparison() {
-		assertTrue((1 > 0));
+	void junit4ChainedReceiverInstanceOfSuppressed() {
+		final var o = anyObject();
+		someHelper().assertTrue(o instanceof String);
+	}
+
+	void junit4FullyQualifiedTypeSuppressed() {
+		final var o = anyObject();
+		assertTrue(o instanceof java.lang.String);
+	}
+
+	void junit4MessageFirstInstanceOfSuppressed() {
+		final var o = anyObject();
+		assertTrue("should be a string", o instanceof String);
+	}
+
+	void junit4QualifiedAssertFalseInstanceOfSuppressed() {
+		final var o = anyObject();
+		org.junit.Assert.assertFalse(o instanceof Integer);
+	}
+
+	void junit4QualifiedAssertInstanceOfSuppressed() {
+		final var o = anyObject();
+		org.junit.Assert.assertTrue(o instanceof String);
+	}
+
+	void junit4UnqualifiedInstanceOfAssertFalseSuppressed() {
+		final var o = anyObject();
+		assertFalse(o instanceof Integer);
+	}
+
+	void junit4UnqualifiedInstanceOfDoubleNegatedSuppressed() {
+		final var o = anyObject();
+		assertTrue(!!(o instanceof String));
+	}
+
+	void junit4UnqualifiedInstanceOfNegatedSuppressed() {
+		final var o = anyObject();
+		assertTrue(!(o instanceof String));
+	}
+
+	void junit4UnqualifiedInstanceOfSuppressed() {
+		final var o = anyObject();
+		assertTrue(o instanceof String);
 	}
 
 	void noFireOnSimilarMethodName() {
@@ -80,6 +132,10 @@ class InputPreferExactAssertionClean {
 	void otherMethodWithComparison() {
 		final var a = 1;
 		someMethod(a > 0);
+	}
+
+	private TestHelper someHelper() {
+		return new TestHelper();
 	}
 
 	private void someMethod(boolean flag) {

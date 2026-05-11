@@ -20,8 +20,7 @@ public class PreferExactAssertionFixerTest {
 	}
 
 	private static List<String> withJunit5(String body) {
-		// default fixture: a JUnit 5 Assertions non-static import is in scope
-		return List.of("import org.junit.jupiter.api.Assertions;", "", body);
+		return List.of("import static org.junit.jupiter.api.Assertions.*;", "", body);
 	}
 
 	@Test
@@ -39,8 +38,6 @@ public class PreferExactAssertionFixerTest {
 
 	@Test
 	public void assertJStaticImportNotMistakenForJunit() {
-		// AssertJ's `assertThat` starts with "assert" but is not in the JUnit set;
-		// fixer must not pick its FQN prefix when adding the assertInstanceOf import.
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of(
 				"import static org.assertj.core.api.Assertions.assertThat;",
@@ -95,8 +92,6 @@ public class PreferExactAssertionFixerTest {
 
 	@Test
 	public void dollarInImportFqnParsed() {
-		// IMPORT_PATTERN admits `$` for inner-class FQNs; the parser must accept such
-		// import lines and not bail out as if they were non-import text.
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of(
 				"import com.foo.Outer$Inner;",
@@ -110,7 +105,6 @@ public class PreferExactAssertionFixerTest {
 
 	@Test
 	public void doubleNegationCancelsToPositive() {
-		// !!(x instanceof Y) cancels — assertTrue stays positive (assertInstanceOf)
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
 		final var call = "\t\tassertTrue(!!(o instanceof String));";
@@ -122,7 +116,6 @@ public class PreferExactAssertionFixerTest {
 
 	@Test
 	public void doubleNegationOnAssertFalseCancelsToNegative() {
-		// !!(x instanceof Y) cancels — assertFalse stays negative (assertNotInstanceOf)
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertFalse;");
 		final var call = "\t\tassertFalse(!!(o instanceof Integer));";
@@ -154,6 +147,21 @@ public class PreferExactAssertionFixerTest {
 	}
 
 	@Test
+	public void fullyQualifiedAssertionsCallPreservesFqnPrefix() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var line = "\t\torg.junit.jupiter.api.Assertions.assertTrue(o instanceof String);";
+		final var attempt = fixer.fix(withJunit5(line), 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(
+				"\t\torg.junit.jupiter.api.Assertions.assertInstanceOf(String.class, o);",
+				result.replacement().getFirst()
+		);
+		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
+	}
+
+	@Test
 	public void fullyQualifiedTypePreserved() {
 		final var fixer = new PreferExactAssertionFixer();
 		final var line = "\t\tassertTrue(ex.getCause() instanceof java.io.IOException);";
@@ -175,9 +183,22 @@ public class PreferExactAssertionFixerTest {
 	}
 
 	@Test
+	public void importWithTrailingLineCommentRecognized() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of(
+				"import static org.junit.jupiter.api.Assertions.assertTrue; // bootstrap"
+		);
+		final var call = "\t\tassertTrue(o instanceof String);";
+		final var attempt = fixer.fix(toLines(imports, call), imports.size() + 1, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals("\t\tassertInstanceOf(String.class, o);", result.replacement().getFirst());
+		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertInstanceOf"), result.importsToAdd());
+		assertEquals(imports.size() + 1, result.startLine());
+		assertEquals(imports.size() + 1, result.endLine());
+	}
+
+	@Test
 	public void instanceofInsideParensInOtherArgIgnored() {
-		// the FIRST arg contains " instanceof " but inside parens; the SECOND arg has the
-		// top-level instanceof. The fixer must pick arg 1, not arg 0.
 		final var fixer = new PreferExactAssertionFixer();
 		final var line = "\t\tassertTrue(\"got: \" + (x instanceof Y), x instanceof Y);";
 		final var attempt = fixer.fix(withJunit5(line), 2, 0);
@@ -190,8 +211,6 @@ public class PreferExactAssertionFixerTest {
 
 	@Test
 	public void junit4And5MixedImportsRewriteQualified() {
-		// In a mixed-imports file, a QUALIFIED `Assertions.assertTrue` is unambiguous —
-		// the qualifier names JUnit 5 explicitly, so the rewrite is safe.
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of(
 				"import static org.junit.Assert.assertTrue;",
@@ -201,12 +220,13 @@ public class PreferExactAssertionFixerTest {
 		final var attempt = fixer.fix(toLines(imports, call), imports.size() + 1, 0);
 		final var result = assertInstanceOf(FixResult.class, attempt);
 		assertEquals("\t\tAssertions.assertInstanceOf(String.class, o);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(imports.size() + 1, result.startLine());
+		assertEquals(imports.size() + 1, result.endLine());
 	}
 
 	@Test
 	public void junit4And5MixedImportsSkipUnqualified() {
-		// JUnit 4 + JUnit 5 in same file: the unqualified `assertTrue` resolves through
-		// JUnit 4 today; rewriting would silently swap frameworks, so we skip.
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of(
 				"import static org.junit.Assert.assertTrue;",
@@ -220,8 +240,6 @@ public class PreferExactAssertionFixerTest {
 
 	@Test
 	public void junit4ImportOnlySkipped() {
-		// JUnit 4's Assert class has no assertInstanceOf — fixer must skip rather than
-		// emit a rewrite that won't compile.
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of("import static org.junit.Assert.assertTrue;");
 		final var call = "\t\tassertTrue(o instanceof String);";
@@ -244,12 +262,7 @@ public class PreferExactAssertionFixerTest {
 	}
 
 	@Test
-	public void junit4NonStaticAndJunit5StaticMixedSkipsUnqualified() {
-		// Pin conservative behavior: a non-static `import org.junit.Assert;` plus a JUnit 5
-		// static import skips the unqualified rewrite. The skip is over-conservative
-		// (the unqualified call resolves through JUnit 5's static import, so a rewrite
-		// would be safe), but the simple-name match in `hasJunit4AssertImport` errs on
-		// the side of caution rather than silently swapping frameworks on a bug.
+	public void junit4NonStaticAndJunit5StaticMixedRewritesUnqualified() {
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of(
 				"import org.junit.Assert;",
@@ -257,17 +270,15 @@ public class PreferExactAssertionFixerTest {
 		);
 		final var call = "\t\tassertTrue(o instanceof String);";
 		final var attempt = fixer.fix(toLines(imports, call), imports.size() + 1, 0);
-		assertNotNull(attempt);
-		assertInstanceOf(SkipResult.class, attempt);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals("\t\tassertInstanceOf(String.class, o);", result.replacement().getFirst());
+		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertInstanceOf"), result.importsToAdd());
+		assertEquals(imports.size() + 1, result.startLine());
+		assertEquals(imports.size() + 1, result.endLine());
 	}
 
 	@Test
 	public void junit4PackageWildcardWithJunit5RewritesUnqualified() {
-		// `import org.junit.*;` is a TYPE wildcard — it brings `Assert` (and `Test` etc.)
-		// into scope as types but does NOT statically import `assertTrue`. So the
-		// unqualified call resolves through the JUnit 5 static import. The rewrite is
-		// safe, and `hasJunit4AssertImport` correctly returns false (the wildcard's
-		// stripped FQN is `org.junit`, simple name `junit`, not `Assert`).
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of(
 				"import org.junit.*;",
@@ -278,6 +289,8 @@ public class PreferExactAssertionFixerTest {
 		final var result = assertInstanceOf(FixResult.class, attempt);
 		assertEquals("\t\tassertInstanceOf(String.class, o);", result.replacement().getFirst());
 		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertInstanceOf"), result.importsToAdd());
+		assertEquals(imports.size() + 1, result.startLine());
+		assertEquals(imports.size() + 1, result.endLine());
 	}
 
 	@Test
@@ -305,9 +318,6 @@ public class PreferExactAssertionFixerTest {
 
 	@Test
 	public void junit5WildcardFollowedByStaticAssertImportSkipsAdd() {
-		// Ordering: a JUnit 5 wildcard `Assertions.*` followed by a JUnit 5 single static
-		// import. addAssertImport must short-circuit on the wildcard before reaching the
-		// single import; the wildcard already covers the new method, so no add needed.
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of(
 				"import static org.junit.jupiter.api.Assertions.*;",
@@ -357,14 +367,286 @@ public class PreferExactAssertionFixerTest {
 	}
 
 	@Test
-	public void multiLineCallSkipped() {
+	public void multiLineCallAmbiguousMultiplePerLineSkipped() {
 		final var fixer = new PreferExactAssertionFixer();
-		final var lines = List.of(
-				"\t\tassertTrue(",
-				"\t\t\t\to instanceof String",
-				"\t\t);"
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue /* legacy */ (foo instanceof Object); assertTrue");
+		lines.add("\t\t(o instanceof String);");
+		final var attempt = fixer.fix(lines, 2, 0);
+		assertNotNull(attempt);
+		assertInstanceOf(SkipResult.class, attempt);
+	}
+
+	@Test
+	public void multiLineCallBlockCommentContainingNameIgnored() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\t/* assertTrue(stale) */ assertTrue(o instanceof String);");
+		final var attempt = fixer.fix(lines, 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(
+				List.of("\t\t/* assertTrue(stale) */ assertInstanceOf(String.class, o);"),
+				result.replacement()
 		);
-		final var attempt = fixer.fix(lines, 0, 0);
+		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertInstanceOf"), result.importsToAdd());
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
+	}
+
+	@Test
+	public void multiLineCallFixed() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue(");
+		lines.add("\t\t\t\to instanceof String");
+		lines.add("\t\t);");
+		final var attempt = fixer.fix(lines, 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(List.of("\t\tassertInstanceOf(String.class, o);"), result.replacement());
+		assertEquals(2, result.startLine());
+		assertEquals(4, result.endLine());
+		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertInstanceOf"), result.importsToAdd());
+	}
+
+	@Test
+	public void multiLineCallJunit5MessageLastFixed() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue(");
+		lines.add("\t\t\t\to instanceof String,");
+		lines.add("\t\t\t\t\"msg\"");
+		lines.add("\t\t);");
+		final var attempt = fixer.fix(lines, 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(List.of("\t\tassertInstanceOf(String.class, o, \"msg\");"), result.replacement());
+		assertEquals(2, result.startLine());
+		assertEquals(5, result.endLine());
+		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertInstanceOf"), result.importsToAdd());
+	}
+
+	@Test
+	public void multiLineCallNegatedFixed() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue(");
+		lines.add("\t\t\t\t!(o instanceof String)");
+		lines.add("\t\t);");
+		final var attempt = fixer.fix(lines, 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(List.of("\t\tassertNotInstanceOf(String.class, o);"), result.replacement());
+		assertEquals(2, result.startLine());
+		assertEquals(4, result.endLine());
+		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertNotInstanceOf"), result.importsToAdd());
+	}
+
+	@Test
+	public void multiLineCallNoCloseParenReturnsSkipResult() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue(o instanceof String");
+		final var attempt = fixer.fix(lines, 2, 0);
+		assertNotNull(attempt);
+		assertInstanceOf(SkipResult.class, attempt);
+	}
+
+	@Test
+	public void multiLineCallNoOpenParenReturnsSkipResult() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue x;");
+		final var attempt = fixer.fix(lines, 2, 0);
+		assertNotNull(attempt);
+		assertInstanceOf(SkipResult.class, attempt);
+	}
+
+	@Test
+	public void multiLineCallNoSemicolonReturnsSkipResult() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tboolean b = assertTrue(o instanceof String)");
+		final var attempt = fixer.fix(lines, 2, 0);
+		assertNotNull(attempt);
+		assertInstanceOf(SkipResult.class, attempt);
+	}
+
+	@Test
+	public void multiLineCallOpenParenOnOwnLineFixed() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue");
+		lines.add("\t\t(");
+		lines.add("\t\t\t\to instanceof String");
+		lines.add("\t\t);");
+		final var attempt = fixer.fix(lines, 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(List.of("\t\tassertInstanceOf(String.class, o);"), result.replacement());
+		assertEquals(2, result.startLine());
+		assertEquals(5, result.endLine());
+		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertInstanceOf"), result.importsToAdd());
+	}
+
+	@Test
+	public void multiLineCallSemiOnOwnLineFixed() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue(");
+		lines.add("\t\t\t\to instanceof String");
+		lines.add("\t\t)");
+		lines.add("\t\t;");
+		final var attempt = fixer.fix(lines, 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(List.of("\t\tassertInstanceOf(String.class, o);"), result.replacement());
+		assertEquals(2, result.startLine());
+		assertEquals(5, result.endLine());
+		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertInstanceOf"), result.importsToAdd());
+	}
+
+	@Test
+	public void multiLineCallSpaceBeforeOpenParenFixed() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue (o instanceof String);");
+		final var attempt = fixer.fix(lines, 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(List.of("\t\tassertInstanceOf(String.class, o);"), result.replacement());
+		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertInstanceOf"), result.importsToAdd());
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
+	}
+
+	@Test
+	public void multiLineCallStringLiteralContainingNameIgnored() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tString s = \"earlier: assertTrue\";");
+		lines.add("\t\tassertTrue");
+		lines.add("\t\t(");
+		lines.add("\t\t\to instanceof String");
+		lines.add("\t\t);");
+		final var attempt = fixer.fix(lines, 3, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(List.of("\t\tassertInstanceOf(String.class, o);"), result.replacement());
+		assertEquals(3, result.startLine());
+		assertEquals(6, result.endLine());
+	}
+
+	@Test
+	public void multiLineCallSuffixIdentNotMatched() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrueX");
+		lines.add("\t\t(o instanceof String);");
+		final var attempt = fixer.fix(lines, 2, 0);
+		assertNotNull(attempt);
+		assertInstanceOf(SkipResult.class, attempt);
+	}
+
+	@Test
+	public void multiLineCallWithBlockCommentBeforeOpenParenFixed() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue /* note */ (o instanceof String);");
+		final var attempt = fixer.fix(lines, 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(List.of("\t\tassertInstanceOf(String.class, o);"), result.replacement());
+		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertInstanceOf"), result.importsToAdd());
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
+	}
+
+	@Test
+	public void multiLineCallWithCommentBetweenCloseAndSemiSkipped() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue(o instanceof String) /* note */ ;");
+		final var attempt = fixer.fix(lines, 2, 0);
+		assertNotNull(attempt);
+		assertInstanceOf(SkipResult.class, attempt);
+	}
+
+	@Test
+	public void multiLineCallWithLineCommentBeforeOpenParenFixed() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue // note");
+		lines.add("\t\t(o instanceof String);");
+		final var attempt = fixer.fix(lines, 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(List.of("\t\tassertInstanceOf(String.class, o);"), result.replacement());
+		assertEquals(2, result.startLine());
+		assertEquals(3, result.endLine());
+		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertInstanceOf"), result.importsToAdd());
+	}
+
+	@Test
+	public void multiLineCallWithLineCommentBetweenCloseAndSemiSkipped() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue(o instanceof String) // note");
+		lines.add("\t\t;");
+		final var attempt = fixer.fix(lines, 2, 0);
+		assertNotNull(attempt);
+		assertInstanceOf(SkipResult.class, attempt);
+	}
+
+	@Test
+	public void multiLineGenericTypeSkipped() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue(");
+		lines.add("\t\t\t\to instanceof java.util.List<String>");
+		lines.add("\t\t);");
+		final var attempt = fixer.fix(lines, 2, 0);
+		assertNotNull(attempt);
+		assertInstanceOf(SkipResult.class, attempt);
+	}
+
+	@Test
+	public void multiLinePatternBindingSkipped() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue(");
+		lines.add("\t\t\t\to instanceof String s");
+		lines.add("\t\t);");
+		final var attempt = fixer.fix(lines, 2, 0);
 		assertNotNull(attempt);
 		assertInstanceOf(SkipResult.class, attempt);
 	}
@@ -422,6 +704,66 @@ public class PreferExactAssertionFixerTest {
 	}
 
 	@Test
+	public void parensAroundNegatedInstanceOfFixed() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var line = "\t\tassertTrue((!(o instanceof String)));";
+		final var attempt = fixer.fix(withJunit5(line), 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals("\t\tassertNotInstanceOf(String.class, o);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
+	}
+
+	@Test
+	public void parenthesizedInstanceOfArgDoubleParenFixed() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var line = "\t\tassertTrue(((o instanceof String)));";
+		final var attempt = fixer.fix(withJunit5(line), 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals("\t\tassertInstanceOf(String.class, o);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
+	}
+
+	@Test
+	public void parenthesizedInstanceOfArgFixed() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var line = "\t\tassertTrue((o instanceof String));";
+		final var attempt = fixer.fix(withJunit5(line), 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals("\t\tassertInstanceOf(String.class, o);", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
+	}
+
+	@Test
+	public void parenthesizedInstanceOfArgWithJunit4MessageFirst() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var line = "\t\tassertTrue(\"msg\", (o instanceof String));";
+		final var attempt = fixer.fix(withJunit5(line), 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals("\t\tassertInstanceOf(String.class, o, \"msg\");", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
+	}
+
+	@Test
+	public void parenthesizedInstanceOfArgWithJunit5MessageLast() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var line = "\t\tassertTrue((o instanceof String), \"msg\");";
+		final var attempt = fixer.fix(withJunit5(line), 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals("\t\tassertInstanceOf(String.class, o, \"msg\");", result.replacement().getFirst());
+		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
+	}
+
+	@Test
 	public void patternBindingSkipped() {
 		final var fixer = new PreferExactAssertionFixer();
 		final var line = "\t\tassertTrue(o instanceof String s);";
@@ -441,9 +783,6 @@ public class PreferExactAssertionFixerTest {
 
 	@Test
 	public void qualifiedHeuristicNotSpoofedByStringLiteral() {
-		// A string literal containing "Assertions.assertInstanceOf" must not trick the
-		// qualified-detection into skipping the import-presence guard. With no Assertions
-		// import in scope, this should skip rather than emit non-compiling code.
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of("import static org.junit.Assert.assertTrue;");
 		final var call = "\t\tassertTrue(\"Assertions.assertInstanceOf\".equals(s) && o instanceof String);";
@@ -463,6 +802,21 @@ public class PreferExactAssertionFixerTest {
 	}
 
 	@Test
+	public void sameLineEarlierIdentWithMatchingNameIgnored() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var line = "\t\tString msg = assertTrue + \" x\"; Assertions.assertTrue(o instanceof String);";
+		final var attempt = fixer.fix(withJunit5(line), 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(
+				"\t\tString msg = assertTrue + \" x\"; Assertions.assertInstanceOf(String.class, o);",
+				result.replacement().getFirst()
+		);
+		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
+	}
+
+	@Test
 	public void stringLiteralContainingAssertTrueIgnored() {
 		final var fixer = new PreferExactAssertionFixer();
 		final var line = "\t\tString s = \"call assertTrue(here)\"; assertTrue(o instanceof String);";
@@ -472,15 +826,46 @@ public class PreferExactAssertionFixerTest {
 				"\t\tString s = \"call assertTrue(here)\"; assertInstanceOf(String.class, o);",
 				result.replacement().getFirst()
 		);
+		assertTrue(result.importsToAdd().isEmpty());
 	}
 
 	@Test
-	public void textBlockArgSkipped() {
+	public void textBlockMessageMultiLineFixed() {
+		final var fixer = new PreferExactAssertionFixer();
+		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
+		final var lines = new ArrayList<>(imports);
+		lines.add("");
+		lines.add("\t\tassertTrue(\"\"\"");
+		lines.add("\t\t\tshould be a string\"\"\", o instanceof String);");
+		final var attempt = fixer.fix(lines, 2, 0);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(
+				List.of(
+						"\t\tassertInstanceOf(String.class, o, \"\"\"",
+						"\t\t\tshould be a string\"\"\");"
+				),
+				result.replacement()
+		);
+		assertEquals(2, result.startLine());
+		assertEquals(3, result.endLine());
+		assertEquals(Set.of("static org.junit.jupiter.api.Assertions.assertInstanceOf"), result.importsToAdd());
+	}
+
+	@Test
+	public void textBlockSingleLineArgFixed() {
+		// synthetic single-line `"""..."""` (not valid Java text-block syntax) is now
+		// rewritten now; the splitter's quote-state tracker handles the alternation.
 		final var fixer = new PreferExactAssertionFixer();
 		final var line = "\t\tassertTrue(\"\"\"some text\"\"\", o instanceof String);";
 		final var attempt = fixer.fix(withJunit5(line), 2, 0);
-		assertNotNull(attempt);
-		assertInstanceOf(SkipResult.class, attempt);
+		final var result = assertInstanceOf(FixResult.class, attempt);
+		assertEquals(
+				"\t\tassertInstanceOf(String.class, o, \"\"\"some text\"\"\");",
+				result.replacement().getFirst()
+		);
+		assertTrue(result.importsToAdd().isEmpty());
+		assertEquals(2, result.startLine());
+		assertEquals(2, result.endLine());
 	}
 
 	@Test
@@ -494,7 +879,6 @@ public class PreferExactAssertionFixerTest {
 
 	@Test
 	public void tripleNegationFlipsLikeSingle() {
-		// !!!(x instanceof Y) — odd parity, assertTrue flips to assertNotInstanceOf
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of("import static org.junit.jupiter.api.Assertions.assertTrue;");
 		final var call = "\t\tassertTrue(!!!(o instanceof String));";
@@ -515,8 +899,6 @@ public class PreferExactAssertionFixerTest {
 
 	@Test
 	public void unrelatedWildcardDoesNotBlockJunit5Scan() {
-		// A wildcard import for an unrelated class must not short-circuit the scan;
-		// the subsequent JUnit 5 single import must still be found.
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of(
 				"import static java.util.Arrays.*;",
@@ -540,8 +922,6 @@ public class PreferExactAssertionFixerTest {
 
 	@Test
 	public void whitespaceTolerantImportRecognized() {
-		// Imports with non-canonical whitespace (extra spaces, leading tab, space before `;`)
-		// must still be parsed and recognized as JUnit 5 Assertions imports.
 		final var fixer = new PreferExactAssertionFixer();
 		final var imports = List.of(
 				"\timport   static  org.junit.jupiter.api.Assertions.assertTrue ;"

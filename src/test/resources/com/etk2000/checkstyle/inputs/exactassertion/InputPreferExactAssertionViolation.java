@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.inputs.exactassertion;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings("unused")
 class InputPreferExactAssertionViolation {
@@ -116,6 +116,15 @@ class InputPreferExactAssertionViolation {
 		assertTrue(1 != 2); // violation: Use a dedicated assertion (e.g. 'assertEquals') instead of 'assertTrue' with '!='.
 	}
 
+	void parenthesizedComparisonFires() {
+		assertTrue((1 > 0)); // violation: Use a dedicated assertion (e.g. 'assertEquals') instead of 'assertTrue' with '>'.
+	}
+
+	void parenthesizedInstanceOfFires() {
+		final var o = anyObject();
+		assertTrue((o instanceof String)); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+
 	void qualifiedAssertFalseCall() {
 		org.junit.Assert.assertFalse(1 > 0); // violation: Use a dedicated assertion (e.g. 'assertEquals') instead of 'assertFalse' with '>'.
 	}
@@ -132,17 +141,9 @@ class InputPreferExactAssertionViolation {
 		org.junit.jupiter.api.Assertions.assertTrue(1 > 0); // violation: Use a dedicated assertion (e.g. 'assertEquals') instead of 'assertTrue' with '>'.
 	}
 
-	void twoArgJunit4AssertFalse() {
-		assertFalse("should be negative", 1 >= 0); // violation: Use a dedicated assertion (e.g. 'assertEquals') instead of 'assertFalse' with '>='.
-	}
-
-	void twoArgJunit4AssertTrue() {
-		assertTrue("should be positive", 1 > 0); // violation: Use a dedicated assertion (e.g. 'assertEquals') instead of 'assertTrue' with '>'.
-	}
-
-	void twoArgJunit4AssertTrueInstanceOf() {
+	void qualifiedJunit5AssertTrueInstanceOf() {
 		final var o = anyObject();
-		assertTrue("should be a string", o instanceof String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+		org.junit.jupiter.api.Assertions.assertTrue(o instanceof String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
 	}
 
 	void twoArgJunit5AssertFalse() {
