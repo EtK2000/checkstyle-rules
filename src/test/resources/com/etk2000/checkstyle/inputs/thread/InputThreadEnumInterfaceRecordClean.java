@@ -15,5 +15,4 @@ interface InputThreadInterfaceClean {
 }
 
 @WorkerThread
-record InputThreadRecordClean() {
-}
+record InputThreadRecordClean() {}

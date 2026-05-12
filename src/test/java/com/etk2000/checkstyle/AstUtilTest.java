@@ -753,7 +753,6 @@ public class AstUtilTest {
 	public void testFindNewClassTypeArgumentsConstructorLevelSkipped() throws Exception {
 		final var ast = parseSource("class T { <U> T(U arg) {} void f() { var x = new <String>T(\"a\"); } }");
 		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
-		// constructor-level <String> should NOT be returned
 		assertNull(AstUtil.findNewClassTypeArguments(literalNew));
 	}
 
@@ -763,7 +762,6 @@ public class AstUtilTest {
 				"import java.util.ArrayList;\nclass T { <U> T(U arg) {} void f() { var x = new <String>ArrayList<Object>(\"a\"); } }"
 		);
 		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
-		// should return the class-level <Object>, not the constructor-level <String>
 		final var typeArgs = AstUtil.findNewClassTypeArguments(literalNew);
 		assertTrue(typeArgs != null && typeArgs.findFirstToken(TokenTypes.TYPE_ARGUMENT) != null);
 		final var typeArg = typeArgs.findFirstToken(TokenTypes.TYPE_ARGUMENT);
@@ -801,6 +799,66 @@ public class AstUtilTest {
 		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
 		final var typeArgs = AstUtil.findNewClassTypeArguments(literalNew);
 		assertTrue(typeArgs != null && typeArgs.findFirstToken(TokenTypes.TYPE_ARGUMENT) != null);
+	}
+
+	@Test
+	public void testFirstLineAnnotationOnEarlierLine() throws Exception {
+		final var ast = parseSource("class T {\n\t@Deprecated\n\tint x;\n}");
+		final var varDef = requireNonNull(findFirst(ast, TokenTypes.VARIABLE_DEF));
+		assertEquals(2, AstUtil.firstLine(varDef));
+	}
+
+	@Test
+	public void testFirstLineAnnotationSameLine() throws Exception {
+		final var ast = parseSource("class T {\n\t@Deprecated int x;\n}");
+		final var varDef = requireNonNull(findFirst(ast, TokenTypes.VARIABLE_DEF));
+		assertEquals(2, AstUtil.firstLine(varDef));
+	}
+
+	@Test
+	public void testFirstLineDeepTree() throws Exception {
+		final var sb = new StringBuilder("class T { int f() { return 0");
+		for (var i = 0; i < 500; ++i)
+			sb.append("\n\t\t\t+ ").append(i);
+		sb.append("; } }");
+		final var ast = parseSource(sb.toString());
+		final var exprStart = requireNonNull(findFirst(ast, TokenTypes.LITERAL_RETURN));
+		assertEquals(1, AstUtil.firstLine(exprStart));
+	}
+
+	@Test
+	public void testFirstLineGrandchildEarliest() throws Exception {
+		final var ast = parseSource("@Deprecated\nclass T {\n\tvoid f() {}\n}");
+		final var classDef = requireNonNull(findFirst(ast, TokenTypes.CLASS_DEF));
+		assertEquals(1, AstUtil.firstLine(classDef));
+	}
+
+	@Test
+	public void testFirstLineMultiLineMethodCall() throws Exception {
+		final var ast = parseSource("class T {\n\tvoid f() {\n\t\tg(\n\t\t\t1,\n\t\t\t2\n\t\t);\n\t}\n\tvoid g(int a, int b) {}\n}");
+		final var methodCall = requireNonNull(findFirst(ast, TokenTypes.METHOD_CALL));
+		assertEquals(3, AstUtil.firstLine(methodCall));
+	}
+
+	@Test
+	public void testFirstLineMultipleStackedAnnotations() throws Exception {
+		final var ast = parseSource("class T {\n\t@Deprecated\n\t@SuppressWarnings(\"x\")\n\tint x;\n}");
+		final var varDef = requireNonNull(findFirst(ast, TokenTypes.VARIABLE_DEF));
+		assertEquals(2, AstUtil.firstLine(varDef));
+	}
+
+	@Test
+	public void testFirstLineSameLine() throws Exception {
+		final var ast = parseSource("class T { int x; }");
+		final var varDef = requireNonNull(findFirst(ast, TokenTypes.VARIABLE_DEF));
+		assertEquals(1, AstUtil.firstLine(varDef));
+	}
+
+	@Test
+	public void testFirstLineSingleLeaf() throws Exception {
+		final var ast = parseSource("class T { int x; }");
+		final var ident = requireNonNull(findFirst(ast, TokenTypes.IDENT));
+		assertEquals(ident.getLineNo(), AstUtil.firstLine(ident));
 	}
 
 	@Test
@@ -1176,9 +1234,48 @@ public class AstUtilTest {
 	}
 
 	@Test
+	public void testLastLineDeepTree() throws Exception {
+		final var sb = new StringBuilder("class T { int f() { return 0");
+		for (var i = 0; i < 500; ++i)
+			sb.append("\n\t\t\t+ ").append(i);
+		sb.append("; } }");
+		final var ast = parseSource(sb.toString());
+		final var ret = requireNonNull(findFirst(ast, TokenTypes.LITERAL_RETURN));
+		assertEquals(501, AstUtil.lastLine(ret));
+	}
+
+	@Test
 	public void testLastLineMultiLine() {
 		final var method = findMethod(root, "multiLine");
 		assertEquals(42, AstUtil.lastLine(method));
+	}
+
+	@Test
+	public void testLastLineMultiLineAnnotation() throws Exception {
+		final var ast = parseSource("class T {\n\t@SuppressWarnings(\n\t\t\t\"x\"\n\t)\n\tint y;\n}");
+		final var annotation = requireNonNull(findFirst(ast, TokenTypes.ANNOTATION));
+		assertEquals(4, AstUtil.lastLine(annotation));
+	}
+
+	@Test
+	public void testLastLineMultiLineMethodCall() throws Exception {
+		final var ast = parseSource("class T {\n\tvoid f() {\n\t\tg(\n\t\t\t1,\n\t\t\t2\n\t\t);\n\t}\n\tvoid g(int a, int b) {}\n}");
+		final var methodCall = requireNonNull(findFirst(ast, TokenTypes.METHOD_CALL));
+		assertEquals(6, AstUtil.lastLine(methodCall));
+	}
+
+	@Test
+	public void testLastLineNestedClass() throws Exception {
+		final var ast = parseSource("class T {\n\tclass U {\n\t\tint a;\n\t\tint b;\n\t}\n}");
+		final var outer = requireNonNull(findFirst(ast, TokenTypes.CLASS_DEF));
+		assertEquals(6, AstUtil.lastLine(outer));
+	}
+
+	@Test
+	public void testLastLineSameLineTie() throws Exception {
+		final var ast = parseSource("class T { void f() { int x; } }");
+		final var method = requireNonNull(findFirst(ast, TokenTypes.METHOD_DEF));
+		assertEquals(1, AstUtil.lastLine(method));
 	}
 
 	@Test

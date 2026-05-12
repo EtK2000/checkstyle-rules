@@ -12,18 +12,19 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 class PreferExactAssertionFixer implements CheckstyleFixer {
-	private record CallFix(int startLine, int endLine, @Nonnull List<String> replacement,
-	                       @Nonnull String replacementMethod, boolean qualified) {
-	}
+	private record CallFix(
+			int startLine,
+			int endLine,
+			@Nonnull List<String> replacement,
+			@Nonnull String replacementMethod,
+			boolean qualified
+	) {}
 
-	private record ImportLine(@Nonnull String fqn, boolean staticImport, boolean wildcard) {
-	}
+	private record ImportLine(@Nonnull String fqn, boolean staticImport, boolean wildcard) {}
 
-	private record NegationResult(@Nonnull String content, boolean negated) {
-	}
+	private record NegationResult(@Nonnull String content, boolean negated) {}
 
-	private record RewrittenArgs(@Nonnull String replacementMethod, @Nonnull String newArgs) {
-	}
+	private record RewrittenArgs(@Nonnull String replacementMethod, @Nonnull String newArgs) {}
 
 	/**
 	 * Matches an {@code import [static] FQN[.*];} line tolerantly: accepts arbitrary

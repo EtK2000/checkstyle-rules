@@ -10,5 +10,4 @@ enum InputNoBlankLineAfterClassBraceCleanEnum {
 	VALUE
 }
 
-record InputNoBlankLineAfterClassBraceCleanRecord(int x) {
-}
+record InputNoBlankLineAfterClassBraceCleanRecord(int x) {}

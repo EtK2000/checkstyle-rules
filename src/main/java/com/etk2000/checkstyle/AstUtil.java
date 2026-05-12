@@ -22,7 +22,7 @@ class AstUtil {
 		if (ident != null)
 			return ident.getText();
 
-		// qualified name like @androidx.annotation.NonNull — use last segment
+		// qualified name like @androidx.annotation.NonNull, use last segment
 		final var dot = annotation.findFirstToken(TokenTypes.DOT);
 		if (dot != null) {
 			var last = dot.getFirstChild();
@@ -452,7 +452,6 @@ class AstUtil {
 	@CheckReturnValue
 	@Nonnull
 	static String dottedName(@Nonnull DetailAST dot) {
-		// Walk left-child DOT chain iteratively to collect segments.
 		final var segments = new ArrayList<String>();
 		var current = dot;
 		while (current.getType() == TokenTypes.DOT) {
@@ -645,6 +644,22 @@ class AstUtil {
 	}
 
 	@CheckReturnValue
+	static int firstLine(@Nonnull DetailAST ast) {
+		var first = ast.getLineNo();
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(ast);
+		while (!stack.isEmpty()) {
+			final var node = stack.pop();
+			final var line = node.getLineNo();
+			if (line < first)
+				first = line;
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+				stack.push(child);
+		}
+		return first;
+	}
+
+	@CheckReturnValue
 	@Nullable
 	private static String getMethodName(@Nonnull DetailAST dot) {
 		var last = dot.getFirstChild();
@@ -675,12 +690,9 @@ class AstUtil {
 			return null;
 
 		final var receiverName = receiver.getText();
-
-		// check if receiver starts with uppercase (likely a class name for static calls)
 		if (Character.isUpperCase(receiverName.charAt(0)))
 			return receiverName;
 
-		// look up the variable declaration to find its type
 		return resolveVariableType(methodCall, receiverName);
 	}
 
@@ -700,7 +712,6 @@ class AstUtil {
 		if (simple != null)
 			return simple;
 
-		// try resolving chained method calls: receiver is itself a METHOD_CALL
 		final var firstChild = methodCall.getFirstChild();
 		if (firstChild == null || firstChild.getType() != TokenTypes.DOT)
 			return null;
@@ -709,11 +720,10 @@ class AstUtil {
 		if (receiver == null || receiver.getType() != TokenTypes.METHOD_CALL)
 			return null;
 
-		// recursively resolve the inner call's receiver type
 		final var innerReceiverType = getReceiverTypeName(receiver, packageName, imports);
 		if (innerReceiverType == null) {
-			// bare call in the same class (e.g. requireView().method())
-			// can't resolve without knowing the enclosing class's own type
+			// bare call in the same class (e.g. requireView().method()): can't
+			// resolve without knowing the enclosing class's own type
 			return null;
 		}
 
@@ -721,7 +731,6 @@ class AstUtil {
 		if (innerFqcn == null)
 			return null;
 
-		// get the inner method's name from the DOT of the inner METHOD_CALL
 		final var innerDot = receiver.getFirstChild();
 		if (innerDot == null || innerDot.getType() != TokenTypes.DOT)
 			return null;
@@ -730,7 +739,6 @@ class AstUtil {
 		if (innerMethodName == null)
 			return null;
 
-		// resolve the return type of the inner method
 		return ReflectionUtil.getMethodReturnTypeName(innerFqcn, innerMethodName);
 	}
 
@@ -801,18 +809,15 @@ class AstUtil {
 
 		var s = value;
 
-		// strip trailing type suffix (D/F/L/d/f/l)
 		final var lastChar = s.charAt(s.length() - 1);
 		if (lastChar == 'D' || lastChar == 'F' || lastChar == 'L'
 				|| lastChar == 'd' || lastChar == 'f' || lastChar == 'l')
 			s = s.substring(0, s.length() - 1);
 
-		// strip underscores
 		s = s.replace("_", "");
 		if (s.isEmpty())
 			return false;
 
-		// strip hex/binary prefix
 		if (s.startsWith("0x") || s.startsWith("0X")
 				|| s.startsWith("0b") || s.startsWith("0B"))
 			s = s.substring(2);
@@ -966,7 +971,6 @@ class AstUtil {
 				}
 			}
 
-			// check method/constructor parameters
 			if (scope.getType() == TokenTypes.METHOD_DEF || scope.getType() == TokenTypes.CTOR_DEF) {
 				final var params = scope.findFirstToken(TokenTypes.PARAMETERS);
 				if (params != null) {

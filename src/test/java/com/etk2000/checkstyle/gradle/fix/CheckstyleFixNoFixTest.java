@@ -26,8 +26,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 
 public class CheckstyleFixNoFixTest {
-	record FixOutput(@Nonnull String content, @Nonnull ApplyFixesResult result) {
-	}
+	record FixOutput(@Nonnull String content, @Nonnull ApplyFixesResult result) {}
 
 	@TempDir
 	Path tempDir;

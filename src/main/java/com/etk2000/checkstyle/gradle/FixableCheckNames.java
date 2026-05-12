@@ -61,6 +61,7 @@ final class FixableCheckNames {
 			"com.etk2000.checkstyle.PreferStandardCharsetsCheck",
 			"com.etk2000.checkstyle.PreferStaticImportCheck",
 			"com.etk2000.checkstyle.PreferVarCheck",
+			"com.etk2000.checkstyle.RecordFormattingCheck",
 			"com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck",
 			"com.etk2000.checkstyle.RedundantArrayCreationCheck",
 			"com.etk2000.checkstyle.RedundantEqualityBranchCheck",

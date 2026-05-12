@@ -34,8 +34,7 @@ class InterfaceShadowHost {
 }
 
 class RecordShadowHost {
-	record Predicate() {
-	}
+	record Predicate() {}
 
 	boolean f(Object a, Object b) {
 		return Predicate.not(a) || Predicate.not(b);

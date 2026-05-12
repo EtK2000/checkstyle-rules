@@ -25,6 +25,7 @@ import com.etk2000.checkstyle.PreferSpecificApiCheck;
 import com.etk2000.checkstyle.PreferStandardCharsetsCheck;
 import com.etk2000.checkstyle.PreferStaticImportCheck;
 import com.etk2000.checkstyle.PreferVarCheck;
+import com.etk2000.checkstyle.RecordFormattingCheck;
 import com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck;
 import com.etk2000.checkstyle.RedundantArrayCreationCheck;
 import com.etk2000.checkstyle.RedundantEqualityBranchCheck;
@@ -74,8 +75,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			int fixCount,
 			boolean needsSecondPass,
 			@Nonnull Map<String, List<String>> skippedReasons
-	) {
-	}
+	) {}
 
 	interface Params extends WorkParameters {
 		Property<Boolean> getDryRun();
@@ -147,6 +147,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				Map.entry(PreferStandardCharsetsCheck.class.getName(), new PreferStandardCharsetsFixer()),
 				Map.entry(PreferStaticImportCheck.class.getName(), new PreferStaticImportFixer()),
 				Map.entry(PreferVarCheck.class.getName(), new PreferVarFixer()),
+				Map.entry(RecordFormattingCheck.class.getName(), new RecordFormattingFixer()),
 				Map.entry(RedundantAnnotationSyntaxCheck.class.getName(), new RedundantAnnotationSyntaxFixer()),
 				Map.entry(RedundantArrayCreationCheck.class.getName(), new RedundantArrayCreationFixer()),
 				Map.entry(RedundantEqualityBranchCheck.class.getName(), new RedundantEqualityBranchFixer()),
@@ -475,7 +476,6 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 	 * Returns the number of imports added.
 	 */
 	static int insertMissingImports(@Nonnull List<String> lines, @Nonnull Set<String> fqns) {
-		// separate static and regular imports
 		final var regularToAdd = new TreeSet<String>();
 		final var staticToAdd = new TreeSet<String>();
 		for (var fqn : fqns) {
@@ -515,7 +515,6 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 
 		var addedStatic = 0;
 
-		// insert static imports
 		if (!staticToAdd.isEmpty()) {
 			if (lastStaticImportIdx >= 0) {
 				// existing static group: insert within it (blank-line separator already present)
@@ -583,7 +582,6 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				final var importLine = "import " + fqn + ";";
 				final var targetPrefix = "import " + fqn.substring(0, fqn.lastIndexOf('.') + 1);
 
-				// find the same-package group boundaries
 				var groupStart = -1;
 				var groupEnd = -1;
 				for (var i = 0; i <= lastImportIdx; ++i) {
@@ -646,8 +644,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		if (allSkippedReasons.isEmpty())
 			return;
 
-		record ReasonCount(@Nonnull String check, @Nonnull String reason, int count) {
-		}
+		record ReasonCount(@Nonnull String check, @Nonnull String reason, int count) {}
 
 		final var entries = new ArrayList<ReasonCount>();
 		for (var entry : allSkippedReasons.entrySet()) {

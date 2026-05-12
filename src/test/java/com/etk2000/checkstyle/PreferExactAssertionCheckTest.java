@@ -18,8 +18,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 public class PreferExactAssertionCheckTest {
-	private record Expected(int line, String message) {
-	}
+	private record Expected(int line, String message) {}
 
 	private static final String DIR = "exactassertion/";
 	private static final String MSG_PREFIX = "Use a dedicated assertion (e.g. 'assertEquals') instead of '";

@@ -8,8 +8,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 class FieldConsolidationFixer implements CheckstyleFixer {
-	private static final int MAX_LINE_LENGTH = 120;
-	private static final int WRAP_TAB_WIDTH = 4;
+	private static final int MAX_LINE_LENGTH = LineLength.MAX_LINE_LENGTH;
 
 	@CheckReturnValue
 	@Nonnull
@@ -286,14 +285,7 @@ class FieldConsolidationFixer implements CheckstyleFixer {
 
 	@CheckReturnValue
 	private static int tabExpandedLength(@Nonnull String line) {
-		var len = 0;
-		for (var i = 0; i < line.length(); ++i) {
-			if (line.charAt(i) == '\t')
-				len += WRAP_TAB_WIDTH - (len % WRAP_TAB_WIDTH);
-			else
-				++len;
-		}
-		return len;
+		return LineLength.tabExpandedLength(line);
 	}
 
 	@Nullable

@@ -8,8 +8,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 class AnnotationOwnLineFixer implements CheckstyleFixer {
-	private record EmbeddedResult(@Nonnull List<String> annotations, @Nonnull String prefix,
-			@Nonnull String remaining) {}
+	private record EmbeddedResult(
+			@Nonnull List<String> annotations,
+			@Nonnull String prefix,
+			@Nonnull String remaining
+	) {}
 
 	/**
 	 * Extracts annotations that appear after modifier keywords (e.g. {@code final @A var x}).
@@ -110,8 +113,6 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 				replacement.add(indent + declarationPart);
 			return new FixResult(lineIndex, lineIndex, replacement);
 		}
-
-		// single annotation on its own line
 
 		// case 2: blank line below (possibly after comment lines) - remove blank lines
 		{

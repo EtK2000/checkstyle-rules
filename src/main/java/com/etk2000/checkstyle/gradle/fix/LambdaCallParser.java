@@ -15,8 +15,7 @@ class LambdaCallParser {
 	/**
 	 * Position within a list of source lines.
 	 */
-	record Location(int line, int col) {
-	}
+	record Location(int line, int col) {}
 
 	/**
 	 * Result of a single {@link ScanState#advance} step.

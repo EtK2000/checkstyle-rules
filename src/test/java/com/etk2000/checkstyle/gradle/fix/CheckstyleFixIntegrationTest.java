@@ -27,8 +27,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 public class CheckstyleFixIntegrationTest {
-	record FixOutput(@Nonnull String content, @Nonnull ApplyFixesResult result) {
-	}
+	record FixOutput(@Nonnull String content, @Nonnull ApplyFixesResult result) {}
 
 	private int verifyCleanCallCount;
 
@@ -1191,7 +1190,6 @@ public class CheckstyleFixIntegrationTest {
 		Files.writeString(file.toPath(), "enum Color {\n\tRED,\n\tGREEN,\n}");
 
 		final var output = runFixAndGetResult(file);
-		// FieldSortingFixer sorts GREEN before RED; trailing comma fixer removes the comma
 		assertEquals("enum Color {\n\tGREEN,\n\tRED\n}", output.content());
 		assertEquals(2, output.result().fixCount());
 		assertFalse(output.result().needsSecondPass());
@@ -2047,8 +2045,6 @@ public class CheckstyleFixIntegrationTest {
 
 	@Test
 	public void testJitInefficiencyStringConcatInLoopFieldThis() throws Exception {
-		// Constructor parameter `f` shadows the field, so `this.f` is required
-		// (NoUnnecessaryThisCheck preserves it). This isolates the JIT fixer behavior.
 		final var file = tempDir.resolve("JitConcatField.java").toFile();
 		final var input = "import java.util.List;\nclass T {\n\tString f;\n\tT(List<String> list, String f) {\n\t\tthis.f = f;\n\t\tfor (var x : list)\n\t\t\tthis.f = this.f + x;\n\t}\n}";
 		Files.writeString(file.toPath(), input);
@@ -2359,8 +2355,6 @@ public class CheckstyleFixIntegrationTest {
 
 	@Test
 	public void testPreferBulkOperationArrayFillSourceNameStartsWithLength() throws Exception {
-		// End-to-end: source array named `lengthValues`. The `.length` substring matcher
-		// must not match inside the identifier `lengthValues`.
 		final var file = tempDir.resolve("BulkFillLengthName.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f(int[] lengthValues) {\n\t\tfor (var i = 0; i < lengthValues.length; ++i)\n\t\t\tlengthValues[i] = 0;\n\t}\n}");
 
@@ -2375,8 +2369,6 @@ public class CheckstyleFixIntegrationTest {
 
 	@Test
 	public void testPreferBulkOperationArrayFillUnaryPlusValueContainsBracket() throws Exception {
-		// End-to-end: UNARY_PLUS wrapping an INDEX_OP is a pure expression, but the top
-		// token isn't INDEX_OP so the fill branch runs. Fixer dispatch must route to fill.
 		final var file = tempDir.resolve("BulkFillUnaryPlusBracket.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f(int[] arr, int[] other) {\n\t\tfor (var i = 0; i < arr.length; ++i)\n\t\t\tarr[i] = +other[0];\n\t}\n}");
 
@@ -2391,9 +2383,6 @@ public class CheckstyleFixIntegrationTest {
 
 	@Test
 	public void testPreferBulkOperationArrayFillValueContainsBracket() throws Exception {
-		// End-to-end guard: a fill value containing `[` must NOT be misdispatched to
-		// `fixArrayCopy` (which would produce a no-op self-copy). Regression for the
-		// dispatch bug exposed by `arrayFillDeeplyNestedConstant`.
 		final var file = tempDir.resolve("BulkFillBracket.java").toFile();
 		Files.writeString(file.toPath(), "class T {\n\tvoid f(int[] arr, int[] a, int[] b) {\n\t\tfor (var i = 0; i < arr.length; ++i)\n\t\t\tarr[i] = -a[b[0]];\n\t}\n}");
 
@@ -2464,10 +2453,6 @@ public class CheckstyleFixIntegrationTest {
 
 	@Test
 	public void testPreferBulkOperationForEachLambdaBlockBodyBlockCommentWrongTarget() throws Exception {
-		// End-to-end guard for Gap #10: a multi-line block comment containing a
-		// misleading `.put(` on a different target must not confuse the fixer. The
-		// real body uses `real.put`; the comment mentions `target.put`. Output must
-		// be `real.putAll(source);`.
 		final var file = tempDir.resolve("BulkBlockCommentWrongTarget.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.Map;\nclass T {\n\tvoid f(Map<String, String> source, Map<String, String> real) {\n\t\tsource.forEach((k, v) -> {\n\t\t\t/* future cleanup:\n\t\t\t   target.put(k, v);\n\t\t\t*/\n\t\t\treal.put(k, v);\n\t\t});\n\t}\n}");
 
@@ -3683,8 +3668,6 @@ public class CheckstyleFixIntegrationTest {
 				"import static java.util.Objects.requireNonNull;\n\nclass T {\n\tbyte[] run(String s) throws Exception {\n\t\treturn requireNonNull(s).getBytes(\"UTF-8\");\n\t}\n}"
 		);
 
-		// fixer adds java.nio.charset.StandardCharsets (regular) to a file with
-		// only static imports; the regular should go after the static group
 		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import static java.util.Objects.requireNonNull;\n\nimport java.nio.charset.StandardCharsets;\nclass T {\n\tbyte[] run(String s) throws Exception {\n\t\treturn requireNonNull(s).getBytes(StandardCharsets.UTF_8);\n\t}\n}",
@@ -3724,8 +3707,6 @@ public class CheckstyleFixIntegrationTest {
 
 	@Test
 	public void testPreferStaticImportChainedCalls() throws Exception {
-		// 4 violations on a single line (`Predicate.not(Objects.requireNonNull(...))` x2);
-		// fixer must strip both `Predicate.` and `Objects.` correctly via column-descending order.
 		final var file = tempDir.resolve("StaticImpChained.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.List;\nimport java.util.Objects;\nimport java.util.function.Predicate;\n\nclass T {\n\tList<String> f(List<String> list, String p, String s) {\n\t\treturn list.stream().filter(Predicate.not(Objects.requireNonNull(p)::startsWith)).filter(Predicate.not(Objects.requireNonNull(s)::endsWith)).toList();\n\t}\n}");
 
@@ -4044,6 +4025,122 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testRecordFormattingBraceNewline() throws Exception {
+		final var file = tempDir.resolve("RecBraceNewline.java").toFile();
+		Files.writeString(file.toPath(), "record R(int a)\n{}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("record R(int a) {}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRecordFormattingComponentCollapseMixed() throws Exception {
+		final var file = tempDir.resolve("RecCompCollapse.java").toFile();
+		Files.writeString(file.toPath(), "record R(int a,\n\t\tint b) {}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("record R(int a, int b) {}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRecordFormattingComponentExpandWideLine() throws Exception {
+		final var file = tempDir.resolve("RecCompExpand.java").toFile();
+		Files.writeString(
+				file.toPath(),
+				"record WideRecord(int aaaaaaaaaa,\n\t\tint bbbbbbbbbb, int cccccccccc, int dddddddddd, int eeeeeeeeee, int ffffffffff, int gggggggggg, int hhhhhhhhhh) {}"
+		);
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"record WideRecord(\n\t\tint aaaaaaaaaa,\n\t\tint bbbbbbbbbb,\n\t\tint cccccccccc,\n\t\tint dddddddddd,\n\t\tint eeeeeeeeee,\n\t\tint ffffffffff,\n\t\tint gggggggggg,\n\t\tint hhhhhhhhhh\n) {}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRecordFormattingEmptyBodySplit() throws Exception {
+		final var file = tempDir.resolve("RecEmptySplit.java").toFile();
+		Files.writeString(file.toPath(), "record R(int a) {\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("record R(int a) {}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRecordFormattingImplementsMultiLine() throws Exception {
+		final var file = tempDir.resolve("RecImplMulti.java").toFile();
+		Files.writeString(file.toPath(), "interface Foo {}\nrecord R(int a) implements\n\t\tFoo\n{}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("interface Foo {}\nrecord R(int a) implements\n\t\tFoo {}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRecordFormattingImplementsNoSpace() throws Exception {
+		final var file = tempDir.resolve("RecImpl.java").toFile();
+		Files.writeString(file.toPath(), "interface Foo {}\nrecord R(int a) implements Foo{}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("interface Foo {}\nrecord R(int a) implements Foo {}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRecordFormattingNonEmptyBodySameLine() throws Exception {
+		final var file = tempDir.resolve("RecCuddled.java").toFile();
+		Files.writeString(file.toPath(), "record R(int a) { int b() { return a; } }");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("record R(int a) {\n\tint b() { return a; }\n}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRecordFormattingNoSpaceBeforeBrace() throws Exception {
+		final var file = tempDir.resolve("RecNoSpace.java").toFile();
+		Files.writeString(file.toPath(), "record R(int a){}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("record R(int a) {}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRecordFormattingTabBeforeBrace() throws Exception {
+		final var file = tempDir.resolve("RecTab.java").toFile();
+		Files.writeString(file.toPath(), "record R(int a)\t{}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("record R(int a) {}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testRecordFormattingTwoSpacesBeforeBrace() throws Exception {
+		final var file = tempDir.resolve("RecTwoSpace.java").toFile();
+		Files.writeString(file.toPath(), "record R(int a)  {}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals("record R(int a) {}", output.content());
+		assertEquals(1, output.result().fixCount());
+		assertFalse(output.result().needsSecondPass());
+	}
+
+	@Test
 	public void testRedundantArrayCreation() throws Exception {
 		final var file = tempDir.resolve("VarArgs.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.ArrayList;\nimport java.util.Collections;\n\nclass T {\n\tvoid f() {\n\t\tCollections.addAll(new ArrayList<>(), new String[]{\"a\", \"b\"});\n\t}\n}");
@@ -4160,8 +4257,6 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("Imp.java").toFile();
 		Files.writeString(file.toPath(), "import java.lang.String;\n\nclass T {\n\tString s;\n}");
 
-		// both RedundantImport and UnusedImports fire on java.lang.String, so
-		// the import line is deleted twice. The second delete removes the blank line
 		final var output = runFixAndGetResult(file);
 		assertEquals("class T {\n\tString s;\n}", output.content());
 		assertEquals(2, output.result().fixCount());
@@ -4173,8 +4268,6 @@ public class CheckstyleFixIntegrationTest {
 		final var file = tempDir.resolve("RedImpContig.java").toFile();
 		Files.writeString(file.toPath(), "import java.lang.String;\nimport java.util.List;\n\nclass T {\n\tList<String> s;\n}");
 
-		// both RedundantImport and UnusedImports fire on java.lang.String;
-		// the second same-line violation is suppressed so import java.util.List is preserved
 		final var output = runFixAndGetResult(file);
 		assertEquals("import java.util.List;\n\nclass T {\n\tList<String> s;\n}", output.content());
 		assertEquals(1, output.result().fixCount());
@@ -4194,8 +4287,6 @@ public class CheckstyleFixIntegrationTest {
 				"import java.io.File;\n\nimport java.lang.String;\n\nimport javax.annotation.Nonnull;\n\nclass T {\n\t@Nonnull\n\tFile f;\n\tString s;\n}"
 		);
 
-		// both RedundantImport and UnusedImports fire on java.lang.String;
-		// first delete collapses the blank below, second is suppressed
 		final var output = runFixAndGetResult(file);
 		assertEquals(
 				"import java.io.File;\n\nimport javax.annotation.Nonnull;\n\nclass T {\n\t@Nonnull\n\tFile f;\n\tString s;\n}",

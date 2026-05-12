@@ -33,7 +33,7 @@ class FieldSortingFixer implements CheckstyleFixer {
 
 	private record ParseResult(@Nonnull List<EnumEntry> entries, int blockStart, int blockEnd, @Nonnull String terminal) {}
 
-	private static final int MAX_LINE_LENGTH = 120;
+	private static final int MAX_LINE_LENGTH = LineLength.MAX_LINE_LENGTH;
 	private static final Pattern ANNOTATION_PREFIX_PATTERN = Pattern.compile(
 			"^(?:@\\w+(?:\\([^()]*(?:\\([^()]*\\)[^()]*)*\\))?\\s*)+"
 	);
@@ -899,7 +899,6 @@ class FieldSortingFixer implements CheckstyleFixer {
 		final var commentStart = findTrailingCommentStart(line);
 		if (commentStart < 0)
 			return line + sep;
-		// insert separator before the comment, preserving whitespace
 		final var beforeComment = line.substring(0, commentStart).stripTrailing();
 		final var commentPart = line.substring(commentStart);
 		return beforeComment + sep + " " + commentPart;
@@ -1021,7 +1020,6 @@ class FieldSortingFixer implements CheckstyleFixer {
 				if (blockStart < 0)
 					blockStart = i;
 				leading.add(line);
-				// use string/char/comment-aware paren tracking
 				var annotParenDepth = structuralParenDelta(line);
 				++i;
 				while (annotParenDepth > 0 && i < lines.size()) {
@@ -1466,14 +1464,7 @@ class FieldSortingFixer implements CheckstyleFixer {
 
 	@CheckReturnValue
 	private static int tabExpandedLength(@Nonnull String line) {
-		var len = 0;
-		for (var i = 0; i < line.length(); ++i) {
-			if (line.charAt(i) == '\t')
-				len += 4 - (len % 4);
-			else
-				++len;
-		}
-		return len;
+		return LineLength.tabExpandedLength(line);
 	}
 
 	@CheckReturnValue

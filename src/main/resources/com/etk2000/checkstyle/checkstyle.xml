@@ -188,6 +188,9 @@
 		<!-- Custom: Prefer record classes over classes with all final fields -->
 		<module name="com.etk2000.checkstyle.PreferRecordCheck" />
 
+		<!-- Custom: Record component layout and brace formatting -->
+		<module name="com.etk2000.checkstyle.RecordFormattingCheck" />
+
 		<!-- Custom: Prefer literal suffix over widening cast in arithmetic -->
 		<module name="com.etk2000.checkstyle.PreferLiteralSuffixCheck" />
 

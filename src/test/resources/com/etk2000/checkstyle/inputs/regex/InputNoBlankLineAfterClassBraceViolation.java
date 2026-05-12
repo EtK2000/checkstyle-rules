@@ -15,4 +15,5 @@ enum InputNoBlankLineAfterClassBraceEnumViolation {
 
 record InputNoBlankLineAfterClassBraceRecordViolation(int x) {
 
-} // violation: blank line after record brace
+	int y() { return x; } // violation: blank line after record brace
+}
