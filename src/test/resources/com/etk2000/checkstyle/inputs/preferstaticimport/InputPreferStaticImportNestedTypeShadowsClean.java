@@ -2,9 +2,6 @@ package com.etk2000.checkstyle.inputs.preferstaticimport;
 
 import java.util.function.*;
 
-// Exercises every token type accepted by walkForLocalShadows as a nested
-// shadow: ENUM_DEF, INTERFACE_DEF, RECORD_DEF, ANNOTATION_DEF.
-// (CLASS_DEF is covered by InputPreferStaticImportSameFileShadowClean.)
 class InputPreferStaticImportNestedTypeShadowsClean {
 	@interface Predicate {
 	}

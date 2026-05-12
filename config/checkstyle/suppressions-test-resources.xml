@@ -113,11 +113,9 @@
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]specificapi[\\/]" />
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]unnecessarythis[\\/]" />
 	<suppress checks="EmptyLineSeparator" files="inputs[\\/]annotationownline[\\/]" />
-	<suppress checks="EmptyLineSeparator" files="inputs[\\/]redundantcast[\\/]" />
 	<suppress checks="EmptyLineSeparator" files="inputs[\\/]redundantsuffix[\\/]" />
 	<suppress checks="EmptyLineSeparator" files="inputs[\\/]regex[\\/]" />
 	<suppress checks="EmptySwitchCheck" files="inputs[\\/]switchorder[\\/]" />
-	<suppress checks="ExplicitInitialization" files="inputs[\\/]preferlambda[\\/]" />
 	<suppress checks="ExplicitInitialization" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="ExplicitInitialization" files="inputs[\\/]redundantsuffix[\\/]" />
 	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
@@ -127,7 +125,6 @@
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]multilinecall[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]preferrecord[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]redundantsuffix[\\/]" />
-	<suppress checks="FieldSortingCheck" files="inputs[\\/]switchorder[\\/]" />
 	<suppress checks="IllegalSymbol" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="InstanceofBeforeCastCheck" files="inputs[\\/]patterninstanceof[\\/]" />
 	<suppress checks="NoBlankLineBetweenSingleCasesCheck" files="inputs[\\/]switchorder[\\/]" />
@@ -155,7 +152,6 @@
 	<suppress checks="PreferVarCheck" files="inputs[\\/]astutil[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]controlflow[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]emptybody[\\/]" />
-	<suppress checks="PreferVarCheck" files="inputs[\\/]prefix[\\/]" />
 	<suppress checks="RedundantCastCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]literalsuffix[\\/]" />

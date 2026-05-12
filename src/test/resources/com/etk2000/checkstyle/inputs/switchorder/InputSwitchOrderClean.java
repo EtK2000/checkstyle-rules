@@ -1,11 +1,10 @@
 package com.etk2000.checkstyle.inputs.switchorder;
 
 class InputSwitchOrderClean {
+	static final char CHAR_CONST = 'x';
 	static final int ALPHA = 1;
 	static final int BETA = 2;
-	static final char CHAR_CONST = 'x';
 
-	// alpha sorted
 	String alphaSorted(String s) {
 		return switch (s) {
 			case "alpha" -> "a";
@@ -15,7 +14,6 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// string digit content before letter content (mixed case)
 	String alphaWithDigits(String s) {
 		return switch (s) {
 			case "0123" -> "num";
@@ -26,7 +24,6 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// binary literals sorted numerically
 	int binarySorted(int x) {
 		return switch (x) {
 			case 0b0001 -> 1;
@@ -36,7 +33,6 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// char digit literals before letter literals (including uppercase)
 	int charDigitBeforeLetter(char c) {
 		return switch (c) {
 			case '0' -> 0;
@@ -48,7 +44,6 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// named constant before digit and letter char literals
 	int charNamedBeforeDigitBeforeLetter(char c) {
 		return switch (c) {
 			case CHAR_CONST -> 99;
@@ -58,7 +53,6 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// comma-separated with named constant before numeric
 	int commaNamedBeforeNumeric(int x) {
 		return switch (x) {
 			case ALPHA, 100 -> 10;
@@ -66,7 +60,6 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// enhanced with comma-separated, internally sorted
 	int commaSorted(int x) {
 		return switch (x) {
 			case 1, 2 -> 10;
@@ -75,7 +68,6 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// comma-separated digit before letter chars
 	int commaSortedDigitBeforeLetter(char c) {
 		return switch (c) {
 			case '0', 'a' -> 1;
@@ -83,13 +75,11 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// empty switch
 	void emptySwitch(int x) {
 		switch (x) {
 		}
 	}
 
-	// qualified enum refs sorted by constant name
 	int enumSorted(Thread.State state) {
 		return switch (state) {
 			case BLOCKED -> 1;
@@ -99,7 +89,6 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// fall-through groups sorted by first label
 	int fallThroughSorted(int x) {
 		switch (x) {
 			case 1:
@@ -113,7 +102,6 @@ class InputSwitchOrderClean {
 		}
 	}
 
-	// hex literals sorted numerically
 	int hexSorted(int x) {
 		return switch (x) {
 			case 0x0A -> 10;
@@ -123,7 +111,6 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// long suffix sorted numerically
 	long longSuffixSorted(long x) {
 		return switch (x) {
 			case 1L -> 1;
@@ -133,7 +120,6 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// named constants before numbers
 	int namedBeforeNumeric(int x) {
 		switch (x) {
 			case ALPHA:
@@ -147,7 +133,6 @@ class InputSwitchOrderClean {
 		}
 	}
 
-	// negative binary, hex, octal sorted numerically
 	int negativeMixedRadix(int x) {
 		return switch (x) {
 			case -0xFF -> -255;
@@ -160,7 +145,6 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// numeric sorted
 	int numericSorted(int x) {
 		switch (x) {
 			case -2:
@@ -178,7 +162,6 @@ class InputSwitchOrderClean {
 		}
 	}
 
-	// octal literals sorted numerically
 	int octalSorted(int x) {
 		return switch (x) {
 			case 010 -> 8;
@@ -188,7 +171,6 @@ class InputSwitchOrderClean {
 		};
 	}
 
-	// only default
 	int onlyDefault(int x) {
 		switch (x) {
 			default:
@@ -196,7 +178,6 @@ class InputSwitchOrderClean {
 		}
 	}
 
-	// underscore numeric literals sorted numerically
 	int underscoreSorted(int x) {
 		return switch (x) {
 			case 100 -> 100;

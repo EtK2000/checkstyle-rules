@@ -15,7 +15,7 @@ class InputPreferLambdaClean {
 
 	void complexAnonymous() {
 		final var r = new Runnable() {
-			int count = 0;
+			int count;
 
 			@Override
 			public void run() {
