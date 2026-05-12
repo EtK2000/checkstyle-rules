@@ -121,6 +121,87 @@ public class CheckstyleFixUtilTest {
 	}
 
 	@Test
+	public void testApplyFixesClearsFilePathEvenWhenFixerThrows() {
+		FixContext.clearFilePath();
+		final var event = createEvent(1, SeverityLevel.ERROR, null, Object.class);
+		final var lines = new ArrayList<>(List.of("content"));
+		final CheckstyleFixer throwingFixer = (l, i, c) -> {
+			throw new RuntimeException("boom");
+		};
+		try {
+			CheckstyleFixAction.applyFixes(
+					lines, new ArrayList<>(List.of(event)), Map.of("java.lang.Object", throwingFixer), Map.of()
+			);
+		}
+		catch (RuntimeException ignored) {
+		}
+		assertNull(FixContext.getFilePath());
+	}
+
+	@Test
+	public void testApplyFixesEmptyViolationsLeavesFilePathUnchanged() {
+		FixContext.clearFilePath();
+		final var lines = new ArrayList<>(List.of("content"));
+		CheckstyleFixAction.applyFixes(lines, new ArrayList<>(), Map.of(), Map.of());
+		assertNull(FixContext.getFilePath());
+	}
+
+	@Test
+	public void testApplyFixesFilePathStaysSetAcrossMultipleViolations() {
+		FixContext.clearFilePath();
+		final var event1 = createEvent(1, SeverityLevel.ERROR, null, Object.class);
+		final var event2 = createEvent(2, SeverityLevel.ERROR, null, Object.class);
+		final var lines = new ArrayList<>(List.of("a", "b"));
+		final var seen = new ArrayList<String>();
+		final CheckstyleFixer recordingFixer = (l, i, c) -> {
+			seen.add(FixContext.getFilePath());
+			return null;
+		};
+		CheckstyleFixAction.applyFixes(
+				lines, new ArrayList<>(List.of(event1, event2)), Map.of("java.lang.Object", recordingFixer), Map.of()
+		);
+		assertEquals(List.of("Test.java", "Test.java"), seen);
+		assertNull(FixContext.getFilePath());
+	}
+
+	@Test
+	public void testApplyFixesLeavesFilePathUnsetWhenFirstFileNameIsNull() {
+		FixContext.clearFilePath();
+		final var violation = new Violation(
+				1, 0, "", "", null, SeverityLevel.ERROR, null, Object.class, "test"
+		);
+		final var event = new AuditEvent(new Object(), null, violation);
+		final var lines = new ArrayList<>(List.of("content"));
+		final String[] recorded = {"sentinel"};
+		final CheckstyleFixer recordingFixer = (l, i, c) -> {
+			recorded[0] = FixContext.getFilePath();
+			return null;
+		};
+		CheckstyleFixAction.applyFixes(
+				lines, new ArrayList<>(List.of(event)), Map.of("java.lang.Object", recordingFixer), Map.of()
+		);
+		assertNull(recorded[0]);
+		assertNull(FixContext.getFilePath());
+	}
+
+	@Test
+	public void testApplyFixesSetsFilePathDuringFixerCallAndClearsAfter() {
+		FixContext.clearFilePath();
+		final var event = createEvent(1, SeverityLevel.ERROR, null, Object.class);
+		final var lines = new ArrayList<>(List.of("content"));
+		final String[] recorded = {null};
+		final CheckstyleFixer recordingFixer = (l, i, c) -> {
+			recorded[0] = FixContext.getFilePath();
+			return null;
+		};
+		CheckstyleFixAction.applyFixes(
+				lines, new ArrayList<>(List.of(event)), Map.of("java.lang.Object", recordingFixer), Map.of()
+		);
+		assertEquals("Test.java", recorded[0]);
+		assertNull(FixContext.getFilePath());
+	}
+
+	@Test
 	public void testExtractCheckShortNameModuleIdPreferred() {
 		final var event = createEvent(1, SeverityLevel.ERROR, "NoDoubleBlankLines", Object.class);
 		final var lines = new ArrayList<>(List.of("line1"));

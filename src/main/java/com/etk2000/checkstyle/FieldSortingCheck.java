@@ -139,7 +139,7 @@ public class FieldSortingCheck extends AbstractCheck {
 	private static int chunkOf(@Nonnull DetailAST varDef) {
 		final var modifiers = varDef.findFirstToken(TokenTypes.MODIFIERS);
 		if (modifiers == null || modifiers.findFirstToken(TokenTypes.FINAL) == null)
-			return 2; // non-final
+			return 2;
 
 		return varDef.findFirstToken(TokenTypes.ASSIGN) != null ? 0 : 1;
 	}
@@ -184,15 +184,12 @@ public class FieldSortingCheck extends AbstractCheck {
 		final var aPrim = PRIMITIVES.contains(aBase);
 		final var bPrim = PRIMITIVES.contains(bBase);
 
-		// primitives before reference types
 		if (aPrim != bPrim)
 			return aPrim ? -1 : 1;
 
-		// same base type: sort by array depth (int before int[] before int[][])
 		if (aBase.equals(bBase))
 			return Integer.compare(arrayDepth(a), arrayDepth(b));
 
-		// alphabetical by base type name
 		return aBase.compareToIgnoreCase(bBase);
 	}
 
@@ -356,23 +353,19 @@ public class FieldSortingCheck extends AbstractCheck {
 			if (currChunk > prevChunk)
 				continue;
 
-			// same chunk: check dependencies
 			final var currName = fieldName(curr);
 			final var prevName = fieldName(prev);
 			final var currDeps = deps.get(currName);
 			final var prevDeps = deps.get(prevName);
 
-			// curr depends on prev: ordering is justified
 			if (currDeps != null && currDeps.contains(prevName))
 				continue;
 
-			// prev depends on curr: curr should be declared first
 			if (prevDeps != null && prevDeps.contains(currName)) {
 				log(prev, MSG_DEPENDENCY, prevName, currName);
 				continue;
 			}
 
-			// anonymous class initializers sort before non-anonymous
 			final var prevAnon = hasAnonymousClassInit(prev);
 			final var currAnon = hasAnonymousClassInit(curr);
 			if (prevAnon != currAnon) {
@@ -381,7 +374,6 @@ public class FieldSortingCheck extends AbstractCheck {
 				continue;
 			}
 
-			// compare types
 			final var prevType = typeName(prev);
 			final var currType = typeName(curr);
 			final var typeCmp = compareTypes(currType, prevType);

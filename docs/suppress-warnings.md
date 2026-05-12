@@ -6,10 +6,11 @@ entirely, and the auto-fix task never sees the violation.
 
 ## Supported keys
 
-| Key            | Check             | Effect                                                   |
-|----------------|-------------------|----------------------------------------------------------|
-| `FieldSorting` | FieldSortingCheck | Suppresses all field ordering and enum constant ordering |
-| `PreferRecord` | PreferRecordCheck | Suppresses the "should/can be a record" suggestion       |
+| Key                            | Check                           | Effect                                                                                          |
+|--------------------------------|---------------------------------|-------------------------------------------------------------------------------------------------|
+| `FieldSorting`                 | FieldSortingCheck               | Suppresses all field ordering and enum constant ordering                                        |
+| `PreferRecord`                 | PreferRecordCheck               | Suppresses the "should/can be a record" suggestion                                              |
+| `PreferStaticImportConstant`   | PreferStaticImportConstantCheck | Suppresses the redundant-constant-alias suggestion (placement: on the field or enclosing type)  |
 
 ## Annotation forms
 

@@ -24,6 +24,7 @@ import com.etk2000.checkstyle.PreferPrefixIncrementCheck;
 import com.etk2000.checkstyle.PreferSpecificApiCheck;
 import com.etk2000.checkstyle.PreferStandardCharsetsCheck;
 import com.etk2000.checkstyle.PreferStaticImportCheck;
+import com.etk2000.checkstyle.PreferStaticImportConstantCheck;
 import com.etk2000.checkstyle.PreferVarCheck;
 import com.etk2000.checkstyle.RecordFormattingCheck;
 import com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck;
@@ -146,6 +147,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				Map.entry(PreferSpecificApiCheck.class.getName(), new PreferSpecificApiFixer()),
 				Map.entry(PreferStandardCharsetsCheck.class.getName(), new PreferStandardCharsetsFixer()),
 				Map.entry(PreferStaticImportCheck.class.getName(), new PreferStaticImportFixer()),
+				Map.entry(PreferStaticImportConstantCheck.class.getName(), new PreferStaticImportConstantFixer()),
 				Map.entry(PreferVarCheck.class.getName(), new PreferVarFixer()),
 				Map.entry(RecordFormattingCheck.class.getName(), new RecordFormattingFixer()),
 				Map.entry(RedundantAnnotationSyntaxCheck.class.getName(), new RedundantAnnotationSyntaxFixer()),
@@ -190,58 +192,65 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		var fixed = 0;
 		var suppressedLine = -1;
 		var passedThrough = false;
-		for (var event : violations) {
-			final var checkName = extractCheckShortName(event);
-			final var fixer = resolveFixer(event, fixers, moduleIdFixers);
-			if (fixer == null) {
-				trackSkip(skippedReasons, checkName, SkipMessages.FIX_NO_FIXER);
-				continue;
-			}
-			if (event.getSeverityLevel() != SeverityLevel.ERROR) {
-				trackSkip(skippedReasons, checkName, SkipMessages.FIX_SEVERITY);
-				continue;
-			}
-			final var lineIndex = event.getLine() - 1;
-			if (lineIndex == suppressedLine) {
-				// after a prior delete, a blank line may shift into this position;
-				// allow deletion only once and only for DeleteLineFixer (e.g.
-				// RedundantImport + UnusedImports double-fire: first removes
-				// import, second removes leftover blank)
-				if (!passedThrough && lineIndex >= 0 && lineIndex < lines.size()
-						&& lines.get(lineIndex).isEmpty()
-						&& fixer instanceof DeleteLineFixer)
-					passedThrough = true;
-				else {
-					trackSkip(skippedReasons, checkName, SkipMessages.FIX_SUPPRESSED);
+		try {
+			if (!violations.isEmpty() && violations.getFirst().getFileName() != null)
+				FixContext.setFilePath(violations.getFirst().getFileName());
+			for (var event : violations) {
+				final var checkName = extractCheckShortName(event);
+				final var fixer = resolveFixer(event, fixers, moduleIdFixers);
+				if (fixer == null) {
+					trackSkip(skippedReasons, checkName, SkipMessages.FIX_NO_FIXER);
 					continue;
 				}
+				if (event.getSeverityLevel() != SeverityLevel.ERROR) {
+					trackSkip(skippedReasons, checkName, SkipMessages.FIX_SEVERITY);
+					continue;
+				}
+				final var lineIndex = event.getLine() - 1;
+				if (lineIndex == suppressedLine) {
+					// after a prior delete, a blank line may shift into this position;
+					// allow deletion only once and only for DeleteLineFixer (e.g.
+					// RedundantImport + UnusedImports double-fire: first removes
+					// import, second removes leftover blank)
+					if (!passedThrough && lineIndex >= 0 && lineIndex < lines.size()
+							&& lines.get(lineIndex).isEmpty()
+							&& fixer instanceof DeleteLineFixer)
+						passedThrough = true;
+					else {
+						trackSkip(skippedReasons, checkName, SkipMessages.FIX_SUPPRESSED);
+						continue;
+					}
+				}
+				else
+					passedThrough = false;
+				if (lineIndex < 0 || lineIndex >= lines.size()) {
+					trackSkip(skippedReasons, checkName, SkipMessages.FIX_BOUNDS);
+					continue;
+				}
+				final var charColumn = tabColumnToCharIndex(lines.get(lineIndex), event.getColumn() - 1);
+				final var attempt = fixer.fix(lines, lineIndex, charColumn);
+				if (attempt == null) {
+					trackSkip(skippedReasons, checkName, SkipMessages.FIX_NOT_FIXABLE);
+					continue;
+				}
+				if (attempt instanceof SkipResult(String reason)) {
+					trackSkip(skippedReasons, checkName, reason);
+					continue;
+				}
+				final var result = (FixResult) attempt;
+				if (result.endLine() >= result.startLine())
+					lines.subList(result.startLine(), result.endLine() + 1).clear();
+				lines.addAll(result.startLine(), result.replacement());
+				importsToAdd.addAll(result.importsToAdd());
+				// suppress next same-line violation when this fix removed content,
+				// since the line that shifted into this position is unrelated
+				suppressedLine = result.replacement().size() < result.endLine() - result.startLine() + 1
+						? lineIndex : -1;
+				++fixed;
 			}
-			else
-				passedThrough = false;
-			if (lineIndex < 0 || lineIndex >= lines.size()) {
-				trackSkip(skippedReasons, checkName, SkipMessages.FIX_BOUNDS);
-				continue;
-			}
-			final var charColumn = tabColumnToCharIndex(lines.get(lineIndex), event.getColumn() - 1);
-			final var attempt = fixer.fix(lines, lineIndex, charColumn);
-			if (attempt == null) {
-				trackSkip(skippedReasons, checkName, SkipMessages.FIX_NOT_FIXABLE);
-				continue;
-			}
-			if (attempt instanceof SkipResult(String reason)) {
-				trackSkip(skippedReasons, checkName, reason);
-				continue;
-			}
-			final var result = (FixResult) attempt;
-			if (result.endLine() >= result.startLine())
-				lines.subList(result.startLine(), result.endLine() + 1).clear();
-			lines.addAll(result.startLine(), result.replacement());
-			importsToAdd.addAll(result.importsToAdd());
-			// suppress next same-line violation when this fix removed content,
-			// since the line that shifted into this position is unrelated
-			suppressedLine = result.replacement().size() < result.endLine() - result.startLine() + 1
-					? lineIndex : -1;
-			++fixed;
+		}
+		finally {
+			FixContext.clearFilePath();
 		}
 
 		var needsSecondPass = false;

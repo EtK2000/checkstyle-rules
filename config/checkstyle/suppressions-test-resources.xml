@@ -72,6 +72,11 @@
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]specificapi[\\/]" />
 	<suppress checks="PreferStandardCharsetsCheck" files="inputs[\\/]standardcharsets[\\/]" />
 	<suppress checks="PreferStaticImportCheck" files="inputs[\\/]preferstaticimport[\\/]" />
+	<suppress checks="PreferStaticImportConstantCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="PreferStaticImportConstantCheck" files="inputs[\\/]standardcharsets[\\/]" />
+	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="JitInefficiencyCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
 	<suppress checks="RecordFormattingCheck" files="inputs[\\/]recordformatting[\\/]" />
 	<suppress checks="RedundantArrayCreationCheck" files="inputs[\\/]redundantarraycreation[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]redundantarraycreation[\\/]" />

@@ -166,6 +166,9 @@
 			<property name="minSdk" value="${minSdk}" />
 		</module>
 
+		<!-- Custom: Prefer static import over a redundant constant alias field -->
+		<module name="com.etk2000.checkstyle.PreferStaticImportConstantCheck" />
+
 		<!-- Custom: Prefer bulk operations over element-by-element loops -->
 		<module name="com.etk2000.checkstyle.PreferBulkOperationCheck" />
 

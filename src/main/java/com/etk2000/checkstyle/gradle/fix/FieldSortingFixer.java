@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import static com.etk2000.checkstyle.gradle.fix.LineLength.MAX_LINE_LENGTH;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -33,7 +35,6 @@ class FieldSortingFixer implements CheckstyleFixer {
 
 	private record ParseResult(@Nonnull List<EnumEntry> entries, int blockStart, int blockEnd, @Nonnull String terminal) {}
 
-	private static final int MAX_LINE_LENGTH = LineLength.MAX_LINE_LENGTH;
 	private static final Pattern ANNOTATION_PREFIX_PATTERN = Pattern.compile(
 			"^(?:@\\w+(?:\\([^()]*(?:\\([^()]*\\)[^()]*)*\\))?\\s*)+"
 	);

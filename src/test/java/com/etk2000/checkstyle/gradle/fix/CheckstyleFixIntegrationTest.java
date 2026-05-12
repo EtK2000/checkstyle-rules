@@ -3734,6 +3734,138 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
+	public void testPreferStaticImportConstantAliasAloneInChunk() throws Exception {
+		final var file = tempDir.resolve("StaticImpConstAlone.java").toFile();
+		Files.writeString(file.toPath(), "import foo.Foo;\n\nclass T {\n\tprivate int a;\n\n\tprivate static final int X = Foo.X;\n\n\tprivate int b;\n\n\tint f() {\n\t\treturn X + a + b;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import static foo.Foo.X;\n\nimport foo.Foo;\n\nclass T {\n\tprivate int a;\n\n\tprivate int b;\n\n\tint f() {\n\t\treturn X + a + b;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferStaticImportConstantAliasInsideFieldChunk() throws Exception {
+		final var file = tempDir.resolve("StaticImpConstInside.java").toFile();
+		// fields are already in alphabetical order (A, X, Z) so FieldSortingCheck doesn't fire
+		// alongside our check on the same line. Foo.OTHER keeps the foo.Foo import used.
+		Files.writeString(file.toPath(), "import foo.Foo;\n\nclass T {\n\tprivate static final int A = 1;\n\tprivate static final int X = Foo.X;\n\tprivate static final int Z = 2;\n\n\tint f() {\n\t\treturn A + X + Z + Foo.OTHER;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import static foo.Foo.X;\n\nimport foo.Foo;\n\nclass T {\n\tprivate static final int A = 1;\n\tprivate static final int Z = 2;\n\n\tint f() {\n\t\treturn A + X + Z + Foo.OTHER;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferStaticImportConstantCinitBlankFinalAutoFix() throws Exception {
+		final var file = tempDir.resolve("StaticImpConstCinit.java").toFile();
+		Files.writeString(file.toPath(), "import foo.Foo;\n\nclass T {\n\tprivate static final int X;\n\n\tstatic {\n\t\tX = Foo.X;\n\t}\n\n\tint f() {\n\t\treturn X;\n\t}\n}");
+
+		assertEquals(
+				"import static foo.Foo.X;\n\nclass T {\n\tint f() {\n\t\treturn X;\n\t}\n}",
+				runFixMultiPass(file)
+		);
+	}
+
+	@Test
+	public void testPreferStaticImportConstantCinitFqnLhsAutoFix() throws Exception {
+		final var file = tempDir.resolve("StaticImpConstCinitFqn.java").toFile();
+		Files.writeString(file.toPath(), "package x;\nimport foo.Foo;\n\nclass T {\n\tprivate static final int X;\n\n\tstatic {\n\t\tx.T.X = Foo.X;\n\t}\n\n\tint f() {\n\t\treturn X;\n\t}\n}");
+
+		assertEquals(
+				"package x;\n\nimport static foo.Foo.X;\n\nclass T {\n\tint f() {\n\t\treturn X;\n\t}\n}",
+				runFixMultiPass(file)
+		);
+	}
+
+	@Test
+	public void testPreferStaticImportConstantCinitQualifiedLhsAutoFix() throws Exception {
+		final var file = tempDir.resolve("StaticImpConstCinitQualified.java").toFile();
+		Files.writeString(file.toPath(), "import foo.Foo;\n\nclass T {\n\tprivate static final int X;\n\n\tstatic {\n\t\tT.X = Foo.X;\n\t}\n\n\tint f() {\n\t\treturn X;\n\t}\n}");
+
+		assertEquals(
+				"import static foo.Foo.X;\n\nclass T {\n\tint f() {\n\t\treturn X;\n\t}\n}",
+				runFixMultiPass(file)
+		);
+	}
+
+	@Test
+	public void testPreferStaticImportConstantCinitSameLineDeclAndCinitAutoFix() throws Exception {
+		final var file = tempDir.resolve("StaticImpConstCinitSameLine.java").toFile();
+		Files.writeString(file.toPath(), "import foo.Foo;\n\nclass T { private static final int X; static { X = Foo.X; } int f() { return X; } }");
+
+		assertEquals(
+				"import static foo.Foo.X;\n\nclass T {   int f() { return X; } }",
+				runFixMultiPass(file)
+		);
+	}
+
+	@Test
+	public void testPreferStaticImportConstantImportBecomesUnusedAfterFix() throws Exception {
+		final var file = tempDir.resolve("StaticImpConstUnused.java").toFile();
+		Files.writeString(file.toPath(), "import foo.Foo;\n\nclass T {\n\tprivate static final int X = Foo.X;\n\n\tint f() {\n\t\treturn X;\n\t}\n}");
+
+		assertEquals(
+				"import static foo.Foo.X;\n\nclass T {\n\tint f() {\n\t\treturn X;\n\t}\n}",
+				runFixMultiPass(file)
+		);
+	}
+
+	@Test
+	public void testPreferStaticImportConstantMultiLineAlias() throws Exception {
+		final var file = tempDir.resolve("StaticImpConstMulti.java").toFile();
+		Files.writeString(file.toPath(), "import foo.LongClassName;\n\nclass T {\n\tprivate static final int LONG_CONSTANT_NAME =\n\t\t\tLongClassName.LONG_CONSTANT_NAME;\n\n\tint f() {\n\t\treturn LONG_CONSTANT_NAME;\n\t}\n}");
+
+		final var output = runFixAndGetResult(file);
+		assertEquals(
+				"import static foo.LongClassName.LONG_CONSTANT_NAME;\n\nimport foo.LongClassName;\n\nclass T {\n\n\tint f() {\n\t\treturn LONG_CONSTANT_NAME;\n\t}\n}",
+				output.content()
+		);
+		assertEquals(1, output.result().fixCount());
+		assertTrue(output.result().needsSecondPass());
+	}
+
+	@Test
+	public void testPreferStaticImportConstantMultiVarAnnotationPreserved() throws Exception {
+		final var file = tempDir.resolve("StaticImpConstMultiVarAnno.java").toFile();
+		Files.writeString(file.toPath(), "import foo.Foo;\n\nclass T {\n\t@Deprecated private static final int X = Foo.X, Y = Foo.Y;\n\n\tint f() {\n\t\treturn X + Y;\n\t}\n}");
+
+		assertEquals(
+				"import static foo.Foo.X;\nimport static foo.Foo.Y;\n\nclass T {\n\tint f() {\n\t\treturn X + Y;\n\t}\n}",
+				runFixMultiPass(file)
+		);
+	}
+
+	@Test
+	public void testPreferStaticImportConstantMultiVarSingleLine() throws Exception {
+		final var file = tempDir.resolve("StaticImpConstMultiVar.java").toFile();
+		Files.writeString(file.toPath(), "import foo.Foo;\n\nclass T {\n\tprivate static final int X = Foo.X, Y = Foo.Y;\n\n\tint f() {\n\t\treturn X + Y;\n\t}\n}");
+
+		assertEquals(
+				"import static foo.Foo.X;\nimport static foo.Foo.Y;\n\nclass T {\n\tint f() {\n\t\treturn X + Y;\n\t}\n}",
+				runFixMultiPass(file)
+		);
+	}
+
+	@Test
+	public void testPreferStaticImportConstantMultiVarStringLiteralSiblingPreserved() throws Exception {
+		final var file = tempDir.resolve("StaticImpConstMultiVarString.java").toFile();
+		Files.writeString(file.toPath(), "import foo.Foo;\n\nclass T {\n\tprivate static final Object X = Foo.X, Y = \"hello\";\n\n\tObject f() {\n\t\treturn X;\n\t}\n}");
+
+		assertEquals(
+				"import static foo.Foo.X;\n\nclass T {\n\tprivate static final Object Y = \"hello\";\n\n\tObject f() {\n\t\treturn X;\n\t}\n}",
+				runFixMultiPass(file)
+		);
+	}
+
+	@Test
 	public void testPreferStaticImportObjectsRequireNonNull() throws Exception {
 		final var file = tempDir.resolve("StaticImpObjects.java").toFile();
 		Files.writeString(file.toPath(), "import java.util.Objects;\n\nclass T {\n\tObject f(Object a, Object b) {\n\t\tfinal var x = Objects.requireNonNull(a);\n\t\tfinal var y = Objects.requireNonNull(b);\n\t\treturn x.toString() + y.toString();\n\t}\n}");

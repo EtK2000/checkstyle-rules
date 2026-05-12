@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import static com.etk2000.checkstyle.gradle.fix.LineLength.MAX_LINE_LENGTH;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,8 +10,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 class FieldConsolidationFixer implements CheckstyleFixer {
-	private static final int MAX_LINE_LENGTH = LineLength.MAX_LINE_LENGTH;
-
 	@CheckReturnValue
 	@Nonnull
 	private static List<String> buildWrappedLines(

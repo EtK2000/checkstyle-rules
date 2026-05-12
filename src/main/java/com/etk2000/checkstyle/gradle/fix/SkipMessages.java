@@ -31,6 +31,12 @@ final class SkipMessages {
 	static final String PREFER_ASSERT_SKIP = get("prefer.assert.skip");
 	static final String PREFER_BULK_SKIP = get("prefer.bulk.skip");
 	static final String PREFER_STANDARD_CHARSETS_SKIP = get("prefer.standard.charsets.skip");
+	static final String PREFER_STATIC_IMPORT_CONSTANT_SKIP = get("prefer.static.import.constant.skip");
+	static final String PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT = get("prefer.static.import.constant.skip.cinit");
+	static final String PREFER_STATIC_IMPORT_CONSTANT_SKIP_CONFLICT = get("prefer.static.import.constant.skip.conflict");
+	static final String PREFER_STATIC_IMPORT_CONSTANT_SKIP_MULTI_VAR = get("prefer.static.import.constant.skip.multi.var");
+	static final String PREFER_STATIC_IMPORT_CONSTANT_SKIP_SHADOW = get("prefer.static.import.constant.skip.shadow");
+	static final String PREFER_STATIC_IMPORT_CONSTANT_SKIP_VISIBILITY = get("prefer.static.import.constant.skip.visibility");
 	static final String PREFER_STATIC_IMPORT_SKIP = get("prefer.static.import.skip");
 	static final String PREFER_VAR_SKIP = get("prefer.var.skip");
 

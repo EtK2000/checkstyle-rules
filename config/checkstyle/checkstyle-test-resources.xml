@@ -125,6 +125,7 @@
 		<module name="com.etk2000.checkstyle.PreferStaticImportCheck">
 			<property name="minSdk" value="${minSdk}" />
 		</module>
+		<module name="com.etk2000.checkstyle.PreferStaticImportConstantCheck" />
 		<module name="com.etk2000.checkstyle.PreferVarCheck" />
 		<module name="com.etk2000.checkstyle.RecordFormattingCheck" />
 		<module name="com.etk2000.checkstyle.RedundantCastCheck" />
