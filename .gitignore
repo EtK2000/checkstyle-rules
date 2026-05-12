@@ -6,6 +6,8 @@ build/
 *.iml
 *.iws
 *.ipr
+local.properties
 
 # Claude Code
-.claude/
+.claude/settings.local.json
+.claude/state
