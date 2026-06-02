@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -14,7 +13,7 @@ import javax.annotation.Nonnull;
  *
  * @see InfiniteEmptyLoopCheck for infinite empty loops at error severity
  */
-public class EmptyBodyCheck extends AbstractCheck {
+public class EmptyBodyCheck extends AbstractAstCheck {
 	private static final String MSG_DO = "empty.do";
 	private static final String MSG_ELSE = "empty.else";
 	private static final String MSG_FOR = "empty.for";
@@ -22,12 +21,6 @@ public class EmptyBodyCheck extends AbstractCheck {
 	private static final String MSG_INSTANCE_INIT = "empty.instance.init";
 	private static final String MSG_STATIC_INIT = "empty.static.init";
 	private static final String MSG_WHILE = "empty.while";
-
-	@Nonnull
-	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
 
 	@Nonnull
 	@Override
@@ -51,7 +44,7 @@ public class EmptyBodyCheck extends AbstractCheck {
 	private void visitDo(@Nonnull DetailAST ast) {
 		final var body = ast.getFirstChild();
 		if (body != null && AstUtil.isEmptyBody(body))
-			log(ast, MSG_DO);
+			logWarning(ast, MSG_DO);
 	}
 
 	private void visitIf(@Nonnull DetailAST ast) {
@@ -92,7 +85,7 @@ public class EmptyBodyCheck extends AbstractCheck {
 			return;
 		final var body = rparen.getNextSibling();
 		if (body != null && AstUtil.isEmptyBody(body))
-			log(ast, msgKey);
+			logWarning(ast, msgKey);
 	}
 
 	@Override

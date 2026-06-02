@@ -20,7 +20,7 @@ class PreferStaticImportFixer implements CheckstyleFixer {
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
-		if (column >= line.length())
+		if (column < 0 || column >= line.length())
 			return null;
 
 		// read the receiver IDENT at column

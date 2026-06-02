@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -18,7 +17,7 @@ import javax.annotation.Nullable;
  * method return types ({@code int method()[]}). Does not flag array creation
  * expressions ({@code new int[5]}) since those are a different construct.
  */
-public class ArrayTypeStyleCheck extends AbstractCheck {
+public class ArrayTypeStyleCheck extends AbstractAstCheck {
 	private static final String MSG = "array.type.style";
 
 	@CheckReturnValue
@@ -50,12 +49,6 @@ public class ArrayTypeStyleCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{
 				TokenTypes.METHOD_DEF,
@@ -63,12 +56,6 @@ public class ArrayTypeStyleCheck extends AbstractCheck {
 				TokenTypes.RECORD_COMPONENT_DEF,
 				TokenTypes.VARIABLE_DEF
 		};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

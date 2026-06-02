@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -9,25 +8,13 @@ import javax.annotation.Nonnull;
 /**
  * Checkstyle check that flags trailing commas in array initializers.
  */
-public class NoArrayTrailingCommaCheck extends AbstractCheck {
+public class NoArrayTrailingCommaCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "no.array.trailing.comma";
-
-	@Nonnull
-	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
 
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.ARRAY_INIT};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

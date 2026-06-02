@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -8,26 +7,18 @@ import javax.annotation.Nonnull;
 
 /**
  * Checkstyle check that flags {@code final} on parameters (method, constructor,
- * catch, lambda), for-each iteration variables, and for-loop init variables.
- * Parameters and for-each are errors; for-init is opt-in at warning severity
- * (conflicts with {@code FinalLocalVariable} for non-reassigned variables).
- * Replaces the fragile {@code NoFinalParameters} regex rule.
+ * catch, lambda), for-each iteration variables, and for-loop init variables, all
+ * as errors. Replaces the fragile {@code NoFinalParameters} regex rule.
  */
-public class NoFinalParametersCheck extends AbstractCheck {
+public class NoFinalParametersCheck extends AbstractAstCheck {
 	static final String MSG_FOR_INIT = "no.final.for.init";
 	static final String MSG_FOREACH = "no.final.foreach";
 	static final String MSG_PARAMETER = "no.final.parameters";
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return new int[]{TokenTypes.FOR_EACH_CLAUSE, TokenTypes.FOR_INIT, TokenTypes.PARAMETER_DEF};
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
-		return new int[]{TokenTypes.FOR_EACH_CLAUSE, TokenTypes.PARAMETER_DEF};
+		return new int[]{TokenTypes.FOR_EACH_CLAUSE, TokenTypes.FOR_INIT, TokenTypes.PARAMETER_DEF};
 	}
 
 	@Nonnull

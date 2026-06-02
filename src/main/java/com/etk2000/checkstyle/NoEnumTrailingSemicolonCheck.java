@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -12,25 +11,13 @@ import javax.annotation.Nonnull;
  * when the enum has body declarations (methods, fields, constructors,
  * inner types, or initializer blocks) after it.
  */
-public class NoEnumTrailingSemicolonCheck extends AbstractCheck {
+public class NoEnumTrailingSemicolonCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "no.enum.trailing.semicolon";
-
-	@Nonnull
-	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
 
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.ENUM_DEF};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

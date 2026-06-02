@@ -9,7 +9,6 @@ import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FileContents;
 import com.puppycrawl.tools.checkstyle.api.FileText;
-import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import org.junit.jupiter.api.Test;
@@ -22,10 +21,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class PreferDoWhileCheckTest {
-	private static final String DIR = "preferdowhile/";
-
-	private static final String MESSAGE = "Replace pre-loop statement and 'while' with 'do-while'.";
-
 	@Nullable
 	private static DetailAST findFirst(@Nonnull DetailAST node, int tokenType) {
 		if (node.getType() == tokenType)
@@ -40,19 +35,14 @@ public class PreferDoWhileCheckTest {
 
 	@Nonnull
 	private static DetailAST parseSource(@Nonnull String source) throws Exception {
-		final var tmp = File.createTempFile("test", ".java");
+		final var tempFile = File.createTempFile("test", ".java");
 		try {
-			Files.writeString(tmp.toPath(), source);
-			return JavaParser.parse(new FileContents(new FileText(tmp, StandardCharsets.UTF_8.name())));
+			Files.writeString(tempFile.toPath(), source);
+			return JavaParser.parse(new FileContents(new FileText(tempFile, StandardCharsets.UTF_8.name())));
 		}
 		finally {
-			tmp.delete();
+			tempFile.delete();
 		}
-	}
-
-	@Test
-	public void testClean() throws Exception {
-		assertTrue(BaseCheckTest.runCheck(PreferDoWhileCheck.class, DIR + "InputPreferDoWhileClean.java").isEmpty());
 	}
 
 	@Test
@@ -99,17 +89,5 @@ public class PreferDoWhileCheckTest {
 		final var rparen = literalWhile.findFirstToken(TokenTypes.RPAREN);
 		assertNotNull(rparen);
 		assertEquals(TokenTypes.EXPR, rparen.getNextSibling().getType());
-	}
-
-	@Test
-	public void testViolations() throws Exception {
-		final var violations = BaseCheckTest.runCheck(PreferDoWhileCheck.class, DIR + "InputPreferDoWhileViolation.java");
-		assertEquals(11, violations.size());
-		final int[] expectedLines = {14, 20, 26, 32, 40, 46, 59, 67, 74, 80, 86};
-		for (var i = 0; i < expectedLines.length; ++i) {
-			assertEquals(expectedLines[i], violations.get(i).getLine());
-			assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-			assertEquals(MESSAGE, violations.get(i).getMessage());
-		}
 	}
 }

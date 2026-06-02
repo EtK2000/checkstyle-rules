@@ -5,7 +5,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-class DeleteLineFixer implements CheckstyleFixer {
+class DeleteLineFixer implements CheckstyleFixer, LineDeleter {
 	@Nullable
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {

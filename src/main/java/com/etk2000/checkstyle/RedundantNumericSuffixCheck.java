@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -15,8 +14,48 @@ import javax.annotation.Nonnull;
  * The {@code d} suffix on decimal literals (e.g. {@code 0.0d}) is
  * always redundant since the literal is already {@code double}.
  */
-public class RedundantNumericSuffixCheck extends AbstractCheck {
+public class RedundantNumericSuffixCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "redundant.numeric.suffix";
+
+	/**
+	 * Whether the suffix is load-bearing once the declaration becomes {@code var}.
+	 * A single-variable local must use {@code var} (see {@code PreferVarCheck}), and
+	 * {@code var} binds the literal's own type, so dropping a suffix the unsuffixed
+	 * literal would not imply silently retypes the variable: {@code long l = 5L} would
+	 * become an {@code int}. Only {@code d} on a literal that already has a decimal
+	 * point or an exponent is safe, because such a literal is a {@code double} without
+	 * it.
+	 */
+	@CheckReturnValue
+	private static boolean establishesTypeUnderVar(@Nonnull DetailAST literal, @Nonnull DetailAST varDef) {
+		// mirrors PreferVarCheck.isLocalVariable: a for-init declaration is converted too,
+		// so `for (long i = 0L; ...)` would otherwise become an int-typed loop counter
+		final var parent = varDef.getParent();
+		if (parent == null
+				|| (parent.getType() != TokenTypes.SLIST && parent.getType() != TokenTypes.FOR_INIT))
+			return false;
+
+		// a shared declaration is never converted, so nothing rebinds the literal and the
+		// suffix is as redundant as it would be on a field
+		if (PreferVarCheck.isMultiVarDeclaration(varDef))
+			return false;
+
+		// only when the literal is the whole initializer: nested in an expression its type
+		// is decided by promotion, and such a declaration is never converted to `var`
+		final var assign = varDef.findFirstToken(TokenTypes.ASSIGN);
+		if (assign == null)
+			return false;
+		var value = AstUtil.unwrapParensAndExpr(assign.getFirstChild());
+		while (value != null
+				&& (value.getType() == TokenTypes.UNARY_MINUS || value.getType() == TokenTypes.UNARY_PLUS))
+			value = AstUtil.unwrapParensAndExpr(value.getFirstChild());
+		if (value != literal)
+			return false;
+
+		final var text = literal.getText();
+		final var suffix = text.charAt(text.length() - 1);
+		return isIntegerValue(text) || (suffix != 'd' && suffix != 'D');
+	}
 
 	@CheckReturnValue
 	private static boolean isIntegerValue(@Nonnull String text) {
@@ -29,10 +68,8 @@ public class RedundantNumericSuffixCheck extends AbstractCheck {
 	@CheckReturnValue
 	private static boolean isNonPrimitiveType(@Nonnull DetailAST varDef) {
 		final var type = varDef.findFirstToken(TokenTypes.TYPE);
-		if (type == null)
-			return true;
 		// IDENT means var, wrapper, or other reference type
-		return type.findFirstToken(TokenTypes.IDENT) != null;
+		return type == null || type.findFirstToken(TokenTypes.IDENT) != null;
 	}
 
 	@CheckReturnValue
@@ -80,7 +117,7 @@ public class RedundantNumericSuffixCheck extends AbstractCheck {
 					return !isPrimitiveMethodReturn(node);
 				}
 				case TokenTypes.VARIABLE_DEF -> {
-					return isNonPrimitiveType(node);
+					return isNonPrimitiveType(node) || establishesTypeUnderVar(literal, node);
 				}
 			}
 			node = node.getParent();
@@ -106,20 +143,8 @@ public class RedundantNumericSuffixCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.NUM_DOUBLE, TokenTypes.NUM_FLOAT, TokenTypes.NUM_LONG};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

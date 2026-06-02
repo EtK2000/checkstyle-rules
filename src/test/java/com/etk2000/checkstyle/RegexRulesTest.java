@@ -25,12 +25,12 @@ public class RegexRulesTest {
 
 	@Test
 	public void testBlankLineAfterBreakClean() throws Exception {
-		assertTrue(BaseCheckTest.runRegexCheck(MULTI, FMT_BLANK_LINE_AFTER_BREAK, DIR + "InputBlankLineAfterBreakClean.java").isEmpty());
+		assertTrue(BaseCheckTest.runRegexCheck(MULTI, FMT_BLANK_LINE_AFTER_BREAK, DIR + "cases.blanklineafterbreak.clean.java").isEmpty());
 	}
 
 	@Test
 	public void testBlankLineAfterBreakViolation() throws Exception {
-		final var violations = BaseCheckTest.runRegexCheck(MULTI, FMT_BLANK_LINE_AFTER_BREAK, DIR + "InputBlankLineAfterBreakViolation.java");
+		final var violations = BaseCheckTest.runRegexCheck(MULTI, FMT_BLANK_LINE_AFTER_BREAK, DIR + "cases.blanklineafterbreak.in.java");
 		assertEquals(2, violations.size());
 	}
 
@@ -38,12 +38,12 @@ public class RegexRulesTest {
 
 	@Test
 	public void testNoBlankLineAfterClassBraceClean() throws Exception {
-		assertTrue(BaseCheckTest.runRegexCheck(MULTI, FMT_NO_BLANK_LINE_AFTER_CLASS_BRACE, DIR + "InputNoBlankLineAfterClassBraceClean.java").isEmpty());
+		assertTrue(BaseCheckTest.runRegexCheck(MULTI, FMT_NO_BLANK_LINE_AFTER_CLASS_BRACE, DIR + "cases.noblanklineafterclassbrace.clean.java").isEmpty());
 	}
 
 	@Test
 	public void testNoBlankLineAfterClassBraceViolation() throws Exception {
-		final var violations = BaseCheckTest.runRegexCheck(MULTI, FMT_NO_BLANK_LINE_AFTER_CLASS_BRACE, DIR + "InputNoBlankLineAfterClassBraceViolation.java");
+		final var violations = BaseCheckTest.runRegexCheck(MULTI, FMT_NO_BLANK_LINE_AFTER_CLASS_BRACE, DIR + "cases.noblanklineafterclassbrace.in.java");
 		assertEquals(4, violations.size());
 	}
 
@@ -51,12 +51,12 @@ public class RegexRulesTest {
 
 	@Test
 	public void testNoBlankLineBeforeClosingBraceClean() throws Exception {
-		assertTrue(BaseCheckTest.runRegexCheck(MULTI, FMT_NO_BLANK_LINE_BEFORE_CLOSING_BRACE, DIR + "InputNoBlankLineBeforeClosingBraceClean.java").isEmpty());
+		assertTrue(BaseCheckTest.runRegexCheck(MULTI, FMT_NO_BLANK_LINE_BEFORE_CLOSING_BRACE, DIR + "cases.noblanklinebeforeclosingbrace.clean.java").isEmpty());
 	}
 
 	@Test
 	public void testNoBlankLineBeforeClosingBraceViolation() throws Exception {
-		final var violations = BaseCheckTest.runRegexCheck(MULTI, FMT_NO_BLANK_LINE_BEFORE_CLOSING_BRACE, DIR + "InputNoBlankLineBeforeClosingBraceViolation.java");
+		final var violations = BaseCheckTest.runRegexCheck(MULTI, FMT_NO_BLANK_LINE_BEFORE_CLOSING_BRACE, DIR + "cases.noblanklinebeforeclosingbrace.in.java");
 		assertEquals(1, violations.size());
 	}
 
@@ -64,12 +64,12 @@ public class RegexRulesTest {
 
 	@Test
 	public void testNoDoubleBlankLinesClean() throws Exception {
-		assertTrue(BaseCheckTest.runRegexCheck(MULTI, FMT_NO_DOUBLE_BLANK_LINES, DIR + "InputNoDoubleBlankLinesClean.java").isEmpty());
+		assertTrue(BaseCheckTest.runRegexCheck(MULTI, FMT_NO_DOUBLE_BLANK_LINES, DIR + "cases.nodoubleblanklines.clean.java").isEmpty());
 	}
 
 	@Test
 	public void testNoDoubleBlankLinesViolation() throws Exception {
-		final var violations = BaseCheckTest.runRegexCheck(MULTI, FMT_NO_DOUBLE_BLANK_LINES, DIR + "InputNoDoubleBlankLinesViolation.java");
+		final var violations = BaseCheckTest.runRegexCheck(MULTI, FMT_NO_DOUBLE_BLANK_LINES, DIR + "cases.nodoubleblanklines.in.java");
 		assertEquals(1, violations.size());
 	}
 
@@ -77,12 +77,12 @@ public class RegexRulesTest {
 
 	@Test
 	public void testNoSpaceIndentClean() throws Exception {
-		assertTrue(BaseCheckTest.runRegexCheck(SINGLE, FMT_NO_SPACE_INDENT, DIR + "InputNoSpaceIndentClean.java").isEmpty());
+		assertTrue(BaseCheckTest.runRegexCheck(SINGLE, FMT_NO_SPACE_INDENT, DIR + "cases.nospaceindent.clean.java").isEmpty());
 	}
 
 	@Test
 	public void testNoSpaceIndentViolation() throws Exception {
-		final var violations = BaseCheckTest.runRegexCheck(SINGLE, FMT_NO_SPACE_INDENT, DIR + "InputNoSpaceIndentViolation.java");
+		final var violations = BaseCheckTest.runRegexCheck(SINGLE, FMT_NO_SPACE_INDENT, DIR + "cases.nospaceindent.in.java");
 		assertEquals(2, violations.size());
 	}
 

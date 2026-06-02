@@ -1,17 +1,13 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import com.etk2000.checkstyle.LineText;
+
 import java.util.List;
 
-import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 class UpperEllFixer implements CheckstyleFixer {
-	@CheckReturnValue
-	private static boolean isLiteralChar(char c) {
-		return Character.isLetterOrDigit(c) || c == '_' || c == '.';
-	}
-
 	@Nullable
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
@@ -19,9 +15,7 @@ class UpperEllFixer implements CheckstyleFixer {
 		if (column < 0 || column >= line.length())
 			return null;
 
-		var end = column;
-		while (end < line.length() && isLiteralChar(line.charAt(end)))
-			++end;
+		final var end = LineText.literalTokenEnd(line, column);
 		if (end <= column)
 			return null;
 

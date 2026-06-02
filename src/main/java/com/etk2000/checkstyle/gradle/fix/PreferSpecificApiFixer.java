@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import com.etk2000.checkstyle.JavaLineScanner;
+
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -33,13 +35,12 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 			@Nonnull Set<String> imports
 	) {
 		for (var existing : lines) {
-			if (!existing.startsWith("import static "))
+			final var parsed = ImportLine.parse(existing);
+			if (parsed == null || !parsed.staticImport())
 				continue;
-			final var fqn = existing.substring(14, existing.length() - 1);
-
-			if (fqn.endsWith(".*"))
+			if (parsed.wildcard())
 				return;
-
+			final var fqn = parsed.fqn();
 			final var lastDot = fqn.lastIndexOf('.');
 			if (lastDot < 0)
 				continue;
@@ -49,6 +50,48 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 				return;
 			}
 		}
+	}
+
+	/**
+	 * {@code Collections.unmodifiableList(Arrays.asList(args))} -> {@code List.of(args)}.
+	 * Mirrors the check's combined suggestion for the nested form; the plain
+	 * {@code unmodifiableList(x)} form is left to the generic copyOf replacement.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String collapseUnmodifiableListAsList(
+			@Nonnull String line,
+			@Nonnull String scan,
+			@Nonnull Set<String> imports
+	) {
+		final var pattern = "Collections.unmodifiableList(Arrays.asList(";
+		final var idx = scan.indexOf(pattern);
+		if (idx < 0)
+			return null;
+
+		final var argsStart = idx + pattern.length();
+		var depth = 2;
+		var pos = argsStart;
+		var innerClose = -1;
+		while (pos < scan.length() && depth > 0) {
+			final var ch = scan.charAt(pos);
+			if (ch == '(')
+				++depth;
+			else if (ch == ')') {
+				--depth;
+				if (depth == 1)
+					innerClose = pos;
+				else if (depth == 0)
+					break;
+			}
+			++pos;
+		}
+		if (depth != 0 || innerClose < 0)
+			return null;
+
+		imports.add("java.util.List");
+		return line.substring(0, idx) + "List.of(" + line.substring(argsStart, innerClose)
+				+ ")" + line.substring(pos + 1);
 	}
 
 	/**
@@ -84,23 +127,23 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static int[] findReversedMatch(@Nonnull String line, @Nonnull String prefix, @Nonnull String suffix) {
+	private static int[] findReversedMatch(@Nonnull String scan, @Nonnull String prefix, @Nonnull String suffix) {
 		var searchFrom = 0;
-		while (searchFrom < line.length()) {
-			final var idx = line.indexOf(prefix, searchFrom);
+		while (searchFrom < scan.length()) {
+			final var idx = scan.indexOf(prefix, searchFrom);
 			if (idx < 0)
 				return null;
 			if (idx > 0) {
-				final var prev = line.charAt(idx - 1);
+				final var prev = scan.charAt(idx - 1);
 				if (Character.isJavaIdentifierPart(prev) || prev == '.') {
 					searchFrom = idx + 1;
 					continue;
 				}
 			}
-			final var methodIdx = line.indexOf(suffix, idx + prefix.length());
+			final var methodIdx = scan.indexOf(suffix, idx + prefix.length());
 			if (methodIdx < 0)
 				return null;
-			final var between = line.substring(idx + prefix.length(), methodIdx);
+			final var between = scan.substring(idx + prefix.length(), methodIdx);
 			if (!isSimpleReceiver(between)) {
 				searchFrom = idx + 1;
 				continue;
@@ -119,18 +162,18 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 * Iterates through occurrences until a valid one is found.
 	 */
 	@CheckReturnValue
-	private static int findStandalonePattern(@Nonnull String line, @Nonnull String pattern, int from) {
+	private static int findStandalonePattern(@Nonnull String scan, @Nonnull String pattern, int from) {
 		if (pattern.isEmpty() || !Character.isDigit(pattern.charAt(pattern.length() - 1)))
-			return line.indexOf(pattern, from);
-		var idx = line.indexOf(pattern, from);
+			return scan.indexOf(pattern, from);
+		var idx = scan.indexOf(pattern, from);
 		while (idx >= 0) {
 			final var endPos = idx + pattern.length();
-			if (endPos >= line.length())
+			if (endPos >= scan.length())
 				return idx;
-			final var ch = line.charAt(endPos);
+			final var ch = scan.charAt(endPos);
 			if (!Character.isJavaIdentifierPart(ch) && ch != '.')
 				return idx;
-			idx = line.indexOf(pattern, idx + 1);
+			idx = scan.indexOf(pattern, idx + 1);
 		}
 		return -1;
 	}
@@ -141,9 +184,9 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixArraysAsList(@Nonnull String line, @Nonnull Set<String> imports) {
+	private static String fixArraysAsList(@Nonnull String line, @Nonnull String scan, @Nonnull Set<String> imports) {
 		final var pattern = "Arrays.asList(";
-		final var idx = line.indexOf(pattern);
+		final var idx = scan.indexOf(pattern);
 		if (idx < 0)
 			return null;
 		imports.add("java.util.List");
@@ -159,27 +202,26 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixAssertion(@Nonnull List<String> lines, @Nonnull String line, @Nonnull Set<String> imports) {
+	private static String fixAssertion(
+			@Nonnull List<String> lines,
+			@Nonnull String line,
+			@Nonnull String scan,
+			@Nonnull Set<String> imports
+	) {
 		for (var rule : ASSERT_RULES) {
-			final var result = fixAssertionLiteralFirst(line, rule[0], rule[1], rule[2]);
-			if (result != null) {
-				addAssertImport(lines, rule[2], imports);
+			final var result = fixAssertionLiteralFirst(lines, line, scan, rule[0], rule[1], rule[2], imports);
+			if (result != null)
 				return result;
-			}
 		}
 		for (var rule : ASSERT_RULES) {
-			final var result = fixAssertionLiteralLast(line, rule[0], rule[1], rule[2]);
-			if (result != null) {
-				addAssertImport(lines, rule[2], imports);
+			final var result = fixAssertionLiteralLast(lines, line, scan, rule[0], rule[1], rule[2], imports);
+			if (result != null)
 				return result;
-			}
 		}
 		for (var rule : ASSERT_RULES) {
-			final var result = fixAssertionLiteralMiddle(line, rule[0], rule[1], rule[2]);
-			if (result != null) {
-				addAssertImport(lines, rule[2], imports);
+			final var result = fixAssertionLiteralMiddle(lines, line, scan, rule[0], rule[1], rule[2], imports);
+			if (result != null)
 				return result;
-			}
 		}
 		return null;
 	}
@@ -190,15 +232,20 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nullable
 	private static String fixAssertionLiteralFirst(
+			@Nonnull List<String> lines,
 			@Nonnull String line,
+			@Nonnull String scan,
 			@Nonnull String methodName,
 			@Nonnull String literal,
-			@Nonnull String replacement
+			@Nonnull String replacement,
+			@Nonnull Set<String> imports
 	) {
 		final var pattern = methodName + "(" + literal + ", ";
-		final var idx = line.indexOf(pattern);
+		final var idx = scan.indexOf(pattern);
 		if (idx < 0)
 			return null;
+		if (!isQualifiedCallAt(line, idx))
+			addAssertImport(lines, replacement, imports);
 		return line.substring(0, idx) + replacement + "(" + line.substring(idx + pattern.length());
 	}
 
@@ -209,20 +256,25 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nullable
 	private static String fixAssertionLiteralLast(
+			@Nonnull List<String> lines,
 			@Nonnull String line,
+			@Nonnull String scan,
 			@Nonnull String methodName,
 			@Nonnull String literal,
-			@Nonnull String replacement
+			@Nonnull String replacement,
+			@Nonnull Set<String> imports
 	) {
-		final var methodStart = line.indexOf(methodName + "(");
+		final var methodStart = scan.indexOf(methodName + "(");
 		if (methodStart < 0)
 			return null;
 
 		final var suffix = ", " + literal + ")";
-		final var suffixIdx = line.indexOf(suffix, methodStart);
+		final var suffixIdx = scan.indexOf(suffix, methodStart);
 		if (suffixIdx < 0)
 			return null;
 
+		if (!isQualifiedCallAt(line, methodStart))
+			addAssertImport(lines, replacement, imports);
 		return line.substring(0, methodStart) + replacement + "("
 				+ line.substring(methodStart + methodName.length() + 1, suffixIdx)
 				+ ")" + line.substring(suffixIdx + suffix.length());
@@ -236,20 +288,25 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nullable
 	private static String fixAssertionLiteralMiddle(
+			@Nonnull List<String> lines,
 			@Nonnull String line,
+			@Nonnull String scan,
 			@Nonnull String methodName,
 			@Nonnull String literal,
-			@Nonnull String replacement
+			@Nonnull String replacement,
+			@Nonnull Set<String> imports
 	) {
-		final var methodStart = line.indexOf(methodName + "(");
+		final var methodStart = scan.indexOf(methodName + "(");
 		if (methodStart < 0)
 			return null;
 
 		final var pattern = ", " + literal + ", ";
-		final var patternIdx = line.indexOf(pattern, methodStart);
+		final var patternIdx = scan.indexOf(pattern, methodStart);
 		if (patternIdx < 0)
 			return null;
 
+		if (!isQualifiedCallAt(line, methodStart))
+			addAssertImport(lines, replacement, imports);
 		return line.substring(0, methodStart) + replacement + "("
 				+ line.substring(methodStart + methodName.length() + 1, patternIdx)
 				+ ", " + line.substring(patternIdx + pattern.length());
@@ -262,7 +319,11 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixCollectionsFactory(@Nonnull String line, @Nonnull Set<String> imports) {
+	private static String fixCollectionsFactory(@Nonnull String line, @Nonnull String scan, @Nonnull Set<String> imports) {
+		final var collapsed = collapseUnmodifiableListAsList(line, scan, imports);
+		if (collapsed != null)
+			return collapsed;
+
 		final String[][] replacements = {
 				{"Collections.emptyList()", "List.of()"},
 				{"Collections.emptyMap()", "Map.of()"},
@@ -275,7 +336,7 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 				{"Collections.unmodifiableSet(", "Set.copyOf("}
 		};
 		for (var r : replacements) {
-			final var idx = line.indexOf(r[0]);
+			final var idx = scan.indexOf(r[0]);
 			if (idx >= 0) {
 				imports.add("java.util." + r[1].substring(0, r[1].indexOf('.')));
 				return line.substring(0, idx) + r[1] + line.substring(idx + r[0].length());
@@ -291,20 +352,19 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixCollectionsSort(@Nonnull String line) {
+	private static String fixCollectionsSort(@Nonnull String line, @Nonnull String scan) {
 		final var pattern = "Collections.sort(";
-		final var idx = line.indexOf(pattern);
+		final var idx = scan.indexOf(pattern);
 		if (idx < 0)
 			return null;
 
 		final var argsStart = idx + pattern.length();
 
-		// find the comma separating args (at depth 0) or the closing paren
 		var depth = 1;
 		var pos = argsStart;
 		var commaIdx = -1;
-		while (pos < line.length() && depth > 0) {
-			final var ch = line.charAt(pos);
+		while (pos < scan.length() && depth > 0) {
+			final var ch = scan.charAt(pos);
 			if (ch == '(')
 				++depth;
 			else if (ch == ')') {
@@ -314,14 +374,6 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 			}
 			else if (ch == ',' && depth == 1 && commaIdx < 0)
 				commaIdx = pos;
-			else if (ch == '"') {
-				++pos;
-				while (pos < line.length() && line.charAt(pos) != '"') {
-					if (line.charAt(pos) == '\\')
-						++pos;
-					++pos;
-				}
-			}
 			++pos;
 		}
 		if (depth != 0)
@@ -329,14 +381,12 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 
 		final var closeParen = pos;
 		if (commaIdx >= 0) {
-			// 2-arg form: Collections.sort(list, cmp) -> list.sort(cmp)
 			final var listArg = line.substring(argsStart, commaIdx).strip();
 			final var cmpArg = line.substring(commaIdx + 1, closeParen).strip();
 			return line.substring(0, idx) + listArg + ".sort(" + cmpArg + ")"
 					+ line.substring(closeParen + 1);
 		}
 
-		// 1-arg form: Collections.sort(list) -> list.sort(null)
 		final var listArg = line.substring(argsStart, closeParen).strip();
 		return line.substring(0, idx) + listArg + ".sort(null)" + line.substring(closeParen + 1);
 	}
@@ -347,85 +397,13 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixCollectToList(@Nonnull String line) {
+	private static String fixCollectToList(@Nonnull String line, @Nonnull String scan) {
 		for (var collector : new String[]{"toList", "toUnmodifiableList"}) {
 			final var pattern = ".collect(Collectors." + collector + "())";
-			final var idx = line.indexOf(pattern);
+			final var idx = scan.indexOf(pattern);
 			if (idx >= 0)
 				return line.substring(0, idx) + ".toList()" + line.substring(idx + pattern.length());
 		}
-		return null;
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static String fixComparisonIsEmpty(@Nonnull String line, @Nonnull String method) {
-		// positive simple forms: .length() == 0, .length() <= 0, .length() < 1
-		final String[] positivePatterns = {
-				method + " == 0",
-				method + " <= 0",
-				method + " < 1"
-		};
-		for (var pattern : positivePatterns) {
-			final var idx = findStandalonePattern(line, pattern, 0);
-			if (idx >= 0)
-				return line.substring(0, idx) + ".isEmpty()" + line.substring(idx + pattern.length());
-		}
-
-		// positive reversed forms: 0 == expr.length(), 0 >= expr.length(), 1 > expr.length()
-		final String[][] reversedPositive = {
-				{"0 == ", method},
-				{"0 >= ", method},
-				{"1 > ", method}
-		};
-		for (var rev : reversedPositive) {
-			final var match = findReversedMatch(line, rev[0], rev[1]);
-			if (match != null) {
-				final var idx = match[0];
-				final var methodIdx = match[1];
-				return line.substring(0, idx) + line.substring(idx + rev[0].length(), methodIdx)
-						+ ".isEmpty()" + line.substring(methodIdx + rev[1].length());
-			}
-		}
-
-		// negated simple forms: .length() != 0, .length() > 0, .length() >= 1
-		final String[] negatedPatterns = {
-				method + " != 0",
-				method + " > 0",
-				method + " >= 1"
-		};
-		for (var neg : negatedPatterns) {
-			final var idx = findStandalonePattern(line, neg, 0);
-			if (idx >= 0) {
-				final var receiverStart = findReceiverStart(line, idx);
-				if (receiverStart < 0)
-					return null;
-				if (receiverStart > 0 && line.charAt(receiverStart - 1) == '!') {
-					return line.substring(0, receiverStart - 1) + line.substring(receiverStart, idx)
-							+ ".isEmpty()" + line.substring(idx + neg.length());
-				}
-				return line.substring(0, receiverStart) + "!" + line.substring(receiverStart, idx)
-						+ ".isEmpty()" + line.substring(idx + neg.length());
-			}
-		}
-
-		// negated reversed forms: 0 != expr.length(), 0 < expr.length(), 1 <= expr.length()
-		final String[][] reversedNegated = {
-				{"0 != ", method},
-				{"0 < ", method},
-				{"1 <= ", method}
-		};
-		for (var rev : reversedNegated) {
-			final var match = findReversedMatch(line, rev[0], rev[1]);
-			if (match != null) {
-				final var idx = match[0];
-				final var methodIdx = match[1];
-				final var receiver = line.substring(idx + rev[0].length(), methodIdx);
-				return line.substring(0, idx) + "!" + receiver
-						+ ".isEmpty()" + line.substring(methodIdx + rev[1].length());
-			}
-		}
-
 		return null;
 	}
 
@@ -435,9 +413,9 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixEqualsEmpty(@Nonnull String line) {
+	private static String fixEqualsEmpty(@Nonnull String line, @Nonnull String scan) {
 		final var pattern = ".equals(\"\")";
-		final var idx = line.indexOf(pattern);
+		final var idx = scan.indexOf(pattern);
 		if (idx < 0)
 			return null;
 		return line.substring(0, idx) + ".isEmpty()" + line.substring(idx + pattern.length());
@@ -449,15 +427,55 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixGetOrRemoveFirst(@Nonnull String line) {
+	private static String fixGetOrRemoveFirst(@Nonnull String line, @Nonnull String scan) {
 		final String[][] replacements = {
 				{".get(0)", ".getFirst()"},
 				{".remove(0)", ".removeFirst()"}
 		};
 		for (var r : replacements) {
-			final var idx = line.indexOf(r[0]);
+			final var idx = scan.indexOf(r[0]);
 			if (idx >= 0)
 				return line.substring(0, idx) + r[1] + line.substring(idx + r[0].length());
+		}
+		return null;
+	}
+
+	/**
+	 * {@code receiver.get(receiver.size() - 1)} -> {@code receiver.getLast()},
+	 * {@code receiver.remove(receiver.size() - 1)} -> {@code receiver.removeLast()}.
+	 * The check guarantees both receivers textually match; the fixer also requires
+	 * the receiver to be a simple identifier or dotted name so we can locate it
+	 * unambiguously on the line.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String fixGetOrRemoveLast(@Nonnull String line, @Nonnull String scan) {
+		final String[][] replacements = {
+				{".get(", ".getLast()"},
+				{".remove(", ".removeLast()"}
+		};
+		for (var r : replacements) {
+			final var pattern = r[0];
+			var searchFrom = 0;
+			while (searchFrom < scan.length()) {
+				final var openIdx = scan.indexOf(pattern, searchFrom);
+				if (openIdx < 0)
+					break;
+				final var receiverStart = findReceiverStart(line, openIdx);
+				if (receiverStart < 0) {
+					searchFrom = openIdx + 1;
+					continue;
+				}
+				final var receiverText = line.substring(receiverStart, openIdx);
+				final var argStart = openIdx + pattern.length();
+				final var expectedArg = receiverText + ".size() - 1)";
+				if (!line.startsWith(expectedArg, argStart)) {
+					searchFrom = openIdx + 1;
+					continue;
+				}
+				final var endPos = argStart + expectedArg.length();
+				return line.substring(0, openIdx) + r[1] + line.substring(endPos);
+			}
 		}
 		return null;
 	}
@@ -470,38 +488,26 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixIndexOfChar(@Nonnull String line, int column) {
+	private static String fixIndexOfChar(@Nonnull String line, @Nonnull String scan, int column) {
 		// the violation column points at the LPAREN of the METHOD_CALL when emitted
 		// from log(call, ...). Try lastIndexOf (LPAREN-anchored) first; if the match's
 		// LPAREN does NOT line up with `column`, fall back to indexOf (receiver-anchored)
 		// which matches when the column points at the receiver chain instead.
 		final var safeColumn = Math.max(0, column);
 		for (var name : new String[]{".indexOf(", ".lastIndexOf("}) {
-			var idx = line.lastIndexOf(name, safeColumn);
-			// if lastIndexOf hit, prefer it only when its LPAREN aligns with column (or
-			// the column is past the LPAREN by a small offset for receiver-anchored callers)
+			var idx = scan.lastIndexOf(name, safeColumn);
 			if (idx < 0 || idx + name.length() - 1 < safeColumn - 1)
-				idx = line.indexOf(name, safeColumn);
+				idx = scan.indexOf(name, safeColumn);
 			if (idx < 0)
 				continue;
 			final var openParen = idx + name.length() - 1;
 			final var argStart = openParen + 1;
-			if (argStart >= line.length() || line.charAt(argStart) != '"')
+			if (argStart >= scan.length() || scan.charAt(argStart) != '"')
 				continue;
-			var end = argStart + 1;
-			while (end < line.length()) {
-				final var c = line.charAt(end);
-				if (c == '\\') {
-					if (end + 1 >= line.length())
-						return null;
-					end += 2;
-					continue;
-				}
-				if (c == '"')
-					break;
-				++end;
-			}
-			if (end >= line.length())
+			// The mask blanks the string interior (including any escaped quote) but
+			// keeps the delimiter quotes, so the next '"' is the closing quote.
+			final var end = scan.indexOf('"', argStart + 1);
+			if (end < 0)
 				return null;
 			final var content = line.substring(argStart + 1, end);
 			final var charLiteral = stringContentToCharLiteralContent(content);
@@ -522,9 +528,9 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixLengthOrSizeIsEmpty(@Nonnull String line) {
+	private static String fixLengthOrSizeIsEmpty(@Nonnull String line, @Nonnull String scan) {
 		for (var method : new String[]{".length()", ".size()"}) {
-			final var result = fixComparisonIsEmpty(line, method);
+			final var result = rewriteSizeComparison(line, scan, method, ".isEmpty()");
 			if (result != null)
 				return result;
 		}
@@ -537,13 +543,13 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixMapChain(@Nonnull String line) {
+	private static String fixMapChain(@Nonnull String line, @Nonnull String scan) {
 		final String[][] replacements = {
 				{".keySet().contains(", ".containsKey("},
 				{".values().contains(", ".containsValue("}
 		};
 		for (var r : replacements) {
-			final var idx = line.indexOf(r[0]);
+			final var idx = scan.indexOf(r[0]);
 			if (idx >= 0)
 				return line.substring(0, idx) + r[1] + line.substring(idx + r[0].length());
 		}
@@ -555,9 +561,9 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixReplaceAll(@Nonnull String line) {
+	private static String fixReplaceAll(@Nonnull String line, @Nonnull String scan) {
 		final var pattern = ".replaceAll(";
-		final var idx = line.indexOf(pattern);
+		final var idx = scan.indexOf(pattern);
 		if (idx < 0)
 			return null;
 		return line.substring(0, idx) + ".replace(" + line.substring(idx + pattern.length());
@@ -568,9 +574,9 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixStreamCount(@Nonnull String line) {
+	private static String fixStreamCount(@Nonnull String line, @Nonnull String scan) {
 		final var pattern = ".stream().count()";
-		final var idx = line.indexOf(pattern);
+		final var idx = scan.indexOf(pattern);
 		if (idx < 0)
 			return null;
 		return line.substring(0, idx) + ".size()" + line.substring(idx + pattern.length());
@@ -583,9 +589,9 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixStreamFindFirstIsPresent(@Nonnull String line) {
+	private static String fixStreamFindFirstIsPresent(@Nonnull String line, @Nonnull String scan) {
 		final var pattern = ".stream().findFirst().isPresent()";
-		final var idx = line.indexOf(pattern);
+		final var idx = scan.indexOf(pattern);
 		if (idx < 0)
 			return null;
 
@@ -593,7 +599,6 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 		if (receiverStart < 0)
 			return null;
 
-		// if already negated, remove the ! instead of adding another
 		if (receiverStart > 0 && line.charAt(receiverStart - 1) == '!') {
 			return line.substring(0, receiverStart - 1) + line.substring(receiverStart, idx)
 					+ ".isEmpty()" + line.substring(idx + pattern.length());
@@ -607,9 +612,9 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixStreamForEach(@Nonnull String line) {
+	private static String fixStreamForEach(@Nonnull String line, @Nonnull String scan) {
 		final var pattern = ".stream().forEach(";
-		final var idx = line.indexOf(pattern);
+		final var idx = scan.indexOf(pattern);
 		if (idx < 0)
 			return null;
 		return line.substring(0, idx) + ".forEach(" + line.substring(idx + pattern.length());
@@ -622,20 +627,19 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixStringFormat(@Nonnull String line) {
+	private static String fixStringFormat(@Nonnull String line, @Nonnull String scan) {
 		final var pattern = "String.format(";
-		final var idx = line.indexOf(pattern);
+		final var idx = scan.indexOf(pattern);
 		if (idx < 0)
 			return null;
 
 		final var argsStart = idx + pattern.length();
 
-		// find the matching closing paren using depth tracking
 		var depth = 1;
 		var closeParen = argsStart;
 		var commaAtDepthOne = -1;
-		while (closeParen < line.length() && depth > 0) {
-			final var ch = line.charAt(closeParen);
+		while (closeParen < scan.length() && depth > 0) {
+			final var ch = scan.charAt(closeParen);
 			if (ch == '(')
 				++depth;
 			else if (ch == ')') {
@@ -645,50 +649,23 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 			}
 			else if (ch == ',' && depth == 1 && commaAtDepthOne < 0)
 				commaAtDepthOne = closeParen;
-			else if (ch == '"') {
-				++closeParen;
-				while (closeParen < line.length()) {
-					if (line.charAt(closeParen) == '\\')
-						++closeParen;
-					else if (line.charAt(closeParen) == '"')
-						break;
-					++closeParen;
-				}
-			}
-			else if (ch == '\'') {
-				++closeParen;
-				if (closeParen < line.length() && line.charAt(closeParen) == '\\')
-					++closeParen;
-				if (closeParen < line.length())
-					++closeParen;
-			}
-			if (depth > 0)
-				++closeParen;
+			++closeParen;
 		}
 		if (depth != 0)
 			return null;
 
-		// single-arg: String.format(expr) -> expr
 		if (commaAtDepthOne < 0) {
 			final var singleArg = line.substring(argsStart, closeParen).strip();
 			return line.substring(0, idx) + singleArg + line.substring(closeParen + 1);
 		}
 
-		// multi-arg: first arg must be a string literal for .formatted() rewrite
-		if (line.charAt(argsStart) != '"')
+		if (scan.charAt(argsStart) != '"')
 			return null;
 
-		// find end of string literal
-		var literalEnd = argsStart + 1;
-		while (literalEnd < line.length()) {
-			final var ch = line.charAt(literalEnd);
-			if (ch == '\\')
-				++literalEnd;
-			else if (ch == '"')
-				break;
-			++literalEnd;
-		}
-		if (literalEnd >= line.length())
+		// The masked scan blanks string interiors but keeps the delimiter quotes,
+		// so the first '"' after the opener is the literal's closing quote.
+		final var literalEnd = scan.indexOf('"', argsStart + 1);
+		if (literalEnd < 0 || literalEnd > commaAtDepthOne)
 			return null;
 
 		final var literal = line.substring(argsStart, literalEnd + 1);
@@ -702,20 +679,20 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixToArrayNewZero(@Nonnull String line) {
+	private static String fixToArrayNewZero(@Nonnull String line, @Nonnull String scan) {
 		final var prefix = ".toArray(new ";
-		final var idx = line.indexOf(prefix);
+		final var idx = scan.indexOf(prefix);
 		if (idx < 0)
 			return null;
 
 		final var typeStart = idx + prefix.length();
-		final var bracketIdx = line.indexOf('[', typeStart);
+		final var bracketIdx = scan.indexOf('[', typeStart);
 		if (bracketIdx < 0)
 			return null;
 
 		final var typeName = line.substring(typeStart, bracketIdx);
 		final var expectedEnd = "[0])";
-		if (!line.startsWith(expectedEnd, bracketIdx))
+		if (!scan.startsWith(expectedEnd, bracketIdx))
 			return null;
 
 		return line.substring(0, idx) + ".toArray(" + typeName + "[]::new)"
@@ -733,9 +710,9 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixTrimIsBlank(@Nonnull String line) {
+	private static String fixTrimIsBlank(@Nonnull String line, @Nonnull String scan) {
 		for (var method : new String[]{".strip()", ".trim()"}) {
-			final var result = fixTrimOrStripIsBlank(line, method);
+			final var result = fixTrimOrStripIsBlank(line, scan, method);
 			if (result != null)
 				return result;
 		}
@@ -744,80 +721,29 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 
 	@CheckReturnValue
 	@Nullable
-	private static String fixTrimOrStripIsBlank(@Nonnull String line, @Nonnull String method) {
-		var pattern = method + ".isEmpty()";
-		var idx = line.indexOf(pattern);
-		if (idx >= 0)
-			return line.substring(0, idx) + ".isBlank()" + line.substring(idx + pattern.length());
+	private static String fixTrimOrStripIsBlank(@Nonnull String line, @Nonnull String scan, @Nonnull String method) {
+		final var emptyPattern = method + ".isEmpty()";
+		final var emptyIdx = scan.indexOf(emptyPattern);
+		if (emptyIdx >= 0)
+			return line.substring(0, emptyIdx) + ".isBlank()" + line.substring(emptyIdx + emptyPattern.length());
 
-		pattern = method + ".length() == 0";
-		idx = findStandalonePattern(line, pattern, 0);
-		if (idx >= 0)
-			return line.substring(0, idx) + ".isBlank()" + line.substring(idx + pattern.length());
+		return rewriteSizeComparison(line, scan, method + ".length()", ".isBlank()");
+	}
 
-		final var suffix = method + ".length()";
-		final String[][] reversedPositive = {
-				{"0 == ", suffix},
-				{"0 >= ", suffix},
-				{"1 > ", suffix}
-		};
-		for (var rev : reversedPositive) {
-			final var match = findReversedMatch(line, rev[0], rev[1]);
-			if (match != null) {
-				final var matchIdx = match[0];
-				final var methodIdx = match[1];
-				return line.substring(0, matchIdx) + line.substring(matchIdx + rev[0].length(), methodIdx)
-						+ ".isBlank()" + line.substring(methodIdx + rev[1].length());
-			}
-		}
-
-		pattern = method + ".length() < 1";
-		idx = findStandalonePattern(line, pattern, 0);
-		if (idx >= 0)
-			return line.substring(0, idx) + ".isBlank()" + line.substring(idx + pattern.length());
-
-		pattern = method + ".length() <= 0";
-		idx = findStandalonePattern(line, pattern, 0);
-		if (idx >= 0)
-			return line.substring(0, idx) + ".isBlank()" + line.substring(idx + pattern.length());
-
-		final String[] negPatterns = {
-				method + ".length() != 0",
-				method + ".length() > 0",
-				method + ".length() >= 1"
-		};
-		for (var neg : negPatterns) {
-			idx = findStandalonePattern(line, neg, 0);
-			if (idx >= 0) {
-				final var receiverStart = findReceiverStart(line, idx);
-				if (receiverStart < 0)
-					return null;
-				if (receiverStart > 0 && line.charAt(receiverStart - 1) == '!') {
-					return line.substring(0, receiverStart - 1) + line.substring(receiverStart, idx)
-							+ ".isBlank()" + line.substring(idx + neg.length());
-				}
-				return line.substring(0, receiverStart) + "!" + line.substring(receiverStart, idx)
-						+ ".isBlank()" + line.substring(idx + neg.length());
-			}
-		}
-
-		final String[][] reversedNegated = {
-				{"0 != ", suffix},
-				{"0 < ", suffix},
-				{"1 <= ", suffix}
-		};
-		for (var rev : reversedNegated) {
-			final var match = findReversedMatch(line, rev[0], rev[1]);
-			if (match != null) {
-				final var matchIdx = match[0];
-				final var methodIdx = match[1];
-				final var receiver = line.substring(matchIdx + rev[0].length(), methodIdx);
-				return line.substring(0, matchIdx) + "!" + receiver
-						+ ".isBlank()" + line.substring(methodIdx + rev[1].length());
-			}
-		}
-
-		return null;
+	/**
+	 * Whether the call whose name starts at {@code idx} has a dotted receiver
+	 * (e.g. {@code org.junit.Assert.assertEquals(...)}). A qualified call keeps
+	 * its receiver after the rewrite, so it needs no static import. Takes the
+	 * matched index (not a name) so the check targets the exact rewritten call.
+	 */
+	@CheckReturnValue
+	private static boolean isQualifiedCallAt(@Nonnull String line, int idx) {
+		if (idx <= 0)
+			return false;
+		var pos = idx - 1;
+		while (pos >= 0 && Character.isWhitespace(line.charAt(pos)))
+			--pos;
+		return pos >= 0 && line.charAt(pos) == '.';
 	}
 
 	@CheckReturnValue
@@ -830,6 +756,70 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 				return false;
 		}
 		return true;
+	}
+
+	/**
+	 * Rewrites a size/length comparison against zero into a boolean-returning call.
+	 * {@code subject} is the size/length expression suffix (e.g. {@code .size()} or
+	 * {@code .trim().length()}); {@code replacement} is the call it collapses to
+	 * (e.g. {@code .isEmpty()} or {@code .isBlank()}). Handles positive
+	 * ({@code == 0}, {@code <= 0}, {@code < 1}) and negated ({@code != 0},
+	 * {@code > 0}, {@code >= 1}) forms, each in forward and operand-reversed order.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String rewriteSizeComparison(
+			@Nonnull String line,
+			@Nonnull String scan,
+			@Nonnull String subject,
+			@Nonnull String replacement
+	) {
+		final String[] positivePatterns = {subject + " == 0", subject + " <= 0", subject + " < 1"};
+		for (var pattern : positivePatterns) {
+			final var idx = findStandalonePattern(scan, pattern, 0);
+			if (idx >= 0)
+				return line.substring(0, idx) + replacement + line.substring(idx + pattern.length());
+		}
+
+		final String[][] reversedPositive = {{"0 == ", subject}, {"0 >= ", subject}, {"1 > ", subject}};
+		for (var rev : reversedPositive) {
+			final var match = findReversedMatch(scan, rev[0], rev[1]);
+			if (match != null) {
+				final var idx = match[0];
+				final var methodIdx = match[1];
+				return line.substring(0, idx) + line.substring(idx + rev[0].length(), methodIdx)
+						+ replacement + line.substring(methodIdx + rev[1].length());
+			}
+		}
+
+		final String[] negatedPatterns = {subject + " != 0", subject + " > 0", subject + " >= 1"};
+		for (var neg : negatedPatterns) {
+			final var idx = findStandalonePattern(scan, neg, 0);
+			if (idx >= 0) {
+				final var receiverStart = findReceiverStart(line, idx);
+				if (receiverStart < 0)
+					return null;
+				if (receiverStart > 0 && line.charAt(receiverStart - 1) == '!') {
+					return line.substring(0, receiverStart - 1) + line.substring(receiverStart, idx)
+							+ replacement + line.substring(idx + neg.length());
+				}
+				return line.substring(0, receiverStart) + "!" + line.substring(receiverStart, idx)
+						+ replacement + line.substring(idx + neg.length());
+			}
+		}
+
+		final String[][] reversedNegated = {{"0 != ", subject}, {"0 < ", subject}, {"1 <= ", subject}};
+		for (var rev : reversedNegated) {
+			final var match = findReversedMatch(scan, rev[0], rev[1]);
+			if (match != null) {
+				final var idx = match[0];
+				final var methodIdx = match[1];
+				final var receiver = line.substring(idx + rev[0].length(), methodIdx);
+				return line.substring(0, idx) + "!" + receiver + replacement + line.substring(methodIdx + rev[1].length());
+			}
+		}
+
+		return null;
 	}
 
 	@CheckReturnValue
@@ -884,41 +874,52 @@ class PreferSpecificApiFixer implements CheckstyleFixer {
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
 		final var imports = new TreeSet<String>();
+		// Fold the lexer state over preceding lines so a line that continues a
+		// multi-line construct (e.g. a text block whose closing """ sits on this
+		// line before real code) is masked with the correct entry state.
+		var entryState = JavaLineScanner.LexerState.NONE;
+		for (var i = 0; i < lineIndex; ++i)
+			entryState = JavaLineScanner.stateAfter(lines.get(i), entryState);
+		// Mask string/char/comment content once (positions preserved) and locate
+		// every pattern on the mask, splicing output from the original line, so a
+		// pattern appearing inside a literal or comment can't hijack the match.
+		final var scan = JavaLineScanner.stripCommentsAndStrings(line, entryState);
 
-		// try each fixable pattern in turn
-		var result = fixAssertion(lines, line, imports);
+		var result = fixAssertion(lines, line, scan, imports);
 		if (result == null)
-			result = fixCollectionsFactory(line, imports);
+			result = fixCollectionsFactory(line, scan, imports);
 		if (result == null)
-			result = fixCollectionsSort(line);
+			result = fixCollectionsSort(line, scan);
 		if (result == null)
-			result = fixArraysAsList(line, imports);
+			result = fixArraysAsList(line, scan, imports);
 		if (result == null)
-			result = fixCollectToList(line);
+			result = fixCollectToList(line, scan);
 		if (result == null)
-			result = fixEqualsEmpty(line);
+			result = fixEqualsEmpty(line, scan);
 		if (result == null)
-			result = fixGetOrRemoveFirst(line);
+			result = fixGetOrRemoveFirst(line, scan);
 		if (result == null)
-			result = fixIndexOfChar(line, column);
+			result = fixGetOrRemoveLast(line, scan);
 		if (result == null)
-			result = fixMapChain(line);
+			result = fixIndexOfChar(line, scan, column);
 		if (result == null)
-			result = fixReplaceAll(line);
+			result = fixMapChain(line, scan);
 		if (result == null)
-			result = fixStreamCount(line);
+			result = fixReplaceAll(line, scan);
 		if (result == null)
-			result = fixStreamFindFirstIsPresent(line);
+			result = fixStreamCount(line, scan);
 		if (result == null)
-			result = fixStreamForEach(line);
+			result = fixStreamFindFirstIsPresent(line, scan);
 		if (result == null)
-			result = fixStringFormat(line);
+			result = fixStreamForEach(line, scan);
 		if (result == null)
-			result = fixToArrayNewZero(line);
+			result = fixStringFormat(line, scan);
 		if (result == null)
-			result = fixTrimIsBlank(line);
+			result = fixToArrayNewZero(line, scan);
 		if (result == null)
-			result = fixLengthOrSizeIsEmpty(line);
+			result = fixTrimIsBlank(line, scan);
+		if (result == null)
+			result = fixLengthOrSizeIsEmpty(line, scan);
 
 		if (result == null)
 			return new SkipResult(SkipMessages.PREFER_API_SKIP);

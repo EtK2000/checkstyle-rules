@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -13,7 +12,7 @@ import javax.annotation.Nonnull;
  * Checkstyle check that enforces all classes, interfaces, enums, and records
  * have a thread annotation (@AnyThread, @BinderThread, @MainThread, @UiThread, @WorkerThread).
  */
-public class ThreadAnnotationCheck extends AbstractCheck {
+public class ThreadAnnotationCheck extends AbstractAstCheck {
 	private static final Set<String> THREAD_ANNOTATIONS = Set.of(
 			"AnyThread", "BinderThread", "MainThread", "UiThread", "WorkerThread"
 	);
@@ -30,12 +29,6 @@ public class ThreadAnnotationCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{
 				TokenTypes.CLASS_DEF,
@@ -43,12 +36,6 @@ public class ThreadAnnotationCheck extends AbstractCheck {
 				TokenTypes.INTERFACE_DEF,
 				TokenTypes.RECORD_DEF
 		};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

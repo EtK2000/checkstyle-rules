@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -12,7 +11,7 @@ import javax.annotation.Nonnull;
  * {@code for(;;);}, {@code while(true);}, and {@code do; while(true);}.
  * These are almost certainly bugs (the program will hang).
  */
-public class InfiniteEmptyLoopCheck extends AbstractCheck {
+public class InfiniteEmptyLoopCheck extends AbstractAstCheck {
 	private static final String MSG_DO = "empty.infinite.do";
 	private static final String MSG_FOR = "empty.infinite.for";
 	private static final String MSG_WHILE = "empty.infinite.while";
@@ -71,24 +70,12 @@ public class InfiniteEmptyLoopCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{
 				TokenTypes.LITERAL_DO,
 				TokenTypes.LITERAL_FOR,
 				TokenTypes.LITERAL_WHILE
 		};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

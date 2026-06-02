@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -31,11 +30,16 @@ import javax.annotation.Nullable;
  *     <li>Explicit iterator {@code while (it.hasNext())} loop -> enhanced {@code for}</li>
  * </ul>
  */
-public class JitInefficiencyCheck extends AbstractCheck {
+public class JitInefficiencyCheck extends AbstractAstCheck {
+	private record Detection(
+			@Nonnull JitInefficiencyCategory category,
+			@Nonnull Object... logArgs
+	) {}
+
 	private static final Set<String> BOXED_NUMERIC_TYPES = Set.of(
 			"Byte", "Double", "Float", "Integer", "Long", "Short"
 	);
-	private static final Set<String> BOXED_PRIMITIVE_TYPES = Set.of(
+	public static final Set<String> BOXED_PRIMITIVE_TYPES = Set.of(
 			"Boolean", "Byte", "Character", "Double", "Float", "Integer", "Long", "Short"
 	);
 	private static final Set<String> COLLECTION_OR_MAP_TYPES = Set.of(
@@ -50,20 +54,6 @@ public class JitInefficiencyCheck extends AbstractCheck {
 	private static final Set<String> REUSABLE_FACTORY_NEW_TYPES = Set.of(
 			"DecimalFormat", "Gson", "ObjectMapper", "SimpleDateFormat"
 	);
-	private static final String MSG_APPEND_CONCAT = "jit.append.concat";
-	private static final String MSG_BOXED_ACCUMULATOR = "jit.boxed.accumulator";
-	private static final String MSG_BOXED_CONSTRUCTOR = "jit.boxed.constructor";
-	private static final String MSG_DOUBLE_BRACE = "jit.double.brace";
-	private static final String MSG_EMPTY_STRING_CONCAT = "jit.empty.string.concat";
-	private static final String MSG_ENUM_VALUES_IN_LOOP = "jit.enum.values.in.loop";
-	private static final String MSG_ITERATOR_LOOP = "jit.iterator.loop";
-	private static final String MSG_MAP_KEYSET_GET = "jit.map.keyset.get";
-	private static final String MSG_NEW_STRING = "jit.new.string";
-	private static final String MSG_REUSABLE_OBJECT = "jit.reusable.object";
-	private static final String MSG_STRING_BUFFER = "jit.string.buffer";
-	private static final String MSG_STRING_CONCAT_IN_LOOP = "jit.string.concat.in.loop";
-	private static final String MSG_STRING_REGEX_IN_LOOP = "jit.string.regex.in.loop";
-	private static final String MSG_TOARRAY_SIZED = "jit.toarray.sized";
 
 	@CheckReturnValue
 	private static boolean ancestorIsLoop(@Nonnull DetailAST ast) {
@@ -120,7 +110,7 @@ public class JitInefficiencyCheck extends AbstractCheck {
 					if (methodIdent != null && methodIdent.getType() == TokenTypes.IDENT
 							&& "get".equals(methodIdent.getText())) {
 						final var elist = body.findFirstToken(TokenTypes.ELIST);
-						if (elist != null && countArgs(elist) == 1) {
+						if (elist != null && AstUtil.countArguments(elist) == 1) {
 							final var arg = findArgInner(elist, 0);
 							if (arg != null && arg.getType() == TokenTypes.IDENT
 									&& loopVar.equals(arg.getText()))
@@ -135,16 +125,6 @@ public class JitInefficiencyCheck extends AbstractCheck {
 				return true;
 		}
 		return false;
-	}
-
-	@CheckReturnValue
-	private static int countArgs(@Nonnull DetailAST elist) {
-		var count = 0;
-		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() != TokenTypes.COMMA)
-				++count;
-		}
-		return count;
 	}
 
 	@CheckReturnValue
@@ -187,9 +167,7 @@ public class JitInefficiencyCheck extends AbstractCheck {
 		if (first == null)
 			return false;
 		final var rhs = first.getNextSibling();
-		if (rhs == null)
-			return false;
-		return mentionsIdent(rhs, varName);
+		return rhs != null && mentionsIdent(rhs, varName);
 	}
 
 	@CheckReturnValue
@@ -224,11 +202,6 @@ public class JitInefficiencyCheck extends AbstractCheck {
 	@CheckReturnValue
 	private static boolean isStringTypeName(@Nullable String typeName) {
 		return "String".equals(typeName) || "java.lang.String".equals(typeName);
-	}
-
-	@CheckReturnValue
-	private static boolean iteratorBodyOnlyUsesNext(@Nonnull DetailAST body, @Nonnull String iterName) {
-		return iteratorRefsAreNextOnly(body, iterName);
 	}
 
 	@CheckReturnValue
@@ -283,11 +256,6 @@ public class JitInefficiencyCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
-	private static boolean modifiedInLoop(@Nonnull DetailAST methodScope, @Nonnull String varName) {
-		return modifiedInLoopInternal(methodScope, varName, false);
-	}
-
-	@CheckReturnValue
 	private static boolean modifiedInLoopInternal(@Nonnull DetailAST node, @Nonnull String varName, boolean inLoop) {
 		final var t = node.getType();
 		final var nowInLoop = inLoop || t == TokenTypes.LITERAL_FOR
@@ -323,9 +291,8 @@ public class JitInefficiencyCheck extends AbstractCheck {
 			return true;
 		if (node.getType() == TokenTypes.PLUS)
 			return isStringConcat(node);
-		if (node.getType() == TokenTypes.IDENT)
-			return isStringTypeName(AstUtil.resolveVariableType(node, node.getText()));
-		return false;
+		return node.getType() == TokenTypes.IDENT
+				&& isStringTypeName(AstUtil.resolveVariableType(node, node.getText()));
 	}
 
 	@CheckReturnValue
@@ -409,7 +376,6 @@ public class JitInefficiencyCheck extends AbstractCheck {
 			}
 			first = false;
 		}
-		// If there were no DOT segments, currentType is the IDENT's resolution.
 		if (fieldNames.isEmpty())
 			return startType;
 		return currentType;
@@ -419,7 +385,7 @@ public class JitInefficiencyCheck extends AbstractCheck {
 	@Nullable
 	private static DetailAST singleArgInner(@Nonnull DetailAST methodCall) {
 		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
-		if (elist == null || countArgs(elist) != 1)
+		if (elist == null || AstUtil.countArguments(elist) != 1)
 			return null;
 		return findArgInner(elist, 0);
 	}
@@ -434,19 +400,37 @@ public class JitInefficiencyCheck extends AbstractCheck {
 		return ident != null ? ident.getText() : null;
 	}
 
-	private void checkAppendConcat(@Nonnull DetailAST methodCall) {
+	/**
+	 * Walks the parsed tree and returns the inefficiency category of the node
+	 * the check would log at {@code (line, column)} (0-based line index,
+	 * 0-based code-point column, matching {@code AbstractCheck.log}'s
+	 * {@code getLineNo()}/{@code getColumnNo()}).
+	 */
+	@CheckReturnValue
+	@Nullable
+	public JitInefficiencyCategory categorizeAt(@Nonnull DetailAST root, int line, int column) {
+		final var node = AstUtil.findNodeAt(root, line, column, n -> detectFor(n) != null);
+		if (node == null)
+			return null;
+		final var detection = detectFor(node);
+		return detection != null ? detection.category() : null;
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private Detection detectAppendConcat(@Nonnull DetailAST methodCall) {
 		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
 		if (dot == null)
-			return;
+			return null;
 		final var method = dot.getLastChild();
 		if (method == null || method.getType() != TokenTypes.IDENT
 				|| !"append".equals(method.getText()))
-			return;
+			return null;
 		final var arg = singleArgInner(methodCall);
 		if (arg == null || arg.getType() != TokenTypes.PLUS)
-			return;
+			return null;
 		if (!isStringConcat(arg))
-			return;
+			return null;
 		final var receiver = dot.getFirstChild();
 		String receiverType = null;
 		if (receiver != null && receiver.getType() == TokenTypes.IDENT)
@@ -454,291 +438,379 @@ public class JitInefficiencyCheck extends AbstractCheck {
 		if (receiverType != null
 				&& !"StringBuilder".equals(receiverType)
 				&& !"StringBuffer".equals(receiverType))
-			return;
-		log(methodCall, MSG_APPEND_CONCAT);
+			return null;
+		return new Detection(JitInefficiencyCategory.APPEND_CONCAT);
 	}
 
-	private void checkAssignPlusStringInLoop(@Nonnull DetailAST assign) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectAssignPlusStringInLoop(@Nonnull DetailAST assign) {
 		final var lhs = assign.getFirstChild();
 		if (lhs == null)
-			return;
+			return null;
 		if (!isAssignableLhsShape(lhs))
-			return;
+			return null;
 		final var rhs = lhs.getNextSibling();
 		if (rhs == null || rhs.getType() != TokenTypes.PLUS)
-			return;
+			return null;
 		if (!plusChainContainsBareLhs(rhs, lhs))
-			return;
+			return null;
 		final var typeName = resolveLhsType(lhs);
 		if (!isStringTypeName(typeName))
-			return;
+			return null;
 		if (!ancestorIsLoop(assign))
-			return;
-		log(assign, MSG_STRING_CONCAT_IN_LOOP);
+			return null;
+		return new Detection(JitInefficiencyCategory.STRING_CONCAT_IN_LOOP);
 	}
 
-	private void checkBoxedAccumulator(@Nonnull DetailAST variableDef) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectBoxedAccumulator(@Nonnull DetailAST variableDef) {
 		final var parent = variableDef.getParent();
-		if (parent == null || parent.getType() != TokenTypes.SLIST)
-			return;
+		if (parent == null)
+			return null;
 		final var modifiers = variableDef.findFirstToken(TokenTypes.MODIFIERS);
 		if (modifiers != null && modifiers.findFirstToken(TokenTypes.FINAL) != null)
-			return;
+			return null;
 		final var typeName = typeNameForVariableDef(variableDef);
 		if (typeName == null || !BOXED_NUMERIC_TYPES.contains(typeName))
-			return;
+			return null;
 		final var ident = variableDef.findFirstToken(TokenTypes.IDENT);
 		if (ident == null)
-			return;
+			return null;
 		final var varName = ident.getText();
 		var scope = parent;
 		while (scope != null && scope.getType() != TokenTypes.METHOD_DEF
 				&& scope.getType() != TokenTypes.CTOR_DEF)
 			scope = scope.getParent();
 		if (scope == null)
-			return;
-		if (modifiedInLoop(scope, varName))
-			log(variableDef, MSG_BOXED_ACCUMULATOR, varName, typeName);
+			return null;
+		if (modifiedInLoopInternal(scope, varName, false))
+			return new Detection(JitInefficiencyCategory.BOXED_ACCUMULATOR, varName, typeName);
+		return null;
 	}
 
-	private void checkDoubleBrace(@Nonnull DetailAST literalNew, @Nonnull String className) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectDoubleBrace(@Nonnull DetailAST literalNew, @Nonnull String className) {
 		if (!COLLECTION_OR_MAP_TYPES.contains(className))
-			return;
+			return null;
 		final var objBlock = literalNew.findFirstToken(TokenTypes.OBJBLOCK);
 		if (objBlock == null)
-			return;
+			return null;
 		for (var child = objBlock.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.INSTANCE_INIT) {
-				log(literalNew, MSG_DOUBLE_BRACE);
-				return;
-			}
+			if (child.getType() == TokenTypes.INSTANCE_INIT)
+				return new Detection(JitInefficiencyCategory.DOUBLE_BRACE);
 		}
+		return null;
 	}
 
-	private void checkEnumValuesInLoop(@Nonnull DetailAST methodCall) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectEnumValuesInLoop(@Nonnull DetailAST methodCall) {
 		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
 		if (dot == null)
-			return;
+			return null;
 		final var first = dot.getFirstChild();
 		if (first == null || first.getType() != TokenTypes.IDENT)
-			return;
+			return null;
 		final var second = first.getNextSibling();
 		if (second == null || second.getType() != TokenTypes.IDENT
 				|| !"values".equals(second.getText()))
-			return;
+			return null;
 		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
-		if (elist == null || countArgs(elist) != 0)
-			return;
+		if (elist == null || AstUtil.countArguments(elist) != 0)
+			return null;
 		final var receiverName = first.getText();
 		if (receiverName.isEmpty() || !Character.isUpperCase(receiverName.charAt(0)))
-			return;
+			return null;
 		if (!ancestorIsLoop(methodCall))
-			return;
-		log(methodCall, MSG_ENUM_VALUES_IN_LOOP, receiverName);
+			return null;
+		return new Detection(JitInefficiencyCategory.ENUM_VALUES_IN_LOOP, receiverName);
 	}
 
-	private void checkForEachKeySetGet(@Nonnull DetailAST literalFor) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectFor(@Nonnull DetailAST ast) {
+		return switch (ast.getType()) {
+			case TokenTypes.ASSIGN -> detectAssignPlusStringInLoop(ast);
+			case TokenTypes.LITERAL_FOR -> detectForEachKeySetGet(ast);
+			case TokenTypes.LITERAL_NEW -> detectLiteralNew(ast);
+			case TokenTypes.LITERAL_WHILE -> detectIteratorWhile(ast);
+			case TokenTypes.METHOD_CALL -> detectMethodCall(ast);
+			case TokenTypes.PLUS -> detectPlusForEmptyStringConcat(ast);
+			case TokenTypes.PLUS_ASSIGN -> detectPlusAssignStringInLoop(ast);
+			case TokenTypes.VARIABLE_DEF -> detectBoxedAccumulator(ast);
+			default -> null;
+		};
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private Detection detectForEachKeySetGet(@Nonnull DetailAST literalFor) {
 		final var foreach = literalFor.findFirstToken(TokenTypes.FOR_EACH_CLAUSE);
 		if (foreach == null)
-			return;
+			return null;
 		final var iterableExpr = foreach.findFirstToken(TokenTypes.EXPR);
 		if (iterableExpr == null)
-			return;
+			return null;
 		final var iterableInner = iterableExpr.getFirstChild();
 		if (iterableInner == null || iterableInner.getType() != TokenTypes.METHOD_CALL)
-			return;
+			return null;
 		final var dot = iterableInner.findFirstToken(TokenTypes.DOT);
 		if (dot == null)
-			return;
+			return null;
 		final var receiver = dot.getFirstChild();
 		if (receiver == null || receiver.getType() != TokenTypes.IDENT)
-			return;
+			return null;
 		final var method = receiver.getNextSibling();
 		if (method == null || method.getType() != TokenTypes.IDENT
 				|| !"keySet".equals(method.getText()))
-			return;
+			return null;
 		final var mapVar = receiver.getText();
 		final var loopVarDef = foreach.findFirstToken(TokenTypes.VARIABLE_DEF);
 		if (loopVarDef == null)
-			return;
+			return null;
 		final var loopVarIdent = loopVarDef.findFirstToken(TokenTypes.IDENT);
 		if (loopVarIdent == null)
-			return;
+			return null;
 		final var loopVar = loopVarIdent.getText();
 		final var rparen = literalFor.findFirstToken(TokenTypes.RPAREN);
 		final var body = rparen != null ? rparen.getNextSibling() : null;
 		if (body != null && bodyHasMapGet(body, mapVar, loopVar))
-			log(literalFor, MSG_MAP_KEYSET_GET);
+			return new Detection(JitInefficiencyCategory.MAP_KEYSET_GET);
+		return null;
 	}
 
-	private void checkIteratorWhile(@Nonnull DetailAST literalWhile) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectIteratorWhile(@Nonnull DetailAST literalWhile) {
 		final var cond = literalWhile.findFirstToken(TokenTypes.EXPR);
 		if (cond == null)
-			return;
+			return null;
 		final var inner = cond.getFirstChild();
 		if (inner == null || inner.getType() != TokenTypes.METHOD_CALL)
-			return;
+			return null;
 		final var dot = inner.findFirstToken(TokenTypes.DOT);
 		if (dot == null)
-			return;
+			return null;
 		final var receiver = dot.getFirstChild();
 		if (receiver == null || receiver.getType() != TokenTypes.IDENT)
-			return;
+			return null;
 		final var method = receiver.getNextSibling();
 		if (method == null || method.getType() != TokenTypes.IDENT
 				|| !"hasNext".equals(method.getText()))
-			return;
+			return null;
 		final var elist = inner.findFirstToken(TokenTypes.ELIST);
-		if (elist == null || countArgs(elist) != 0)
-			return;
+		if (elist == null || AstUtil.countArguments(elist) != 0)
+			return null;
 		final var iterName = receiver.getText();
 		final var rparen = literalWhile.findFirstToken(TokenTypes.RPAREN);
 		final var body = rparen != null ? rparen.getNextSibling() : null;
 		if (body == null)
-			return;
-		if (iteratorBodyOnlyUsesNext(body, iterName))
-			log(literalWhile, MSG_ITERATOR_LOOP);
+			return null;
+		if (iteratorRefsAreNextOnly(body, iterName))
+			return new Detection(JitInefficiencyCategory.ITERATOR_LOOP);
+		return null;
 	}
 
-	private void checkNewLiteralForReusableFactory(@Nonnull DetailAST literalNew, @Nonnull String className) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectLiteralNew(@Nonnull DetailAST literalNew) {
+		final var className = literalNewClassName(literalNew);
+		if (className == null)
+			return null;
+		if (BOXED_PRIMITIVE_TYPES.contains(className)) {
+			final var elist = literalNew.findFirstToken(TokenTypes.ELIST);
+			if (elist != null && AstUtil.countArguments(elist) == 1)
+				return new Detection(JitInefficiencyCategory.BOXED_CONSTRUCTOR, className);
+		}
+		final var newString = detectNewString(literalNew);
+		if (newString != null)
+			return newString;
+		final var stringBuffer = detectStringBuffer(literalNew, className);
+		if (stringBuffer != null)
+			return stringBuffer;
+		final var doubleBrace = detectDoubleBrace(literalNew, className);
+		if (doubleBrace != null)
+			return doubleBrace;
+		return detectNewLiteralForReusableFactory(literalNew, className);
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private Detection detectMethodCall(@Nonnull DetailAST methodCall) {
+		final var toArray = detectToArraySized(methodCall);
+		if (toArray != null)
+			return toArray;
+		final var reusable = detectReusableFactoryCall(methodCall);
+		if (reusable != null)
+			return reusable;
+		final var regex = detectStringRegexCallInLoop(methodCall);
+		if (regex != null)
+			return regex;
+		final var enumValues = detectEnumValuesInLoop(methodCall);
+		if (enumValues != null)
+			return enumValues;
+		return detectAppendConcat(methodCall);
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private Detection detectNewLiteralForReusableFactory(@Nonnull DetailAST literalNew, @Nonnull String className) {
 		if (!REUSABLE_FACTORY_NEW_TYPES.contains(className))
-			return;
+			return null;
 		final var elist = literalNew.findFirstToken(TokenTypes.ELIST);
-		if (elist == null || countArgs(elist) == 0)
-			return;
+		if (elist == null || AstUtil.countArguments(elist) == 0)
+			return null;
 		final var firstArg = findArgInner(elist, 0);
 		if (firstArg == null || firstArg.getType() != TokenTypes.STRING_LITERAL)
-			return;
+			return null;
 		if (!ancestorIsMethodBody(literalNew))
-			return;
-		log(literalNew, MSG_REUSABLE_OBJECT, "new " + className + "(...)");
+			return null;
+		return new Detection(JitInefficiencyCategory.REUSABLE_OBJECT, "new " + className + "(...)");
 	}
 
-	private void checkNewString(@Nonnull DetailAST literalNew) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectNewString(@Nonnull DetailAST literalNew) {
 		final var className = literalNewClassName(literalNew);
 		if (!"String".equals(className))
-			return;
+			return null;
 		final var elist = literalNew.findFirstToken(TokenTypes.ELIST);
-		if (elist == null || countArgs(elist) != 1)
-			return;
+		if (elist == null || AstUtil.countArguments(elist) != 1)
+			return null;
 		final var arg = findArgInner(elist, 0);
 		if (arg == null)
-			return;
-		if (arg.getType() == TokenTypes.STRING_LITERAL) {
-			log(literalNew, MSG_NEW_STRING, "string literal");
-			return;
-		}
+			return null;
+		if (arg.getType() == TokenTypes.STRING_LITERAL)
+			return new Detection(JitInefficiencyCategory.NEW_STRING, "string literal");
 		if (arg.getType() == TokenTypes.IDENT) {
 			final var typeName = AstUtil.resolveVariableType(literalNew, arg.getText());
 			if (isStringTypeName(typeName))
-				log(literalNew, MSG_NEW_STRING, "String variable");
+				return new Detection(JitInefficiencyCategory.NEW_STRING, "String variable");
 		}
+		return null;
 	}
 
-	private void checkPlusAssignStringInLoop(@Nonnull DetailAST plusAssign) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectPlusAssignStringInLoop(@Nonnull DetailAST plusAssign) {
 		final var lhs = plusAssign.getFirstChild();
 		if (lhs == null || lhs.getType() != TokenTypes.IDENT)
-			return;
+			return null;
 		final var typeName = AstUtil.resolveVariableType(plusAssign, lhs.getText());
 		if (!isStringTypeName(typeName))
-			return;
+			return null;
 		if (!ancestorIsLoop(plusAssign))
-			return;
-		log(plusAssign, MSG_STRING_CONCAT_IN_LOOP);
+			return null;
+		return new Detection(JitInefficiencyCategory.STRING_CONCAT_IN_LOOP);
 	}
 
-	private void checkPlusForEmptyStringConcat(@Nonnull DetailAST plus) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectPlusForEmptyStringConcat(@Nonnull DetailAST plus) {
 		final var left = plus.getFirstChild();
 		final var right = left != null ? left.getNextSibling() : null;
 		if (isEmptyStringLiteral(left) || isEmptyStringLiteral(right))
-			log(plus, MSG_EMPTY_STRING_CONCAT);
+			return new Detection(JitInefficiencyCategory.EMPTY_STRING_CONCAT);
+		return null;
 	}
 
-	private void checkReusableFactoryCall(@Nonnull DetailAST methodCall) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectReusableFactoryCall(@Nonnull DetailAST methodCall) {
 		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
 		if (dot == null)
-			return;
+			return null;
 		final var receiver = dot.getFirstChild();
 		if (receiver == null || receiver.getType() != TokenTypes.IDENT)
-			return;
+			return null;
 		final var method = receiver.getNextSibling();
 		if (method == null || method.getType() != TokenTypes.IDENT)
-			return;
+			return null;
 		final var receiverName = receiver.getText();
 		final var methodName = method.getText();
 		final var matches = ("Pattern".equals(receiverName) && "compile".equals(methodName))
 				|| ("DateTimeFormatter".equals(receiverName) && "ofPattern".equals(methodName));
 		if (!matches)
-			return;
+			return null;
 		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
-		if (elist == null || countArgs(elist) == 0)
-			return;
+		if (elist == null || AstUtil.countArguments(elist) == 0)
+			return null;
 		final var firstArg = findArgInner(elist, 0);
 		if (firstArg == null || firstArg.getType() != TokenTypes.STRING_LITERAL)
-			return;
+			return null;
 		if (!ancestorIsMethodBody(methodCall))
-			return;
-		log(methodCall, MSG_REUSABLE_OBJECT, receiverName + "." + methodName + "(...)");
+			return null;
+		return new Detection(JitInefficiencyCategory.REUSABLE_OBJECT, receiverName + "." + methodName + "(...)");
 	}
 
-	private void checkStringBuffer(@Nonnull DetailAST literalNew, @Nonnull String className) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectStringBuffer(@Nonnull DetailAST literalNew, @Nonnull String className) {
 		if (!"StringBuffer".equals(className))
-			return;
+			return null;
 		for (var parent = literalNew.getParent(); parent != null; parent = parent.getParent()) {
 			final var t = parent.getType();
 			if (t == TokenTypes.VARIABLE_DEF) {
 				final var grand = parent.getParent();
 				if (grand != null && grand.getType() == TokenTypes.SLIST)
-					log(literalNew, MSG_STRING_BUFFER);
-				return;
+					return new Detection(JitInefficiencyCategory.STRING_BUFFER);
+				return null;
 			}
 			if (t == TokenTypes.SLIST || t == TokenTypes.OBJBLOCK
 					|| t == TokenTypes.METHOD_DEF || t == TokenTypes.CTOR_DEF
 					|| t == TokenTypes.LAMBDA)
-				return;
+				return null;
 		}
+		return null;
 	}
 
-	private void checkStringRegexCallInLoop(@Nonnull DetailAST methodCall) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectStringRegexCallInLoop(@Nonnull DetailAST methodCall) {
 		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
 		if (dot == null)
-			return;
+			return null;
 		final var receiver = dot.getFirstChild();
 		if (receiver == null)
-			return;
+			return null;
 		final var method = receiver.getNextSibling();
 		if (method == null || method.getType() != TokenTypes.IDENT
 				|| !REGEX_STRING_METHODS.contains(method.getText()))
-			return;
+			return null;
 		if (receiver.getType() == TokenTypes.IDENT) {
 			final var receiverName = receiver.getText();
 			if (receiverName.isEmpty() || Character.isUpperCase(receiverName.charAt(0)))
-				return;
+				return null;
 			final var receiverType = AstUtil.resolveVariableType(methodCall, receiverName);
 			if (receiverType != null && !isStringTypeName(receiverType))
-				return;
+				return null;
 		}
 		else if (receiver.getType() != TokenTypes.STRING_LITERAL)
-			return;
+			return null;
 		if (!ancestorIsLoop(methodCall))
-			return;
-		log(methodCall, MSG_STRING_REGEX_IN_LOOP, method.getText());
+			return null;
+		return new Detection(JitInefficiencyCategory.STRING_REGEX_IN_LOOP, method.getText());
 	}
 
-	private void checkToArraySized(@Nonnull DetailAST methodCall) {
+	@CheckReturnValue
+	@Nullable
+	private Detection detectToArraySized(@Nonnull DetailAST methodCall) {
 		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
 		if (dot == null)
-			return;
+			return null;
 		final var method = dot.getLastChild();
 		if (method == null || method.getType() != TokenTypes.IDENT
 				|| !"toArray".equals(method.getText()))
-			return;
+			return null;
 		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
-		if (elist == null || countArgs(elist) != 1)
-			return;
+		if (elist == null || AstUtil.countArguments(elist) != 1)
+			return null;
 		final var arg = findArgInner(elist, 0);
 		if (arg == null || arg.getType() != TokenTypes.LITERAL_NEW)
-			return;
+			return null;
 		// skip multi-dimensional arrays: count direct ARRAY_DECLARATOR children of LITERAL_NEW
 		var arrayDeclCount = 0;
 		for (var c = arg.getFirstChild(); c != null; c = c.getNextSibling()) {
@@ -746,31 +818,34 @@ public class JitInefficiencyCheck extends AbstractCheck {
 				++arrayDeclCount;
 		}
 		if (arrayDeclCount != 1)
-			return;
+			return null;
 		final var arrayDecl = arg.findFirstToken(TokenTypes.ARRAY_DECLARATOR);
 		if (arrayDecl == null)
-			return;
+			return null;
 		for (var c = arrayDecl.getFirstChild(); c != null; c = c.getNextSibling()) {
 			if (c.getType() == TokenTypes.ARRAY_DECLARATOR)
-				return;
+				return null;
 		}
 		final var sizeExpr = arrayDecl.findFirstToken(TokenTypes.EXPR);
 		if (sizeExpr == null)
-			return;
+			return null;
 		final var sizeInner = sizeExpr.getFirstChild();
 		if (sizeInner == null)
-			return;
+			return null;
 		if (AstUtil.isZeroLiteral(sizeInner))
-			return;
+			return null;
+		// a qualified type nests its segments under a DOT, so the direct-child IDENT
+		// lookup finds nothing and the message would render the placeholder
 		final var typeIdent = arg.findFirstToken(TokenTypes.IDENT);
-		final var typeName = typeIdent != null ? typeIdent.getText() : "?";
-		log(methodCall, MSG_TOARRAY_SIZED, typeName);
-	}
-
-	@Nonnull
-	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
+		final var qualified = arg.findFirstToken(TokenTypes.DOT);
+		final String typeName;
+		if (typeIdent != null)
+			typeName = typeIdent.getText();
+		else if (qualified != null)
+			typeName = AstUtil.dottedName(qualified);
+		else
+			typeName = "?";
+		return new Detection(JitInefficiencyCategory.TOARRAY_SIZED, typeName);
 	}
 
 	@Nonnull
@@ -788,48 +863,10 @@ public class JitInefficiencyCheck extends AbstractCheck {
 		};
 	}
 
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
-	}
-
-	private void visitLiteralNew(@Nonnull DetailAST literalNew) {
-		final var className = literalNewClassName(literalNew);
-		if (className == null)
-			return;
-		if (BOXED_PRIMITIVE_TYPES.contains(className)) {
-			final var elist = literalNew.findFirstToken(TokenTypes.ELIST);
-			if (elist != null && countArgs(elist) == 1) {
-				log(literalNew, MSG_BOXED_CONSTRUCTOR, className);
-				return;
-			}
-		}
-		checkNewString(literalNew);
-		checkStringBuffer(literalNew, className);
-		checkDoubleBrace(literalNew, className);
-		checkNewLiteralForReusableFactory(literalNew, className);
-	}
-
-	private void visitMethodCall(@Nonnull DetailAST methodCall) {
-		checkToArraySized(methodCall);
-		checkReusableFactoryCall(methodCall);
-		checkStringRegexCallInLoop(methodCall);
-		checkEnumValuesInLoop(methodCall);
-		checkAppendConcat(methodCall);
-	}
-
 	@Override
 	public void visitToken(@Nonnull DetailAST ast) {
-		switch (ast.getType()) {
-			case TokenTypes.ASSIGN -> checkAssignPlusStringInLoop(ast);
-			case TokenTypes.LITERAL_FOR -> checkForEachKeySetGet(ast);
-			case TokenTypes.LITERAL_NEW -> visitLiteralNew(ast);
-			case TokenTypes.LITERAL_WHILE -> checkIteratorWhile(ast);
-			case TokenTypes.METHOD_CALL -> visitMethodCall(ast);
-			case TokenTypes.PLUS -> checkPlusForEmptyStringConcat(ast);
-			case TokenTypes.PLUS_ASSIGN -> checkPlusAssignStringInLoop(ast);
-			case TokenTypes.VARIABLE_DEF -> checkBoxedAccumulator(ast);
-		}
+		final var detection = detectFor(ast);
+		if (detection != null)
+			log(ast, detection.category().checkMessageKey(), detection.logArgs());
 	}
 }

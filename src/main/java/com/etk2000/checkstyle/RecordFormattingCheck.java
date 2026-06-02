@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -25,7 +24,7 @@ import javax.annotation.Nonnull;
  * of an implements clause), with exactly one space between. Empty body keeps both braces on the
  * anchor line; non-empty body splits the closing brace to its own line.
  */
-public class RecordFormattingCheck extends AbstractCheck {
+public class RecordFormattingCheck extends AbstractAstCheck {
 	private static final String MSG_BRACES_EMPTY_BODY_SPLIT = "record.formatting.empty.body.braces.split";
 	private static final String MSG_BRACES_NON_EMPTY_BODY_SAME_LINE = "record.formatting.non.empty.body.braces.same.line";
 	private static final String MSG_COMPONENT_MULTI_PER_LINE = "record.formatting.component.multiple.per.line";
@@ -116,20 +115,8 @@ public class RecordFormattingCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.RECORD_DEF};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

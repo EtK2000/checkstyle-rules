@@ -7,7 +7,7 @@ not being driven by the audit-reminder Stop hook.
 
 The audit-gate PreToolUse hook reads the permissions file on each Agent
 call; once permission is recorded here, the next Agent call to the named
-auditor is allowed. The PostToolUse stamp-audit.py removes the permission
+auditor is allowed. The SubagentStop subagent-stop.py removes the permission
 after the agent finishes, so one grant = one run.
 
 Usage:

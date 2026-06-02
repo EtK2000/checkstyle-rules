@@ -1,6 +1,9 @@
 package com.etk2000.checkstyle;
 
+import org.jetbrains.annotations.TestOnly;
+
 import java.lang.reflect.Executable;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
@@ -10,11 +13,12 @@ import java.lang.reflect.WildcardType;
 import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Queue;
 import java.util.Set;
 
@@ -26,39 +30,46 @@ import javax.annotation.Nullable;
  * Utility for resolving class names and inspecting method signatures
  * via reflection. Designed for use by checkstyle checks that need
  * type information beyond what the AST provides.
- * <p>
- * All methods are static. The class cache uses a plain {@link HashMap}
- * because checkstyle's TreeWalker processes files sequentially on a
- * single thread, so no synchronization is needed.
  */
-class ReflectionUtil {
+public final class ReflectionUtil {
 	// caps the right-to-left dot-to-$ substitution loop in resolveAndLoad so
 	// pathologically deep FQNs don't pay O(d) Class.forName failures.
 	private static final int MAX_INNER_CLASS_DEPTH = 10;
 
-	// plain HashMap is fine: TreeWalker is single-threaded, append-only cache.
-	// Optional.empty() represents a known-absent class so retries don't repeat
-	// Class.forName scans for unresolvable names.
-	private static final Map<String, Optional<Class<?>>> CLASS_CACHE = new HashMap<>();
+	/**
+	 * Atomic because the same daemon runs several checkstyle tasks against one
+	 * loaded copy of this class, and lost increments make the assertions flaky.
+	 */
+	@TestOnly
+	static final AtomicInteger classForNameCallCount = new AtomicInteger();
 
-	// test instrumentation: counts Class.forName invocations so tests can
-	// verify the heuristic short-circuits on common cases. Tests reset this
-	// directly; clearCache only wipes the resolution cache.
-	static int classForNameCallCount;
+	// concurrent because Gradle runs checkstyleMain/checkstyleTest/checkstyleTestResources
+	// in one daemon against one loaded copy of this class, and a plain HashMap can lose
+	// entries or throw under that. Optional.empty() represents a known-absent class so
+	// retries don't repeat Class.forName scans for unresolvable names.
+	private static final Map<String, Optional<Class<?>>> CLASS_CACHE = new ConcurrentHashMap<>();
+
+	/**
+	 * Whether {@code method} could be the one invoked with {@code argCount} arguments.
+	 * Overloads of other arities are irrelevant to the call being classified: without
+	 * this, {@code List.of()} is judged by {@code List.of(E)}, which infers its type
+	 * from an argument the no-arg call does not have.
+	 */
+	@CheckReturnValue
+	private static boolean acceptsArgCount(@Nonnull Method method, int argCount) {
+		final var declared = method.getParameterCount();
+		return method.isVarArgs() ? argCount >= declared - 1 : argCount == declared;
+	}
 
 	/**
 	 * Returns {@code fqcn} with dots between adjacent uppercase-starting
 	 * segments (after the first uppercase segment) rewritten to {@code $}.
 	 * Returns {@code fqcn} unchanged if any segment after the first uppercase
-	 * one starts non-uppercase, so the resulting name never reaches outside
-	 * the substitution space the slow-path lowercase guard would consider.
+	 * one starts non-uppercase.
 	 */
 	@CheckReturnValue
 	@Nonnull
 	static String applyJavaNamingHeuristic(@Nonnull String fqcn) {
-		// Pass 1: detect the mitigation trigger. Bail out without rewriting if
-		// any segment after the first uppercase segment starts non-uppercase;
-		// otherwise pass 2's substitutions are safe (within slow-path's space).
 		var pastFirstClass = false;
 		for (var i = 0; i < fqcn.length(); ++i) {
 			if (i == 0 || fqcn.charAt(i - 1) == '.') {
@@ -70,9 +81,6 @@ class ReflectionUtil {
 			}
 		}
 
-		// Pass 2: emit substitutions. All post-first-class segments are now
-		// known to start uppercase, so every '.' followed by another segment
-		// becomes '$'.
 		final var sb = new StringBuilder(fqcn.length());
 		var seenFirstClass = false;
 		for (var i = 0; i < fqcn.length(); ++i) {
@@ -88,12 +96,39 @@ class ReflectionUtil {
 		return sb.toString();
 	}
 
-	/**
-	 * Test instrumentation: clears the resolution cache so a subsequent
-	 * {@link #classForNameCallCount} measurement reflects fresh lookups.
-	 */
+	@TestOnly
 	static void clearCache() {
 		CLASS_CACHE.clear();
+	}
+
+	/**
+	 * The fully qualified name of the collection interface {@code fqcn} is best declared as: the
+	 * interface itself when it already is one, or the one {@link #findCollectionInterface} picks.
+	 * Callers comparing two spellings need a single canonical form, which a simple name cannot give
+	 * ({@code List} and {@code java.util.List} name one type but differ as strings).
+	 */
+	@CheckReturnValue
+	@Nullable
+	static String collectionInterfaceFqcn(@Nonnull String fqcn) {
+		final var clazz = loadClass(fqcn);
+		if (clazz == null)
+			return null;
+		if (clazz.isInterface())
+			return clazz.getName();
+
+		final var iface = findCollectionInterface(fqcn);
+		if (iface == null)
+			return null;
+
+		return switch (iface) {
+			case "Collection" -> Collection.class.getName();
+			case "Deque" -> Deque.class.getName();
+			case "List" -> List.class.getName();
+			case "Map" -> Map.class.getName();
+			case "Queue" -> Queue.class.getName();
+			case "Set" -> Set.class.getName();
+			default -> null;
+		};
 	}
 
 	private static void collectMethodLevelTypeVars(@Nonnull Type type, @Nonnull Set<String> result) {
@@ -110,19 +145,20 @@ class ReflectionUtil {
 				for (var bound : wt.getLowerBounds())
 					collectMethodLevelTypeVars(bound, result);
 			}
+			// a varargs parameter is an array of the type variable, so without this the
+			// element type is never collected and the method looks target-typed
+			case GenericArrayType ga -> collectMethodLevelTypeVars(ga.getGenericComponentType(), result);
 			default -> {
 			}
 		}
 	}
 
-	/**
-	 * Finds a {@code String} parameter index in a method (or constructor)
-	 * with {@code argCount} parameters where a sibling overload exists
-	 * that replaces that {@code String} with {@code Charset}.
-	 *
-	 * @return the 0-based index of the charset {@code String} parameter,
-	 * or -1 if no such overload pair exists
-	 */
+	@CheckReturnValue
+	static int declaredTypeParameterCount(@Nonnull String fqcn) {
+		final var clazz = loadClass(fqcn);
+		return clazz == null ? -1 : clazz.getTypeParameters().length;
+	}
+
 	@CheckReturnValue
 	static int findCharsetStringArgIndex(@Nonnull String fqcn, @Nonnull String methodName, int argCount) {
 		final var clazz = loadClass(fqcn);
@@ -153,11 +189,11 @@ class ReflectionUtil {
 	 * interface the class implements (List, Set, Map, Deque, Queue, Collection),
 	 * or {@code null} if the class is not a concrete collection type.
 	 * Only flags concrete (non-abstract, non-interface) classes.
-	 * Priority: List > Set > Map > Deque > Queue > Collection.
+	 * Priority: Deque > List > Map > Queue > Set > Collection.
 	 */
 	@CheckReturnValue
 	@Nullable
-	static String findCollectionInterface(@Nonnull String fqcn) {
+	public static String findCollectionInterface(@Nonnull String fqcn) {
 		final var clazz = loadClass(fqcn);
 		if (clazz == null || clazz.isInterface() || Modifier.isAbstract(clazz.getModifiers()))
 			return null;
@@ -261,6 +297,8 @@ class ReflectionUtil {
 		for (var candidate : methods) {
 			if (candidate == method)
 				continue;
+			// findCharsetStringArgIndex always passes a single-kind array (all
+			// methods or all constructors), so this cross-kind skip is defensive
 			if (!candidate.getClass().equals(method.getClass()))
 				continue;
 			if (candidate instanceof Method m && !m.getName().equals(((Method) method).getName()))
@@ -297,27 +335,24 @@ class ReflectionUtil {
 	 * infers the type from the receiver.
 	 */
 	@CheckReturnValue
-	static boolean hasGenericReturnType(@Nonnull String fqcn, @Nonnull String methodName) {
+	static boolean hasGenericReturnType(@Nonnull String fqcn, @Nonnull String methodName, int argCount) {
 		final var clazz = loadClass(fqcn);
 		if (clazz == null)
 			return false;
 
 		var hasAnyOverload = false;
 		for (var method : clazz.getMethods()) {
-			if (!method.getName().equals(methodName))
+			if (!method.getName().equals(methodName) || !acceptsArgCount(method, argCount))
 				continue;
 
-			if (!needsTargetTypeInference(method))
-				return false; // at least one overload is inferable from args
+			if (!needsTargetTypeInference(method, argCount))
+				return false;
 
 			hasAnyOverload = true;
 		}
 		return hasAnyOverload;
 	}
 
-	/**
-	 * Checks whether the given class has a public method with the specified name.
-	 */
 	@CheckReturnValue
 	static boolean hasMethod(@Nonnull String fqcn, @Nonnull String methodName) {
 		final var clazz = loadClass(fqcn);
@@ -360,7 +395,6 @@ class ReflectionUtil {
 		for (var method : clazz.getMethods()) {
 			if (!Modifier.isAbstract(method.getModifiers()))
 				continue;
-			// Object methods don't count for functional interface definition
 			try {
 				Object.class.getMethod(method.getName(), method.getParameterTypes());
 				continue;
@@ -371,6 +405,14 @@ class ReflectionUtil {
 				return false;
 		}
 		return abstractCount == 1;
+	}
+
+	/**
+	 * Whether {@code fqn} names a type loadable from the current classpath.
+	 */
+	@CheckReturnValue
+	public static boolean isResolvableClass(@Nonnull String fqn) {
+		return loadClass(fqn) != null;
 	}
 
 	@CheckReturnValue
@@ -386,19 +428,41 @@ class ReflectionUtil {
 	 * meaning {@code var} would lose type information.
 	 */
 	@CheckReturnValue
-	private static boolean needsTargetTypeInference(@Nonnull Method method) {
+	private static boolean needsTargetTypeInference(@Nonnull Method method, int argCount) {
 		final var returnTypeVars = new HashSet<String>();
 		collectMethodLevelTypeVars(method.getGenericReturnType(), returnTypeVars);
 		if (returnTypeVars.isEmpty())
 			return false;
 
-		// remove type vars that appear in parameter types (inferable from args)
-		for (var paramType : method.getGenericParameterTypes()) {
+		// a varargs parameter given no variadic argument supplies nothing to infer from,
+		// so `List.of()` still needs its target type even though `of(E...)` mentions E
+		final var params = method.getGenericParameterTypes();
+		final var inferable = method.isVarArgs() && argCount < params.length ? params.length - 1 : params.length;
+		for (var i = 0; i < inferable; ++i) {
 			final var paramTypeVars = new HashSet<String>();
-			collectMethodLevelTypeVars(paramType, paramTypeVars);
+			collectMethodLevelTypeVars(params[i], paramTypeVars);
 			returnTypeVars.removeAll(paramTypeVars);
 		}
 		return !returnTypeVars.isEmpty();
+	}
+
+	/**
+	 * Whether a parameter of type {@code parameterFqcn} accepts {@code constructedFqcn} but not
+	 * {@code declaredFqcn}. Such a parameter is the one an argument would bind to once its
+	 * declared type is narrowed to the constructed one, so the call would select a different
+	 * overload than it does today.
+	 */
+	@CheckReturnValue
+	static boolean parameterSelectsOnlyTheConstructedType(
+			@Nonnull String parameterFqcn,
+			@Nonnull String declaredFqcn,
+			@Nonnull String constructedFqcn
+	) {
+		final var parameter = loadClass(parameterFqcn);
+		final var declared = loadClass(declaredFqcn);
+		final var constructed = loadClass(constructedFqcn);
+		return parameter != null && declared != null && constructed != null
+				&& parameter.isAssignableFrom(constructed) && !parameter.isAssignableFrom(declared);
 	}
 
 	/**
@@ -446,7 +510,7 @@ class ReflectionUtil {
 	 */
 	@CheckReturnValue
 	@Nullable
-	static String resolveClassName(@Nonnull String simpleName, @Nullable String packageName, @Nonnull Set<String> imports) {
+	public static String resolveClassName(@Nonnull String simpleName, @Nullable String packageName, @Nonnull Set<String> imports) {
 		if (simpleName.isEmpty())
 			return null;
 
@@ -456,17 +520,14 @@ class ReflectionUtil {
 		if (simpleName.endsWith("]"))
 			return null;
 
-		// already fully qualified
 		if (simpleName.contains("."))
 			return simpleName;
 
-		// check explicit imports
 		for (var imp : imports) {
 			if (imp.endsWith("." + simpleName))
 				return imp;
 		}
 
-		// check wildcard imports
 		for (var imp : imports) {
 			if (imp.endsWith(".*")) {
 				final var candidate = imp.substring(0, imp.length() - 1) + simpleName;
@@ -475,14 +536,12 @@ class ReflectionUtil {
 			}
 		}
 
-		// try same package
 		if (packageName != null) {
 			final var candidate = packageName + "." + simpleName;
 			if (loadClass(candidate) != null)
 				return candidate;
 		}
 
-		// try java.lang
 		final var candidate = "java.lang." + simpleName;
 		if (loadClass(candidate) != null)
 			return candidate;
@@ -493,11 +552,11 @@ class ReflectionUtil {
 	@CheckReturnValue
 	@Nonnull
 	private static Optional<Class<?>> tryLoadClass(@Nonnull String name) {
-		++classForNameCallCount;
+		classForNameCallCount.incrementAndGet();
 		try {
 			return Optional.of(Class.forName(name, false, ReflectionUtil.class.getClassLoader()));
 		}
-		catch (ClassNotFoundException | NoClassDefFoundError e) {
+		catch (ClassNotFoundException | LinkageError | StackOverflowError e) {
 			return Optional.empty();
 		}
 	}

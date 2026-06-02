@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -13,6 +12,7 @@ import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Checkstyle check that enforces field ordering within static and instance
@@ -26,7 +26,22 @@ import javax.annotation.Nonnull;
  * alphabetical by type name. Array types sort right after their base type.
  * Fields of the same type sort alphabetically by name.
  */
-public class FieldSortingCheck extends AbstractCheck {
+public class FieldSortingCheck extends AbstractAstCheck {
+	/**
+	 * The rule-relevant classification of one field {@code VARIABLE_DEF}, exposed so the
+	 * fixer reorders fields with the check's rule rather than re-deriving it via regex.
+	 */
+	public record FieldInfo(
+			@Nonnull DetailAST varDef,
+			@Nonnull String name,
+			int chunk,
+			boolean isStatic,
+			@Nonnull String sortType,
+			@Nonnull List<String> annotationKeys,
+			@Nonnull List<List<String>> typeArgAnnotationKeys,
+			boolean anonInit
+	) {}
+
 	private static final int MAX_ANNOTATION_DEPTH = 50;
 	private static final Set<String> PRIMITIVES = Set.of(
 			"boolean", "byte", "char", "double", "float", "int", "long", "short"
@@ -110,14 +125,9 @@ public class FieldSortingCheck extends AbstractCheck {
 				buildTypeName(ast.getFirstChild(), sb);
 				sb.append("[]");
 			}
-			case TokenTypes.DOT -> {
-				buildTypeName(ast.getFirstChild(), sb);
-				sb.append('.');
-				var last = ast.getFirstChild();
-				while (last.getNextSibling() != null)
-					last = last.getNextSibling();
-				sb.append(last.getText());
-			}
+			// walking to the last child would pick up a TYPE_ARGUMENTS sibling and render
+			// its token name; dottedName stops at the qualified segments
+			case TokenTypes.DOT -> sb.append(AstUtil.dottedName(ast));
 			case TokenTypes.IDENT, TokenTypes.LITERAL_BOOLEAN, TokenTypes.LITERAL_BYTE,
 			     TokenTypes.LITERAL_CHAR, TokenTypes.LITERAL_DOUBLE, TokenTypes.LITERAL_FLOAT,
 			     TokenTypes.LITERAL_INT, TokenTypes.LITERAL_LONG,
@@ -144,6 +154,21 @@ public class FieldSortingCheck extends AbstractCheck {
 		return varDef.findFirstToken(TokenTypes.ASSIGN) != null ? 0 : 1;
 	}
 
+	@CheckReturnValue
+	@Nonnull
+	public static FieldInfo classifyField(@Nonnull DetailAST varDef) {
+		return new FieldInfo(
+				varDef,
+				fieldName(varDef),
+				chunkOf(varDef),
+				isStatic(varDef),
+				typeName(varDef),
+				annotationKeys(varDef),
+				typeArgAnnotationKeys(varDef),
+				hasAnonymousClassInit(varDef)
+		);
+	}
+
 	private static void collectIdents(@Nonnull DetailAST ast, @Nonnull Set<String> result) {
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
 			// skip anonymous class bodies: references inside methods are deferred, not init-time
@@ -156,7 +181,7 @@ public class FieldSortingCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
-	private static int compareAnnotations(@Nonnull List<String> a, @Nonnull List<String> b) {
+	public static int compareAnnotations(@Nonnull List<String> a, @Nonnull List<String> b) {
 		for (var i = 0; i < Math.min(a.size(), b.size()); ++i) {
 			final var cmp = a.get(i).compareToIgnoreCase(b.get(i));
 			if (cmp != 0)
@@ -166,7 +191,7 @@ public class FieldSortingCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
-	private static int compareTypeArgAnnotations(
+	public static int compareTypeArgAnnotations(
 			@Nonnull List<List<String>> a, @Nonnull List<List<String>> b
 	) {
 		for (var i = 0; i < Math.min(a.size(), b.size()); ++i) {
@@ -178,7 +203,7 @@ public class FieldSortingCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
-	private static int compareTypes(@Nonnull String a, @Nonnull String b) {
+	public static int compareTypes(@Nonnull String a, @Nonnull String b) {
 		final var aBase = baseType(a);
 		final var bBase = baseType(b);
 		final var aPrim = PRIMITIVES.contains(aBase);
@@ -206,7 +231,7 @@ public class FieldSortingCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	@Nonnull
-	private static Map<String, Set<String>> fieldDependencies(@Nonnull List<DetailAST> fields) {
+	public static Map<String, Set<String>> fieldDependencies(@Nonnull List<DetailAST> fields) {
 		final var fieldNames = new HashSet<String>();
 		for (var field : fields)
 			fieldNames.add(fieldName(field));
@@ -229,7 +254,7 @@ public class FieldSortingCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	@Nonnull
-	private static String fieldName(@Nonnull DetailAST varDef) {
+	public static String fieldName(@Nonnull DetailAST varDef) {
 		final var ident = varDef.findFirstToken(TokenTypes.IDENT);
 		return ident != null ? ident.getText() : "";
 	}
@@ -244,6 +269,26 @@ public class FieldSortingCheck extends AbstractCheck {
 	private static boolean isStatic(@Nonnull DetailAST varDef) {
 		final var modifiers = varDef.findFirstToken(TokenTypes.MODIFIERS);
 		return modifiers != null && modifiers.findFirstToken(TokenTypes.LITERAL_STATIC) != null;
+	}
+
+	/**
+	 * Returns the {@code OBJBLOCK} whose {@code VARIABLE_DEF} or {@code ENUM_CONSTANT_DEF}
+	 * child the check reported at {@code (line, column)} (0-based), or {@code null} when no
+	 * such member sits there.
+	 */
+	@CheckReturnValue
+	@Nullable
+	public static DetailAST objblockAt(@Nonnull DetailAST root, int line, int column) {
+		final var member = AstUtil.findNodeAt(
+				root,
+				line,
+				column,
+				node -> node.getType() == TokenTypes.VARIABLE_DEF || node.getType() == TokenTypes.ENUM_CONSTANT_DEF
+		);
+		if (member == null)
+			return null;
+		final var parent = member.getParent();
+		return parent != null && parent.getType() == TokenTypes.OBJBLOCK ? parent : null;
 	}
 
 	@CheckReturnValue
@@ -308,8 +353,12 @@ public class FieldSortingCheck extends AbstractCheck {
 		if (type == null)
 			return "";
 
+		final var baseType = type.getFirstChild();
+		if (baseType == null)
+			return "";
+
 		final var sb = new StringBuilder();
-		buildTypeName(type.getFirstChild(), sb);
+		buildTypeName(baseType, sb);
 
 		// count array declarators (can be on the type or after the ident)
 		for (var child = type.getFirstChild(); child != null; child = child.getNextSibling()) {
@@ -439,20 +488,8 @@ public class FieldSortingCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.OBJBLOCK};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

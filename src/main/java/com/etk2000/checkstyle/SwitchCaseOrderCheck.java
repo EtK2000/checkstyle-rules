@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -15,19 +14,16 @@ import javax.annotation.Nonnull;
  * Named constants sort alphabetically first, then numeric literals numerically,
  * then alphabetic literals alphabetically. Default must be last.
  */
-public class SwitchCaseOrderCheck extends AbstractCheck {
+public class SwitchCaseOrderCheck extends AbstractAstCheck {
 	private record Label(@Nonnull String text, boolean namedConstant) {}
 
-	private static final String MSG_INTERNAL_ORDER = "switch.case.internal.order";
 	private static final String MSG_ORDER = "switch.case.order";
 
 	@CheckReturnValue
 	private static int compareLabels(@Nonnull Label a, @Nonnull Label b) {
-		// named constants sort before everything else
 		if (a.namedConstant != b.namedConstant)
 			return a.namedConstant ? -1 : 1;
 
-		// among non-named-constants: numeric content before alphabetic content
 		if (!a.namedConstant) {
 			final var aNumeric = isNumericLabel(a.text);
 			final var bNumeric = isNumericLabel(b.text);
@@ -161,7 +157,7 @@ public class SwitchCaseOrderCheck extends AbstractCheck {
 				text = text.substring(0, text.length() - 1);
 		}
 
-		// handle binary literals (0b/0B prefix) — Long.decode doesn't support them
+		// handle binary literals (0b/0B prefix), Long.decode doesn't support them
 		if (text.length() > 2 && text.charAt(0) == '0'
 				&& (text.charAt(1) == 'b' || text.charAt(1) == 'B'))
 			return Long.parseLong(text.substring(2), 2);
@@ -181,20 +177,8 @@ public class SwitchCaseOrderCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.LITERAL_SWITCH};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override
@@ -208,25 +192,22 @@ public class SwitchCaseOrderCheck extends AbstractCheck {
 
 			final var isDefault = hasDefault(child);
 
-			// default not last: if there's a non-default case after default
 			if (prevWasDefault && !isDefault) {
 				final var currentLabel = getFirstLabel(child);
 				if (!currentLabel.text.isEmpty())
-					log(child, MSG_ORDER, "default", currentLabel.text);
+					log(child, MSG_ORDER, "Case", "default", currentLabel.text);
 			}
 
 			if (!isDefault) {
 				final var currentLabel = getFirstLabel(child);
 
-				// check ordering between cases
 				if (prevLabel != null && !currentLabel.text.isEmpty() && compareLabels(prevLabel, currentLabel) > 0)
-					log(child, MSG_ORDER, currentLabel.text, prevLabel.text);
+					log(child, MSG_ORDER, "Case", currentLabel.text, prevLabel.text);
 
-				// check internal ordering of comma-separated labels
 				final var labels = getLabels(child);
 				for (var i = 1; i < labels.size(); ++i) {
 					if (compareLabels(labels.get(i - 1), labels.get(i)) > 0)
-						log(child, MSG_INTERNAL_ORDER, labels.get(i).text, labels.get(i - 1).text);
+						log(child, MSG_ORDER, "Label", labels.get(i).text, labels.get(i - 1).text);
 				}
 
 				prevLabel = currentLabel.text.isEmpty() ? prevLabel : currentLabel;

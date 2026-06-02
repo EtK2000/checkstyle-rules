@@ -1,0 +1,64 @@
+# Whitelist for NoInlineJavaSourceTest.
+#
+# Lists test classes that currently contain inline Java fixture source (Java
+# code embedded as string literals inside *Test.java). As the migration to
+# resource-based fixtures (src/test/resources/.../inputs/<topic>/snippets/)
+# progresses, entries are removed from this file. When the whitelist contains
+# only the permanent exemptions below, the migration is complete and
+# NoInlineJavaSourceTest enforces resource-only fixtures globally.
+#
+# Format: one bare test class name per line (no package, no #method).
+# Lines beginning with '#' are comments. Inline '#' comments are also
+# stripped before the class name is read.
+# See docs/testing.md for the rationale.
+
+# --- permanent exemptions (test infrastructure) ---
+BaseCheckTest                        # test harness, not a fixture
+FullPipelineRunner                   # test harness, not a fixture
+FullPipelineRunnerTest               # tests the strip-marker helper with inline marker strings
+TestResources                        # loader for fixtures
+NoInlineJavaSourceTest               # this validator itself
+ViolationMarkersInsideSlicesTest     # validates // violation: marker placement; string constants trip heuristics
+
+# --- permanent exemptions (utility/infrastructure tests) ---
+AnnotationFixerUtilTest              # tests string-level annotation helpers
+ArgLayoutClassifierTest              # direct-AST tests for the argument-layout classifier
+BaseCheckTestTest                    # tests the BaseCheckTest harness (inline source for property-forwarding assertion)
+CheckstyleFixUtilTest                # tests hint computation, mock AuditEvents
+CheckstylePluginMinSdkTest           # gradle end-to-end project files
+CheckstylePluginTest                 # gradle end-to-end project files
+FixContextTest                       # tests ThreadLocal context utility
+FinalLocalVariableFixerTest          # direct fixer-call tests for the declaration-start column scan (final-before-type on multi-statement lines); the scenarios are inherently multi-statement lines that can't live in a lint-clean slice
+FixerAstTest                         # tests the shared parse firewall; needs a minimal parseable buffer
+FixerTestUtilTest                    # tests imports-directive helpers with inline import-line strings
+FqnResolverTest                      # tests the line-mask and comment-stripper helpers with inline line-fragment strings
+FragmentCaseReferencesTest           # tests orphan-case detection on inline source strings
+FragmentMigrationGuardTest           # unit-tests the fragment-migration detector with inline classify() body strings
+ImportLineTest                       # tests the shared import-line parser with inline import-line strings
+InsertMissingImportsTest             # tests import-insertion utility
+JavaArgListReformatterTest           # direct-AST tests for the arg-list reformatter's defensive guards
+JavaPostDelayedReformatterTest       # direct-AST tests for the postDelayed reformatter's one-line/fallback branches
+JavaSourceUtilTest                   # tests source-walker and comment-stripper helpers
+JavaSpanReindenterTest               # tests the span re-indenter with inline line-fragment strings
+JavaTernaryReformatterTest           # direct-AST tests for the ternary reformatter's defensive guards
+LambdaCallParserTest                 # tests parser utility helpers
+LineDeletionTest                     # tests deleteRange utility
+LineLengthTest                       # tests tab-expanded length utility
+MultilineCallFormattingFixerTest     # pins the fixer's defensive STALE-reason mapping via a direct call
+TestResourcesTest                    # tests translateImportsDirectives with inline import-line strings
+
+# --- permanent exemptions (AST/fuzz/regex check tests) ---
+# These tests use inline strings because their patterns either (a) trip
+# sibling checks if placed in resource files, (b) are fuzz/generated inputs
+# (e.g. 2000-element chains), or (c) are regex/messages constants that
+# incidentally match the validator's heuristics.
+AnnotationOwnLineCheckTest           # direct AST mutation for Math.min clamp boundary test
+AstUtilTest                          # direct AST inspection on inline snippets
+ControlFlowBracesCheckTierTest       # direct AST inspection on inline snippets
+MessagesFileSortedTest               # validates messages.properties content
+MultilineCallFormattingCheckTest     # direct AST inspection on inline snippet (closingParenMove guard)
+PreferDoWhileCheckTest               # direct AST inspection on inline snippets
+PreferImportCheckTest                # generated fuzz input (2000-element name), a reflection-call-count assertion, and a generic-outer-nested type the fixer's line scan can't handle
+PreferPrefixIncrementCheckTest       # direct AST inspection on inline snippets
+PreferStaticImportConstantCheckTest  # fuzz inputs (2000-element dot chain)
+RegexRulesTest                       # regex patterns trip Java-fixture heuristics

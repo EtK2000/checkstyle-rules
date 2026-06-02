@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -15,7 +14,7 @@ import javax.annotation.Nullable;
  * {@code (long) x * 100} should be {@code x * 100L}, and
  * {@code flag ? (long) x : 0} should be {@code flag ? x : 0L}.
  */
-public class PreferLiteralSuffixCheck extends AbstractCheck {
+public class PreferLiteralSuffixCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "prefer.literal.suffix";
 
 	/**
@@ -50,14 +49,35 @@ public class PreferLiteralSuffixCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
+	static boolean hasNegativeIntValueWhenWidened(@Nonnull String literalText) {
+		// Only hex/binary NUM_INT literals can be negative in int and non-negative as long
+		// (their textual value is unsigned but their int value sign-extends on widening).
+		// Decimal NUM_INT is always non-negative; a leading sign is UNARY_MINUS/PLUS.
+		final var normalised = literalText.replace("_", "");
+		final var isHex = normalised.startsWith("0x") || normalised.startsWith("0X");
+		final var isBinary = normalised.startsWith("0b") || normalised.startsWith("0B");
+		if (!isHex && !isBinary)
+			return false;
+		final var digits = normalised.substring(2);
+		try {
+			return Integer.parseUnsignedInt(digits, isHex ? 16 : 2) < 0;
+		}
+		catch (NumberFormatException e) {
+			return false;
+		}
+	}
+
+	@CheckReturnValue
 	private static boolean isBinaryNumericPromotion(int tokenType) {
+		// SL, SR, BSR intentionally excluded: shift result type/masking depends on
+		// the LHS operand only (JLS 15.19), so swapping a cast for a suffix on the
+		// RHS literal changes the semantic, not just the syntax.
 		return switch (tokenType) {
-			case TokenTypes.BAND, TokenTypes.BOR, TokenTypes.BSR,
-			     TokenTypes.BXOR, TokenTypes.DIV, TokenTypes.EQUAL,
-			     TokenTypes.GE, TokenTypes.GT, TokenTypes.LE,
-			     TokenTypes.LT, TokenTypes.MINUS, TokenTypes.MOD,
-			     TokenTypes.NOT_EQUAL, TokenTypes.PLUS, TokenTypes.SL,
-			     TokenTypes.SR, TokenTypes.STAR -> true;
+			case TokenTypes.BAND, TokenTypes.BOR, TokenTypes.BXOR,
+			     TokenTypes.DIV, TokenTypes.EQUAL, TokenTypes.GE,
+			     TokenTypes.GT, TokenTypes.LE, TokenTypes.LT,
+			     TokenTypes.MINUS, TokenTypes.MOD, TokenTypes.NOT_EQUAL,
+			     TokenTypes.PLUS, TokenTypes.STAR -> true;
 			default -> false;
 		};
 	}
@@ -91,20 +111,8 @@ public class PreferLiteralSuffixCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.TYPECAST};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override
@@ -119,9 +127,6 @@ public class PreferLiteralSuffixCheck extends AbstractCheck {
 			return;
 
 		final var other = findOtherOperand(ast);
-
-		// only flag when the other operand is an integer literal (no suffix)
-		// unwrap UNARY_MINUS/UNARY_PLUS to check the inner node
 		if (other == null)
 			return;
 		final var unwrapped = (other.getType() == TokenTypes.UNARY_MINUS || other.getType() == TokenTypes.UNARY_PLUS)
@@ -130,6 +135,13 @@ public class PreferLiteralSuffixCheck extends AbstractCheck {
 			return;
 
 		final var literalText = other == unwrapped ? unwrapped.getText() : other.getText() + unwrapped.getText();
+
+		// Hex/binary NUM_INT with bit 31 set: 0xFFFFFFFF as int is -1 (sign-extends to -1L
+		// on widening), but 0xFFFFFFFFL as a long literal is +4294967295L. Removing the
+		// cast would change the value.
+		if (hasNegativeIntValueWhenWidened(unwrapped.getText()))
+			return;
+
 		log(ast, MSG_KEY, suffix, literalText);
 	}
 }

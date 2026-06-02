@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -11,7 +10,7 @@ import javax.annotation.Nonnull;
  * Checkstyle check that flags unnecessary braces in case/default blocks.
  * Braces are only allowed when a variable is defined in the case's direct scope.
  */
-public class NoCaseBracesCheck extends AbstractCheck {
+public class NoCaseBracesCheck extends AbstractAstCheck {
 	private static final String MSG_MISSING = "case.braces.missing";
 	private static final String MSG_UNNECESSARY = "no.case.braces";
 
@@ -26,20 +25,8 @@ public class NoCaseBracesCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.CASE_GROUP};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

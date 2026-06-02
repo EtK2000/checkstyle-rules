@@ -157,14 +157,14 @@ Modules are grouped: custom checks first (alphabetical), then built-in checks (a
 
 Create a directory under `src/test/resources/com/etk2000/checkstyle/inputs/mycheck/` with:
 
-### Clean file (`InputMyCheckClean.java`)
+### Clean file (`cases.clean.java`)
 
 Valid code that must produce zero violations. Cover every pattern the check should ALLOW:
 - Each branch that exits without logging
 - Boundary cases that are just barely acceptable
 - Every variant the check explicitly skips (e.g., different token types, null-safe forms)
 
-### Violation file(s) (`InputMyCheckViolation.java`)
+### Violation file(s) (`cases.in.java`)
 
 Code with known violations. Mark each violation line with a comment:
 ```java
@@ -178,42 +178,81 @@ Cover:
 
 ### Multiple violation files
 
-If the check has distinct modes or configurations, use separate files:
-`InputMyCheckFooViolation.java`, `InputMyCheckBarViolation.java`.
+If the check has distinct modes or configurations, use separate files with a variant suffix:
+`cases.foo.in.java`, `cases.bar.in.java` (each paired with `cases.foo.out.java`,
+`cases.bar.out.java` if there is fixer output to verify).
 
-## 5. Test class
+## 5. Wire the check into `StandardCheckTests`
 
-In `src/test/java/com/etk2000/checkstyle/MyNewCheckTest.java`:
+**Always** add the check to `StandardCheckTests.ENTRIES`. This is the
+project's standard test pipeline; one-off `XxxCheckTest` classes that
+duplicate clean / violations / per-slice fix logic are a bug, not a
+shortcut (they bypass `assertCheckMatchesMarkers`, so drifted markers
+and missing minSdk predicates go undetected).
 
 ```java
-public class MyNewCheckTest {
-    private static final String DIR = "mycheck/";
+new Entry(MyNewCheck .class),                       // check-only
+new
 
-    @Test
-    public void testClean() throws Exception {
-        assertTrue(BaseCheckTest.runCheck(MyNewCheck.class, DIR + "InputMyCheckClean.java").isEmpty());
-    }
-
-    @Test
-    public void testViolations() throws Exception {
-        final var violations = BaseCheckTest.runCheck(MyNewCheck.class, DIR + "InputMyCheckViolation.java");
-        assertEquals(3, violations.size());
-        assertEquals(10, violations.get(0).getLine());
-        assertEquals("Expected message.", violations.get(0).getMessage());
-        // ... verify every violation's line and message
-    }
-}
+Entry(MyNewCheck .class, /*hasFixer*/ true)     // check + per-slice fixer tests
 ```
 
-Verify the exact count, line number, and message for every violation. For clean tests, just
-assert empty.
+Entries must stay alphabetically sorted (a dedicated test in the same class
+enforces this). The auto-pipeline expands each entry to:
 
-### Properties
+- `<CheckClass> > clean` — runs the check against `cases.clean.java`,
+  asserts zero violations. When `hasFixer=true` it also runs the entry's own
+  fixer over the clean file to a fixed point and asserts it is unchanged (the
+  file is clean for that check/fixer, so its fixer must be a no-op).
+- `<CheckClass> > violations` — runs the check against `cases.in.java`,
+  matches every `// violation:` marker 1:1 against the check's output via
+  `BaseCheckTest.assertCheckMatchesMarkers`.
+- `<CheckClass> > <slice_name> > violations` — same matcher run against
+  each `// === case: NAME ===` slice (with the file prefix prepended) so
+  type-resolving checks see the right import context.
+- `<CheckClass> > <slice_name> > fix` — applies the fixer to each
+  single-violation slice and asserts the post-fix output equals the
+  matching Fixed slice. Emitted only when `hasFixer=true`.
+- `<CheckClass> > <slice_name> > imports-unchanged` — emitted only when
+  `hasFixer=true` AND the check is gated off under the entry's
+  properties. Asserts the Fixed slice's imports equal the Violation
+  slice's (no fix runs, so no diff allowed).
 
-Pass check properties as alternating key-value pairs:
+See `docs/testing.md` for the full pipeline.
+
+A dedicated `MyNewCheckTest` class is only justified for things the
+auto-pipeline can't express (direct AST unit tests against tokens that
+no `cases.in.java` line can produce, cross-check sanity scans, fragment
+or skip-result assertions against `fragments.in.java`). Do not put a
+clean / violations / per-slice fix test there.
+
+### Properties and minSdk variants
+
+Each `ENTRIES` row can carry a `Map<String,String>` of check properties.
+When a check uses `minSdk` gating, register **every** variant (both
+gated-on and gated-off):
+
 ```java
-BaseCheckTest.runCheck(MyNewCheck.class, DIR + "Input.java", "minSdk", "19")
+new Entry(MyNewCheck .class, true,Map.of("minSdk", "18")),  // gated off
+        new
+
+Entry(MyNewCheck .class, true,Map.of("minSdk", "19")),  // gated on
 ```
+
+Marker predicates are mandatory under variant registration: every
+`// violation:` marker in `cases.in.java` must carry a predicate matching
+the gate (`// violation [minSdk>=19]: ...`) so the marker is inactive
+under the gated-off variant. Without the predicate the
+`violations` dynamic test for the gated-off variant fails with
+"expected N, got 0". For each variant, add a sibling
+`cases.out.<variant>.java` holding the expected post-fix output (for the
+gated-off variant the Fixed slices are byte-identical to the Violation
+slices). See "MinSdk-gated checks: variants and marker predicates" in
+`docs/testing.md`.
+
+Underneath, `BaseCheckTest.runCheck(MyNewCheck.class, "input.java", "minSdk", "19")`
+is the raw primitive; `StandardCheckTests` calls it for you with the
+entry's properties. Don't call `runCheck` directly in a new test.
 
 ## 6. Verify
 
@@ -273,8 +312,11 @@ existing suppression keys.
   `IDENT` tokens, so `AstUtil.typeText()` returns `""`. Use a switch on the child token type to
   map to the primitive name.
 
-- **`DetailAST.getColumnNo()` is tab-expanded**: column numbers account for tab width (default
-  8). This matters if your check uses column positions for anything.
+- **`DetailAST.getColumnNo()` is a raw char index, NOT tab-expanded**: it is the 0-based character
+  offset on the line (each tab counts as one char). Tab expansion applies only to the *reported*
+  violation column (`AuditEvent.getColumn()`), which the fixer harness converts back to a char index
+  via `CheckstyleFixAction.tabColumnToCharIndex` before matching it against `getColumnNo()`. So a
+  fixer can slice a raw line at `getColumnNo()` directly (see `JavaTernaryReformatter`).
 
 - **Cross-check ALL files, not just representative ones**: when your check is related to another
   check (e.g., both handle annotations on parameters), cross-check EVERY test resource file from

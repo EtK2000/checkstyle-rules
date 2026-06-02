@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -19,7 +18,7 @@ import javax.annotation.Nullable;
  * body sequence to also appear as a contiguous pre-loop sequence, which the
  * check does not attempt.</p>
  */
-public class PreferDoWhileCheck extends AbstractCheck {
+public class PreferDoWhileCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "prefer.do.while";
 
 	@CheckReturnValue
@@ -58,20 +57,8 @@ public class PreferDoWhileCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.LITERAL_WHILE};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
@@ -18,6 +17,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Flags qualified static method calls that read better as a static import.
@@ -61,7 +61,7 @@ import javax.annotation.Nonnull;
  *       packages) are not detected.</li>
  * </ul>
  */
-public class PreferStaticImportCheck extends AbstractCheck {
+public class PreferStaticImportCheck extends AbstractAstCheck {
 	private static final int DEFAULT_MIN_OCCURRENCES = 2;
 	private static final int MIN_SDK_COLLECTORS = 24;
 	private static final int MIN_SDK_OBJECTS = 19;
@@ -122,7 +122,7 @@ public class PreferStaticImportCheck extends AbstractCheck {
 	private static Map<String, String> buildSimpleToFqcn(@Nonnull Map<String, Map<String, Integer>> candidates) {
 		final var map = new HashMap<String, String>();
 		for (var fqcn : candidates.keySet())
-			map.put(fqcn.substring(fqcn.lastIndexOf('.') + 1), fqcn);
+			map.put(AstUtil.simpleName(fqcn), fqcn);
 		return Map.copyOf(map);
 	}
 
@@ -135,11 +135,16 @@ public class PreferStaticImportCheck extends AbstractCheck {
 	private int minSdk = Integer.MAX_VALUE;
 
 	@Override
-	public void beginTree(@Nonnull DetailAST rootAST) {
+	public void beginTree(@Nullable DetailAST rootAST) {
 		conflictedMethods.clear();
 		imports.clear();
 		occurrences.clear();
 		shadowedClasses.clear();
+
+		// a comments-only or empty file has no compilation unit, so checkstyle passes a
+		// null root; the guard sits after the clears so finishTree sees the cleared state
+		if (rootAST == null)
+			return;
 
 		// pre-scan the AST: collect imports first (needed for conflict and shadow detection),
 		// then walk for local shadows (methods and nested types), then probe the filesystem
@@ -177,7 +182,7 @@ public class PreferStaticImportCheck extends AbstractCheck {
 			else {
 				// non-static import whose simple name matches a candidate method:
 				// e.g. `import com.foo.not;` shadows `not(...)`.
-				final var simple = imp.substring(imp.lastIndexOf('.') + 1);
+				final var simple = AstUtil.simpleName(imp);
 				if (CANDIDATE_OWNERS_BY_METHOD.containsKey(simple))
 					conflictedMethods.add(simple);
 			}
@@ -191,21 +196,26 @@ public class PreferStaticImportCheck extends AbstractCheck {
 		for (var imp : imports) {
 			if (imp.startsWith("static ") || imp.endsWith(".*"))
 				continue;
-			final var simple = imp.substring(imp.lastIndexOf('.') + 1);
+			final var simple = AstUtil.simpleName(imp);
 			final var candidateFqcn = SIMPLE_TO_FQCN.get(simple);
 			if (candidateFqcn != null && !imp.equals(candidateFqcn))
 				shadowedClasses.add(simple);
 		}
 	}
 
-	private void collectImports(@Nonnull DetailAST root) {
+	void collectImports(@Nonnull DetailAST root) {
 		for (var child = root.getFirstChild(); child != null; child = child.getNextSibling()) {
 			switch (child.getType()) {
 				case TokenTypes.IMPORT -> imports.add(FullIdent.createFullIdentBelow(child).getText());
 
 				case TokenTypes.STATIC_IMPORT -> {
 					// STATIC_IMPORT children: LITERAL_STATIC, then the DOT/IDENT path, then SEMI.
-					final var pathNode = child.getFirstChild().getNextSibling();
+					final var first = child.getFirstChild();
+					if (first == null)
+						continue;
+					final var pathNode = first.getNextSibling();
+					if (pathNode == null)
+						continue;
 					imports.add("static " + FullIdent.createFullIdent(pathNode).getText());
 				}
 			}
@@ -229,20 +239,8 @@ public class PreferStaticImportCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.METHOD_CALL};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	private void probeFilesystemForShadows() {

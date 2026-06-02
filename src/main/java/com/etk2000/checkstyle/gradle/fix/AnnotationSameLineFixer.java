@@ -10,13 +10,12 @@ class AnnotationSameLineFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
-		if (lineIndex < 0 || lineIndex >= lines.size())
+		final var line = lines.get(lineIndex);
+		if (column < 0 || column >= line.length())
 			return null;
 
-		final var line = lines.get(lineIndex);
 		final var stripped = line.stripLeading();
 
-		// case 1: annotation on its own line - join with subsequent lines
 		if (AnnotationFixerUtil.isAnnotationOnlyLine(stripped)) {
 			final var annotationTexts = new ArrayList<String>();
 			var idx = lineIndex;
@@ -25,11 +24,16 @@ class AnnotationSameLineFixer implements CheckstyleFixer {
 				if (!AnnotationFixerUtil.isAnnotationOnlyLine(s))
 					break;
 				final var parsed = AnnotationFixerUtil.parseAnnotations(s);
+				if (parsed.annotations().isEmpty())
+					return null;
 				annotationTexts.addAll(parsed.annotations());
 				++idx;
 			}
 
 			if (idx >= lines.size())
+				return null;
+
+			if (annotationTexts.isEmpty())
 				return null;
 
 			AnnotationFixerUtil.sortAnnotations(annotationTexts);
@@ -40,15 +44,12 @@ class AnnotationSameLineFixer implements CheckstyleFixer {
 			return new FixResult(lineIndex, idx, List.of(joined));
 		}
 
-		// case 2: inline annotations out of alphabetical order - reorder on the same line
-		// find the start of the annotation group by scanning backward from column
 		var groupStart = column;
 		while (groupStart > 0
 				&& line.charAt(groupStart - 1) != '('
 				&& line.charAt(groupStart - 1) != ',')
 			--groupStart;
 
-		// skip whitespace after the boundary
 		while (groupStart < line.length() && Character.isWhitespace(line.charAt(groupStart)))
 			++groupStart;
 

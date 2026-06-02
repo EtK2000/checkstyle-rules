@@ -18,6 +18,34 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 
 public class ReflectionUtilTest {
+	/**
+	 * accessed via reflection from {@link #testGetVarArgsComponentTypeConflictingVarargsReturnsNull()}
+	 */
+	@SuppressWarnings("unused")
+	public static class ConflictingVarargs {
+		public int m(int... values) {
+			return values.length;
+		}
+
+		public int m(String... values) {
+			return values.length;
+		}
+	}
+
+	/**
+	 * accessed via reflection from {@link #testHasGenericReturnTypeVarargsArityBounds()}
+	 */
+	@SuppressWarnings("unused")
+	public static class VarargsArity {
+		public <T> T pick() {
+			return null;
+		}
+
+		public <T> T pick(T seed, Object... rest) {
+			return seed;
+		}
+	}
+
 	public static class TwoLevelOuter {
 		public static class TwoLevelMid {
 			public static class TwoLevelLeaf {
@@ -103,57 +131,42 @@ public class ReflectionUtilTest {
 	@Test
 	public void testClearCacheDoesNotResetCounter() {
 		ReflectionUtil.clearCache();
-		ReflectionUtil.classForNameCallCount = 0;
+		ReflectionUtil.classForNameCallCount.set(0);
 		assertTrue(ReflectionUtil.hasMethod("java.util.List", "size"));
-		final var afterCall = ReflectionUtil.classForNameCallCount;
+		final var afterCall = ReflectionUtil.classForNameCallCount.get();
 		assertNotEquals(0, afterCall);
 		ReflectionUtil.clearCache();
-		assertEquals(afterCall, ReflectionUtil.classForNameCallCount);
+		assertEquals(afterCall, ReflectionUtil.classForNameCallCount.get());
 	}
 
 	@Test
 	public void testFindCharsetStringArgIndexConstructors() {
-		// String(byte[], String charsetName) -> String(byte[], Charset)
 		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.lang.String", "new", 2));
-		// String(byte[], int, int, String) -> String(byte[], int, int, Charset)
 		assertEquals(3, ReflectionUtil.findCharsetStringArgIndex("java.lang.String", "new", 4));
-		// InputStreamReader(InputStream, String) -> InputStreamReader(InputStream, Charset)
 		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.io.InputStreamReader", "new", 2));
-		// OutputStreamWriter(OutputStream, String) -> OutputStreamWriter(OutputStream, Charset)
 		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.io.OutputStreamWriter", "new", 2));
-		// PrintStream(File, String) -> PrintStream(File, Charset)
 		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.io.PrintStream", "new", 2));
-		// PrintStream(OutputStream, boolean, String) -> PrintStream(OutputStream, boolean, Charset)
 		assertEquals(2, ReflectionUtil.findCharsetStringArgIndex("java.io.PrintStream", "new", 3));
-		// PrintWriter(File, String) -> PrintWriter(File, Charset)
 		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.io.PrintWriter", "new", 2));
-		// Scanner(InputStream, String) -> Scanner(InputStream, Charset)
 		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.util.Scanner", "new", 2));
 	}
 
 	@Test
 	public void testFindCharsetStringArgIndexMethods() {
-		// String.getBytes(String) -> String.getBytes(Charset)
 		assertEquals(0, ReflectionUtil.findCharsetStringArgIndex("java.lang.String", "getBytes", 1));
-		// URLEncoder.encode(String, String) -> URLEncoder.encode(String, Charset)
 		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.net.URLEncoder", "encode", 2));
-		// URLDecoder.decode(String, String) -> URLDecoder.decode(String, Charset)
 		assertEquals(1, ReflectionUtil.findCharsetStringArgIndex("java.net.URLDecoder", "decode", 2));
-		// ByteArrayOutputStream.toString(String) -> ByteArrayOutputStream.toString(Charset)
 		assertEquals(0, ReflectionUtil.findCharsetStringArgIndex("java.io.ByteArrayOutputStream", "toString", 1));
 	}
 
 	@Test
 	public void testFindCharsetStringArgIndexNoCharsetOverload() {
-		// Charset.forName(String) has no Charset.forName(Charset) overload
 		assertEquals(-1, ReflectionUtil.findCharsetStringArgIndex("java.nio.charset.Charset", "forName", 1));
-		// String.valueOf(Object) has no Charset variant
 		assertEquals(-1, ReflectionUtil.findCharsetStringArgIndex("java.lang.String", "valueOf", 1));
 	}
 
 	@Test
 	public void testFindCharsetStringArgIndexNoConstructorWithThatCount() {
-		// PrintWriter has no 3-arg String constructor (only Charset)
 		assertEquals(-1, ReflectionUtil.findCharsetStringArgIndex("java.io.PrintWriter", "new", 3));
 	}
 
@@ -200,6 +213,11 @@ public class ReflectionUtilTest {
 	}
 
 	@Test
+	public void testGetMethodReturnTypeNameArrayReturn() {
+		assertEquals("[C", ReflectionUtil.getMethodReturnTypeName("java.lang.String", "toCharArray"));
+	}
+
+	@Test
 	public void testGetMethodReturnTypeNameUnknownClass() {
 		assertNull(ReflectionUtil.getMethodReturnTypeName("com.nonexistent.FakeClass", "method"));
 	}
@@ -207,6 +225,11 @@ public class ReflectionUtilTest {
 	@Test
 	public void testGetMethodReturnTypeNameUnknownMethod() {
 		assertNull(ReflectionUtil.getMethodReturnTypeName("java.lang.String", "nonexistentMethod"));
+	}
+
+	@Test
+	public void testGetVarArgsComponentTypeConflictingVarargsReturnsNull() {
+		assertNull(ReflectionUtil.getVarArgsComponentType("com.etk2000.checkstyle.ReflectionUtilTest$ConflictingVarargs", "m", 1));
 	}
 
 	@Test
@@ -221,9 +244,6 @@ public class ReflectionUtilTest {
 
 	@Test
 	public void testGetVarArgsComponentTypeNonVarargsArrayOverloadBlocks() {
-		// Arrays.sort(int[]) is non-varargs with array last param; no competing varargs at argCount=1
-		// This tests the isArray() branch: int[].isArray() is true, so it would block if a varargs overload existed
-		// Since no varargs overload exists at argCount=1, componentType stays null and returns null
 		assertNull(ReflectionUtil.getVarArgsComponentType("java.util.Arrays", "sort", 1));
 	}
 
@@ -258,41 +278,70 @@ public class ReflectionUtilTest {
 	}
 
 	@Test
+	public void testHasGenericReturnTypeAritySelectsOverload() {
+		assertTrue(ReflectionUtil.hasGenericReturnType("java.util.List", "of", 0));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.List", "of", 1));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.List", "of", 2));
+		assertTrue(ReflectionUtil.hasGenericReturnType("java.util.Map", "of", 0));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.Map", "of", 2));
+		assertTrue(ReflectionUtil.hasGenericReturnType("java.util.Set", "of", 0));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.Set", "of", 1));
+		// above every fixed-arity overload only the varargs one matches, and it infers
+		// from its elements just as the fixed forms do
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.List", "of", 11));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.Arrays", "asList", 2));
+	}
+
+	@Test
 	public void testHasGenericReturnTypeClassLevelTypeParam() {
-		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.List", "get"));
-		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.List", "iterator"));
-		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.Map", "get"));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.List", "get", 1));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.List", "iterator", 0));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.Map", "get", 1));
 	}
 
 	@Test
 	public void testHasGenericReturnTypeInferableFromArgs() {
-		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.Collections", "min"));
-		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.List", "of"));
-		assertFalse(ReflectionUtil.hasGenericReturnType("java.lang.Class", "cast"));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.Collections", "min", 1));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.lang.Class", "cast", 1));
 	}
 
 	@Test
 	public void testHasGenericReturnTypeNeedsTargetType() {
-		assertTrue(ReflectionUtil.hasGenericReturnType("java.util.Collections", "emptyList"));
-		assertTrue(ReflectionUtil.hasGenericReturnType("java.util.Collections", "emptySet"));
-		assertTrue(ReflectionUtil.hasGenericReturnType("java.util.Optional", "empty"));
+		assertTrue(ReflectionUtil.hasGenericReturnType("java.util.Collections", "emptyList", 0));
+		assertTrue(ReflectionUtil.hasGenericReturnType("java.util.Collections", "emptySet", 0));
+		assertTrue(ReflectionUtil.hasGenericReturnType("java.util.Optional", "empty", 0));
 	}
 
 	@Test
 	public void testHasGenericReturnTypeNonGenericMethod() {
-		assertFalse(ReflectionUtil.hasGenericReturnType("java.lang.String", "valueOf"));
-		assertFalse(ReflectionUtil.hasGenericReturnType("java.lang.String", "length"));
-		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.List", "size"));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.lang.String", "valueOf", 1));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.lang.String", "length", 0));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.List", "size", 0));
+	}
+
+	@Test
+	public void testHasGenericReturnTypeUnknownArity() {
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.Collections", "emptyList", 3));
 	}
 
 	@Test
 	public void testHasGenericReturnTypeUnknownClass() {
-		assertFalse(ReflectionUtil.hasGenericReturnType("com.nonexistent.FakeClass", "method"));
+		assertFalse(ReflectionUtil.hasGenericReturnType("com.nonexistent.FakeClass", "method", 0));
 	}
 
 	@Test
 	public void testHasGenericReturnTypeUnknownMethod() {
-		assertFalse(ReflectionUtil.hasGenericReturnType("java.lang.String", "nonexistentMethod"));
+		assertFalse(ReflectionUtil.hasGenericReturnType("java.lang.String", "nonexistentMethod", 0));
+	}
+
+	@Test
+	public void testHasGenericReturnTypeVarargsArityBounds() {
+		// only the no-arg overload accepts arity 0; above that the varargs one takes over and
+		// infers from its own arguments
+		final var fqcn = "com.etk2000.checkstyle.ReflectionUtilTest$VarargsArity";
+		assertTrue(ReflectionUtil.hasGenericReturnType(fqcn, "pick", 0));
+		assertFalse(ReflectionUtil.hasGenericReturnType(fqcn, "pick", 1));
+		assertFalse(ReflectionUtil.hasGenericReturnType(fqcn, "pick", 5));
 	}
 
 	@Test
@@ -303,67 +352,54 @@ public class ReflectionUtilTest {
 
 	@Test
 	public void testHasMethodCountInnerClassResolvesInOneCall() {
-		// heuristic differs from input: java.util.Map$Entry resolves on the
-		// fast path in exactly one Class.forName invocation
 		ReflectionUtil.clearCache();
-		ReflectionUtil.classForNameCallCount = 0;
+		ReflectionUtil.classForNameCallCount.set(0);
 		assertTrue(ReflectionUtil.hasMethod("java.util.Map.Entry", "getKey"));
-		assertEquals(1, ReflectionUtil.classForNameCallCount);
+		assertEquals(1, ReflectionUtil.classForNameCallCount.get());
 	}
 
 	@Test
 	public void testHasMethodCountMitigationFallsBackToSlowPath() {
-		// mitigation triggers (lowercase mid-segment after first uppercase),
-		// heuristic returns input unchanged, slow path runs:
-		// 1) try original (fail) 2) substitute Inner (fail) 3) lowercase guard stops
 		ReflectionUtil.clearCache();
-		ReflectionUtil.classForNameCallCount = 0;
+		ReflectionUtil.classForNameCallCount.set(0);
 		assertFalse(ReflectionUtil.hasMethod("pkg.Outer.lower.Inner", "x"));
-		assertEquals(2, ReflectionUtil.classForNameCallCount);
+		assertEquals(2, ReflectionUtil.classForNameCallCount.get());
 	}
 
 	@Test
 	public void testHasMethodCountTopLevelClassResolvesInOneCall() {
-		// top-level class: heuristic equals input, fast path skipped, slow
-		// path resolves on the first attempt
 		ReflectionUtil.clearCache();
-		ReflectionUtil.classForNameCallCount = 0;
+		ReflectionUtil.classForNameCallCount.set(0);
 		assertTrue(ReflectionUtil.hasMethod("java.util.List", "size"));
-		assertEquals(1, ReflectionUtil.classForNameCallCount);
+		assertEquals(1, ReflectionUtil.classForNameCallCount.get());
 	}
 
 	@Test
 	public void testHasMethodCountTwoLevelInnerResolvesInOneCall() {
-		// 3-level deep nesting: heuristic produces the full $-form in one
-		// shot, no slow-path iterations needed
 		ReflectionUtil.clearCache();
-		ReflectionUtil.classForNameCallCount = 0;
+		ReflectionUtil.classForNameCallCount.set(0);
 		assertTrue(ReflectionUtil.hasMethod(
 				"com.etk2000.checkstyle.ReflectionUtilTest.TwoLevelOuter.TwoLevelMid.TwoLevelLeaf",
 				"getValue"
 		));
-		assertEquals(1, ReflectionUtil.classForNameCallCount);
+		assertEquals(1, ReflectionUtil.classForNameCallCount.get());
 	}
 
 	@Test
 	public void testHasMethodCountUnresolvableCachedSecondCallZero() {
-		// failed lookups are cached as Optional.empty(); a second call with
-		// the same FQN must hit the cache and not invoke Class.forName again
 		ReflectionUtil.clearCache();
 		assertFalse(ReflectionUtil.hasMethod("Bareword", "method"));
-		ReflectionUtil.classForNameCallCount = 0;
+		ReflectionUtil.classForNameCallCount.set(0);
 		assertFalse(ReflectionUtil.hasMethod("Bareword", "method"));
-		assertEquals(0, ReflectionUtil.classForNameCallCount);
+		assertEquals(0, ReflectionUtil.classForNameCallCount.get());
 	}
 
 	@Test
 	public void testHasMethodCountUnresolvableTopLevelOneCall() {
-		// pin that the counter increments even on Class.forName failure:
-		// no-dot input runs slow path once (fail), then exits on lastDot < 0
 		ReflectionUtil.clearCache();
-		ReflectionUtil.classForNameCallCount = 0;
+		ReflectionUtil.classForNameCallCount.set(0);
 		assertFalse(ReflectionUtil.hasMethod("Bareword", "method"));
-		assertEquals(1, ReflectionUtil.classForNameCallCount);
+		assertEquals(1, ReflectionUtil.classForNameCallCount.get());
 	}
 
 	@Test
@@ -390,15 +426,11 @@ public class ReflectionUtilTest {
 
 	@Test
 	public void testHasMethodInnerClassDollarForm() {
-		// FQN already in JVM '$' form: heuristic returns same string, fast
-		// path skipped, slow path resolves directly. Verifies cache key is
-		// the original input form (not the heuristic).
 		assertTrue(ReflectionUtil.hasMethod("java.util.Map$Entry", "getKey"));
 	}
 
 	@Test
 	public void testHasMethodInnerClassDottedName() {
-		// Java FQN uses '.', JVM expects '$'; loadClass should retry with substitution
 		assertTrue(ReflectionUtil.hasMethod("java.util.AbstractMap.SimpleEntry", "getValue"));
 		assertTrue(ReflectionUtil.hasMethod("java.util.AbstractMap.SimpleEntry", "getKey"));
 		assertTrue(ReflectionUtil.hasMethod("java.util.Map.Entry", "getKey"));
@@ -422,22 +454,16 @@ public class ReflectionUtilTest {
 
 	@Test
 	public void testHasMethodMixedCaseLowercaseInMiddle() {
-		// uppercase segment followed by lowercase segment after first class:
-		// heuristic mitigation returns input unchanged so we never load a
-		// substituted form the slow path's lowercase guard would have rejected
 		assertFalse(ReflectionUtil.hasMethod("pkg.Outer.lower.Inner", "x"));
 	}
 
 	@Test
 	public void testHasMethodNoDotsBareName() {
-		// no-dot input: substitution loop has no '.' to replace, returns null without retry
 		assertFalse(ReflectionUtil.hasMethod("Bareword", "method"));
 	}
 
 	@Test
 	public void testHasMethodTrailingDot() {
-		// rightmost char is '.': lastDot+1 == length, guard returns null without
-		// attempting charAt on out-of-bounds index
 		assertFalse(ReflectionUtil.hasMethod("java.util.", "x"));
 	}
 
@@ -524,6 +550,18 @@ public class ReflectionUtilTest {
 	}
 
 	@Test
+	public void testIsResolvableClassResolvable() {
+		assertTrue(ReflectionUtil.isResolvableClass("java.lang.String"));
+		assertTrue(ReflectionUtil.isResolvableClass("java.util.Map"));
+	}
+
+	@Test
+	public void testIsResolvableClassUnresolvable() {
+		assertFalse(ReflectionUtil.isResolvableClass("com.etk2000.checkstyle.NoSuchClass"));
+		assertFalse(ReflectionUtil.isResolvableClass("totally.bogus.Type"));
+	}
+
+	@Test
 	public void testResolveClassNameAlreadyQualified() {
 		assertEquals(
 				"java.util.List",
@@ -581,6 +619,14 @@ public class ReflectionUtilTest {
 		assertEquals(
 				"java.util.Collections",
 				ReflectionUtil.resolveClassName("Collections", null, Set.of("java.util.*"))
+		);
+	}
+
+	@Test
+	public void testResolveClassNameWildcardImportMissesFallsThroughToJavaLang() {
+		assertEquals(
+				"java.lang.String",
+				ReflectionUtil.resolveClassName("String", null, Set.of("com.bogus.*"))
 		);
 	}
 }

@@ -1,103 +1,59 @@
 package com.etk2000.checkstyle.gradle.fix;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSimpleFix;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class DeleteLineFixerTest {
+	private static final String TOPIC = "deleteline";
+
 	private final CheckstyleFixer fixer = new DeleteLineFixer();
 
 	@Test
-	public void testDeleteFirstLine() {
-		final var lines = new ArrayList<>(List.of("import java.util.List;", "class Foo {}"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.replacement().isEmpty());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testDeleteFirstLine() throws Exception {
+		// can't migrate: fixer-internal line-deletion probe with synthetic non-parseable input; DeleteLineFixer is shared by RegexpMultiline/RegexpSingleline (AbstractFileSetCheck) and UnusedImports/RedundantImport, no single AbstractCheck class drives this case
+		assertSimpleFix(fixer, TOPIC, "delete_first_line");
 	}
 
 	@Test
-	public void testDeleteFirstLineBlankBelow() {
-		final var lines = new ArrayList<>(List.of("import A;", "", "class T {}"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.replacement().isEmpty());
+	public void testDeleteFirstLineBlankBelow() throws Exception {
+		// can't migrate: fixer-internal line-deletion probe with synthetic non-parseable input (`import A;` is not a resolvable import)
+		assertSimpleFix(fixer, TOPIC, "delete_first_line_blank_below");
 	}
 
 	@Test
-	public void testDeleteImportBlankAboveOnly() {
-		final var lines = new ArrayList<>(List.of("import A;", "", "import B;", "import C;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
-		assertEquals(2, result.startLine());
-		assertEquals(2, result.endLine());
-		assertTrue(result.replacement().isEmpty());
+	public void testDeleteImportBlankAboveOnly() throws Exception {
+		// can't migrate: fixer-internal line-deletion probe with synthetic non-parseable input (`import A;` is not a resolvable import)
+		assertSimpleFix(fixer, TOPIC, "delete_import_blank_above_only");
 	}
 
 	@Test
-	public void testDeleteImportBlankBelowOnly() {
-		final var lines = new ArrayList<>(List.of("import A;", "import B;", "", "import C;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(1, result.endLine());
-		assertTrue(result.replacement().isEmpty());
+	public void testDeleteImportBlankBelowOnly() throws Exception {
+		// can't migrate: fixer-internal line-deletion probe with synthetic non-parseable input (`import A;` is not a resolvable import)
+		assertSimpleFix(fixer, TOPIC, "delete_import_blank_below_only");
 	}
 
 	@Test
-	public void testDeleteLastLine() {
-		final var lines = new ArrayList<>(List.of("class Foo {}", "import java.util.List;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(1, result.endLine());
-		assertTrue(result.replacement().isEmpty());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testDeleteLastLine() throws Exception {
+		// can't migrate: fixer-internal line-deletion probe with invalid Java (import after class declaration)
+		assertSimpleFix(fixer, TOPIC, "delete_last_line");
 	}
 
 	@Test
-	public void testDeleteLastLineBlankAbove() {
-		final var lines = new ArrayList<>(List.of("import A;", "", "import B;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
-		assertEquals(2, result.startLine());
-		assertEquals(2, result.endLine());
-		assertTrue(result.replacement().isEmpty());
+	public void testDeleteLastLineBlankAbove() throws Exception {
+		// can't migrate: fixer-internal line-deletion probe with synthetic non-parseable input (`import A;` is not a resolvable import)
+		assertSimpleFix(fixer, TOPIC, "delete_last_line_blank_above");
 	}
 
 	@Test
-	public void testDeleteMiddleLine() {
-		final var lines = new ArrayList<>(List.of("line1", "line2", "line3"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 1, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(1, result.endLine());
-		assertTrue(result.replacement().isEmpty());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testDeleteMiddleLine() throws Exception {
+		// can't migrate: fixer-internal line-deletion probe with non-Java content (`line1\nline2\nline3`)
+		assertSimpleFix(fixer, TOPIC, "delete_middle_line");
 	}
 
 	@Test
-	public void testDeleteOrphanedImportBlankAboveAndBelow() {
-		final var lines = new ArrayList<>(List.of("import A;", "", "import B;", "", "import C;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
-		assertEquals(2, result.startLine());
-		assertEquals(3, result.endLine());
-		assertTrue(result.replacement().isEmpty());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testLineIndexOutOfBounds() {
-		final var lines = new ArrayList<>(List.of("single line"));
-		assertNull(fixer.fix(lines, 5, 0));
-	}
-
-	@Test
-	public void testNegativeLineIndex() {
-		final var lines = new ArrayList<>(List.of("single line"));
-		assertNull(fixer.fix(lines, -1, 0));
+	public void testDeleteOrphanedImportBlankAboveAndBelow() throws Exception {
+		// can't migrate: fixer-internal line-deletion probe with synthetic non-parseable input (`import A;` is not a resolvable import)
+		assertSimpleFix(fixer, TOPIC, "delete_orphaned_import_blank_above_and_below");
 	}
 }

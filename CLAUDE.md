@@ -166,6 +166,16 @@
   Example: `method(this, x -> {\n\tbody;\n});`
   The inline block exception also applies to `Handler.postDelayed` with a braced lambda as the
   first argument and the delay as the second.
+  The inline block exception also applies to `computeIfAbsent` with a braced lambda as the second
+  argument (the key stays on the opening paren line, the lambda's closing brace/paren on the
+  closing paren line). This is gated on the method name, not on any two-argument call with a
+  lambda, because a `computeIfAbsent` key is short while an arbitrary method's first argument may
+  be long. Example: `map.computeIfAbsent(key, k -> {\n\tbody;\n});`
+  The inline block exception also applies to a two-argument `put` whose second argument is an inline
+  block (a chained constructor like `new JSONObject().put(...)`, a lambda, or an anonymous class):
+  the key stays on the opening paren line and the value's closing brace/paren on the closing paren
+  line. Like `computeIfAbsent` this is gated on the method name, because a `put` key is short.
+  Example: `obj.put("View", new JSONObject()\n\t\t.put("key", value)\n);`
   `getString` is only recognized with a known Context receiver (parameter typed as `Context`,
   variable assigned from `requireContext()`/`getContext()`/`requireActivity()`/`getActivity()`, or
   calling directly on one of those)

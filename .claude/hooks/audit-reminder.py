@@ -25,6 +25,9 @@ import re
 import sys
 import time
 
+import audit_lock
+import audit_stamp
+
 # Cache: memoize the last decision keyed by transcript fingerprint (size, mtime_ns).
 # If the transcript hasn't been written since the last run, reuse the cached
 # decision instead of re-walking the whole JSONL.
@@ -34,7 +37,7 @@ _CACHE_FILE = os.path.join(_STATE_DIR, "audit-reminder-cache.json")
 # Bump this when the hook's logic changes in a way that could produce a
 # different decision from the same transcript (e.g. new patterns, new guards).
 # Bumping invalidates all cached entries.
-_CACHE_VERSION = 6
+_CACHE_VERSION = 7
 
 _STAMPS_FILE = os.path.join(_STATE_DIR, "audit-stamps.json")
 _PERMISSIONS_FILE = os.path.join(_STATE_DIR, "audit-permissions.json")
@@ -43,7 +46,7 @@ _PERMISSIONS_FILE = os.path.join(_STATE_DIR, "audit-permissions.json")
 def _grant_permissions(missing_agents):
 	"""Record per-agent permission entries so the audit-gate PreToolUse hook
 	allows the upcoming Agent call to each missing auditor. Idempotent.
-	stamp-audit.py removes a permission once its agent finishes."""
+	subagent-stop.py removes a permission once its agent finishes."""
 	if not missing_agents:
 		return
 	try:
@@ -103,7 +106,7 @@ def _transcript_fingerprint(path):
 
 
 def _read_stamps():
-	"""Read the audit-stamps.json written by stamp-audit.py (PostToolUse hook)."""
+	"""Read the audit-stamps.json written by subagent-stop.py (SubagentStop hook)."""
 	try:
 		with open(_STAMPS_FILE, encoding="utf-8") as f:
 			data = json.load(f)
@@ -183,6 +186,94 @@ def _pending_signature(pending):
 		f"{p}:{','.join(sorted(agents))}"
 		for p, agents in sorted(pending.items())
 	)
+
+
+def _wait_notice(target_desc, blockers, agents_to_run):
+	"""Lines appended to a block message when the required agent(s) can't acquire
+	the audit/deslop mutex because ANOTHER session holds it. (A lock held by this
+	session's own run takes the defer path instead.) Tells the model to wait
+	in-turn via wait-for-audit-lock.py rather than launch-and-die."""
+	agents_arg = " ".join(agents_to_run)
+	return [
+		"",
+		"LOCK — do NOT launch yet:",
+		f"  {target_desc} is blocked by a conflicting agent already running in "
+		f"another session: {', '.join(blockers)}. Launching now is denied "
+		"by the gate and dies instantly.",
+		f"  Wait in-turn, then launch in the SAME turn: "
+		f".claude/hooks/wait-for-audit-lock.py {agents_arg}",
+		"  Run it via Bash first (exits 0 when clear); non-zero = timed-out leaked "
+		"lock, report it.",
+	]
+
+
+def _inflight_block_reason(agents, self_run):
+	"""Block reason for when every required agent is already running on the same
+	files, unchanged since that run started (an identical in-flight run). It will
+	satisfy the requirement when it finishes, so the model must NOT launch or
+	rerun. `self_run` is True when THIS session owns that run (its completion
+	wakes us and re-checks), False when another session does."""
+	names = ", ".join(agents)
+	if self_run:
+		origin = "a run you already started"
+		tail = ("Do NOT launch or rerun — just end your turn; its completion wakes "
+			"this session and re-checks.")
+	else:
+		origin = "a run from another session"
+		tail = ("Do NOT launch or rerun — just end your turn. (If a later stop still "
+			"reports these files pending, that run finished without covering them; "
+			"follow that stop's instructions then.)")
+	return [
+		"Stop blocked by audit-reminder hook: already in flight.",
+		"",
+		f"The file(s) you edited still need {names}, but {origin} is already in "
+		"progress on the same files, unchanged since it started. It will satisfy "
+		"this requirement when it finishes, so a rerun would be redundant.",
+		"",
+		tail,
+	]
+
+
+def _classify_blockers(agents, blocker_sessions, current_session):
+	"""Classify the union of lock blockers across `agents`.
+
+	Returns (all_self, foreign_blockers): all_self is True iff there is at least
+	one blocker and EVERY blocker is held by current_session (so its completion
+	will wake this session); foreign_blockers is the sorted list of blocker agent
+	names NOT owned by this session. A missing current_session, or a blocker whose
+	holder session is unknown, counts as foreign — we only defer-to-wake when we
+	can prove this session owns every lock."""
+	holders = {}
+	for a in agents:
+		holders.update(blocker_sessions.get(a, {}))
+	if not holders:
+		return False, []
+	foreign = sorted(
+		b for b, sess in holders.items()
+		if not (current_session and sess == current_session)
+	)
+	return (not foreign), foreign
+
+
+def _self_locked_reason(target_desc, self_blockers):
+	"""Block reason for when the ONLY thing preventing the required agent(s) from
+	launching is THIS session's own in-flight agent holding the mutex. Unlike a
+	foreign lock we do NOT tell the model to wait synchronously: its own agent's
+	completion wakes this session and re-evaluates, so the model just ends the
+	turn."""
+	names = ", ".join(self_blockers)
+	return [
+		"Stop blocked by audit-reminder hook: locked by this session's own run.",
+		"",
+		f"{target_desc} cannot start yet: {names} is still running in THIS session "
+		"and holds the audit/deslop mutex. Launching now is denied by the gate and "
+		"dies instantly.",
+		"",
+		f"Do NOT launch, and do NOT wait synchronously. Just end your turn — when "
+		f"{names} finishes it wakes this session and re-evaluates: files it covers "
+		"clear automatically, and anything still pending is re-flagged then with "
+		"fresh instructions.",
+	]
 
 
 def required_audits(path):
@@ -321,6 +412,11 @@ def main():
 	# Final loop guard lives further down, after `pending` is computed.
 	stop_hook_active = bool(hook_input.get("stop_hook_active"))
 
+	# Session that is stopping now. Used to tell whether a lock-holding agent is
+	# THIS session's own in-flight run (which wakes us on completion) or a foreign
+	# session's (which does not) — see the locked-message branches below.
+	current_session = hook_input.get("session_id")
+
 	transcript_path = hook_input.get("transcript_path")
 	if not transcript_path or not os.path.exists(transcript_path):
 		sys.exit(0)
@@ -359,8 +455,8 @@ def main():
 		# kind == "tool_use"
 		tool_name, tool_input = name, inp
 
-		# Note: Agent invocations no longer clear pending here. The PostToolUse
-		# hook (stamp-audit.py) records file hashes when an agent finishes.
+		# Note: Agent invocations no longer clear pending here. The SubagentStop
+		# hook (subagent-stop.py) records file hashes when an agent finishes.
 		# Below, after walking the transcript, we drop any pending entry whose
 		# file currently hashes to its stamped value for the required agent.
 		# This catches the cascade case (Claude edits the file post-audit, hash
@@ -408,7 +504,7 @@ def main():
 
 	# Fingerprint clearing: for each pending file, drop required agents whose
 	# stamps match the file's current hash. The stamps were written by
-	# stamp-audit.py (PostToolUse hook on Agent) when each agent ran.
+	# subagent-stop.py (SubagentStop hook) when each agent ran.
 	stamps = _read_stamps()
 	to_drop_paths = []
 	for path, reqs in pending.items():
@@ -446,13 +542,36 @@ def main():
 			by_transcript = dict(sorted_entries[-50:])
 		_write_cache({"version": _CACHE_VERSION, "by_transcript": by_transcript})
 
+	# Lock awareness: for each still-required agent, which currently-running
+	# agents would deny its launch (mutex conflict, usually a cross-session
+	# deslop). Computed once here so it can both fold into the loop-guard
+	# signature and drive the wait messaging below.
+	agent_blockers = {}
+	agent_blocker_sessions = {}
+	for reqs in pending.values():
+		for agent in reqs:
+			if agent not in agent_blockers:
+				holders = audit_lock.blocking_sessions(agent)
+				agent_blocker_sessions[agent] = holders
+				agent_blockers[agent] = sorted(holders.keys())
+
 	# Loop guard for re-fired stops. The "pending signature" is a deterministic
 	# string derived from `pending`. On a re-fire (stop_hook_active=true),
 	# if the signature matches the one cached at the previous block, the
 	# user already saw this exact state — exit silently. If it differs
-	# (e.g., deslop just satisfied, coverage/security newly visible), fall
-	# through and emit a fresh block.
+	# (e.g., deslop just satisfied, coverage/security newly visible, or a
+	# blocking lock just cleared), fall through and emit a fresh block. Folding
+	# the blocker set into the signature is what lets a passive wait recover:
+	# when the conflicting agent finishes, the signature changes and the block
+	# re-fires with the plain run instruction instead of the wait notice.
+	blocker_tags = set()
+	for holders in agent_blocker_sessions.values():
+		for b, sess in holders.items():
+			tag = "self" if (current_session and sess == current_session) else "foreign"
+			blocker_tags.add(f"{b}@{tag}")
 	signature = _pending_signature(pending)
+	if blocker_tags:
+		signature += "|LOCK:" + ",".join(sorted(blocker_tags))
 	cached_sig = cached.get("pending_signature", "") if isinstance(cached, dict) else ""
 	if stop_hook_active and signature == cached_sig:
 		sys.exit(0)
@@ -474,6 +593,29 @@ def main():
 	# one turn.
 	if DESLOP_AGENT in missing_agents:
 		deslop_files_sorted = sorted(p for p, reqs in pending.items() if DESLOP_AGENT in reqs)
+		if (DESLOP_AGENT in agent_blockers.get(DESLOP_AGENT, [])
+				and audit_stamp.unchanged_inflight(DESLOP_AGENT, deslop_files_sorted)):
+			self_run, _ = _classify_blockers([DESLOP_AGENT], agent_blocker_sessions, current_session)
+			block_output = json.dumps({
+				"decision": "block",
+				"reason": "\n".join(_inflight_block_reason(["deslop-fixer"], self_run)),
+			})
+			_update_cache(blocked=True, reason=block_output, signature=signature)
+			print(block_output)
+			sys.exit(0)
+		deslop_all_self, deslop_foreign = _classify_blockers(
+			[DESLOP_AGENT], agent_blocker_sessions, current_session
+		)
+		if deslop_all_self:
+			block_output = json.dumps({
+				"decision": "block",
+				"reason": "\n".join(
+					_self_locked_reason("deslop-fixer", agent_blockers[DESLOP_AGENT])
+				),
+			})
+			_update_cache(blocked=True, reason=block_output, signature=signature)
+			print(block_output)
+			sys.exit(0)
 		deslop_files_list = "\n".join(f"  - {p}" for p in deslop_files_sorted)
 		reason_parts = [
 			"Stop blocked by audit-reminder hook: deslop sweep pending.",
@@ -503,8 +645,8 @@ def main():
 			"still pending after deslop's edits) will be reported on the next "
 			"stop.",
 			"",
-			"Stamp behavior: deslop-fixer's edits are recorded by stamp-audit. "
-			"If a file's pre-deslop hash matched an existing coverage/security "
+			"Stamp behavior: deslop-fixer's edits are recorded at completion by "
+			"subagent-stop. If a file's pre-deslop hash matched an existing coverage/security "
 			"stamp, that stamp is promoted to the post-deslop hash — files "
 			"that were already audited stay audited. New audit requirements "
 			"only appear for files that already needed them before deslop ran.",
@@ -512,6 +654,8 @@ def main():
 		# Deslop is not in GATED_AGENTS, so audit-gate.py does not require a
 		# permission entry for it. Do NOT call _grant_permissions for the
 		# auditors here either — grant only when we actually report them.
+		if deslop_foreign:
+			reason_parts += _wait_notice("deslop-fixer", deslop_foreign, [DESLOP_AGENT])
 		block_output = json.dumps({"decision": "block", "reason": "\n".join(reason_parts)})
 		_update_cache(blocked=True, reason=block_output, signature=signature)
 		print(block_output)
@@ -520,6 +664,37 @@ def main():
 	agent_order = [COVERAGE_AGENT, SECURITY_AGENT]
 	missing_sorted = [a for a in agent_order if a in missing_agents]
 	files_sorted = sorted(pending.keys())
+
+	# If every missing auditor is already running (identical in-flight run) on
+	# the same files unchanged since it started, the requirement clears on its
+	# own — tell the model not to rerun rather than dumping the full run body.
+	if all(
+		a in agent_blockers.get(a, [])
+		and audit_stamp.unchanged_inflight(a, [p for p in files_sorted if a in pending[p]])
+		for a in missing_sorted
+	):
+		self_run, _ = _classify_blockers(missing_sorted, agent_blocker_sessions, current_session)
+		block_output = json.dumps({
+			"decision": "block",
+			"reason": "\n".join(_inflight_block_reason(missing_sorted, self_run)),
+		})
+		_update_cache(blocked=True, reason=block_output, signature=signature)
+		print(block_output)
+		sys.exit(0)
+
+	audits_all_self, audits_foreign = _classify_blockers(
+		missing_sorted, agent_blocker_sessions, current_session
+	)
+	if audits_all_self:
+		target = "the audit(s)" if len(missing_sorted) != 1 else missing_sorted[0]
+		self_blockers = sorted({b for a in missing_sorted for b in agent_blockers.get(a, [])})
+		block_output = json.dumps({
+			"decision": "block",
+			"reason": "\n".join(_self_locked_reason(target, self_blockers)),
+		})
+		_update_cache(blocked=True, reason=block_output, signature=signature)
+		print(block_output)
+		sys.exit(0)
 
 	files_list = "\n".join(f"  - {p}  (needs: {', '.join(sorted(pending[p]))})" for p in files_sorted)
 	agents_list = "\n".join(f"  - {a}" for a in missing_sorted)
@@ -599,6 +774,10 @@ def main():
 		"responds in THIS turn) is a protocol violation and will be mechanically "
 		"rejected by the hook.",
 	]
+
+	if audits_foreign:
+		target = "the audit(s)" if len(missing_sorted) != 1 else missing_sorted[0]
+		reason_parts += _wait_notice(target, audits_foreign, missing_sorted)
 
 	_grant_permissions(missing_sorted)
 	block_output = json.dumps({"decision": "block", "reason": "\n".join(reason_parts)})

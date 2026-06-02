@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
@@ -28,8 +27,7 @@ import javax.annotation.Nullable;
  * <ul>
  *   <li>The declaration is a field (parent is {@code OBJBLOCK}).</li>
  *   <li>Modifiers include {@code static} and {@code final}. Visibility doesn't
- *       matter for the check (the fixer skips non-private since deletion may
- *       break external callers).</li>
+ *       matter for the check.</li>
  *   <li>The initializer, after stripping enclosing parens, is a pure
  *       {@code DOT}-chain ending in an {@code IDENT}: e.g. {@code Foo.X},
  *       {@code Outer.Inner.X}, {@code com.foo.Bar.X}, or {@code (Foo.X)}. No
@@ -49,22 +47,23 @@ import javax.annotation.Nullable;
  * single static initializer (multiple branches/static blocks are skipped to
  * avoid mis-flagging conditional assignments).</p>
  */
-public class PreferStaticImportConstantCheck extends AbstractCheck {
+public class PreferStaticImportConstantCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "prefer.static.import.constant";
 	private static final String SUPPRESS_KEY = "PreferStaticImportConstant";
 
+	/**
+	 * Locates the unique {@code static { ... }} assignment to {@code fieldName}
+	 * within {@code objBlock} (matching either bare {@code FIELD = ...} or
+	 * {@code EnclosingType.FIELD = ...}/{@code pkg.EnclosingType.FIELD = ...}),
+	 * returning its {@code ASSIGN} node, or {@code null} when there is no such
+	 * assignment or more than one. Shared with {@code PreferStaticImportConstantFixer}
+	 * so the fixer matches cinit assignments by the same rule the check enforces.
+	 */
 	@CheckReturnValue
 	@Nullable
-	private static String classChainText(@Nonnull DetailAST chain) {
-		final var text = FullIdent.createFullIdent(chain).getText();
-		return text == null || text.isEmpty() ? null : text;
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static DetailAST findStaticInitAssign(@Nonnull DetailAST objBlock, @Nonnull String fieldName) {
-		final var enclosingTypeName = getEnclosingTypeName(objBlock);
-		final var packageName = getPackageName(objBlock);
+	public static DetailAST findStaticInitAssign(@Nonnull DetailAST objBlock, @Nonnull String fieldName) {
+		final var enclosingTypeName = AstUtil.getEnclosingTypeName(objBlock);
+		final var packageName = AstUtil.getPackageName(objBlock);
 		DetailAST found = null;
 		for (var child = objBlock.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() != TokenTypes.STATIC_INIT)
@@ -89,44 +88,6 @@ public class PreferStaticImportConstantCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
-	@Nullable
-	private static String getEnclosingTypeName(@Nonnull DetailAST objBlock) {
-		final var parent = objBlock.getParent();
-		if (parent == null)
-			return null;
-		final var type = parent.getType();
-		if (type != TokenTypes.CLASS_DEF && type != TokenTypes.INTERFACE_DEF
-				&& type != TokenTypes.ENUM_DEF && type != TokenTypes.RECORD_DEF
-				&& type != TokenTypes.ANNOTATION_DEF)
-			return null;
-		final var ident = parent.findFirstToken(TokenTypes.IDENT);
-		return ident == null ? null : ident.getText();
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static String getPackageName(@Nonnull DetailAST node) {
-		var root = node;
-		while (root.getParent() != null)
-			root = root.getParent();
-		for (var child = root.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() != TokenTypes.PACKAGE_DEF)
-				continue;
-			final var dot = child.findFirstToken(TokenTypes.DOT);
-			if (dot != null) {
-				final var text = FullIdent.createFullIdent(dot).getText();
-				return text == null || text.isEmpty() ? null : text;
-			}
-			final var ident = child.findFirstToken(TokenTypes.IDENT);
-			if (ident != null) {
-				final var text = ident.getText();
-				return text.isEmpty() ? null : text;
-			}
-		}
-		return null;
-	}
-
-	@CheckReturnValue
 	private static boolean isAssignToField(
 			@Nullable DetailAST lhs,
 			@Nonnull String fieldName,
@@ -139,7 +100,7 @@ public class PreferStaticImportConstantCheck extends AbstractCheck {
 			return fieldName.equals(lhs.getText());
 		if (lhs.getType() != TokenTypes.DOT || enclosingTypeName == null)
 			return false;
-		if (!isPureDotChainOrIdent(lhs))
+		if (!AstUtil.isPureDotChainOrIdent(lhs))
 			return false;
 		final var lhsText = FullIdent.createFullIdent(lhs).getText();
 		if (lhsText.equals(enclosingTypeName + "." + fieldName))
@@ -148,57 +109,54 @@ public class PreferStaticImportConstantCheck extends AbstractCheck {
 				&& lhsText.equals(packageName + "." + enclosingTypeName + "." + fieldName);
 	}
 
-	@CheckReturnValue
-	private static boolean isLowerCaseFirst(@Nonnull String segment) {
-		return !segment.isEmpty() && Character.isLowerCase(segment.charAt(0));
-	}
-
-	@CheckReturnValue
-	private static boolean isPureDotChainOrIdent(@Nonnull DetailAST ast) {
-		var cur = ast;
-		while (true) {
-			if (cur.getType() == TokenTypes.IDENT)
-				return true;
-			if (cur.getType() != TokenTypes.DOT)
-				return false;
-			final var left = cur.getFirstChild();
-			if (left == null)
-				return false;
-			final var right = left.getNextSibling();
-			if (right == null || right.getType() != TokenTypes.IDENT)
-				return false;
-			cur = left;
-		}
-	}
-
+	/**
+	 * Extracts the declared package name from a {@code PACKAGE_DEF} node (the
+	 * qualified name before the terminating {@code ;}), or {@code null} for the
+	 * default package. Used to build a same-package sibling class's FQCN.
+	 */
 	@CheckReturnValue
 	@Nullable
-	private static DetailAST unwrapParens(@Nullable DetailAST node) {
-		var cur = node;
-		while (cur != null) {
-			if (cur.getType() == TokenTypes.LPAREN) {
-				cur = cur.getNextSibling();
-				continue;
-			}
-			if (cur.getType() == TokenTypes.EXPR) {
-				cur = cur.getFirstChild();
-				continue;
-			}
-			break;
-		}
-		return cur;
+	private static String packageNameOf(@Nonnull DetailAST packageDef) {
+		final var semi = packageDef.getLastChild();
+		final var nameNode = semi == null ? null : semi.getPreviousSibling();
+		if (nameNode == null)
+			return null;
+		final var name = FullIdent.createFullIdent(nameNode).getText();
+		return name == null || name.isEmpty() ? null : name;
 	}
 
 	private final Map<String, String> importedClasses = new HashMap<>();
+	private final Map<String, Set<String>> staticImportsByMember = new HashMap<>();
 	private final Set<String> wildcardPackages = new HashSet<>();
+	@Nullable
+	private String packageName;
 
 	@Override
-	public void beginTree(@Nonnull DetailAST rootAST) {
+	public void beginTree(@Nullable DetailAST rootAST) {
 		importedClasses.clear();
+		staticImportsByMember.clear();
 		wildcardPackages.clear();
+		packageName = null;
 
-		for (var child = rootAST.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() != TokenTypes.IMPORT)
+		// a comments-only or empty file has no compilation unit, so checkstyle passes a null root
+		if (rootAST == null)
+			return;
+
+		collectImports(rootAST);
+	}
+
+	void collectImports(@Nonnull DetailAST root) {
+		for (var child = root.getFirstChild(); child != null; child = child.getNextSibling()) {
+			final var type = child.getType();
+			if (type == TokenTypes.PACKAGE_DEF) {
+				packageName = packageNameOf(child);
+				continue;
+			}
+			if (type == TokenTypes.STATIC_IMPORT) {
+				collectStaticImport(child);
+				continue;
+			}
+			if (type != TokenTypes.IMPORT)
 				continue;
 			final var fqn = FullIdent.createFullIdentBelow(child).getText();
 			if (fqn.endsWith(".*")) {
@@ -214,22 +172,50 @@ public class PreferStaticImportConstantCheck extends AbstractCheck {
 		}
 	}
 
-	@Nonnull
-	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
+	/**
+	 * Records a single {@code import static <prefix>.<member>;} into
+	 * {@link #staticImportsByMember} keyed by member name. Static wildcard imports
+	 * ({@code import static <prefix>.*;}) and malformed forms name no specific
+	 * member, so they are ignored (they can never create a same-member conflict).
+	 */
+	private void collectStaticImport(@Nonnull DetailAST staticImport) {
+		final var nameNode = staticImport.getFirstChild() == null ? null : staticImport.getFirstChild().getNextSibling();
+		if (nameNode == null)
+			return;
+		final var fqn = FullIdent.createFullIdent(nameNode).getText();
+		if (fqn == null || fqn.endsWith(".*"))
+			return;
+		final var lastDot = fqn.lastIndexOf('.');
+		if (lastDot <= 0 || lastDot == fqn.length() - 1)
+			return;
+		staticImportsByMember.computeIfAbsent(fqn.substring(lastDot + 1), k -> new HashSet<>()).add(fqn.substring(0, lastDot));
+	}
+
+	/**
+	 * @return {@code true} when the file already declares
+	 * {@code import static <prefix>.<member>;} with a {@code <prefix>} other than
+	 * {@code classFqcn}. Adding our own static import of {@code member} from
+	 * {@code classFqcn} would then be a duplicate-member compile error, so the
+	 * alias cannot be replaced with a static import and the check must stay silent.
+	 * Shares the conflict rule the fixer applies in
+	 * {@code PreferStaticImportConstantFixer.conflictsWithExistingStaticImport}.
+	 */
+	@CheckReturnValue
+	private boolean conflictsWithExistingStaticImport(@Nonnull String classFqcn, @Nonnull String member) {
+		final var prefixes = staticImportsByMember.get(member);
+		if (prefixes == null)
+			return false;
+		for (var prefix : prefixes) {
+			if (!prefix.equals(classFqcn))
+				return true;
+		}
+		return false;
 	}
 
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.VARIABLE_DEF};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@CheckReturnValue
@@ -246,14 +232,18 @@ public class PreferStaticImportConstantCheck extends AbstractCheck {
 			catch (InvalidPathException ignored) {
 			}
 		}
-		return !wildcardPackages.isEmpty();
+		// java.lang is implicitly imported; an unqualified reference to one of
+		// those types resolves there in the absence of an explicit shadowing
+		// import (already checked above). The wildcard fallback must not be
+		// allowed to misroute these to an unrelated wildcard-imported package.
+		return JavaLangClasses.forJavaTarget(Integer.MAX_VALUE).contains(simpleClass) || !wildcardPackages.isEmpty();
 	}
 
 	private void processAlias(@Nonnull DetailAST reportTarget, @Nonnull DetailAST initRoot) {
-		final var init = unwrapParens(initRoot);
+		final var init = AstUtil.unwrapParensAndExpr(initRoot);
 		if (init == null || init.getType() != TokenTypes.DOT)
 			return;
-		if (!isPureDotChainOrIdent(init))
+		if (!AstUtil.isPureDotChainOrIdent(init))
 			return;
 
 		final var leftSubtree = init.getFirstChild();
@@ -261,7 +251,8 @@ public class PreferStaticImportConstantCheck extends AbstractCheck {
 		if (leftSubtree == null || rightmostIdent == null || rightmostIdent.getType() != TokenTypes.IDENT)
 			return;
 
-		final var classChain = classChainText(leftSubtree);
+		final var classChainFull = FullIdent.createFullIdent(leftSubtree).getText();
+		final var classChain = classChainFull == null || classChainFull.isEmpty() ? null : classChainFull;
 		if (classChain == null)
 			return;
 
@@ -269,10 +260,66 @@ public class PreferStaticImportConstantCheck extends AbstractCheck {
 		final var leftmostSegment = firstDot < 0 ? classChain : classChain.substring(0, firstDot);
 		if (leftmostSegment.isEmpty())
 			return;
-		if (!isLowerCaseFirst(leftmostSegment) && !isClassResolvable(leftmostSegment))
+		if (!Character.isLowerCase(leftmostSegment.charAt(0)) && !isClassResolvable(leftmostSegment))
 			return;
 
-		log(reportTarget, MSG_KEY, reportTarget.getText(), classChain, rightmostIdent.getText());
+		// An alias whose static-import replacement would collide with an existing
+		// `import static <other>.<member>;` (different class, same member) can't be
+		// auto-converted, so flagging it would suggest an impossible fix; stay silent.
+		// When the class FQCN can't be determined (e.g. two wildcard imports) no
+		// conflict can be proven, so fire conservatively.
+		final var member = rightmostIdent.getText();
+		final var classFqcn = resolveClassFqcn(classChain);
+		if (classFqcn != null && conflictsWithExistingStaticImport(classFqcn, member))
+			return;
+
+		log(reportTarget, MSG_KEY, reportTarget.getText(), classChain, member);
+	}
+
+	/**
+	 * Resolves the fully-qualified name of the class named by {@code classChain}
+	 * (a simple name or a dotted chain), mirroring the fixer's
+	 * {@code FqnResolver.resolveFqcn}: a leading-lowercase chain is already
+	 * fully-qualified; otherwise the leftmost segment is resolved via an explicit
+	 * import, a same-package sibling file, the implicit {@code java.lang}, or a
+	 * lone wildcard import, and the remainder appended. Returns {@code null} when
+	 * the FQCN can't be determined (no resolving import, or ambiguous wildcards).
+	 */
+	@CheckReturnValue
+	@Nullable
+	private String resolveClassFqcn(@Nonnull String classChain) {
+		final var firstDot = classChain.indexOf('.');
+		if (firstDot >= 0) {
+			final var first = classChain.substring(0, firstDot);
+			if (!first.isEmpty() && Character.isLowerCase(first.charAt(0)))
+				return classChain;
+			final var leftmost = resolveSimpleClassFqcn(first);
+			return leftmost == null ? null : leftmost + classChain.substring(firstDot);
+		}
+		return resolveSimpleClassFqcn(classChain);
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private String resolveSimpleClassFqcn(@Nonnull String simpleClass) {
+		final var imported = importedClasses.get(simpleClass);
+		if (imported != null)
+			return imported;
+		final var filePath = getFilePath();
+		if (filePath != null) {
+			try {
+				final var parentDir = Path.of(filePath).getParent();
+				if (parentDir != null && Files.exists(parentDir.resolve(simpleClass + ".java")))
+					return packageName == null ? simpleClass : packageName + "." + simpleClass;
+			}
+			catch (InvalidPathException ignored) {
+			}
+		}
+		if (JavaLangClasses.forJavaTarget(Integer.MAX_VALUE).contains(simpleClass))
+			return "java.lang." + simpleClass;
+		if (wildcardPackages.size() == 1)
+			return wildcardPackages.iterator().next() + "." + simpleClass;
+		return null;
 	}
 
 	@Override

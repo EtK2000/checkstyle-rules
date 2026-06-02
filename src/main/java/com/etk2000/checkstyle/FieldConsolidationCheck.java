@@ -1,9 +1,9 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -17,8 +17,13 @@ import javax.annotation.Nonnull;
  * separate lines that should be combined into a single declaration
  * (e.g. {@code int height, width;}).
  */
-public class FieldConsolidationCheck extends AbstractCheck {
+public class FieldConsolidationCheck extends AbstractAstCheck {
 	private static final int MAX_ANNOTATION_DEPTH = 50;
+	// the type serializers recurse through nested generics, and this check runs outside
+	// any fixer firewall, so a machine-generated `List<List<...<String>...>>` would fail
+	// the whole check task with a StackOverflowError. Past this depth the pair is simply
+	// not reported, which cannot merge two types that differ below the cap.
+	private static final int MAX_TYPE_DEPTH = 64;
 	private static final String MSG_KEY = "field.consolidate.same.type";
 
 	@CheckReturnValue
@@ -36,8 +41,19 @@ public class FieldConsolidationCheck extends AbstractCheck {
 		return result;
 	}
 
+	/**
+	 * True when the declaration opened by {@code currGroup} can be folded into the
+	 * one opened by {@code prevGroup}. The pairing is between the declarations'
+	 * adjacent declarators (the previous declaration's last and the current one's
+	 * first), but the answer is about the whole declarations: the fix rewrites both
+	 * into a single declaration rendered as one base type followed by bare names
+	 * (see {@code docs/c-style-array-fixer.md}), so every declarator either side
+	 * has to end up with that one type.
+	 */
 	@CheckReturnValue
-	private static boolean canCombine(@Nonnull DetailAST prev, @Nonnull DetailAST curr) {
+	private static boolean canCombine(@Nonnull List<DetailAST> prevGroup, @Nonnull List<DetailAST> currGroup) {
+		final var prev = prevGroup.getLast();
+		final var curr = currGroup.getFirst();
 		final var prevIdentLine = prev.findFirstToken(TokenTypes.IDENT).getLineNo();
 		final var currIdentLine = curr.findFirstToken(TokenTypes.IDENT).getLineNo();
 		if (prevIdentLine == currIdentLine)
@@ -50,7 +66,59 @@ public class FieldConsolidationCheck extends AbstractCheck {
 			return false;
 		if (!annotationKeys(prev).equals(annotationKeys(curr)))
 			return false;
-		return typeName(prev).equals(typeName(curr));
+		if (exceedsTypeDepth(prev) || exceedsTypeDepth(curr))
+			return false;
+		final var type = typeName(prev);
+		return type.equals(typeName(curr)) && sharesType(prevGroup, type) && sharesType(currGroup, type);
+	}
+
+	/**
+	 * The declarators of the declaration {@code first} opens: itself plus every
+	 * {@code VARIABLE_DEF} reachable through a chain of {@code COMMA} siblings,
+	 * since {@code int a, b;} is two sibling {@code VARIABLE_DEF}s under the
+	 * {@code OBJBLOCK} rather than one node with two names.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static List<DetailAST> declarationGroup(@Nonnull DetailAST first) {
+		final var group = new ArrayList<DetailAST>();
+		group.add(first);
+		for (var sibling = first.getNextSibling(); sibling != null && sibling.getType() == TokenTypes.COMMA; ) {
+			final var declarator = sibling.getNextSibling();
+			// defensive: on parseable input a COMMA in an OBJBLOCK is always followed by
+			// the next declarator
+			if (declarator == null || declarator.getType() != TokenTypes.VARIABLE_DEF)
+				break;
+			group.add(declarator);
+			sibling = declarator.getNextSibling();
+		}
+		return group;
+	}
+
+	/**
+	 * True when the declaration's type nests deeper than {@link #MAX_TYPE_DEPTH}.
+	 * Walks iteratively so measuring the depth cannot itself overflow the stack.
+	 */
+	@CheckReturnValue
+	private static boolean exceedsTypeDepth(@Nonnull DetailAST varDef) {
+		final var type = varDef.findFirstToken(TokenTypes.TYPE);
+		if (type == null)
+			return false;
+		final var nodes = new ArrayDeque<DetailAST>();
+		final var depths = new ArrayDeque<Integer>();
+		nodes.push(type);
+		depths.push(0);
+		while (!nodes.isEmpty()) {
+			final var node = nodes.pop();
+			final var depth = depths.pop();
+			if (depth > MAX_TYPE_DEPTH)
+				return true;
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
+				nodes.push(child);
+				depths.push(depth + 1);
+			}
+		}
+		return false;
 	}
 
 	@CheckReturnValue
@@ -171,6 +239,21 @@ public class FieldConsolidationCheck extends AbstractCheck {
 		}
 	}
 
+	/**
+	 * True when every declarator of a declaration is itself of {@code type}. A
+	 * declarator may carry its own C-style brackets, so one declaration can hold
+	 * several types ({@code int a, b[];} declares an {@code int} and an
+	 * {@code int[]}) and only the pair the check compares is guaranteed to match.
+	 */
+	@CheckReturnValue
+	private static boolean sharesType(@Nonnull List<DetailAST> group, @Nonnull String type) {
+		for (var declarator : group) {
+			if (!type.equals(typeName(declarator)))
+				return false;
+		}
+		return true;
+	}
+
 	@CheckReturnValue
 	@Nonnull
 	private static String typeName(@Nonnull DetailAST varDef) {
@@ -189,25 +272,13 @@ public class FieldConsolidationCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.OBJBLOCK};
 	}
 
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
-	}
-
 	@Override
 	public void visitToken(@Nonnull DetailAST ast) {
-		DetailAST prev = null;
+		List<DetailAST> prevGroup = null;
 		var prevSeparatedByComma = false;
 
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
@@ -215,13 +286,16 @@ public class FieldConsolidationCheck extends AbstractCheck {
 				case TokenTypes.COMMA -> prevSeparatedByComma = true;
 				case TokenTypes.SEMI -> {}
 				case TokenTypes.VARIABLE_DEF -> {
-					if (prev != null && !prevSeparatedByComma && canCombine(prev, child))
-						log(child.findFirstToken(TokenTypes.IDENT), MSG_KEY, fieldName(child), fieldName(prev), typeName(child));
-					prev = child;
+					if (!prevSeparatedByComma) {
+						final var group = declarationGroup(child);
+						if (prevGroup != null && canCombine(prevGroup, group))
+							log(child.findFirstToken(TokenTypes.IDENT), MSG_KEY, fieldName(child), fieldName(prevGroup.getLast()), typeName(child));
+						prevGroup = group;
+					}
 					prevSeparatedByComma = false;
 				}
 				default -> {
-					prev = null;
+					prevGroup = null;
 					prevSeparatedByComma = false;
 				}
 			}

@@ -6,29 +6,28 @@ How tests work in this project, common pitfalls, and how to ensure coverage.
 
 ### Check tests
 
-Check tests use `BaseCheckTest.runCheck()` to run a single check against a test resource file and
-collect violations. Each check has:
+Check tests are driven by `StandardCheckTests` / `StandardFixerCases`,
+which expand each `ENTRIES` row into per-case dynamic tests (see
+"`StandardCheckTests` and the per-case fixer pipeline" above). Every new
+check should land in `ENTRIES`. Each check has:
 
-- **Clean file** (`InputXxxClean.java`): valid code that must produce zero violations
-- **Violation file(s)** (`InputXxxViolation.java`): code with known violations, each marked with
-  `// violation: <description>` comments
+- **Clean file** (`cases.clean.java`): valid code that must produce zero violations. For a
+  fixer-backed check it doubles as a no-op assertion: `StandardCheckTests` runs the entry's own
+  fixer over it to a fixed point and asserts it is left unchanged (clean for that check/fixer, not
+  the whole pipeline). Put parsable, check-silent edge cases here rather than in
+  `fragments.in.java` so this no-op check covers them.
+- **Violation file(s)** (`cases.in.java`, plus `cases.<variant>.in.java` for sub-scenarios): code
+  with known violations, each marked with `// violation: <description>` comments
 
-Tests verify the exact count, line numbers, and messages of violations. Clean tests use
-`assertTrue(...isEmpty())`.
-
-```java
-final var violations = BaseCheckTest.runCheck(SomeCheck.class, DIR + "InputViolation.java");
-
-assertEquals(3,violations.size());
-
-assertEquals(10,violations.get(0).
-
-getLine());
-
-assertEquals("Expected message.",violations.get(0).
-
-getMessage());
-```
+`BaseCheckTest.runCheck()` is the underlying primitive that loads a
+resource file, runs the check, and returns the raw violation list.
+`StandardCheckTests` calls it internally via `assertCheckMatchesMarkers`,
+which parses the file's `// violation:` markers (honouring `[minSdk>=N]`
+and other predicates) and asserts an exact 1:1 match against the check's
+output (count + line + severity + message). Do not call `runCheck()`
+directly in a new test to assert violation absence under a different
+property combination — register that combination as another `ENTRIES`
+row instead, so the marker pipeline runs against it too.
 
 ### Regex tests
 
@@ -53,8 +52,9 @@ full output. Integration tests are split across three classes:
 
 ## Tab-expanded columns
 
-Checkstyle reports column numbers with tabs expanded to width 8 (the default `tabWidth`). A tab
-at position 0 makes the next character report as column 8 instead of 1.
+Checkstyle reports column numbers with tabs expanded to the configured `tabWidth`. This project
+sets `tabWidth=4` (see `LineLength.TAB_WIDTH`), so a tab at position 0 makes the next character
+report as column 4 instead of 1.
 
 `CheckstyleFixTask.tabColumnToCharIndex()` converts tab-expanded columns to character indices.
 Any code that uses `event.getColumn()` to index into a line string must convert first. This
@@ -468,7 +468,8 @@ uppercase prefix), `0_0` (underscore separator)
 returns false and that `isZeroLiteral(child NUM token)` returns true.
 
 **Boundary pairs**: for every zero form, test a non-zero value with the same notation (e.g. `0x0`
-is zero, `0x1` is non-zero; `0.0e0` is zero, `0.0e1` is non-zero).
+is zero, `0x1` is non-zero; `0.0e1` is zero (a zero mantissa stays zero for any exponent), `1.0e1`
+is non-zero).
 
 ### Negation insertion in fixers
 
@@ -506,6 +507,42 @@ behavior of tests that previously relied on the pattern being unfixable (e.g. ad
 `Collections.sort` fixer broke `testPreferSpecificApiCollectionsFactoryRetainsUsedImport` because
 the sort call was the reason the `Collections` import was retained).
 
+### Fragment-migration guard
+
+`fragments.in.java` snippets are the fallback fixture form: line fragments fed to a fixer's
+`fix()` at an explicit `// target:` position, used only when a case genuinely cannot be a
+`cases.{in,out}.java` slice. `FragmentMigrationGuardTest` (via `FragmentMigrationDetector`) keeps
+the corpus honest: it wraps each fragment body in a minimal compilation unit (a bare
+`class {...}`, a method body, a constructor body, or a class with an appended `int __x;` so a body
+ending in a bare annotation parses), runs the topic's check, and flags any case that behaves like a
+slice — the check fires and the fixer either reproduces `.out` as a fixed point (a fix-slice) or
+returns a `SkipResult` at the reported site (a `// skip-reason:` skip-slice). It also flags a
+`// target:` that is *redundant* (points at a position the check already reports): the directive is
+only justified for a synthetic position the check never reports.
+
+The migration is complete, so the guard simply fails on any flagged case: migrate it to a slice, or
+delete it if an existing slice already covers the behavior. (There is no whitelist; the ratchet
+reached zero and it was removed.)
+
+A case is legitimately fragment-only (and correctly NOT flagged) when it is:
+
+- **non-compilable** — a body no wrapper can parse (`@B(` at EOF, a bare `value = x;`);
+- **synthetic-target** — the `// target:` is an out-of-bounds/negative/past-end column or line the
+  check never reports, exercising the fixer's positional robustness at a site a slice (which
+  derives the position from the check) cannot reproduce;
+- **null-returning** — the fixer returns bare `null` rather than a `SkipResult`; `assertCaseSkip`
+  requires a `SkipResult` and `assertCaseFix` would leave the violation unfixed, so neither slice
+  form can express it;
+- **style-invariant** — the body trips a non-suppressible formatting invariant (`NoSpaceIndent`,
+  `NoTrailingWhitespace`) that a linted slice cannot carry and the migration policy refuses to
+  suppress.
+
+To migrate a flagged case: author the `cases.in.java`/`cases.out.java` slice (a `// skip-reason:`
+slice for a skip case, `.out == .in` minus markers), add a per-topic cross-check suppression if a
+non-topic check fires on it, then delete the fragment (both `.in` and `.out` entries), its whitelist
+line, and its dedicated fixer-test method. If the flagged case is already covered by an existing
+slice (the fragment is a leftover duplicate), delete it outright instead of creating a second copy.
+
 ### Comparison operator coverage
 
 When a check detects comparisons (e.g. `.size() == 0`, `.trim().length() != 0`), there are 6
@@ -526,6 +563,7 @@ literal and the method suffix, while normal forms scan backwards from the method
 
 When a check/fixer handles method calls that can have different argument counts (e.g.
 `String.format(x)` vs `String.format("fmt", args)`), the behavior may differ by arg count:
+
 - Single-arg: strip the call entirely (`String.format(x)` -> `x`)
 - Multi-arg with literal first arg: rewrite (`String.format("fmt", a)` -> `"fmt".formatted(a)`)
 - Multi-arg with non-literal first arg: skip (can't safely rewrite)
@@ -551,6 +589,7 @@ fires on ALL source files AND test resources via `checkstyleTestResources`. Befo
 ### File formatting in test resources
 
 New test resource files must comply with the project's formatting rules:
+
 - No trailing newline at end of file (use `perl -pi -e 'chomp if eof'` after creating)
 - Methods alphabetically ordered
 - TAB indentation, no spaces
@@ -596,6 +635,12 @@ Never use shorthand, paraphrases, or descriptions. The comment IS the expected m
 - Clean files must have ZERO violation comments
 - Violation files must have a comment on EVERY violation line
 - No clean cases in violation files, no violation cases in clean files
+- The slice `violations` sub-test (and the fixer sub-tests) strip `// violation:`
+  markers, along with the whitespace before them, before running the check, so a
+  marker never alters the check's own input. That lets a marker sit on a line the
+  check actually reads: an otherwise-blank line for an internal-blank violation
+  (`\n// violation: ...\n` strips back to a blank line), or a line already
+  carrying a comment (`@B( // note // violation: ...` strips back to `@B( // note`)
 
 ### Assertion completeness
 

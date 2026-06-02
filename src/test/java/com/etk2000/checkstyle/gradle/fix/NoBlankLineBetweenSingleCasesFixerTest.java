@@ -1,89 +1,40 @@
 package com.etk2000.checkstyle.gradle.fix;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSimpleFix;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkip;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class NoBlankLineBetweenSingleCasesFixerTest {
+	private static final String TOPIC = "noblanklinebetweensinglecases";
+
 	private final CheckstyleFixer fixer = new NoBlankLineBetweenSingleCasesFixer();
 
 	@Test
-	public void testBlankLinesWithWhitespace() {
-		final var lines = new ArrayList<>(List.of(
-				"\t\t\treturn 1;",
-				"\t",
-				"\t\tcase B:"
-		));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(1, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testBlankLinesWithWhitespace() throws Exception {
+		// can't migrate: probes fixer's isBlank() handling of whitespace-only lines; class-wrapped slice would contain whitespace-only lines that violate the project's NoTrailingWhitespace lint, which scans cases.in.java
+		assertSimpleFix(fixer, TOPIC, "blank_lines_with_whitespace");
 	}
 
 	@Test
-	public void testFirstLine() {
-		final var lines = new ArrayList<>(List.of("\t\tcase A:"));
-		assertNull(fixer.fix(lines, 0, 0));
+	public void testFirstLine() throws Exception {
+		assertSkip(fixer, TOPIC, "first_line");
 	}
 
 	@Test
-	public void testMixedBlankAndWhitespaceLines() {
-		final var lines = new ArrayList<>(List.of(
-				"\t\t\treturn 1;",
-				"",
-				"   ",
-				"\t",
-				"\t\tcase B:"
-		));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 4, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(3, result.endLine());
-		assertEquals(List.of(), result.replacement());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testMixedBlankAndWhitespaceLines() throws Exception {
+		// can't migrate: combines whitespace-only lines (NoTrailingWhitespace lint violation) and multiple consecutive blank lines (NoDoubleBlankLines lint violation) in cases.in.java
+		assertSimpleFix(fixer, TOPIC, "mixed_blank_and_whitespace_lines");
 	}
 
 	@Test
-	public void testNoBlankLinesAbove() {
-		final var lines = new ArrayList<>(List.of(
-				"\t\t\treturn 1;",
-				"\t\tcase B:"
-		));
-		assertNull(fixer.fix(lines, 1, 0));
+	public void testNoBlankLinesAbove() throws Exception {
+		assertSkip(fixer, TOPIC, "no_blank_lines_above");
 	}
 
 	@Test
-	public void testRemoveMultipleBlankLines() {
-		final var lines = new ArrayList<>(List.of(
-				"\t\t\treturn 1;",
-				"",
-				"",
-				"",
-				"\t\tcase B:"
-		));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 4, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(3, result.endLine());
-		assertEquals(List.of(), result.replacement());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testRemoveSingleBlankLine() {
-		final var lines = new ArrayList<>(List.of(
-				"\t\t\treturn 1;",
-				"",
-				"\t\tcase B:"
-		));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 2, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(1, result.endLine());
-		assertEquals(List.of(), result.replacement());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testRemoveMultipleBlankLines() throws Exception {
+		// can't migrate: requires multiple consecutive blank lines in cases.in.java, which violates the project's NoDoubleBlankLines lint
+		assertSimpleFix(fixer, TOPIC, "remove_multiple_blank_lines");
 	}
 }

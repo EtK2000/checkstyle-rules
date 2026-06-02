@@ -11,3 +11,5 @@ local.properties
 # Claude Code
 .claude/settings.local.json
 .claude/state
+
+**/.DS_Store

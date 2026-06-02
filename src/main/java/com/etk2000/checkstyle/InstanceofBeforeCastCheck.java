@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -21,7 +20,7 @@ import javax.annotation.Nullable;
  *         {@code ClassCastException}.</li>
  * </ol>
  */
-public class InstanceofBeforeCastCheck extends AbstractCheck {
+public class InstanceofBeforeCastCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "instanceof.before.cast";
 	private static final String MSG_WRONG_BRANCH = "instanceof.cast.wrong.branch";
 
@@ -80,20 +79,8 @@ public class InstanceofBeforeCastCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.LITERAL_INSTANCEOF};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	private void visitIfWrongBranch(

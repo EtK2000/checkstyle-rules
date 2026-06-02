@@ -39,7 +39,7 @@ processResources {
 }
 
 dependencies {
-	checkstyle files(sourceSets.main.output.classesDirs)
+	checkstyle files(sourceSets.main.output)
 	checkstyle "com.puppycrawl.tools:checkstyle:${checkstyleVersion}"
 	checkstyle 'com.google.code.findbugs:jsr305:3.0.2'
 
@@ -63,6 +63,11 @@ tasks.withType(Checkstyle).configureEach {
 tasks.register('checkstyleTestResources', Checkstyle) {
 	source fileTree('src/test/resources')
 	include '**/*.java'
+	// snippet fixtures (used by fixer unit tests) are line fragments, not full
+	// compilation units. They drive fixer.fix() text-level operations directly
+	// and don't have to parse as a complete Java file.
+	exclude '**/fragments.in.java'
+	exclude '**/fragments.out.java'
 	classpath = files()
 	configFile = file('config/checkstyle/checkstyle-test-resources.xml')
 	configDirectory = file('config/checkstyle')
@@ -71,4 +76,38 @@ tasks.register('checkstyleTestResources', Checkstyle) {
 
 tasks.named('check') {
 	dependsOn 'checkstyleTestResources'
+}
+
+// When a Checkstyle task fails because a *check* threw an exception (rather than
+// because rule violations were found), Gradle surfaces only "An unexpected error
+// occurred configuring and executing Checkstyle" plus the Ant task's entire
+// input-file list, burying the real cause several `Caused by` levels down (only
+// visible with --stacktrace). Unwrap the chain here so the failing file, check,
+// and exception are reported up front.
+gradle.taskGraph.afterTask { task, state ->
+	if (!(task instanceof Checkstyle) || state.failure == null)
+		return
+
+	def chain = []
+	for (Throwable t = state.failure; t != null && !chain.contains(t); t = t.cause)
+		chain << t
+
+	// only react to a check *throwing* (the Ant task wraps it as "Exception was thrown
+	// while processing <file>"); a normal "rule violations were found" failure has no
+	// such cause and Gradle already reports it clearly.
+	def processing = chain.find { it.message?.startsWith('Exception was thrown while processing') }
+	if (processing == null)
+		return
+
+	def root = chain.last()
+	def lines = [
+			'',
+			"${task.path}: a checkstyle check threw an exception (this is NOT a rule violation):",
+			"  file:  ${processing.message - 'Exception was thrown while processing '}",
+			"  cause: ${root}"
+	]
+	root.stackTrace.findAll { it.className.startsWith('com.etk2000.checkstyle') }.take(6).each {
+		lines << "    at ${it}"
+	}
+	logger.error(lines.join('\n'))
 }

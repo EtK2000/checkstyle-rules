@@ -144,6 +144,26 @@ class LambdaCallParser {
 	}
 
 	/**
+	 * Whether {@code line} ends while still inside a block comment it opened but
+	 * did not close (a {@code /*} with no matching close before end-of-line). A
+	 * trailing {@code //} line comment does not count, since it is fully contained
+	 * on the line. Lets a caller refuse to edit a line whose block comment
+	 * continues onto later lines.
+	 */
+	@CheckReturnValue
+	static boolean endsInBlockComment(@Nonnull String line) {
+		final var state = new ScanState();
+		for (var j = 0; j < line.length(); ++j) {
+			final var step = state.advance(line, j);
+			if (step.lineCommentStart)
+				return false;
+			if (step.consumed > 1)
+				j += step.consumed - 1;
+		}
+		return state.inBlockComment;
+	}
+
+	/**
 	 * Scans backward from {@code endPos} for a simple dotted identifier chain
 	 * (e.g. {@code x}, {@code x.y}, {@code x.y.z}) and returns its start index.
 	 * Returns {@code endPos} if no identifier character precedes that position.

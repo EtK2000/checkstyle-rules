@@ -6,21 +6,22 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Fixes trailing newlines at end of file by deleting trailing blank lines.
- * For a single trailing newline with no blank lines in the lines list, the
- * read/write cycle in {@link CheckstyleFixTask} handles it automatically
- * (readAllLines strips the trailing newline, writeString doesn't add one).
+ * Fixes a trailing newline at end of file by deleting the trailing blank
+ * line(s). The file is read via
+ * {@link CheckstyleFixAction#splitPreservingTrailingNewline}, which represents
+ * an end-of-file newline as a trailing blank line, so a lone trailing newline
+ * is deleted the same way as multiple trailing blank lines.
  */
 class TrailingNewlineFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
-		// scan backward from the end to find trailing blank lines
 		var lastBlank = lines.size();
 		while (lastBlank > 0 && lines.get(lastBlank - 1).isBlank())
 			--lastBlank;
 
-		// no trailing blank lines: the read/write cycle handles the single trailing newline
+		// unreachable for a real violation: a NoTrailingNewline file always ends
+		// with a terminator, which the read step materializes as a trailing blank
 		if (lastBlank == lines.size())
 			return null;
 

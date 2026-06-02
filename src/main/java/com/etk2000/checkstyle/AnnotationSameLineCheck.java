@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -13,7 +12,7 @@ import javax.annotation.Nonnull;
  * method parameters, constructor parameters, catch parameters, lambda
  * parameters, record components, and for-each iteration variables.
  */
-public class AnnotationSameLineCheck extends AbstractCheck {
+public class AnnotationSameLineCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "annotation.same.line";
 	private static final String MSG_ORDER = "annotation.alphabetical.order";
 
@@ -63,20 +62,8 @@ public class AnnotationSameLineCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.ANNOTATIONS, TokenTypes.MODIFIERS};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

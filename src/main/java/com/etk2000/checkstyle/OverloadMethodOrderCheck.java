@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -16,7 +15,7 @@ import javax.annotation.Nonnull;
  * compares parameter types left-to-right: primitives sort before
  * reference types, alphabetical within each group.
  */
-public class OverloadMethodOrderCheck extends AbstractCheck {
+public class OverloadMethodOrderCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "overload.method.order";
 	private static final String MSG_TYPE_KEY = "overload.method.type.order";
 
@@ -32,7 +31,6 @@ public class OverloadMethodOrderCheck extends AbstractCheck {
 			final var aPrimitive = isPrimitive(aType);
 			final var bPrimitive = isPrimitive(bType);
 
-			// primitives sort before reference types
 			if (aPrimitive != bPrimitive)
 				return aPrimitive ? -1 : 1;
 
@@ -55,7 +53,6 @@ public class OverloadMethodOrderCheck extends AbstractCheck {
 	private static String getBaseTypeName(@Nonnull DetailAST firstChild) {
 		return switch (firstChild.getType()) {
 			case TokenTypes.DOT -> {
-				// qualified type like java.util.List — use last segment
 				var last = firstChild.getFirstChild();
 				while (last.getNextSibling() != null)
 					last = last.getNextSibling();
@@ -105,7 +102,6 @@ public class OverloadMethodOrderCheck extends AbstractCheck {
 
 		final var base = getBaseTypeName(first);
 
-		// count ARRAY_DECLARATOR siblings to determine array dimensions
 		var arrayDimensions = 0;
 		for (var sibling = first.getNextSibling(); sibling != null; sibling = sibling.getNextSibling()) {
 			if (sibling.getType() == TokenTypes.ARRAY_DECLARATOR)
@@ -120,7 +116,7 @@ public class OverloadMethodOrderCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	private static boolean isPrimitive(@Nonnull String typeName) {
-		// strip array/varargs suffixes — int[] and int... are still primitive for sorting
+		// strip array/varargs suffixes: int[] and int... are still primitive for sorting
 		var base = typeName;
 		if (base.endsWith("..."))
 			base = base.substring(0, base.length() - 3);
@@ -132,27 +128,10 @@ public class OverloadMethodOrderCheck extends AbstractCheck {
 		};
 	}
 
-	@CheckReturnValue
-	private static int paramCount(@Nonnull DetailAST methodDef) {
-		return methodDef.findFirstToken(TokenTypes.PARAMETERS).getChildCount(TokenTypes.PARAMETER_DEF);
-	}
-
-	@Nonnull
-	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.OBJBLOCK};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override
@@ -166,7 +145,7 @@ public class OverloadMethodOrderCheck extends AbstractCheck {
 				continue;
 
 			final var name = child.findFirstToken(TokenTypes.IDENT).getText();
-			final var params = paramCount(child);
+			final var params = child.findFirstToken(TokenTypes.PARAMETERS).getChildCount(TokenTypes.PARAMETER_DEF);
 
 			if (name.equals(prevName)) {
 				if (params < prevParams)

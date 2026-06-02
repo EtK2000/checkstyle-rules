@@ -30,6 +30,10 @@ public class CheckstylePluginTest {
 	private static final Pattern ALLOWED_METHODS_PATTERN = Pattern.compile(
 			"<property\\s+name=\"allowedMethods\"\\s+value=\"([^\"]+)\""
 	);
+	private static final Pattern CUSTOM_CHECK_MODULE_PATTERN = Pattern.compile(
+			"<module\\s+name=\"(com\\.etk2000\\.checkstyle\\.\\w+Check)\"\\s*(?:/>|>(.*?)</module>)",
+			Pattern.DOTALL
+	);
 	private static final Pattern ID_PATTERN = Pattern.compile(
 			"<property\\s+name=\"id\"\\s+value=\"([^\"]+)\"",
 			Pattern.MULTILINE
@@ -55,6 +59,42 @@ public class CheckstylePluginTest {
 			<?xml version="1.0" encoding="UTF-8"?>
 			<checkstyle version="10.21.4">
 			""";
+
+	private static void assertNoCustomCheckDeclaresProperty(String propertyName, String rationale) throws IOException {
+		final String xml;
+		try (var in = CheckstylePlugin.class.getResourceAsStream("/com/etk2000/checkstyle/checkstyle.xml")) {
+			assertNotNull(in);
+			xml = new String(in.readAllBytes());
+		}
+
+		final var propertyPattern = propertyDeclarationPattern(propertyName);
+		final var matcher = CUSTOM_CHECK_MODULE_PATTERN.matcher(xml);
+		final var matchedChecks = new HashSet<String>();
+		while (matcher.find()) {
+			final var name = matcher.group(1);
+			matchedChecks.add(name);
+			final var body = matcher.group(2);
+			if (body != null) {
+				assertFalse(
+						propertyPattern.matcher(body).find(),
+						"Custom check " + name + " sets " + propertyName + " in checkstyle.xml; " + rationale
+				);
+			}
+		}
+		assertTrue(
+				matchedChecks.containsAll(Set.of(
+						"com.etk2000.checkstyle.EmptyBodyCheck",
+						"com.etk2000.checkstyle.NoFinalParametersCheck",
+						"com.etk2000.checkstyle.PreferImportCheck",
+						"com.etk2000.checkstyle.PreferVarCheck"
+				)),
+				"custom-check module regex did not match the expected checks; matched " + matchedChecks
+		);
+	}
+
+	private static Pattern propertyDeclarationPattern(String propertyName) {
+		return Pattern.compile("name\\s*=\\s*[\"']" + Pattern.quote(propertyName) + "[\"']");
+	}
 
 	@TempDir
 	Path tempDir;
@@ -506,6 +546,49 @@ public class CheckstylePluginTest {
 				new int[]{2, 2},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
 		);
+	}
+
+	/**
+	 * Severity for custom checks is single-sourced in the check code (via
+	 * {@code AbstractAstCheck.logWarning}), so no custom-check module in
+	 * checkstyle.xml may set a {@code severity} property. Guards against
+	 * reintroducing a config severity that would silently diverge from the
+	 * code (regexp and other built-in modules may still set severity).
+	 */
+	@Test
+	public void customCheckModulesDeclareNoSeverity() throws Exception {
+		assertNoCustomCheckDeclaresProperty(
+				"severity",
+				"severity must live in the check code (AbstractAstCheck.logWarning), not config"
+		);
+	}
+
+	/**
+	 * Custom checks are exercised only at their default token set (their tests
+	 * use {@code getDefaultTokens}), so no custom-check module in checkstyle.xml
+	 * may narrow or override the token set with a {@code tokens} property. Guards
+	 * against a config token override silently running a check at a token set no
+	 * test covers (built-in modules like RightCurly may still set tokens).
+	 */
+	@Test
+	public void customCheckModulesDeclareNoTokens() throws Exception {
+		assertNoCustomCheckDeclaresProperty(
+				"tokens",
+				"custom checks run at their default token set (getDefaultTokens), which is what the tests cover"
+		);
+	}
+
+	@Test
+	public void customCheckPropertyGuardDetectsDeclaredProperty() {
+		final var xml = "<module name=\"com.etk2000.checkstyle.FooCheck\">"
+				+ "<property name=\"tokens\" value=\"METHOD_DEF\" /></module>";
+		final var matcher = CUSTOM_CHECK_MODULE_PATTERN.matcher(xml);
+		assertTrue(matcher.find());
+		final var body = matcher.group(2);
+		assertNotNull(body);
+		assertTrue(propertyDeclarationPattern("tokens").matcher(body).find());
+		assertFalse(propertyDeclarationPattern("severity").matcher(body).find());
+		assertTrue(propertyDeclarationPattern("tokens").matcher("name = 'tokens'").find());
 	}
 
 	@Test

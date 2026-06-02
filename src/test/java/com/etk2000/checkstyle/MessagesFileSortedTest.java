@@ -5,25 +5,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -73,7 +69,7 @@ public class MessagesFileSortedTest {
 
 	@Nonnull
 	private static List<String> findUnreferencedKeys(@Nonnull List<String> keys, @Nonnull List<String> sources) {
-		final var stripped = sources.stream().map(MessagesFileSortedTest::stripJavaComments).toList();
+		final var stripped = sources.stream().map(JavaSourceUtil::stripJavaComments).toList();
 		final var unused = new ArrayList<String>();
 		for (var key : keys) {
 			final var literal = '"' + key + '"';
@@ -87,7 +83,7 @@ public class MessagesFileSortedTest {
 	private static List<String> findUnresolvedMsgLiterals(@Nonnull Set<String> keys, @Nonnull List<String> sources) {
 		final var unresolved = new ArrayList<String>();
 		for (var src : sources) {
-			for (var literal : findMsgConstantLiterals(stripJavaComments(src))) {
+			for (var literal : findMsgConstantLiterals(JavaSourceUtil.stripJavaComments(src))) {
 				if (!keys.contains(literal))
 					unresolved.add(literal);
 			}
@@ -168,91 +164,6 @@ public class MessagesFileSortedTest {
 		return len;
 	}
 
-	@Nonnull
-	private static String stripJavaComments(@Nonnull String source) {
-		final var out = new StringBuilder(source.length());
-		final var len = source.length();
-		var i = 0;
-		while (i < len) {
-			final var c = source.charAt(i);
-			if (c == '"' && i + 2 < len && source.charAt(i + 1) == '"' && source.charAt(i + 2) == '"') {
-				out.append("\"\"\"");
-				i += 3;
-				while (i + 2 < len) {
-					if (source.charAt(i) == '"' && source.charAt(i + 1) == '"' && source.charAt(i + 2) == '"') {
-						out.append("\"\"\"");
-						i += 3;
-						break;
-					}
-					out.append(source.charAt(i));
-					++i;
-				}
-				continue;
-			}
-			if (c == '"' || c == '\'') {
-				out.append(c);
-				++i;
-				while (i < len) {
-					final var sc = source.charAt(i);
-					if (sc == '\\' && i + 1 < len) {
-						out.append(sc);
-						out.append(source.charAt(i + 1));
-						i += 2;
-						continue;
-					}
-					out.append(sc);
-					++i;
-					if (sc == c || sc == '\n')
-						break;
-				}
-				continue;
-			}
-			if (c == '/' && i + 1 < len && source.charAt(i + 1) == '/') {
-				i += 2;
-				while (i < len && source.charAt(i) != '\n')
-					++i;
-				continue;
-			}
-			if (c == '/' && i + 1 < len && source.charAt(i + 1) == '*') {
-				i += 2;
-				while (i + 1 < len && !(source.charAt(i) == '*' && source.charAt(i + 1) == '/'))
-					++i;
-				if (i + 1 < len)
-					i += 2;
-				else
-					i = len;
-				out.append(' ');
-				continue;
-			}
-			out.append(c);
-			++i;
-		}
-		return out.toString();
-	}
-
-	@Nonnull
-	private static Stream<Arguments> stripJavaCommentsCases() {
-		return Stream.of(
-				Arguments.of("foo // line\nbar", "foo \nbar"),
-				Arguments.of("a /* x */ b", "a   b"),
-				Arguments.of("\"// inside string\"", "\"// inside string\""),
-				Arguments.of("\"/* inside string */\"", "\"/* inside string */\""),
-				Arguments.of("'/'", "'/'"),
-				Arguments.of("// only comment", ""),
-				Arguments.of("/* unterminated", " "),
-				Arguments.of("a // b\nc /* d */ e", "a \nc   e"),
-				Arguments.of("\"\"\"\n// in text block\n\"\"\"", "\"\"\"\n// in text block\n\"\"\""),
-				Arguments.of("\"a\\\"b\"", "\"a\\\"b\""),
-				Arguments.of("\"a\\\\\"", "\"a\\\\\""),
-				Arguments.of("\"a\\", "\"a\\"),
-				Arguments.of("\"\"\"abc\"\"\"", "\"\"\"abc\"\"\""),
-				Arguments.of("'\\''", "'\\''"),
-				Arguments.of("'\\n'", "'\\n'"),
-				Arguments.of("/*/", " "),
-				Arguments.of("/* * */", " ")
-		);
-	}
-
 	@Nullable
 	private static MsgParseResult tryParseMsgValue(@Nonnull String source, int afterIdent) {
 		final var len = source.length();
@@ -302,23 +213,11 @@ public class MessagesFileSortedTest {
 		return new MsgParseResult(pos, combined.toString());
 	}
 
-	@Nonnull
-	private static List<String> walkJavaSources(@Nonnull Path root) throws IOException {
-		final var sources = new ArrayList<String>();
-		try (var paths = Files.walk(root)) {
-			for (var path : paths.filter(p -> p.toString().endsWith(".java")).toList())
-				sources.add(Files.readString(path, StandardCharsets.UTF_8));
-		}
-		if (sources.isEmpty())
-			throw new IllegalStateException("no Java sources found under " + root + " - check the test's working directory");
-		return sources;
-	}
-
 	@Test
 	public void testEveryMessageKeyIsReferenced() throws Exception {
 		final var unused = findUnreferencedKeys(
 				readMessageKeys(),
-				walkJavaSources(Path.of("src/main/java"))
+				JavaSourceUtil.walkJavaSources(Path.of("src/main/java"))
 		);
 		if (!unused.isEmpty())
 			fail("Unused message keys in messages.properties: " + unused);
@@ -328,7 +227,7 @@ public class MessagesFileSortedTest {
 	public void testEveryMsgConstantResolvesToAKey() throws Exception {
 		final var unresolved = findUnresolvedMsgLiterals(
 				new HashSet<>(readMessageKeys()),
-				walkJavaSources(Path.of("src/main/java"))
+				JavaSourceUtil.walkJavaSources(Path.of("src/main/java"))
 		);
 		if (!unresolved.isEmpty())
 			fail("MSG_* constants reference missing keys: " + unresolved);
@@ -540,59 +439,5 @@ public class MessagesFileSortedTest {
 				IllegalStateException.class,
 				() -> readMessageKeys(new BufferedReader(new StringReader(input)))
 		);
-	}
-
-	@MethodSource("stripJavaCommentsCases")
-	@ParameterizedTest
-	public void testStripJavaComments(String input, String expected) {
-		assertEquals(expected, stripJavaComments(input));
-	}
-
-	@Test
-	public void testWalkJavaSourcesFailsWhenEmpty() throws Exception {
-		final var tempDir = Files.createTempDirectory("empty-sources");
-		try {
-			assertThrows(IllegalStateException.class, () -> walkJavaSources(tempDir));
-		}
-		finally {
-			Files.deleteIfExists(tempDir);
-		}
-	}
-
-	@Test
-	public void testWalkJavaSourcesIgnoresNonJavaFiles() throws Exception {
-		final var tempDir = Files.createTempDirectory("walk-mixed");
-		final var javaFile = tempDir.resolve("Foo.java");
-		final var txtFile = tempDir.resolve("Bar.txt");
-		final var bakFile = tempDir.resolve("Baz.java.bak");
-		try {
-			Files.writeString(javaFile, "class Foo {}", StandardCharsets.UTF_8);
-			Files.writeString(txtFile, "ignored", StandardCharsets.UTF_8);
-			Files.writeString(bakFile, "ignored", StandardCharsets.UTF_8);
-			final var sources = walkJavaSources(tempDir);
-			assertEquals(1, sources.size());
-		}
-		finally {
-			Files.deleteIfExists(javaFile);
-			Files.deleteIfExists(txtFile);
-			Files.deleteIfExists(bakFile);
-			Files.deleteIfExists(tempDir);
-		}
-	}
-
-	@Test
-	public void testWalkJavaSourcesReadsFileContents() throws Exception {
-		final var tempDir = Files.createTempDirectory("walk-content");
-		final var javaFile = tempDir.resolve("Foo.java");
-		try {
-			Files.writeString(javaFile, "class Foo {}", StandardCharsets.UTF_8);
-			final var sources = walkJavaSources(tempDir);
-			assertEquals(1, sources.size());
-			assertEquals("class Foo {}", sources.getFirst());
-		}
-		finally {
-			Files.deleteIfExists(javaFile);
-			Files.deleteIfExists(tempDir);
-		}
 	}
 }

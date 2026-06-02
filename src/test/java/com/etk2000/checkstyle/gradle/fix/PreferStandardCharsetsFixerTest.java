@@ -1,71 +1,22 @@
 package com.etk2000.checkstyle.gradle.fix;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import com.etk2000.checkstyle.TestResources;
+
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
 
 public class PreferStandardCharsetsFixerTest {
+	private static final String TOPIC = "preferstandardcharsets";
+
 	private final CheckstyleFixer fixer = new PreferStandardCharsetsFixer();
 
-	@CsvSource({
-			"UTF-8,       UTF_8",
-			"utf-8,       UTF_8",
-			"UTF8,        UTF_8",
-			"utf8,        UTF_8",
-			"Utf-8,       UTF_8",
-			"ISO-8859-1,  ISO_8859_1",
-			"latin1,      ISO_8859_1",
-			"US-ASCII,    US_ASCII",
-			"ASCII,       US_ASCII",
-			"UTF-16,      UTF_16",
-			"UTF-16BE,    UTF_16BE",
-			"UTF-16LE,    UTF_16LE"
-	})
-	@ParameterizedTest
-	public void testCharsetReplacement(String charsetName, String constant) {
-		final var input = "\t\tfinal var bytes = s.getBytes(\"" + charsetName + "\");";
-		final var lines = new ArrayList<>(List.of(input));
-		final var column = input.indexOf('"');
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, column));
-		assertEquals(
-				"\t\tfinal var bytes = s.getBytes(StandardCharsets." + constant.strip() + ");",
-				result.replacement().getFirst()
-		);
-		assertEquals(Set.of("java.nio.charset.StandardCharsets"), result.importsToAdd());
-	}
-
 	@Test
-	public void testColumnNotOnQuoteReturnsNull() {
-		final var lines = new ArrayList<>(List.of("\t\tfinal var bytes = s.getBytes(charset);"));
-		assertNull(fixer.fix(lines, 0, 31));
-	}
-
-	@Test
-	public void testColumnPastEndReturnsNull() {
-		final var lines = new ArrayList<>(List.of("\t\tshort"));
-		assertNull(fixer.fix(lines, 0, 100));
-	}
-
-	@Test
-	public void testUnclosedQuoteReturnsNull() {
-		final var lines = new ArrayList<>(List.of("\t\ts.getBytes(\"UTF-8"));
-		final var column = lines.getFirst().indexOf('"');
-		assertNull(fixer.fix(lines, 0, column));
-	}
-
-	@Test
-	public void testUnknownCharsetReturnsSkipResult() {
-		final var input = "\t\tfinal var bytes = s.getBytes(\"Windows-1252\");";
-		final var lines = new ArrayList<>(List.of(input));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, input.indexOf('"')));
-		assertEquals(SkipMessages.PREFER_STANDARD_CHARSETS_SKIP, result.reason());
+	public void testUnclosedQuoteReturnsNull() throws Exception {
+		final var fx = TestResources.loadSnippet(TOPIC, "unclosed_quote");
+		final var t = fx.firstTarget();
+		assertNull(fixer.fix(new ArrayList<>(fx.inputLines()), t.line(), t.column()));
 	}
 }

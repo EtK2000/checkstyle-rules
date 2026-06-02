@@ -1,49 +1,34 @@
 package com.etk2000.checkstyle.gradle.fix;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSimpleFix;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkip;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class BlankLineAfterBreakFixerTest {
+	private static final String TOPIC = "blanklineafterbreak";
+
 	private final CheckstyleFixer fixer = new BlankLineAfterBreakFixer();
 
 	@Test
-	public void testAlreadyHasBlankLine() {
-		final var lines = new ArrayList<>(List.of("\t\tbreak;", "", "\t\tcase 2:"));
-		assertNull(fixer.fix(lines, 0, 0));
+	public void testAlreadyHasBlankLine() throws Exception {
+		assertSkip(fixer, TOPIC, "already_has_blank_line");
 	}
 
 	@Test
-	public void testInsertBlankBeforeCase() {
-		final var lines = new ArrayList<>(List.of("\t\tbreak;", "\t\tcase 2:"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(0, result.endLine());
-		assertEquals(1, result.replacement().size());
-		assertEquals("", result.replacement().getFirst());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testInsertBlankBeforeCase() throws Exception {
+		// can't migrate: BlankLineAfterBreak is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
+		assertSimpleFix(fixer, TOPIC, "insert_blank_before_case");
 	}
 
 	@Test
-	public void testInsertBlankBeforeDefault() {
-		final var lines = new ArrayList<>(List.of("\t\tbreak;", "\t\tdefault:"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(0, result.endLine());
-		assertEquals(1, result.replacement().size());
-		assertEquals("", result.replacement().getFirst());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testInsertBlankBeforeDefault() throws Exception {
+		// can't migrate: BlankLineAfterBreak is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
+		assertSimpleFix(fixer, TOPIC, "insert_blank_before_default");
 	}
 
 	@Test
-	public void testNoNextLine() {
-		final var lines = new ArrayList<>(List.of("\t\tbreak;"));
-		assertNull(fixer.fix(lines, 0, 0));
+	public void testNoNextLine() throws Exception {
+		assertSkip(fixer, TOPIC, "no_next_line");
 	}
 }

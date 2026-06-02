@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -13,26 +12,14 @@ import javax.annotation.Nonnull;
  *   <li>{@code @A(value = x)} should be {@code @A(x)} (explicit {@code value} key)</li>
  * </ul>
  */
-public class RedundantAnnotationSyntaxCheck extends AbstractCheck {
+public class RedundantAnnotationSyntaxCheck extends AbstractAstCheck {
 	private static final String MSG_EMPTY_PARENS = "annotation.syntax.empty.parens";
 	private static final String MSG_EXPLICIT_VALUE = "annotation.syntax.explicit.value";
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.ANNOTATION};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override
@@ -43,21 +30,19 @@ public class RedundantAnnotationSyntaxCheck extends AbstractCheck {
 
 		final var name = AstUtil.annotationName(ast);
 
-		// rule 1: empty parens @A()
 		if (ast.findFirstToken(TokenTypes.RPAREN) != null
 				&& ast.findFirstToken(TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR) == null
 				&& ast.findFirstToken(TokenTypes.EXPR) == null
-				&& ast.findFirstToken(TokenTypes.ANNOTATION_ARRAY_INIT) == null) {
+				&& ast.findFirstToken(TokenTypes.ANNOTATION_ARRAY_INIT) == null
+				&& ast.findFirstToken(TokenTypes.ANNOTATION) == null) {
 			log(ast, MSG_EMPTY_PARENS, name);
 			return;
 		}
 
-		// rule 2: explicit value key @A(value = x) when it's the only param
 		final var pair = ast.findFirstToken(TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR);
 		if (pair == null)
 			return;
 
-		// check it's the only pair (no COMMA sibling)
 		if (ast.findFirstToken(TokenTypes.COMMA) != null)
 			return;
 

@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -13,7 +12,7 @@ import javax.annotation.Nonnull;
  * 4. Static methods, 5. Instance fields, 6. Constructors/instance initializers,
  * 7. Instance methods.
  */
-public class ClassStructureOrderCheck extends AbstractCheck {
+public class ClassStructureOrderCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "class.structure.order";
 	private static final String[] SECTION_NAMES = {
 			"",
@@ -61,20 +60,8 @@ public class ClassStructureOrderCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.OBJBLOCK};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

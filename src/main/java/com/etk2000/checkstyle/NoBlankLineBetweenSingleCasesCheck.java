@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -11,7 +10,7 @@ import javax.annotation.Nonnull;
  * Checkstyle check that flags blank lines between consecutive single-line switch cases
  * (case + one statement like return/throw/yield).
  */
-public class NoBlankLineBetweenSingleCasesCheck extends AbstractCheck {
+public class NoBlankLineBetweenSingleCasesCheck extends AbstractAstCheck {
 	private static final String MSG_BRACED = "no.blank.line.after.braced.case";
 	private static final String MSG_KEY = "no.blank.line.between.single.cases";
 
@@ -70,20 +69,8 @@ public class NoBlankLineBetweenSingleCasesCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.LITERAL_SWITCH};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

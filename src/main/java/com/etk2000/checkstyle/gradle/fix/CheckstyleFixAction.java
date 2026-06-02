@@ -9,6 +9,7 @@ import com.etk2000.checkstyle.FieldConsolidationCheck;
 import com.etk2000.checkstyle.FieldSortingCheck;
 import com.etk2000.checkstyle.JitInefficiencyCheck;
 import com.etk2000.checkstyle.LambdaParameterTypeCheck;
+import com.etk2000.checkstyle.MultilineCallFormattingCheck;
 import com.etk2000.checkstyle.NoArrayTrailingCommaCheck;
 import com.etk2000.checkstyle.NoBlankLineBetweenSingleCasesCheck;
 import com.etk2000.checkstyle.NoEnumTrailingSemicolonCheck;
@@ -19,6 +20,8 @@ import com.etk2000.checkstyle.PreferCollectionInterfaceCheck;
 import com.etk2000.checkstyle.PreferDirectBooleanReturnCheck;
 import com.etk2000.checkstyle.PreferDoWhileCheck;
 import com.etk2000.checkstyle.PreferExactAssertionCheck;
+import com.etk2000.checkstyle.PreferImportCheck;
+import com.etk2000.checkstyle.PreferLiteralSuffixCheck;
 import com.etk2000.checkstyle.PreferMathMethodCheck;
 import com.etk2000.checkstyle.PreferPrefixIncrementCheck;
 import com.etk2000.checkstyle.PreferSpecificApiCheck;
@@ -29,13 +32,13 @@ import com.etk2000.checkstyle.PreferVarCheck;
 import com.etk2000.checkstyle.RecordFormattingCheck;
 import com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck;
 import com.etk2000.checkstyle.RedundantArrayCreationCheck;
+import com.etk2000.checkstyle.RedundantCastCheck;
 import com.etk2000.checkstyle.RedundantEqualityBranchCheck;
 import com.etk2000.checkstyle.RedundantNumericSuffixCheck;
 import com.puppycrawl.tools.checkstyle.Checker;
 import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
 import com.puppycrawl.tools.checkstyle.TreeWalker;
 import com.puppycrawl.tools.checkstyle.api.AuditEvent;
-import com.puppycrawl.tools.checkstyle.api.AuditListener;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import com.puppycrawl.tools.checkstyle.checks.UpperEllCheck;
@@ -48,10 +51,10 @@ import com.puppycrawl.tools.checkstyle.checks.imports.UnusedImportsCheck;
 import com.puppycrawl.tools.checkstyle.checks.modifier.RedundantModifierCheck;
 
 import org.gradle.api.file.DirectoryProperty;
-import org.jetbrains.annotations.VisibleForTesting;
 import org.gradle.api.provider.Property;
 import org.gradle.workers.WorkAction;
 import org.gradle.workers.WorkParameters;
+import org.jetbrains.annotations.VisibleForTesting;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,7 +62,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -92,7 +94,6 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		DirectoryProperty getTestSource();
 	}
 
-	private static final int TAB_WIDTH = 8;
 	private static final String ALLOWED_METHODS = "findViewById,findViewWithTag,getArgument,getSystemService,requireViewById";
 	private static final String BLANK_LINE_AFTER_BREAK_ID = "BlankLineAfterBreak";
 	private static final String BLANK_LINE_AFTER_CLASS_BRACE_ID = "NoBlankLineAfterClassBrace";
@@ -101,7 +102,6 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 	private static final String TRAILING_NEWLINE_ID = "NoTrailingNewline";
 	private static final String TRAILING_WHITESPACE_ID = "NoTrailingWhitespace";
 
-	// keyed by module id (Checker-level modules like RegexpSingleline/RegexpMultiline)
 	static final Map<String, CheckstyleFixer> MODULE_ID_FIXERS = Map.of(
 			BLANK_LINE_AFTER_BREAK_ID, new BlankLineAfterBreakFixer(),
 			BLANK_LINE_AFTER_CLASS_BRACE_ID, new BlankLineAfterClassBraceFixer(),
@@ -111,7 +111,6 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			TRAILING_WHITESPACE_ID, new TrailingWhitespaceFixer()
 	);
 
-	// keyed by check class name (TreeWalker modules)
 	static final Map<String, CheckstyleFixer> FIXERS;
 
 	static {
@@ -131,6 +130,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				Map.entry(FinalLocalVariableCheck.class.getName(), new FinalLocalVariableFixer()),
 				Map.entry(JitInefficiencyCheck.class.getName(), new JitInefficiencyFixer()),
 				Map.entry(LambdaParameterTypeCheck.class.getName(), new LambdaParameterTypeFixer()),
+				Map.entry(MultilineCallFormattingCheck.class.getName(), new MultilineCallFormattingFixer()),
 				Map.entry(NoArrayTrailingCommaCheck.class.getName(), commaFixer),
 				Map.entry(NoFinalParametersCheck.class.getName(), modifierFixer),
 				Map.entry(NoBlankLineBetweenSingleCasesCheck.class.getName(), new NoBlankLineBetweenSingleCasesFixer()),
@@ -142,6 +142,8 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				Map.entry(PreferDirectBooleanReturnCheck.class.getName(), new PreferDirectBooleanReturnFixer()),
 				Map.entry(PreferDoWhileCheck.class.getName(), new PreferDoWhileFixer()),
 				Map.entry(PreferExactAssertionCheck.class.getName(), new PreferExactAssertionFixer()),
+				Map.entry(PreferImportCheck.class.getName(), new PreferImportFixer()),
+				Map.entry(PreferLiteralSuffixCheck.class.getName(), new PreferLiteralSuffixFixer()),
 				Map.entry(PreferMathMethodCheck.class.getName(), new PreferMathMethodFixer()),
 				Map.entry(PreferPrefixIncrementCheck.class.getName(), new PreferPrefixIncrementFixer()),
 				Map.entry(PreferSpecificApiCheck.class.getName(), new PreferSpecificApiFixer()),
@@ -152,11 +154,12 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				Map.entry(RecordFormattingCheck.class.getName(), new RecordFormattingFixer()),
 				Map.entry(RedundantAnnotationSyntaxCheck.class.getName(), new RedundantAnnotationSyntaxFixer()),
 				Map.entry(RedundantArrayCreationCheck.class.getName(), new RedundantArrayCreationFixer()),
+				Map.entry(RedundantCastCheck.class.getName(), new RedundantCastFixer()),
 				Map.entry(RedundantEqualityBranchCheck.class.getName(), new RedundantEqualityBranchFixer()),
 				Map.entry(RedundantImportCheck.class.getName(), deleteLineFixer),
 				Map.entry(RedundantModifierCheck.class.getName(), modifierFixer),
 				Map.entry(RedundantNumericSuffixCheck.class.getName(), new RedundantNumericSuffixFixer()),
-				Map.entry(UnusedImportsCheck.class.getName(), deleteLineFixer),
+				Map.entry(UnusedImportsCheck.class.getName(), new UnusedImportsFixer()),
 				Map.entry(UpperEllCheck.class.getName(), new UpperEllFixer())
 		);
 	}
@@ -187,6 +190,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 						.thenComparing(Comparator.comparingInt(AuditEvent::getColumn).reversed())
 		);
 
+		final var preFixUsedImports = collectUsedImports(lines);
 		final var importsToAdd = new TreeSet<String>();
 		final var skippedReasons = new LinkedHashMap<String, List<String>>();
 		var fixed = 0;
@@ -209,12 +213,12 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				final var lineIndex = event.getLine() - 1;
 				if (lineIndex == suppressedLine) {
 					// after a prior delete, a blank line may shift into this position;
-					// allow deletion only once and only for DeleteLineFixer (e.g.
+					// allow deletion only once and only for a line-deleting fixer (e.g.
 					// RedundantImport + UnusedImports double-fire: first removes
 					// import, second removes leftover blank)
 					if (!passedThrough && lineIndex >= 0 && lineIndex < lines.size()
 							&& lines.get(lineIndex).isEmpty()
-							&& fixer instanceof DeleteLineFixer)
+							&& fixer instanceof LineDeleter)
 						passedThrough = true;
 					else {
 						trackSkip(skippedReasons, checkName, SkipMessages.FIX_SUPPRESSED);
@@ -228,7 +232,22 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 					continue;
 				}
 				final var charColumn = tabColumnToCharIndex(lines.get(lineIndex), event.getColumn() - 1);
-				final var attempt = fixer.fix(lines, lineIndex, charColumn);
+				FixContext.setViolation(event.getViolation());
+				final FixAttempt attempt;
+				try {
+					attempt = fixer.fix(lines, lineIndex, charColumn);
+				}
+				// one violation the fixer cannot survive must not abandon the run: files
+				// already rewritten stay written, and the rest still get fixed. A
+				// VirtualMachineError other than a blown stack is not survivable, so it
+				// propagates and leaves the current file untouched rather than writing a
+				// half-fixed one.
+				catch (RuntimeException | AssertionError | LinkageError | StackOverflowError e) {
+					System.err.println(checkName + " fixer failed at " + event.getFileName() + ":" + event.getLine());
+					e.printStackTrace();
+					trackSkip(skippedReasons, checkName, SkipMessages.FIX_ERROR);
+					continue;
+				}
 				if (attempt == null) {
 					trackSkip(skippedReasons, checkName, SkipMessages.FIX_NOT_FIXABLE);
 					continue;
@@ -238,29 +257,66 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 					continue;
 				}
 				final var result = (FixResult) attempt;
+				if (result.startLine() < 0 || result.startLine() > lines.size()
+						|| result.endLine() >= lines.size()) {
+					trackSkip(skippedReasons, checkName, SkipMessages.FIX_BOUNDS);
+					continue;
+				}
 				if (result.endLine() >= result.startLine())
 					lines.subList(result.startLine(), result.endLine() + 1).clear();
 				lines.addAll(result.startLine(), result.replacement());
 				importsToAdd.addAll(result.importsToAdd());
-				// suppress next same-line violation when this fix removed content,
-				// since the line that shifted into this position is unrelated
-				suppressedLine = result.replacement().size() < result.endLine() - result.startLine() + 1
+				// suppress the next violation whose lineIndex falls past the replacement range
+				// after an actual deletion, since that line belongs to content that shifted up
+				suppressedLine = result.endLine() >= result.startLine()
+						&& lineIndex >= result.startLine() + result.replacement().size()
 						? lineIndex : -1;
 				++fixed;
 			}
 		}
 		finally {
+			FixerAst.clearCache();
 			FixContext.clearFilePath();
+			FixContext.clearViolation();
 		}
 
 		var needsSecondPass = false;
 		if (!importsToAdd.isEmpty())
 			needsSecondPass = insertMissingImports(lines, importsToAdd) > 0;
+		if (!needsSecondPass && fixed > 0 && !preFixUsedImports.isEmpty()) {
+			final var postFixImportLines = new HashSet<String>();
+			for (var line : lines) {
+				final var stripped = line.strip();
+				if (stripped.startsWith("import "))
+					postFixImportLines.add(stripped);
+			}
+			final var postFixBody = collectBodyLines(lines);
+			for (var entry : preFixUsedImports.entrySet()) {
+				if (postFixImportLines.contains(entry.getKey())
+						&& !JavaSourceScanner.containsIdentifier(postFixBody, entry.getValue())) {
+					needsSecondPass = true;
+					break;
+				}
+			}
+		}
 
 		final var immutableReasons = new LinkedHashMap<String, List<String>>();
 		for (var entry : skippedReasons.entrySet())
 			immutableReasons.put(entry.getKey(), List.copyOf(entry.getValue()));
 		return new ApplyFixesResult(fixed, needsSecondPass, Map.copyOf(immutableReasons));
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static List<String> collectBodyLines(@Nonnull List<String> lines) {
+		final var result = new ArrayList<String>();
+		for (var line : lines) {
+			final var trimmed = line.strip();
+			if (trimmed.startsWith("import ") || trimmed.startsWith("package "))
+				continue;
+			result.add(line);
+		}
+		return result;
 	}
 
 	@VisibleForTesting
@@ -272,6 +328,31 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 					.map(Path::toFile)
 					.forEach(out::add);
 		}
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static Map<String, String> collectUsedImports(@Nonnull List<String> lines) {
+		final var imports = new LinkedHashMap<String, String>();
+		for (var line : lines) {
+			final var parsed = ImportLine.parse(line);
+			if (parsed == null || parsed.wildcard())
+				continue;
+			final var fqn = parsed.fqn();
+			final var dotIdx = fqn.lastIndexOf('.');
+			if (dotIdx < 0)
+				continue;
+			imports.put(line.strip(), fqn.substring(dotIdx + 1));
+		}
+		if (imports.isEmpty())
+			return Map.of();
+		final var bodyLines = collectBodyLines(lines);
+		final var result = new LinkedHashMap<String, String>();
+		for (var entry : imports.entrySet()) {
+			if (JavaSourceScanner.containsIdentifier(bodyLines, entry.getValue()))
+				result.put(entry.getKey(), entry.getValue());
+		}
+		return result;
 	}
 
 	/**
@@ -292,7 +373,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 	@VisibleForTesting
 	static DefaultConfiguration createCheckerConfig(@Nonnull String minSdk) {
 		final var treeWalkerConfig = new DefaultConfiguration(TreeWalker.class.getName());
-		treeWalkerConfig.addProperty("tabWidth", String.valueOf(TAB_WIDTH));
+		treeWalkerConfig.addProperty("tabWidth", String.valueOf(LineLength.TAB_WIDTH));
 		for (var checkName : FIXERS.keySet()) {
 			final var checkConfig = new DefaultConfiguration(checkName);
 			if (checkName.equals(FinalLocalVariableCheck.class.getName()))
@@ -310,7 +391,6 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		final var checkerConfig = new DefaultConfiguration("Checker");
 		checkerConfig.addChild(treeWalkerConfig);
 
-		// Checker-level regex modules
 		final var blankAfterBreakConfig = new DefaultConfiguration("RegexpMultiline");
 		blankAfterBreakConfig.addProperty("id", BLANK_LINE_AFTER_BREAK_ID);
 		blankAfterBreakConfig.addProperty("format", "break\\s*;\\n[^\\S\\n]*(case |default[\\s:])");
@@ -360,39 +440,11 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			@Nonnull List<File> files
 	) throws CheckstyleException, IOException {
 		final var checker = new Checker();
-		final var violationsByFile = new HashMap<String, List<AuditEvent>>();
+		final var listener = new ViolationsByFileListener();
 		try {
 			checker.setModuleClassLoader(NoArrayTrailingCommaCheck.class.getClassLoader());
 			checker.configure(checkerConfig);
-
-			checker.addListener(new AuditListener() {
-				@Override
-				public void addError(@Nonnull AuditEvent event) {
-					violationsByFile.computeIfAbsent(event.getFileName(), k -> new ArrayList<>()).add(event);
-				}
-
-				@Override
-				public void addException(@Nonnull AuditEvent event, @Nonnull Throwable throwable) {
-					System.err.println("Checkstyle exception on " + event.getFileName() + ": " + throwable.getMessage());
-				}
-
-				@Override
-				public void auditFinished(@Nonnull AuditEvent event) {
-				}
-
-				@Override
-				public void auditStarted(@Nonnull AuditEvent event) {
-				}
-
-				@Override
-				public void fileFinished(@Nonnull AuditEvent event) {
-				}
-
-				@Override
-				public void fileStarted(@Nonnull AuditEvent event) {
-				}
-			});
-
+			checker.addListener(listener);
 			checker.process(files);
 		}
 		finally {
@@ -405,17 +457,34 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		var totalSkipped = 0;
 		final var allSkippedReasons = new LinkedHashMap<String, List<String>>();
 
-		for (var entry : violationsByFile.entrySet()) {
+		for (var entry : listener.getViolationsByFile().entrySet()) {
 			final var filePath = Path.of(entry.getKey());
 			final var violations = entry.getValue();
 			final var totalViolations = violations.size();
 
-			final var lines = new ArrayList<>(Files.readAllLines(filePath));
+			final List<String> sourceLines;
+			try {
+				sourceLines = readSourceLines(filePath);
+			}
+			// one unreadable file (not UTF-8, permissions, a dangling symlink) must not
+			// abandon the run and leave the files already rewritten without a summary
+			catch (IOException e) {
+				System.err.println("Skipping " + filePath + ": " + e);
+				continue;
+			}
+			final var lines = new ArrayList<>(sourceLines);
 			final var result = applyFixes(lines, violations, FIXERS, MODULE_ID_FIXERS);
 
 			if (result.fixCount() > 0) {
-				if (!dryRun)
-					Files.writeString(filePath, String.join("\n", lines));
+				if (!dryRun) {
+					try {
+						Files.writeString(filePath, String.join("\n", lines));
+					}
+					catch (IOException e) {
+						System.err.println("Could not write " + filePath + ": " + e);
+						continue;
+					}
+				}
 				++filesFixed;
 				totalFixed += result.fixCount();
 			}
@@ -449,7 +518,6 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 
 	/**
 	 * Returns the set of check source names and module IDs that have fixers.
-	 * Used by tests to verify consistency with {@code FixableCheckNames}.
 	 */
 	@CheckReturnValue
 	@Nonnull
@@ -461,7 +529,6 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 
 	/**
 	 * Returns the {@code allowedMethods} value used by the fixer for PreferVarCheck.
-	 * Used by tests to verify consistency with {@code checkstyle.xml}.
 	 */
 	@CheckReturnValue
 	@Nonnull
@@ -494,12 +561,26 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				regularToAdd.add(fqn);
 		}
 
-		// remove already-present imports (exact matches and wildcard coverage)
+		// A line inside a text block or block comment can textually begin with
+		// `import `/`package ` (e.g. a text block whose content is Java source, or a
+		// commented-out import group). Treating it as a real directive would insert the
+		// new import inside that literal. `masked` marks lines inside such a literal and
+		// is kept in sync with every insertion below (an added import/blank line is never
+		// masked), so every directive scan can skip masked lines even after mutation.
+		final var masks = FqnResolver.computeLineMasks(lines);
+		final var masked = new ArrayList<Boolean>(lines.size());
+		for (var i = 0; i < lines.size(); ++i)
+			masked.add(masks.inBlockComment()[i] || masks.inTextBlock()[i]);
 		var lastImportIdx = -1;
 		var lastStaticImportIdx = -1;
 		var packageIdx = -1;
 		for (var i = 0; i < lines.size(); ++i) {
-			final var line = lines.get(i);
+			if (masked.get(i))
+				continue;
+			// leading whitespace (and a BOM on line 0) is legal ahead of `package`/`import`;
+			// matching the raw line missed those and dropped the new import at index 0,
+			// above the package declaration
+			final var line = lines.get(i).strip();
 			if (line.startsWith("package "))
 				packageIdx = i;
 			else if (line.startsWith("import static ")) {
@@ -526,29 +607,31 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 
 		if (!staticToAdd.isEmpty()) {
 			if (lastStaticImportIdx >= 0) {
-				// existing static group: insert within it (blank-line separator already present)
 				for (var fqn : staticToAdd) {
 					final var importLine = "import static " + fqn + ";";
 					var insertIdx = lastStaticImportIdx + 1;
 					for (var i = 0; i <= lastStaticImportIdx; ++i) {
-						if (lines.get(i).startsWith("import static ") && lines.get(i).compareTo(importLine) > 0) {
+						if (!masked.get(i) && lines.get(i).strip().startsWith("import static ") && lines.get(i).strip().compareTo(importLine) > 0) {
 							insertIdx = i;
 							break;
 						}
 					}
+					insertIdx = skipMaskedRun(masked, insertIdx);
 					lines.add(insertIdx, importLine);
-					++lastStaticImportIdx;
+					masked.add(insertIdx, false);
+					lastStaticImportIdx = Math.max(lastStaticImportIdx + 1, insertIdx);
 					if (lastImportIdx >= insertIdx)
 						++lastImportIdx;
 					++addedStatic;
 				}
 			}
 			else {
-				// no existing static group: insert a new block with a trailing blank line
 				var insertIdx = packageIdx + 1;
 				if (packageIdx >= 0) {
+					insertIdx = skipMaskedRun(masked, insertIdx);
 					if (insertIdx >= lines.size() || !lines.get(insertIdx).isEmpty()) {
 						lines.add(insertIdx, "");
+						masked.add(insertIdx, false);
 						if (lastImportIdx >= insertIdx)
 							++lastImportIdx;
 					}
@@ -556,14 +639,15 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				}
 				for (var fqn : staticToAdd) {
 					lines.add(insertIdx, "import static " + fqn + ";");
+					masked.add(insertIdx, false);
 					if (lastImportIdx >= insertIdx)
 						++lastImportIdx;
 					++insertIdx;
 					++addedStatic;
 				}
-				// ensure blank line after the new static group
 				if (insertIdx >= lines.size() || !lines.get(insertIdx).isEmpty()) {
 					lines.add(insertIdx, "");
+					masked.add(insertIdx, false);
 					if (lastImportIdx >= insertIdx)
 						++lastImportIdx;
 				}
@@ -574,10 +658,13 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 		// after the static group (with blank separator) so regulars go below statics
 		if (!regularToAdd.isEmpty() && lastImportIdx < 0) {
 			for (var i = lines.size() - 1; i >= 0; --i) {
-				if (lines.get(i).startsWith("import static ")) {
-					if (i + 1 >= lines.size() || !lines.get(i + 1).isEmpty())
-						lines.add(i + 1, "");
-					lastImportIdx = i + 1;
+				if (!masked.get(i) && lines.get(i).strip().startsWith("import static ")) {
+					final var after = skipMaskedRun(masked, i + 1);
+					if (after >= lines.size() || !lines.get(after).isEmpty()) {
+						lines.add(after, "");
+						masked.add(after, false);
+					}
+					lastImportIdx = after;
 					break;
 				}
 			}
@@ -594,7 +681,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				var groupStart = -1;
 				var groupEnd = -1;
 				for (var i = 0; i <= lastImportIdx; ++i) {
-					if (lines.get(i).startsWith(targetPrefix)) {
+					if (!masked.get(i) && lines.get(i).startsWith(targetPrefix)) {
 						if (groupStart < 0)
 							groupStart = i;
 						groupEnd = i;
@@ -603,21 +690,19 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 
 				int insertIdx;
 				if (groupStart >= 0) {
-					// insert within the same-package group in sorted order
 					insertIdx = groupEnd + 1;
 					for (var i = groupStart; i <= groupEnd; ++i) {
-						if (lines.get(i).compareTo(importLine) > 0) {
+						if (!masked.get(i) && lines.get(i).compareTo(importLine) > 0) {
 							insertIdx = i;
 							break;
 						}
 					}
 				}
 				else {
-					// no same-package group, fall back to global alphabetical
 					insertIdx = lastImportIdx + 1;
 					for (var i = 0; i <= lastImportIdx; ++i) {
 						final var line = lines.get(i);
-						if (line.startsWith("import ") && !line.startsWith("import static ")
+						if (!masked.get(i) && line.startsWith("import ") && !line.startsWith("import static ")
 								&& line.compareTo(importLine) > 0) {
 							insertIdx = i;
 							break;
@@ -625,25 +710,34 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 					}
 				}
 
+				insertIdx = skipMaskedRun(masked, insertIdx);
 				lines.add(insertIdx, importLine);
-				++lastImportIdx;
+				masked.add(insertIdx, false);
+				lastImportIdx = Math.max(lastImportIdx + 1, insertIdx);
 			}
 		}
 		else if (packageIdx >= 0) {
-			// no existing imports, insert after package with blank line
-			var insertIdx = packageIdx + 1;
+			var insertIdx = skipMaskedRun(masked, packageIdx + 1);
 			if (insertIdx < lines.size() && lines.get(insertIdx).isEmpty())
 				++insertIdx;
-			else
-				lines.add(insertIdx++, "");
-			for (var fqn : regularToAdd)
-				lines.add(insertIdx++, "import " + fqn + ";");
+			else {
+				lines.add(insertIdx, "");
+				masked.add(insertIdx, false);
+				++insertIdx;
+			}
+			for (var fqn : regularToAdd) {
+				lines.add(insertIdx, "import " + fqn + ";");
+				masked.add(insertIdx, false);
+				++insertIdx;
+			}
 		}
 		else {
-			// no package, no imports
 			var insertIdx = 0;
-			for (var fqn : regularToAdd)
-				lines.add(insertIdx++, "import " + fqn + ";");
+			for (var fqn : regularToAdd) {
+				lines.add(insertIdx, "import " + fqn + ";");
+				masked.add(insertIdx, false);
+				++insertIdx;
+			}
 		}
 
 		return addedStatic + regularToAdd.size();
@@ -672,6 +766,21 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			System.out.println("  " + entry.check() + ": " + entry.reason() + " (x" + entry.count() + ")");
 	}
 
+	/**
+	 * Reads a source file into a mutable line list that faithfully models the
+	 * file's line structure, preserving a final empty line when the file ends
+	 * with a line terminator. {@link Files#readAllLines} drops that terminator,
+	 * which hides an end-of-file newline from line-based fixers; preserving it
+	 * lets {@link TrailingNewlineFixer} treat it as an ordinary trailing blank
+	 * line and lets {@code String.join("\n", lines)} round-trip LF-terminated
+	 * content (CR and CRLF terminators are normalized to LF on write).
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static List<String> readSourceLines(@Nonnull Path path) throws IOException {
+		return splitPreservingTrailingNewline(Files.readString(path));
+	}
+
 	@CheckReturnValue
 	@Nullable
 	private static CheckstyleFixer resolveFixer(
@@ -689,9 +798,39 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 	}
 
 	/**
-	 * Converts a tab-expanded column (as reported by Checkstyle) to a
-	 * character index in the line. Checkstyle expands TABs to
-	 * {@link #TAB_WIDTH} when calculating column numbers.
+	 * Advances {@code idx} past a contiguous run of masked lines (inside a block
+	 * comment or text block). Used so a new import chosen to sit right after an
+	 * anchor directive that itself opens an unterminated comment lands after the
+	 * comment closes rather than inside it.
+	 */
+	@CheckReturnValue
+	private static int skipMaskedRun(@Nonnull List<Boolean> masked, int idx) {
+		while (idx < masked.size() && masked.get(idx))
+			++idx;
+		return idx;
+	}
+
+	/**
+	 * Splits {@code content} into lines like {@link Files#readAllLines} (handles
+	 * {@code \n}, {@code \r\n}, and {@code \r}; no terminators in the result),
+	 * but appends a trailing empty line when {@code content} ends with a line
+	 * terminator so an end-of-file newline is represented. Returns a mutable list.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static List<String> splitPreservingTrailingNewline(@Nonnull String content) {
+		final var lines = new ArrayList<>(content.lines().toList());
+		if (content.endsWith("\n") || content.endsWith("\r"))
+			lines.add("");
+		return lines;
+	}
+
+	/**
+	 * Converts a tab-expanded column (as reported by Checkstyle) back to the
+	 * code-point column the AST node carries; Checkstyle expands TABs to
+	 * {@link LineLength#TAB_WIDTH} when calculating column numbers. The result is
+	 * not a char index: it may be compared against an AST position, but must be
+	 * converted before it indexes a line.
 	 */
 	@CheckReturnValue
 	static int tabColumnToCharIndex(@Nonnull String line, int tabExpandedCol) {
@@ -700,7 +839,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 			if (visualCol >= tabExpandedCol)
 				return i;
 			if (line.charAt(i) == '\t')
-				visualCol += TAB_WIDTH - (visualCol % TAB_WIDTH);
+				visualCol += LineLength.TAB_WIDTH - (visualCol % LineLength.TAB_WIDTH);
 			else
 				++visualCol;
 		}

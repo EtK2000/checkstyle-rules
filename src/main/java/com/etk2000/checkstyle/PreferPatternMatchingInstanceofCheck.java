@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -12,7 +11,7 @@ import javax.annotation.Nonnull;
  * is subsequently cast to, preferring pattern matching
  * ({@code x instanceof Foo f}) instead.
  */
-public class PreferPatternMatchingInstanceofCheck extends AbstractCheck {
+public class PreferPatternMatchingInstanceofCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "prefer.pattern.instanceof";
 
 	@CheckReturnValue
@@ -61,20 +60,8 @@ public class PreferPatternMatchingInstanceofCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.LITERAL_INSTANCEOF};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

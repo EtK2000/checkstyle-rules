@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -23,7 +22,7 @@ import javax.annotation.Nullable;
  * Only flags when all operands are pure (no side effects).
  * Skips method calls, constructors, increment/decrement, and assignments.
  */
-public class PreferMathMethodCheck extends AbstractCheck {
+public class PreferMathMethodCheck extends AbstractAstCheck {
 	private record BranchInfo(@Nonnull BranchKind kind, @Nullable DetailAST target, @Nonnull DetailAST value, int assignType) {}
 
 	private enum BranchKind {
@@ -32,7 +31,7 @@ public class PreferMathMethodCheck extends AbstractCheck {
 	}
 
 	private static final int MIN_SDK_CLAMP = 35;
-	private static final String MSG_METHOD = "prefer.math.method";
+	private static final String MSG_METHOD = "prefer.replacement";
 	private static final String MSG_METHOD_IF = "prefer.math.method.if";
 
 	/**
@@ -65,7 +64,6 @@ public class PreferMathMethodCheck extends AbstractCheck {
 
 		final var op = condition.getType();
 
-		// determine which operand is the variable and which is zero
 		final var leftIsZero = AstUtil.isZeroLiteral(condLeft);
 		final var rightIsZero = AstUtil.isZeroLiteral(condRight);
 		if (!leftIsZero && !rightIsZero)
@@ -76,8 +74,6 @@ public class PreferMathMethodCheck extends AbstractCheck {
 		final var variable = leftIsZero ? condRight : condLeft;
 		final var varText = branchText(variable);
 
-		// determine which branch is "V is positive" vs "V is negative"
-		// when V is positive, the result should be V; when negative, -V
 		final boolean vPositiveInTrueBranch;
 		if (leftIsZero) {
 			// 0 op V: GT/GE means V <= 0 in true branch, so false is positive
@@ -90,8 +86,6 @@ public class PreferMathMethodCheck extends AbstractCheck {
 			vPositiveInTrueBranch = op == TokenTypes.GT || op == TokenTypes.GE;
 		}
 
-		// in the "positive" branch: expect V
-		// in the "negative" branch: expect -V
 		final var positiveBranch = vPositiveInTrueBranch ? trueBranch : falseBranch;
 		final var negativeBranch = vPositiveInTrueBranch ? falseBranch : trueBranch;
 
@@ -227,7 +221,7 @@ public class PreferMathMethodCheck extends AbstractCheck {
 	@CheckReturnValue
 	@Nullable
 	private static BranchInfo extractBranch(@Nonnull DetailAST body) {
-		final var stmt = unwrapSingleStatementBlock(body);
+		final var stmt = AstUtil.unwrapSingleStatementBlock(body);
 		if (stmt == null)
 			return null;
 
@@ -349,46 +343,12 @@ public class PreferMathMethodCheck extends AbstractCheck {
 		return ast;
 	}
 
-	/**
-	 * Returns the body unchanged if it is a single non-block statement, or
-	 * returns its sole child statement if it is an SLIST with exactly one
-	 * statement. Returns {@code null} for SLISTs with zero or multiple
-	 * statements.
-	 */
-	@CheckReturnValue
-	@Nullable
-	private static DetailAST unwrapSingleStatementBlock(@Nonnull DetailAST body) {
-		if (body.getType() != TokenTypes.SLIST)
-			return body;
-		DetailAST single = null;
-		for (var child = body.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.SEMI || child.getType() == TokenTypes.RCURLY)
-				continue;
-			if (single != null)
-				return null;
-			single = child;
-		}
-		return single;
-	}
-
 	private int minSdk = Integer.MAX_VALUE;
-
-	@Nonnull
-	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
 
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.LITERAL_IF, TokenTypes.METHOD_CALL, TokenTypes.QUESTION};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	/**

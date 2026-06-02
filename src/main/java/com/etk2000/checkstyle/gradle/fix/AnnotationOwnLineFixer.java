@@ -14,6 +14,36 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 			@Nonnull String remaining
 	) {}
 
+	@CheckReturnValue
+	private static boolean containsBareAt(@Nonnull String content) {
+		for (var pos = 0; pos < content.length(); ++pos) {
+			final var ch = content.charAt(pos);
+			if (ch == '@')
+				return true;
+			if (ch == '"' || ch == '\'') {
+				final var quote = ch;
+				++pos;
+				while (pos < content.length() && content.charAt(pos) != quote) {
+					if (content.charAt(pos) == '\\' && pos + 1 < content.length())
+						++pos;
+					++pos;
+				}
+			}
+			else if (ch == '/' && pos + 1 < content.length()) {
+				if (content.charAt(pos + 1) == '/')
+					return false;
+				if (content.charAt(pos + 1) == '*') {
+					pos += 2;
+					while (pos + 1 < content.length()
+							&& !(content.charAt(pos) == '*' && content.charAt(pos + 1) == '/'))
+						++pos;
+					++pos;
+				}
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * Extracts annotations that appear after modifier keywords (e.g. {@code final @A var x}).
 	 * Returns {@code null} if no embedded annotations are found.
@@ -70,12 +100,8 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
-		if (lineIndex < 0 || lineIndex >= lines.size())
-			return null;
-
 		final var line = lines.get(lineIndex);
 
-		// case 0: blank line inside a multi-line annotation - remove it
 		if (line.isBlank()) {
 			var lastBlank = lineIndex;
 			while (lastBlank + 1 < lines.size() && lines.get(lastBlank + 1).isBlank())
@@ -86,9 +112,6 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 		final var stripped = line.stripLeading();
 		final var indent = line.substring(0, line.length() - stripped.length());
 
-		// case 1: annotations on same line as declaration - split and sort
-		// handles leading annotations (@A @B void f), embedded annotations (final @A var x),
-		// and mixed (@ C final @A var x)
 		final var parsed = AnnotationFixerUtil.parseAnnotations(stripped);
 		final var allAnnotations = new ArrayList<>(parsed.annotations());
 		var declarationPart = parsed.remaining();
@@ -103,6 +126,9 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 					: embedded.prefix() + " " + embedded.remaining();
 		}
 
+		if (containsBareAt(declarationPart))
+			return null;
+
 		if (allAnnotations.size() > 1
 				|| (!allAnnotations.isEmpty() && !declarationPart.isEmpty())) {
 			AnnotationFixerUtil.sortAnnotations(allAnnotations);
@@ -114,8 +140,12 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 			return new FixResult(lineIndex, lineIndex, replacement);
 		}
 
-		// case 2: blank line below (possibly after comment lines) - remove blank lines
-		{
+		// Guard: skip if the current line is a comment-only line. Without this guard, a
+		// stale violation lineIndex (shifted by a prior fixer's deletion) can point to a
+		// comment line and the delete-blank-below branch would wrongly eat a blank line
+		// beneath it. Legitimate lines here either start with `@` (single-line annotation)
+		// or end with `)` (closing line of a multi-line annotation), neither matches `//`.
+		if (!stripped.startsWith("//") && !stripped.startsWith("/*") && !stripped.startsWith("*")) {
 			var scan = lineIndex + 1;
 			var inBlock = false;
 			while (scan < lines.size() && isInsideOrStartsComment(lines.get(scan), inBlock)) {
@@ -135,7 +165,6 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 			}
 		}
 
-		// case 3: alphabetical order - collect block, sort, replace
 		var start = lineIndex;
 		while (start > 0 && AnnotationFixerUtil.isAnnotationOnlyLine(lines.get(start - 1).stripLeading()))
 			--start;
@@ -146,7 +175,10 @@ class AnnotationOwnLineFixer implements CheckstyleFixer {
 
 		final var blockAnnotations = new ArrayList<String>();
 		for (var i = start; i <= end; ++i) {
-			final var p = AnnotationFixerUtil.parseAnnotations(lines.get(i).stripLeading());
+			final var stripped2 = lines.get(i).stripLeading();
+			final var p = AnnotationFixerUtil.parseAnnotations(stripped2);
+			if (p.annotations().isEmpty() && !stripped2.isEmpty())
+				return null;
 			blockAnnotations.addAll(p.annotations());
 		}
 

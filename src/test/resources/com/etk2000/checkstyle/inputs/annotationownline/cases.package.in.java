@@ -1,0 +1,3 @@
+// === case: packageannotation ===
+@Deprecated package com.etk2000.checkstyle.inputs.annotationownline; // violation: Annotation 'Deprecated' must be on its own line.
+// === end ===

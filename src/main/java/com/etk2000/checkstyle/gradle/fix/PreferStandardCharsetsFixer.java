@@ -1,10 +1,13 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import com.etk2000.checkstyle.LineText;
+
 import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -24,9 +27,9 @@ class PreferStandardCharsetsFixer implements CheckstyleFixer {
 				try {
 					final var charset = (Charset) field.get(null);
 					final var fieldName = field.getName();
-					map.put(charset.name().toLowerCase(), fieldName);
+					map.put(charset.name().toLowerCase(Locale.ROOT), fieldName);
 					for (var alias : charset.aliases())
-						map.put(alias.toLowerCase(), fieldName);
+						map.put(alias.toLowerCase(Locale.ROOT), fieldName);
 				}
 				catch (IllegalAccessException ignored) {
 				}
@@ -41,19 +44,28 @@ class PreferStandardCharsetsFixer implements CheckstyleFixer {
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
 
-		// column points to the opening " of the charset string literal
-		if (column >= line.length() || line.charAt(column) != '"')
+		// the reported column counts code points, so it has to be converted before it can
+		// index the line: one supplementary character earlier on the line shifts every
+		// char index right of it
+		final var charColumn = LineText.charIndexOfColumn(line, column);
+		if (charColumn < 0 || charColumn >= line.length())
 			return null;
-		final var closeQuote = line.indexOf('"', column + 1);
+
+		// the converted column points at the opening " of the charset literal; the
+		// String-variable form of this violation names an identifier instead, so there is no
+		// literal on the line to rewrite
+		if (line.charAt(charColumn) != '"')
+			return new SkipResult(SkipMessages.PREFER_STANDARD_CHARSETS_SKIP_VARIABLE);
+		final var closeQuote = line.indexOf('"', charColumn + 1);
 		if (closeQuote < 0)
 			return null;
 
-		final var charsetName = line.substring(column + 1, closeQuote);
-		final var constant = CHARSET_MAP.get(charsetName.toLowerCase());
+		final var charsetName = line.substring(charColumn + 1, closeQuote);
+		final var constant = CHARSET_MAP.get(charsetName.toLowerCase(Locale.ROOT));
 		if (constant == null)
 			return new SkipResult(SkipMessages.PREFER_STANDARD_CHARSETS_SKIP);
 
-		final var newLine = line.substring(0, column) + "StandardCharsets." + constant
+		final var newLine = line.substring(0, charColumn) + "StandardCharsets." + constant
 				+ line.substring(closeQuote + 1);
 		return new FixResult(
 				lineIndex,

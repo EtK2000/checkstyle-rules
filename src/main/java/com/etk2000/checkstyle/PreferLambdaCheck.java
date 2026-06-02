@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
@@ -17,7 +16,7 @@ import javax.annotation.Nonnull;
  * Only flags anonymous classes with a single method and no extra members
  * (fields, inner types, etc.).
  */
-public class PreferLambdaCheck extends AbstractCheck {
+public class PreferLambdaCheck extends AbstractAstCheck {
 	private static final String MSG = "prefer.lambda";
 
 	@CheckReturnValue
@@ -100,24 +99,12 @@ public class PreferLambdaCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{
 				TokenTypes.IMPORT,
 				TokenTypes.LITERAL_NEW,
 				TokenTypes.PACKAGE_DEF
 		};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
@@ -31,9 +30,8 @@ import javax.annotation.Nullable;
  * <p>Respects {@code minSdk}: {@code StandardCharsets} requires Android
  * API 19+, so the check is suppressed when {@code minSdk < 19}.</p>
  */
-public class PreferStandardCharsetsCheck extends AbstractCheck {
+public class PreferStandardCharsetsCheck extends AbstractAstCheck {
 	private static final int MIN_SDK_STANDARD_CHARSETS = 19;
-	// maps lowercase charset name/alias to StandardCharsets field name
 	private static final Map<String, String> CHARSET_MAP = buildCharsetMap();
 	private static final String MSG_GENERIC = "prefer.standard.charsets.string";
 	private static final String MSG_SPECIFIC = "prefer.standard.charsets";
@@ -58,16 +56,6 @@ public class PreferStandardCharsetsCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
-	private static int countArgs(@Nonnull DetailAST elist) {
-		var count = 0;
-		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.EXPR)
-				++count;
-		}
-		return count;
-	}
-
-	@CheckReturnValue
 	@Nullable
 	private static DetailAST getArgExpr(@Nonnull DetailAST elist, int index) {
 		var i = 0;
@@ -81,9 +69,6 @@ public class PreferStandardCharsetsCheck extends AbstractCheck {
 		return null;
 	}
 
-	/**
-	 * Returns whether the expression is a {@code StandardCharsets.XXX} reference.
-	 */
 	@CheckReturnValue
 	private static boolean isStandardCharsetsRef(@Nonnull DetailAST expr) {
 		if (expr.getType() == TokenTypes.DOT) {
@@ -189,20 +174,8 @@ public class PreferStandardCharsetsCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.IMPORT, TokenTypes.LITERAL_NEW, TokenTypes.METHOD_CALL, TokenTypes.PACKAGE_DEF};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	/**
@@ -220,12 +193,11 @@ public class PreferStandardCharsetsCheck extends AbstractCheck {
 		if (elist == null)
 			return;
 
-		final var argCount = countArgs(elist);
+		final var argCount = AstUtil.countArguments(elist);
 		final var charsetArgIndex = ast.getType() == TokenTypes.LITERAL_NEW
 				? findConstructorCharsetArgIndex(ast, argCount)
 				: findMethodCharsetArgIndex(ast, argCount);
 
-		// check known charset arg position
 		if (charsetArgIndex >= 0) {
 			final var arg = getArgExpr(elist, charsetArgIndex);
 			if (arg != null && !isStandardCharsetsRef(arg)) {
@@ -233,11 +205,10 @@ public class PreferStandardCharsetsCheck extends AbstractCheck {
 				if (constant != null)
 					log(arg, MSG_SPECIFIC, arg.getText().substring(1, arg.getText().length() - 1), constant);
 				else if (isStringIdent(arg))
-					log(arg, MSG_GENERIC);
+					log(arg, MSG_GENERIC, arg.getText());
 			}
 		}
 
-		// scan all other args for charset string literals
 		var i = 0;
 		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() != TokenTypes.EXPR)

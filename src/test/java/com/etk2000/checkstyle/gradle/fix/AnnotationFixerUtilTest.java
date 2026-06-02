@@ -10,13 +10,49 @@ import java.util.List;
 
 public class AnnotationFixerUtilTest {
 	@Test
+	public void testAnnotationSortKeyBareAt() {
+		assertEquals("", AnnotationFixerUtil.annotationSortKey("@"));
+	}
+
+	@Test
+	public void testAnnotationSortKeyBareAtWithParen() {
+		assertEquals("", AnnotationFixerUtil.annotationSortKey("@("));
+	}
+
+	@Test
+	public void testAnnotationSortKeyEmpty() {
+		assertEquals("", AnnotationFixerUtil.annotationSortKey(""));
+	}
+
+	@Test
+	public void testAnnotationSortKeyParenFirst() {
+		assertEquals("", AnnotationFixerUtil.annotationSortKey("("));
+	}
+
+	@Test
 	public void testAnnotationSortKeyQualified() {
 		assertEquals("Nonnull", AnnotationFixerUtil.annotationSortKey("@javax.annotation.Nonnull"));
 	}
 
 	@Test
+	public void testAnnotationSortKeyQualifiedArgumentConstant() {
+		// the last '.' sits in the argument, not the name; keying off it put start past end
+		assertEquals("Target", AnnotationFixerUtil.annotationSortKey("@Target(ElementType.TYPE)"));
+	}
+
+	@Test
+	public void testAnnotationSortKeyQualifiedNameAndArgumentConstant() {
+		assertEquals("C", AnnotationFixerUtil.annotationSortKey("@a.b.C(x.y)"));
+	}
+
+	@Test
 	public void testAnnotationSortKeySimple() {
 		assertEquals("A", AnnotationFixerUtil.annotationSortKey("@A"));
+	}
+
+	@Test
+	public void testAnnotationSortKeyStringArgumentContainingDot() {
+		assertEquals("Foo", AnnotationFixerUtil.annotationSortKey("@Foo(\"a.b\")"));
 	}
 
 	@Test
@@ -27,6 +63,17 @@ public class AnnotationFixerUtilTest {
 	@Test
 	public void testIsAnnotationOnlyLineAnnotationWithParams() {
 		assertTrue(AnnotationFixerUtil.isAnnotationOnlyLine("@A(\"value\")"));
+	}
+
+	@Test
+	public void testIsAnnotationOnlyLineBareAt() {
+		// deliberately diverges from parseAnnotations, which refuses a nameless '@'
+		assertTrue(AnnotationFixerUtil.isAnnotationOnlyLine("@"));
+	}
+
+	@Test
+	public void testIsAnnotationOnlyLineBareAtWithParen() {
+		assertTrue(AnnotationFixerUtil.isAnnotationOnlyLine("@("));
 	}
 
 	@Test
@@ -55,6 +102,17 @@ public class AnnotationFixerUtilTest {
 	}
 
 	@Test
+	public void testIsAnnotationOnlyLineSupplementaryInName() {
+		assertTrue(AnnotationFixerUtil.isAnnotationOnlyLine("@A\uD835\uDC00b"));
+	}
+
+	@Test
+	public void testIsAnnotationOnlyLineUnterminatedBareParen() {
+		// deliberately diverges from parseAnnotations, which bails on an unterminated '('
+		assertTrue(AnnotationFixerUtil.isAnnotationOnlyLine("@A("));
+	}
+
+	@Test
 	public void testIsAnnotationOnlyLineUnterminatedCharLiteral() {
 		assertTrue(AnnotationFixerUtil.isAnnotationOnlyLine("@A('\\"));
 	}
@@ -67,6 +125,20 @@ public class AnnotationFixerUtilTest {
 	@Test
 	public void testIsAnnotationOnlyLineWithTrailingContent() {
 		assertFalse(AnnotationFixerUtil.isAnnotationOnlyLine("@A void f()"));
+	}
+
+	@Test
+	public void testParseAnnotationsBareAt() {
+		final var result = AnnotationFixerUtil.parseAnnotations("@");
+		assertEquals(List.of(), result.annotations());
+		assertEquals("@", result.remaining());
+	}
+
+	@Test
+	public void testParseAnnotationsBareAtWithParen() {
+		final var result = AnnotationFixerUtil.parseAnnotations("@(");
+		assertEquals(List.of(), result.annotations());
+		assertEquals("@(", result.remaining());
 	}
 
 	@Test
@@ -140,6 +212,23 @@ public class AnnotationFixerUtilTest {
 	}
 
 	@Test
+	public void testParseAnnotationsSpaceAfterAtIsNotAnAnnotation() {
+		// `@ Deprecated` is legal Java; emitting a bare "@" splits it onto its own line
+		final var result = AnnotationFixerUtil.parseAnnotations("@ Deprecated void f()");
+		assertEquals(List.of(), result.annotations());
+		assertEquals("@ Deprecated void f()", result.remaining());
+	}
+
+	@Test
+	public void testParseAnnotationsSupplementaryInName() {
+		// a char-wise name scan stops inside the surrogate pair and splits it across the
+		// annotation and the remaining content
+		final var result = AnnotationFixerUtil.parseAnnotations("@A\uD835\uDC00b @B void f()");
+		assertEquals(List.of("@A\uD835\uDC00b", "@B"), result.annotations());
+		assertEquals("void f()", result.remaining());
+	}
+
+	@Test
 	public void testParseAnnotationsTabSeparated() {
 		final var result = AnnotationFixerUtil.parseAnnotations("@A\t@B void f()");
 		assertEquals(List.of("@A", "@B"), result.annotations());
@@ -147,16 +236,44 @@ public class AnnotationFixerUtilTest {
 	}
 
 	@Test
+	public void testParseAnnotationsUnterminatedBareParen() {
+		final var result = AnnotationFixerUtil.parseAnnotations("@A(");
+		assertEquals(List.of(), result.annotations());
+		assertEquals("@A(", result.remaining());
+	}
+
+	@Test
 	public void testParseAnnotationsUnterminatedCharLiteral() {
 		final var result = AnnotationFixerUtil.parseAnnotations("@A('\\");
-		assertEquals(List.of("@A('\\"), result.annotations());
-		assertEquals("", result.remaining());
+		assertEquals(List.of(), result.annotations());
+		assertEquals("@A('\\", result.remaining());
+	}
+
+	@Test
+	public void testParseAnnotationsUnterminatedNestedAnnotation() {
+		final var result = AnnotationFixerUtil.parseAnnotations("@A(@B");
+		assertEquals(List.of(), result.annotations());
+		assertEquals("@A(@B", result.remaining());
 	}
 
 	@Test
 	public void testParseAnnotationsUnterminatedString() {
 		final var result = AnnotationFixerUtil.parseAnnotations("@A(\"unterminated");
-		assertEquals(List.of("@A(\"unterminated"), result.annotations());
-		assertEquals("", result.remaining());
+		assertEquals(List.of(), result.annotations());
+		assertEquals("@A(\"unterminated", result.remaining());
+	}
+
+	@Test
+	public void testParseAnnotationsValidThenSpaceAfterAt() {
+		final var result = AnnotationFixerUtil.parseAnnotations("@A @ Deprecated void f()");
+		assertEquals(List.of("@A"), result.annotations());
+		assertEquals("@ Deprecated void f()", result.remaining());
+	}
+
+	@Test
+	public void testParseAnnotationsValidThenUnterminatedParen() {
+		final var result = AnnotationFixerUtil.parseAnnotations("@A @B(");
+		assertEquals(List.of("@A"), result.annotations());
+		assertEquals("@B(", result.remaining());
 	}
 }

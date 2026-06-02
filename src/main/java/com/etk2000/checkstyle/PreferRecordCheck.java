@@ -1,8 +1,6 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
-import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.Set;
@@ -17,7 +15,7 @@ import javax.annotation.Nonnull;
  * no custom equals/hashCode/toString with {@code @Override}, and constructors
  * only do simple field assignments.
  */
-public class PreferRecordCheck extends AbstractCheck {
+public class PreferRecordCheck extends AbstractAstCheck {
 	private static final Set<String> RECORD_OVERRIDE_METHODS = Set.of("equals", "hashCode", "toString");
 	private static final String MSG_KEY = "prefer.record";
 	private static final String MSG_KEY_WARNING = "prefer.record.warning";
@@ -29,18 +27,6 @@ public class PreferRecordCheck extends AbstractCheck {
 				return true;
 		}
 		return false;
-	}
-
-	@CheckReturnValue
-	private static boolean hasExtendsClause(@Nonnull DetailAST classDef) {
-		final var extendsClause = classDef.findFirstToken(TokenTypes.EXTENDS_CLAUSE);
-		return extendsClause != null && extendsClause.getChildCount() > 0;
-	}
-
-	@CheckReturnValue
-	private static boolean hasImplementsClause(@Nonnull DetailAST classDef) {
-		final var implementsClause = classDef.findFirstToken(TokenTypes.IMPLEMENTS_CLAUSE);
-		return implementsClause != null && implementsClause.getChildCount() > 0;
 	}
 
 	@CheckReturnValue
@@ -73,7 +59,6 @@ public class PreferRecordCheck extends AbstractCheck {
 			if (assign == null || assign.getType() != TokenTypes.ASSIGN)
 				continue;
 
-			// check if this is a this.field assignment
 			final var lhs = assign.getFirstChild();
 			if (lhs == null || lhs.getType() != TokenTypes.DOT)
 				continue;
@@ -81,7 +66,6 @@ public class PreferRecordCheck extends AbstractCheck {
 			if (thisToken == null || thisToken.getType() != TokenTypes.LITERAL_THIS)
 				continue;
 
-			// it IS a this.field assignment — RHS must be the matching parameter
 			final var fieldIdent = thisToken.getNextSibling();
 			final var rhs = lhs.getNextSibling();
 			if (rhs == null || rhs.getType() != TokenTypes.IDENT
@@ -122,12 +106,10 @@ public class PreferRecordCheck extends AbstractCheck {
 			if (modifiers != null && modifiers.findFirstToken(TokenTypes.LITERAL_STATIC) != null)
 				continue;
 
-			// instance field found
 			hasInstanceField = true;
 			if (modifiers == null || modifiers.findFirstToken(TokenTypes.FINAL) == null)
 				return false;
 
-			// inline initializer means it can't be a record component
 			if (child.findFirstToken(TokenTypes.ASSIGN) != null)
 				return false;
 		}
@@ -136,20 +118,8 @@ public class PreferRecordCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.CLASS_DEF};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override
@@ -161,7 +131,8 @@ public class PreferRecordCheck extends AbstractCheck {
 		if (modifiers != null && AstUtil.hasSuppressWarnings(modifiers, "PreferRecord"))
 			return;
 
-		if (hasExtendsClause(ast))
+		final var extendsClause = ast.findFirstToken(TokenTypes.EXTENDS_CLAUSE);
+		if (extendsClause != null && extendsClause.getChildCount() > 0)
 			return;
 
 		final var objBlock = ast.findFirstToken(TokenTypes.OBJBLOCK);
@@ -197,16 +168,9 @@ public class PreferRecordCheck extends AbstractCheck {
 
 		final var ident = ast.findFirstToken(TokenTypes.IDENT);
 		final var name = ident != null ? ident.getText() : "<unknown>";
-		if (hasImplementsClause(ast)) {
-			final var savedSeverity = getSeverity();
-			try {
-				setSeverity(SeverityLevel.WARNING.getName());
-				log(ast, MSG_KEY_WARNING, name);
-			}
-			finally {
-				setSeverity(savedSeverity);
-			}
-		}
+		final var implementsClause = ast.findFirstToken(TokenTypes.IMPLEMENTS_CLAUSE);
+		if (implementsClause != null && implementsClause.getChildCount() > 0)
+			logWarning(ast, MSG_KEY_WARNING, name);
 		else
 			log(ast, MSG_KEY, name);
 	}

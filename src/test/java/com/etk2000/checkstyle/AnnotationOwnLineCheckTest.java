@@ -1,162 +1,115 @@
 package com.etk2000.checkstyle;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.DetailAstImpl;
+import com.puppycrawl.tools.checkstyle.JavaParser;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.FileContents;
+import com.puppycrawl.tools.checkstyle.api.FileText;
 import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 public class AnnotationOwnLineCheckTest {
 	private static final String DIR = "annotationownline/";
-	private static final String SAME_DIR = "annotationsameline/";
 
-	@Test
-	public void testBlankLineViolations() throws Exception {
-		final var violations = BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, DIR + "InputAnnotationOwnLineBlankViolation.java");
-		assertEquals(14, violations.size());
-
-		assertEquals(10, violations.get(0).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
-		assertEquals("No blank line after annotation 'A'.", violations.get(0).getMessage());
-
-		assertEquals(14, violations.get(1).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
-		assertEquals("No blank line after annotation 'A'.", violations.get(1).getMessage());
-
-		assertEquals(19, violations.get(2).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(2).getSeverityLevel());
-		assertEquals("No blank line after annotation 'A'.", violations.get(2).getMessage());
-
-		assertEquals(23, violations.get(3).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(3).getSeverityLevel());
-		assertEquals("No blank line after annotation 'A'.", violations.get(3).getMessage());
-
-		assertEquals(28, violations.get(4).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(4).getSeverityLevel());
-		assertEquals("No blank line after annotation 'A'.", violations.get(4).getMessage());
-
-		assertEquals(33, violations.get(5).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(5).getSeverityLevel());
-		assertEquals("No blank line after annotation 'A'.", violations.get(5).getMessage());
-
-		assertEquals(38, violations.get(6).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(6).getSeverityLevel());
-		assertEquals("No blank line after annotation 'A'.", violations.get(6).getMessage());
-
-		assertEquals(46, violations.get(7).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(7).getSeverityLevel());
-		assertEquals("No blank line after annotation 'A'.", violations.get(7).getMessage());
-
-		assertEquals(51, violations.get(8).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(8).getSeverityLevel());
-		assertEquals("No blank line after annotation 'A'.", violations.get(8).getMessage());
-
-		assertEquals(56, violations.get(9).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(9).getSeverityLevel());
-		assertEquals("No blank line after annotation 'A'.", violations.get(9).getMessage());
-
-		assertEquals(61, violations.get(10).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(10).getSeverityLevel());
-		assertEquals("No blank line after annotation 'A'.", violations.get(10).getMessage());
-
-		assertEquals(71, violations.get(11).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(11).getSeverityLevel());
-		assertEquals("No blank line after annotation 'V'.", violations.get(11).getMessage());
-
-		assertEquals(75, violations.get(12).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(12).getSeverityLevel());
-		assertEquals("No blank line after annotation 'A'.", violations.get(12).getMessage());
-
-		assertEquals(83, violations.get(13).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(13).getSeverityLevel());
-		assertEquals("No blank line inside annotation 'V'.", violations.get(13).getMessage());
-	}
-
-	@Test
-	public void testClean() throws Exception {
-		assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, DIR + "InputAnnotationOwnLineClean.java").isEmpty());
-	}
-
-	@Test
-	public void testDoesNotFireOnSameLineClean() throws Exception {
-		assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR + "InputAnnotationSameLineClean.java").isEmpty());
-	}
-
-	@Test
-	public void testDoesNotFireOnSameLineOrderViolation() throws Exception {
-		assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR + "InputAnnotationSameLineOrderViolation.java").isEmpty());
-	}
-
-	@Test
-	public void testDoesNotFireOnSameLineViolation() throws Exception {
-		assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR + "InputAnnotationSameLineViolation.java").isEmpty());
-	}
-
-	@Test
-	public void testOrderViolations() throws Exception {
-		final var violations = BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, DIR + "InputAnnotationOwnLineOrderViolation.java");
-		assertEquals(4, violations.size());
-
-		assertEquals(9, violations.get(0).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(0).getSeverityLevel());
-		assertEquals("Annotation 'A' must appear before 'B' (alphabetical order).", violations.get(0).getMessage());
-
-		assertEquals(13, violations.get(1).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
-		assertEquals("Annotation 'A' must appear before 'C' (alphabetical order).", violations.get(1).getMessage());
-
-		assertEquals(18, violations.get(2).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(2).getSeverityLevel());
-		assertEquals("Annotation 'B' must appear before 'C' (alphabetical order).", violations.get(2).getMessage());
-		assertEquals(19, violations.get(3).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(3).getSeverityLevel());
-		assertEquals("Annotation 'A' must appear before 'B' (alphabetical order).", violations.get(3).getMessage());
-	}
-
-	@Test
-	public void testPackageAnnotationClean() throws Exception {
-		assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, DIR + "InputAnnotationOwnLinePackageClean.java").isEmpty());
-	}
-
-	@Test
-	public void testPackageAnnotationViolation() throws Exception {
-		final var violations = BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, DIR + "InputAnnotationOwnLinePackageViolation.java");
-		assertEquals(1, violations.size());
-		assertEquals(1, violations.getFirst().getLine());
-		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
-		assertEquals("Annotation 'Deprecated' must be on its own line.", violations.getFirst().getMessage());
-	}
-
-	@Test
-	public void testSameLineViolations() throws Exception {
-		final var violations = BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, DIR + "InputAnnotationOwnLineViolation.java");
-		assertEquals(20, violations.size());
-
-		assertEquals(7, violations.get(0).getLine());
-		assertEquals(9, violations.get(1).getLine());
-		assertEquals(12, violations.get(2).getLine());
-		assertEquals(14, violations.get(3).getLine());
-		assertEquals(17, violations.get(4).getLine());
-		assertEquals(19, violations.get(5).getLine());
-		assertEquals(20, violations.get(6).getLine());
-		assertEquals(23, violations.get(7).getLine());
-		assertEquals(26, violations.get(8).getLine());
-		assertEquals(29, violations.get(9).getLine());
-		assertEquals(31, violations.get(10).getLine());
-		assertEquals(33, violations.get(11).getLine());
-		assertEquals(36, violations.get(12).getLine());
-		assertEquals(38, violations.get(13).getLine());
-		assertEquals(40, violations.get(14).getLine());
-		assertEquals(43, violations.get(15).getLine());
-		assertEquals(45, violations.get(16).getLine());
-		assertEquals(47, violations.get(17).getLine());
-		assertEquals(49, violations.get(18).getLine());
-		assertEquals(52, violations.get(19).getLine());
-
-		for (var violation : violations) {
-			assertEquals(SeverityLevel.ERROR, violation.getSeverityLevel());
-			assertEquals("Annotation 'A' must be on its own line.", violation.getMessage());
+	@Nullable
+	private static DetailAST findFirst(@Nonnull DetailAST node, int tokenType) {
+		if (node.getType() == tokenType)
+			return node;
+		for (var child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
+			final var found = findFirst(child, tokenType);
+			if (found != null)
+				return found;
 		}
+		return null;
+	}
+
+	@Test
+	public void testBetweenScanClampPreventsAioobeWhenDeclLineExceedsFileLength() throws Exception {
+		final var source = "package com.example;\n@interface V { String[] value(); }\nclass T {\n\t@V({\n\t\t\"a\"\n\t})\n\tint field;\n}";
+		final var tempFile = File.createTempFile("test", ".java");
+		try {
+			Files.writeString(tempFile.toPath(), source);
+			final var fileContents = new FileContents(new FileText(tempFile, StandardCharsets.UTF_8.name()));
+			final var variableDef = findFirst(JavaParser.parse(fileContents), TokenTypes.VARIABLE_DEF);
+			assertNotNull(variableDef);
+			final var modifiers = variableDef.findFirstToken(TokenTypes.MODIFIERS);
+			assertNotNull(modifiers);
+			final var type = variableDef.findFirstToken(TokenTypes.TYPE);
+			assertNotNull(type);
+
+			assertEquals(8, fileContents.getLines().length);
+			((DetailAstImpl) type).setLineNo(fileContents.getLines().length + 5);
+
+			final var check = new AnnotationOwnLineCheck();
+			check.setFileContents(fileContents);
+			assertDoesNotThrow(() -> check.visitToken(modifiers));
+		}
+		finally {
+			tempFile.delete();
+		}
+	}
+
+	@Test
+	public void testBlankLineInsideMultiLineAnnotationViolation() throws Exception {
+		final var violations = BaseCheckTest.runCheck(
+				AnnotationOwnLineCheck.class,
+				DIR + "InputAnnotationOwnLineBlankInsideAnnotation.java"
+		);
+		assertEquals(1, violations.size());
+		assertEquals(9, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
+		assertEquals("No blank line inside annotation 'V'.", violations.getFirst().getMessage());
+	}
+
+	@Test
+	public void testInternalScanClampPreventsAioobeWhenAstLineExceedsFileLength() throws Exception {
+		final var source = "package com.example;\n@interface V { String[] value(); }\nclass T {\n\t@V({\n\t\t\"a\"\n\t})\n\tint field;\n}";
+		final var tempFile = File.createTempFile("test", ".java");
+		try {
+			Files.writeString(tempFile.toPath(), source);
+			final var fileContents = new FileContents(new FileText(tempFile, StandardCharsets.UTF_8.name()));
+			final var variableDef = findFirst(JavaParser.parse(fileContents), TokenTypes.VARIABLE_DEF);
+			assertNotNull(variableDef);
+			final var modifiers = variableDef.findFirstToken(TokenTypes.MODIFIERS);
+			assertNotNull(modifiers);
+			final var annotation = modifiers.findFirstToken(TokenTypes.ANNOTATION);
+			assertNotNull(annotation);
+			final var rparen = annotation.findFirstToken(TokenTypes.RPAREN);
+			assertNotNull(rparen);
+
+			assertEquals(8, fileContents.getLines().length);
+			final var bogusLine = fileContents.getLines().length + 5;
+			((DetailAstImpl) rparen).setLineNo(bogusLine);
+			assertEquals(bogusLine, AstUtil.lastLine(annotation));
+
+			final var check = new AnnotationOwnLineCheck();
+			check.setFileContents(fileContents);
+			assertDoesNotThrow(() -> check.visitToken(modifiers));
+		}
+		finally {
+			tempFile.delete();
+		}
+	}
+
+	@Test
+	public void testMultiLineAnnotationAtEofBoundary() throws Exception {
+		assertTrue(BaseCheckTest.runCheck(
+				AnnotationOwnLineCheck.class,
+				DIR + "InputAnnotationOwnLineLastInFile.java"
+		).isEmpty());
 	}
 }

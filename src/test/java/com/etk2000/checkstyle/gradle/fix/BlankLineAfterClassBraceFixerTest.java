@@ -1,107 +1,70 @@
 package com.etk2000.checkstyle.gradle.fix;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSimpleFix;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkip;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class BlankLineAfterClassBraceFixerTest {
+	private static final String TOPIC = "blanklineafterclassbrace";
+
 	private final CheckstyleFixer fixer = new BlankLineAfterClassBraceFixer();
 
 	@Test
-	public void testDeleteMixedWhitespaceBlanks() {
-		final var lines = new ArrayList<>(List.of("class T {", "", "\t", "  ", "\tint x;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(3, result.endLine());
-		assertTrue(result.replacement().isEmpty());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testDeleteMixedWhitespaceBlanks() throws Exception {
+		// can't migrate: NoBlankLineAfterClassBrace is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
+		assertSimpleFix(fixer, TOPIC, "delete_mixed_whitespace_blanks");
 	}
 
 	@Test
-	public void testDeleteMultipleBlanksAfterClassBrace() {
-		final var lines = new ArrayList<>(List.of("class T {", "", "", "\tint x;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(2, result.endLine());
-		assertTrue(result.replacement().isEmpty());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testDeleteMultipleBlanksAfterClassBrace() throws Exception {
+		// can't migrate: NoBlankLineAfterClassBrace is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
+		assertSimpleFix(fixer, TOPIC, "delete_multiple_blanks_after_class_brace");
 	}
 
 	@Test
-	public void testDeleteSingleBlankAfterClassBrace() {
-		final var lines = new ArrayList<>(List.of("class T {", "", "\tint x;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(1, result.endLine());
-		assertTrue(result.replacement().isEmpty());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testDeleteSingleBlankAfterClassBrace() throws Exception {
+		// can't migrate: NoBlankLineAfterClassBrace is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
+		assertSimpleFix(fixer, TOPIC, "delete_single_blank_after_class_brace");
 	}
 
 	@Test
-	public void testDeleteWhitespaceOnlyBlank() {
-		final var lines = new ArrayList<>(List.of("class T {", "\t", "\tint x;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(1, result.endLine());
-		assertTrue(result.replacement().isEmpty());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testDeleteWhitespaceOnlyBlank() throws Exception {
+		// can't migrate: NoBlankLineAfterClassBrace is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
+		assertSimpleFix(fixer, TOPIC, "delete_whitespace_only_blank");
 	}
 
 	@Test
-	public void testEnumKeyword() {
-		final var lines = new ArrayList<>(List.of("enum E {", "", "\tA"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(1, result.endLine());
-		assertTrue(result.replacement().isEmpty());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testEnumKeyword() throws Exception {
+		// can't migrate: NoBlankLineAfterClassBrace is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
+		assertSimpleFix(fixer, TOPIC, "enum_keyword");
 	}
 
 	@Test
-	public void testInterfaceKeyword() {
-		final var lines = new ArrayList<>(List.of("interface I {", "", "\tvoid f();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(1, result.endLine());
-		assertTrue(result.replacement().isEmpty());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testInterfaceKeyword() throws Exception {
+		// can't migrate: NoBlankLineAfterClassBrace is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
+		assertSimpleFix(fixer, TOPIC, "interface_keyword");
 	}
 
 	@Test
-	public void testMultiLineDeclaration() {
-		final var lines = new ArrayList<>(List.of("class T", "\textends Base {", "", "\tint x;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
-		assertEquals(2, result.startLine());
-		assertEquals(2, result.endLine());
-		assertTrue(result.replacement().isEmpty());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testMultiLineDeclaration() throws Exception {
+		// can't migrate: NoBlankLineAfterClassBrace is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
+		assertSimpleFix(fixer, TOPIC, "multi_line_declaration");
 	}
 
 	@Test
-	public void testNoBlankAfterBrace() {
-		final var lines = new ArrayList<>(List.of("class T {", "\tint x;"));
-		assertNull(fixer.fix(lines, 0, 0));
+	public void testNoBlankAfterBrace() throws Exception {
+		assertSkip(fixer, TOPIC, "no_blank_after_brace");
 	}
 
 	@Test
-	public void testNoBraceFound() {
-		final var lines = new ArrayList<>(List.of("class T"));
-		assertNull(fixer.fix(lines, 0, 0));
+	public void testNoBraceFound() throws Exception {
+		assertSkip(fixer, TOPIC, "no_brace_found");
 	}
 
 	@Test
-	public void testRecordKeyword() {
-		final var lines = new ArrayList<>(List.of("record R(int x) {", "", "}"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
-		assertEquals(1, result.startLine());
-		assertEquals(1, result.endLine());
-		assertTrue(result.replacement().isEmpty());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testRecordKeyword() throws Exception {
+		// can't migrate: NoBlankLineAfterClassBrace is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
+		assertSimpleFix(fixer, TOPIC, "record_keyword");
 	}
 }

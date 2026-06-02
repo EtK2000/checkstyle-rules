@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
@@ -22,18 +21,8 @@ import javax.annotation.Nullable;
  * are skipped because removing the array wrapper would change autoboxing
  * behavior.
  */
-public class RedundantArrayCreationCheck extends AbstractCheck {
+public class RedundantArrayCreationCheck extends AbstractAstCheck {
 	private static final String MSG = "redundant.array.creation";
-
-	@CheckReturnValue
-	private static int countArgs(@Nonnull DetailAST elist) {
-		var count = 0;
-		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.EXPR)
-				++count;
-		}
-		return count;
-	}
 
 	@CheckReturnValue
 	@Nullable
@@ -64,25 +53,6 @@ public class RedundantArrayCreationCheck extends AbstractCheck {
 	}
 
 	@CheckReturnValue
-	@Nullable
-	private static String getMethodName(@Nonnull DetailAST methodCall) {
-		final var firstChild = methodCall.getFirstChild();
-		if (firstChild == null)
-			return null;
-		if (firstChild.getType() == TokenTypes.IDENT)
-			return firstChild.getText();
-		if (firstChild.getType() == TokenTypes.DOT) {
-			var last = firstChild.getFirstChild();
-			if (last == null)
-				return null;
-			while (last.getNextSibling() != null)
-				last = last.getNextSibling();
-			return last.getType() == TokenTypes.IDENT ? last.getText() : null;
-		}
-		return null;
-	}
-
-	@CheckReturnValue
 	private static boolean isPrimitiveArray(@Nonnull DetailAST literalNew) {
 		for (var child = literalNew.getFirstChild(); child != null; child = child.getNextSibling()) {
 			switch (child.getType()) {
@@ -108,12 +78,6 @@ public class RedundantArrayCreationCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{
 				TokenTypes.IMPORT,
@@ -130,12 +94,6 @@ public class RedundantArrayCreationCheck extends AbstractCheck {
 		if (receiverTypeName == null)
 			return null;
 		return ReflectionUtil.resolveClassName(receiverTypeName, packageName, imports);
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	private void visitConstructorCall(@Nonnull DetailAST ast) {
@@ -155,7 +113,7 @@ public class RedundantArrayCreationCheck extends AbstractCheck {
 		if (fqcn == null)
 			return;
 
-		final var argCount = countArgs(elist);
+		final var argCount = AstUtil.countArguments(elist);
 		final var componentType = ReflectionUtil.getVarArgsComponentType(fqcn, "new", argCount);
 		if (componentType == null)
 			return;
@@ -175,7 +133,7 @@ public class RedundantArrayCreationCheck extends AbstractCheck {
 		if (arrayNew == null)
 			return;
 
-		final var methodName = getMethodName(ast);
+		final var methodName = AstUtil.getMethodName(ast);
 		if (methodName == null)
 			return;
 
@@ -183,7 +141,7 @@ public class RedundantArrayCreationCheck extends AbstractCheck {
 		if (fqcn == null)
 			return;
 
-		final var argCount = countArgs(elist);
+		final var argCount = AstUtil.countArguments(elist);
 		final var componentType = ReflectionUtil.getVarArgsComponentType(fqcn, methodName, argCount);
 		if (componentType == null)
 			return;

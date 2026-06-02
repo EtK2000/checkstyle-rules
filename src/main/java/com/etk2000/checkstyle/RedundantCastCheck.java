@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -14,7 +13,7 @@ import javax.annotation.Nullable;
  * null casts matching the target type, and widening primitive casts
  * that Java performs implicitly.
  */
-public class RedundantCastCheck extends AbstractCheck {
+public class RedundantCastCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "redundant.cast";
 
 	@CheckReturnValue
@@ -26,18 +25,8 @@ public class RedundantCastCheck extends AbstractCheck {
 
 	/**
 	 * Returns the target type from context if the cast is in a variable
-	 * declaration assignment or a return statement with a known return
-	 * type. Returns {@code null} if the context target type cannot be
-	 * determined.
-	 */
-	@CheckReturnValue
-	@Nullable
-	private static String contextTargetType(@Nonnull DetailAST typecast) {
-		return contextTargetType(typecast, false);
-	}
-
-	/**
-	 * Returns the target type from context. When {@code walkTernary} is
+	 * declaration assignment or a return statement with a known return type,
+	 * or {@code null} if it cannot be determined. When {@code walkTernary} is
 	 * true, also looks through ternary (QUESTION) and reassignment contexts.
 	 * The non-ternary variant is used for null casts (where the cast may
 	 * affect the ternary result type), while the ternary variant is used
@@ -373,20 +362,8 @@ public class RedundantCastCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.TYPECAST};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override
@@ -404,7 +381,7 @@ public class RedundantCastCheck extends AbstractCheck {
 		// meaningful in method/constructor args (overload resolution) or
 		// var declarations (type inference), so flag it everywhere else
 		if (expr.getType() == TokenTypes.LITERAL_NULL) {
-			final var targetType = contextTargetType(ast);
+			final var targetType = contextTargetType(ast, false);
 			if (targetType != null && !"var".equals(targetType)) {
 				log(ast, MSG_KEY, castType, "null");
 				return;
@@ -415,13 +392,11 @@ public class RedundantCastCheck extends AbstractCheck {
 		if (exprType == null)
 			return;
 
-		// same-type cast is always redundant
 		if (castType.equals(exprType)) {
 			log(ast, MSG_KEY, castType, exprType);
 			return;
 		}
 
-		// widening primitive cast: redundant in assignment/return, compound assignment, when sibling is already wider, or in ternary with wider sibling
 		if (isWideningPrimitive(exprType, castType)
 				&& (isCompoundAssignment(ast) || isWideningRedundantInContext(ast) || isSiblingAlreadyWiderOrEqual(ast, castType) || isTernarySiblingAlreadyWiderOrEqual(ast, castType)))
 			log(ast, MSG_KEY, castType, exprType);

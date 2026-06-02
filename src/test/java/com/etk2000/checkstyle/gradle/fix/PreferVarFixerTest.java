@@ -1,726 +1,115 @@
 package com.etk2000.checkstyle.gradle.fix;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSimpleFix;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkipResult;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class PreferVarFixerTest {
+	private static final String TOPIC = "prefervar";
+
 	private final CheckstyleFixer fixer = new PreferVarFixer();
 
 	@Test
-	public void testAlreadyFinalVar() {
-		final var lines = new ArrayList<>(List.of("\tfinal var x = 5;"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
+	public void testArrayInitBeforeReportedDeclaration() throws Exception {
+		assertSimpleFix(fixer, TOPIC, "array_init_before_reported_declaration");
 	}
 
 	@Test
-	public void testAlreadyVar() {
-		final var lines = new ArrayList<>(List.of("\tvar x = 5;"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
+	public void testAtPrefixedOpenParenDoesNotJoin() throws Exception {
+		// can't migrate: unparseable Java fragment (unclosed `@Foo(` annotation on prev line)
+		assertSimpleFix(fixer, TOPIC, "at_prefixed_open_paren_does_not_join");
 	}
 
 	@Test
-	public void testAnnotation() {
-		final var lines = new ArrayList<>(List.of("for (@Nonnull String i : l)"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 5));
-		assertEquals("for (@Nonnull var i : l)", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testChainReceiverDiamondWithoutAnAst() throws Exception {
+		assertSkipResult(fixer, TOPIC, "chain_receiver_diamond_without_an_ast", "declared type arguments belong to a diamond this fixer cannot reach");
 	}
 
 	@Test
-	public void testAnnotationMultiple() {
-		final var lines = new ArrayList<>(List.of("for (@Nonnull @Deprecated String i : l)"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 5));
-		assertEquals("for (@Nonnull @Deprecated var i : l)", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testColumnAtExactEnd() throws Exception {
+		assertSkipResult(fixer, TOPIC, "column_at_exact_end", "reported column does not resolve on this line");
 	}
 
 	@Test
-	public void testAnnotationPlusFinal() {
-		final var lines = new ArrayList<>(List.of("for (@Nonnull final String i : l)"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 5));
-		assertEquals("for (@Nonnull final var i : l)", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testColumnAtNonIdentifier() throws Exception {
+		assertSkipResult(fixer, TOPIC, "column_at_non_identifier", "reported position is not a declaration this fixer recognises");
 	}
 
 	@Test
-	public void testAnnotationWithArgs() {
-		final var lines = new ArrayList<>(List.of("\t@SuppressWarnings(\"x\") String s = \"\";"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\t@SuppressWarnings(\"x\") var s = \"\";", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testColumnMidIdentifier() throws Exception {
+		assertSkipResult(fixer, TOPIC, "column_mid_identifier", "reported position is not a declaration this fixer recognises");
 	}
 
 	@Test
-	public void testArrayType() {
-		final var lines = new ArrayList<>(List.of("\tString[] a = new String[5];"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar a = new String[5];", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testDeclarationTypeInsideStringLiteral() throws Exception {
+		assertSkipResult(fixer, TOPIC, "declaration_type_inside_string_literal", "reported position is not a declaration this fixer recognises");
 	}
 
 	@Test
-	public void testColumnAtExactEnd() {
-		final var lines = new ArrayList<>(List.of("\tint x = 5;"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 11));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
+	public void testDiamondNoNewKeyword() throws Exception {
+		assertSkipResult(fixer, TOPIC, "diamond_no_new_keyword", "declaration already uses 'var'");
 	}
 
 	@Test
-	public void testColumnAtNonIdentifier() {
-		// column points at '=' which is not a Java identifier start
-		final var lines = new ArrayList<>(List.of("\tint x = 5;"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 7));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
+	public void testDiamondUnbalancedAngleBrackets() throws Exception {
+		assertSkipResult(fixer, TOPIC, "diamond_unbalanced_angle_brackets", "declaration already uses 'var'");
 	}
 
 	@Test
-	public void testColumnOutOfBounds() {
-		final var lines = new ArrayList<>(List.of("\tint x = 5;"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 999));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
+	public void testDoubleEqualsAfterName() throws Exception {
+		assertSkipResult(fixer, TOPIC, "double_equals_after_name", "reported position is not a declaration this fixer recognises");
 	}
 
 	@Test
-	public void testCommaInCharLiteralNotMultiVar() {
-		final var lines = new ArrayList<>(List.of("\tchar c = ',';"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar c = ',';", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testEqualsAtLineEnd() throws Exception {
+		// can't migrate: unparseable Java fragment (incomplete `int[] a =`)
+		assertSimpleFix(fixer, TOPIC, "equals_at_line_end");
 	}
 
 	@Test
-	public void testCommaInMethodCallNotMultiVar() {
-		final var lines = new ArrayList<>(List.of("\tString x = m(a, b);"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar x = m(a, b);", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testEqualsOnlyDoubleEquals() throws Exception {
+		assertSkipResult(fixer, TOPIC, "equals_only_double_equals", "declaration already uses 'var'");
 	}
 
 	@Test
-	public void testCommaInStringNotMultiVar() {
-		final var lines = new ArrayList<>(List.of("\tString x = \"a,b\";"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar x = \"a,b\";", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testExplicitArrayInitNoBrace() throws Exception {
+		// can't migrate: unparseable Java fragment (incomplete `int[] a = new int[]`)
+		assertSimpleFix(fixer, TOPIC, "explicit_array_init_no_brace");
 	}
 
 	@Test
-	public void testDiamondAlreadyDiamond() {
-		final var lines = new ArrayList<>(List.of("\tvar a = new ArrayList<>();"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
+	public void testExplicitArrayInitNoBraceVar() throws Exception {
+		assertSkipResult(fixer, TOPIC, "explicit_array_init_no_brace_var", "declaration already uses 'var'");
 	}
 
 	@Test
-	public void testDiamondAnnotationEndingInVar() {
-		final var lines = new ArrayList<>(List.of("\t@Autovar var x = new ArrayList<Object>();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\t@Autovar var x = new ArrayList<>();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testExplicitArrayInitUnbalancedAngleBrackets() throws Exception {
+		assertSkipResult(fixer, TOPIC, "explicit_array_init_unbalanced_angle_brackets", "declaration already uses 'var'");
 	}
 
 	@Test
-	public void testDiamondAnnotationEqualSign() {
-		final var lines = new ArrayList<>(List.of("\t@SuppressWarnings(value = \"unchecked\") var x = new ArrayList<Object>();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\t@SuppressWarnings(value = \"unchecked\") var x = new ArrayList<>();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testExplicitArrayInitUnbalancedParen() throws Exception {
+		assertSkipResult(fixer, TOPIC, "explicit_array_init_unbalanced_paren", "declaration already uses 'var'");
 	}
 
 	@Test
-	public void testDiamondAnonymousClass() {
-		final var lines = new ArrayList<>(List.of("\tvar cmp = new Comparator<Object>() {"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar cmp = new Comparator<>() {", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testMultiVarTextFallback() throws Exception {
+		assertSkipResult(fixer, TOPIC, "multi_var_text_fallback", "reported position is not a declaration this fixer recognises");
 	}
 
 	@Test
-	public void testDiamondAtLineStart() {
-		final var lines = new ArrayList<>(List.of("var x = new ArrayList<Object>();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 0));
-		assertEquals("var x = new ArrayList<>();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testUnterminatedGenericDeclaration() throws Exception {
+		assertSkipResult(
+				fixer,
+				TOPIC,
+				"unterminated_generic_declaration",
+				"declared type arguments belong to a diamond this fixer cannot reach"
+		);
 	}
 
 	@Test
-	public void testDiamondMixedObjectAndNonObjectArgs() {
-		final var lines = new ArrayList<>(List.of("\tvar m = new HashMap<Object, String>();"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testDiamondMixedQualifiedAndBareObjectArgs() {
-		final var lines = new ArrayList<>(List.of("\tvar m = new HashMap<Object, java.lang.Object>();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar m = new HashMap<>();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testDiamondMultipleObjectArgs() {
-		final var lines = new ArrayList<>(List.of("\tvar m = new HashMap<Object, Object>();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar m = new HashMap<>();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testDiamondNestedGenericTypeArg() {
-		final var lines = new ArrayList<>(List.of("\tvar m = new Foo<Map<Object, Object>>();"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testDiamondNoEqualsSign() {
-		final var lines = new ArrayList<>(List.of("\tnew ArrayList<Object>();"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, -1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testDiamondNoNewKeyword() {
-		final var lines = new ArrayList<>(List.of("\tvar x = factory<Object>();"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testDiamondNonObjectTypeArg() {
-		final var lines = new ArrayList<>(List.of("\tvar a = new ArrayList<String>();"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testDiamondNonObjectTypeArgAnnotated() {
-		final var lines = new ArrayList<>(List.of("\tvar a = new ArrayList<@Ann Object>();"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testDiamondNotVarType() {
-		final var lines = new ArrayList<>(List.of("\tArrayList<Object> a = new ArrayList<Object>();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		// type-to-var path handles this, not diamond path
-		assertEquals("\tvar a = new ArrayList<Object>();", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testDiamondQualifiedObjectTypeArg() {
-		final var lines = new ArrayList<>(List.of("\tvar a = new ArrayList<java.lang.Object>();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar a = new ArrayList<>();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testDiamondQualifiedTypeName() {
-		final var lines = new ArrayList<>(List.of("\tvar a = new java.util.ArrayList<Object>();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar a = new java.util.ArrayList<>();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testDiamondSingleObjectArg() {
-		final var lines = new ArrayList<>(List.of("\tvar a = new ArrayList<Object>();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar a = new ArrayList<>();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testDiamondSingleObjectArgWithWhitespace() {
-		final var lines = new ArrayList<>(List.of("\tvar a = new ArrayList< Object >();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar a = new ArrayList<>();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testDiamondThreeObjectArgs() {
-		final var lines = new ArrayList<>(List.of("\tvar t = new Foo<Object, Object, Object>();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar t = new Foo<>();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testDiamondTypePrefixContainingVar() {
-		final var lines = new ArrayList<>(List.of("\tfoovar x = new ArrayList<Object>();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		// diamond path rejects "foovar" (identifier-part guard), type-to-var path handles it
-		assertEquals("\tvar x = new ArrayList<Object>();", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testDiamondUnbalancedAngleBrackets() {
-		final var lines = new ArrayList<>(List.of("\tvar x = new ArrayList<Object();"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testDiamondVarInVariableName() {
-		final var lines = new ArrayList<>(List.of("\tvar myvar = new ArrayList<Object>();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar myvar = new ArrayList<>();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testDiamondWithConstructorArgs() {
-		final var lines = new ArrayList<>(List.of("\tvar list = new ArrayList<Object>(16);"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar list = new ArrayList<>(16);", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testDiamondWithFinal() {
-		final var lines = new ArrayList<>(List.of("\tfinal var s = new LinkedHashSet<Object>();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal var s = new LinkedHashSet<>();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testDoubleEscapedBackslashNotMultiVar() {
-		final var lines = new ArrayList<>(List.of("\tString x = \"\\\\\", y = \"z\";"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testEqualsAtLineEnd() {
-		final var lines = new ArrayList<>(List.of("\tint[] a ="));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar a =", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testEqualsComparisonNotAssignment() {
-		final var lines = new ArrayList<>(List.of("\tfinal boolean b = x == y;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal var b = x == y;", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testEqualsOnlyDoubleEquals() {
-		// "var" already present so fixTypeToVar bails, isolating findAssignmentEquals's == rejection
-		final var lines = new ArrayList<>(List.of("\tvar b == true;"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testExplicitArrayInitAnnotationEqualSign() {
-		final var lines = new ArrayList<>(List.of("\t@Anno(param = \"x\") String[] arr = new String[]{\"a\"};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\t@Anno(param = \"x\") String[] arr = {\"a\"};", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testExplicitArrayInitAnnotationEqualSignVar() {
-		final var lines = new ArrayList<>(List.of("\t@Anno(param = \"x\") var arr = new String[]{\"a\"};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\t@Anno(param = \"x\") String[] arr = {\"a\"};", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testExplicitArrayInitAnnotationNestedEqualSign() {
-		final var lines = new ArrayList<>(List.of("\t@Anno(a = \"x\", b = @Inner(c = \"y\")) String[] arr = new String[]{\"a\"};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\t@Anno(a = \"x\", b = @Inner(c = \"y\")) String[] arr = {\"a\"};", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testExplicitArrayInitAnnotationNestedEqualSignVar() {
-		final var lines = new ArrayList<>(List.of("\t@Anno(a = \"x\", b = @Inner(c = \"y\")) var arr = new String[]{\"a\"};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\t@Anno(a = \"x\", b = @Inner(c = \"y\")) String[] arr = {\"a\"};", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testExplicitArrayInitConstructorNotArray() {
-		// "new Type(...)" without [] should not be treated as array init
-		final var lines = new ArrayList<>(List.of("\tfinal var x = new String(\"x\");"));
-		// array path returns null (no []), falls through to type-to-var which sees "final var" -> SkipResult
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testExplicitArrayInitEmptyTyped() {
-		final var lines = new ArrayList<>(List.of("\tfinal String[] a = new String[]{};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal String[] a = {};", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testExplicitArrayInitEmptyVar() {
-		final var lines = new ArrayList<>(List.of("\tfinal var a = new String[]{};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal String[] a = {};", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testExplicitArrayInitGenericDeclaredType() {
-		final var lines = new ArrayList<>(List.of("\tfinal List<String>[] arr = new List<String>[]{list};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal List<String>[] arr = {list};", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testExplicitArrayInitGenericDeclaredTypeNested() {
-		final var lines = new ArrayList<>(List.of("\tfinal Map<String, List<Integer>>[] arr = new Map<String, List<Integer>>[]{map};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal Map<String, List<Integer>>[] arr = {map};", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testExplicitArrayInitGenericType() {
-		final var lines = new ArrayList<>(List.of("\tfinal var a = new List<String>[]{list};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal List<String>[] a = {list};", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testExplicitArrayInitListOf() {
-		final var lines = new ArrayList<>(List.of("\tfinal Object[] a = List.of(new Object[]{\"a\"});"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal var a = List.of(new Object[]{\"a\"});", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testExplicitArrayInitMethodCallArg() {
-		final var lines = new ArrayList<>(List.of("\tfinal String result = String.join(\",\", new String[]{\"a\", \"b\"});"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal var result = String.join(\",\", new String[]{\"a\", \"b\"});", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testExplicitArrayInitMultiArgMethodCall() {
-		final var lines = new ArrayList<>(List.of("\tfinal Object[] a = Arrays.asList(new int[]{1}, new int[]{2});"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal var a = Arrays.asList(new int[]{1}, new int[]{2});", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testExplicitArrayInitMultiDim() {
-		final var lines = new ArrayList<>(List.of("\tfinal int[][] m = new int[][]{{1}};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal int[][] m = {{1}};", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testExplicitArrayInitMultiSpace() {
-		final var lines = new ArrayList<>(List.of("\tfinal String[] a =   new String[]{\"a\"};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal String[] a = {\"a\"};", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testExplicitArrayInitNoBrace() {
-		final var lines = new ArrayList<>(List.of("\tint[] a = new int[]"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar a = new int[]", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testExplicitArrayInitNoBraceVar() {
-		final var lines = new ArrayList<>(List.of("\tfinal var a = new String[]"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testExplicitArrayInitNoEquals() {
-		final var lines = new ArrayList<>(List.of("\tnew String[]{\"a\"};"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, -1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testExplicitArrayInitQualifiedNewType() {
-		final var lines = new ArrayList<>(List.of("\tfinal var a = new java.lang.String[]{\"a\"};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal java.lang.String[] a = {\"a\"};", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testExplicitArrayInitTernary() {
-		final var lines = new ArrayList<>(List.of("\tfinal int[] a = cond ? new int[]{1} : new int[]{2};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal var a = cond ? new int[]{1} : new int[]{2};", result.replacement().getFirst());
-	}
-
-	@Test
-	public void testExplicitArrayInitTernaryVar() {
-		final var lines = new ArrayList<>(List.of("\tfinal var a = cond ? new int[]{1} : new int[]{2};"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testExplicitArrayInitTypedMatching() {
-		final var lines = new ArrayList<>(List.of("\tfinal String[] a = new String[]{\"a\"};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal String[] a = {\"a\"};", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testExplicitArrayInitUnbalancedParen() {
-		final var lines = new ArrayList<>(List.of("\tvar x) = new String[]{\"a\"};"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testExplicitArrayInitVarToPrimitive() {
-		final var lines = new ArrayList<>(List.of("\tfinal var a = new int[]{1, 2};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal int[] a = {1, 2};", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testExplicitArrayInitVarToString() {
-		final var lines = new ArrayList<>(List.of("\tfinal var a = new String[]{\"a\"};"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal String[] a = {\"a\"};", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testFinalColumnAtFinal() {
-		final var lines = new ArrayList<>(List.of("\tfinal int x = 5;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tfinal var x = 5;", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testFinalColumnAtType() {
-		final var lines = new ArrayList<>(List.of("\tfinal int x = 5;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 7));
-		assertEquals("\tfinal var x = 5;", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testForEach() {
-		final var lines = new ArrayList<>(List.of("for (String item : list)"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 5));
-		assertEquals("for (var item : list)", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testForEachFinal() {
-		final var lines = new ArrayList<>(List.of("for (final String i : l)"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 5));
-		assertEquals("for (final var i : l)", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testForInit() {
-		final var lines = new ArrayList<>(List.of("for (int i = 0; i < 10; ++i)"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 5));
-		assertEquals("for (var i = 0; i < 10; ++i)", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testGenericType() {
-		final var lines = new ArrayList<>(List.of("\tList<String> l = List.of();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar l = List.of();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testMultiDimArray() {
-		final var lines = new ArrayList<>(List.of("\tint[][] m = new int[3][3];"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar m = new int[3][3];", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testMultiVar() {
-		final var lines = new ArrayList<>(List.of("\tint x = 1, y = 2;"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, 1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testNegativeColumn() {
-		final var lines = new ArrayList<>(List.of("\tint x = 5;"));
-		final var result = assertInstanceOf(SkipResult.class, fixer.fix(lines, 0, -1));
-		assertEquals(SkipMessages.PREFER_VAR_SKIP, result.reason());
-	}
-
-	@Test
-	public void testNestedGeneric() {
-		final var lines = new ArrayList<>(List.of("\tMap<String, List<Integer>> m = Map.of();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar m = Map.of();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testQualifiedType() {
-		final var lines = new ArrayList<>(List.of("\tjava.util.List<String> l = x;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar l = x;", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testSimpleInt() {
-		final var lines = new ArrayList<>(List.of("\tint x = 5;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar x = 5;", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testSimpleString() {
-		final var lines = new ArrayList<>(List.of("\tString s = \"hi\";"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar s = \"hi\";", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testTryWithResources() {
-		final var lines = new ArrayList<>(List.of("try (InputStream in = x)"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 5));
-		assertEquals("try (var in = x)", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testTwoTabIndent() {
-		final var lines = new ArrayList<>(List.of("\t\tint x = 5;"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 2));
-		assertEquals("\t\tvar x = 5;", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
-	}
-
-	@Test
-	public void testWildcardGeneric() {
-		final var lines = new ArrayList<>(List.of("\tList<?> l = List.of();"));
-		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 1));
-		assertEquals("\tvar l = List.of();", result.replacement().getFirst());
-		assertEquals(0, result.startLine());
-		assertEquals(0, result.endLine());
-		assertTrue(result.importsToAdd().isEmpty());
+	public void testVarDeclarationAfterReportedDeclaration() throws Exception {
+		assertSimpleFix(fixer, TOPIC, "var_declaration_after_reported_declaration");
 	}
 }

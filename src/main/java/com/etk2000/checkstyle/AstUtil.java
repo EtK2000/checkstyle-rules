@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle;
 
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.ArrayDeque;
@@ -9,12 +10,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Predicate;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-class AstUtil {
+public final class AstUtil {
 	@CheckReturnValue
 	@Nonnull
 	static String annotationName(@Nonnull DetailAST annotation) {
@@ -97,14 +99,14 @@ class AstUtil {
 							key,
 							value.getType() == TokenTypes.ANNOTATION
 									? canonicalAnnotation(value, maxDepth - 1)
-									: serializeAst(value)
+									: exprText(value)
 					);
 				}
 			}
 			else if (child.getType() == TokenTypes.ANNOTATION)
 				params.put("value", canonicalAnnotation(child, maxDepth - 1));
 			else if (child.getType() == TokenTypes.EXPR || child.getType() == TokenTypes.ANNOTATION_ARRAY_INIT)
-				params.put("value", serializeAst(child));
+				params.put("value", exprText(child));
 		}
 		if (!params.isEmpty()) {
 			sb.append('(');
@@ -120,10 +122,6 @@ class AstUtil {
 		return sb.toString();
 	}
 
-	/**
-	 * Returns a canonical string for a TYPE AST node, including primitives,
-	 * reference types, qualified names, and arrays.
-	 */
 	@CheckReturnValue
 	@Nonnull
 	static String canonicalType(@Nonnull DetailAST typeNode) {
@@ -180,10 +178,34 @@ class AstUtil {
 		return types;
 	}
 
+	@CheckReturnValue
+	@Nonnull
+	static List<DetailAST> collectMatching(@Nonnull DetailAST root, @Nonnull Predicate<DetailAST> predicate) {
+		final var results = new ArrayList<DetailAST>();
+		collectMatchingInto(root, predicate, results);
+		return results;
+	}
+
 	/**
-	 * Collects the names of all parameters in the given constructor or
-	 * method definition.
+	 * Iterative for the same reason as the other walks here: a deeply nested
+	 * generated expression must not overflow the stack. Children are pushed in
+	 * reverse so results stay in pre-order, which callers index positionally.
 	 */
+	private static void collectMatchingInto(@Nonnull DetailAST node, @Nonnull Predicate<DetailAST> predicate, @Nonnull List<DetailAST> results) {
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(node);
+		while (!stack.isEmpty()) {
+			final var current = stack.pop();
+			if (predicate.test(current))
+				results.add(current);
+			final var children = new ArrayDeque<DetailAST>();
+			for (var child = current.getFirstChild(); child != null; child = child.getNextSibling())
+				children.push(child);
+			for (var child : children)
+				stack.push(child);
+		}
+	}
+
 	@CheckReturnValue
 	@Nonnull
 	static Set<String> collectParameterNames(@Nonnull DetailAST defNode) {
@@ -262,13 +284,18 @@ class AstUtil {
 		return false;
 	}
 
-	/**
-	 * Builds human-readable text for an expression AST.
-	 * Unlike {@link #exprText} which is designed for equality comparison,
-	 * this includes operators, dots, and brackets for display in messages.
-	 * Uses an iterative stack to avoid StackOverflowError on deeply nested
-	 * expressions.
-	 */
+	@CheckReturnValue
+	static int countArguments(@Nonnull DetailAST elist) {
+		// a lambda argument is a bare ELIST child rather than an EXPR, so counting EXPR alone
+		// reads `f(() -> x)` as a no-argument call
+		var count = 0;
+		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() != TokenTypes.COMMA)
+				++count;
+		}
+		return count;
+	}
+
 	@CheckReturnValue
 	private static int countParameters(@Nonnull DetailAST parameters) {
 		var count = 0;
@@ -279,6 +306,13 @@ class AstUtil {
 		return count;
 	}
 
+	/**
+	 * Builds human-readable text for an expression AST.
+	 * Unlike {@link #exprText} which is designed for equality comparison,
+	 * this includes operators, dots, and brackets for display in messages.
+	 * Uses an iterative stack to avoid StackOverflowError on deeply nested
+	 * expressions.
+	 */
 	@CheckReturnValue
 	@Nonnull
 	static String displayText(@Nonnull DetailAST ast) {
@@ -388,6 +422,22 @@ class AstUtil {
 					stack.push(" < ");
 					stack.push(first);
 				}
+				case TokenTypes.METHOD_CALL -> {
+					final var elist = node.findFirstToken(TokenTypes.ELIST);
+					final var callArgs = new ArrayList<DetailAST>();
+					for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
+						if (child.getType() == TokenTypes.EXPR)
+							callArgs.add(child);
+					}
+					stack.push(")");
+					for (var k = callArgs.size() - 1; k >= 0; --k) {
+						stack.push(callArgs.get(k));
+						if (k > 0)
+							stack.push(", ");
+					}
+					stack.push("(");
+					stack.push(first);
+				}
 				case TokenTypes.MINUS -> {
 					stack.push(second);
 					stack.push(" - ");
@@ -416,6 +466,14 @@ class AstUtil {
 					stack.push("++");
 					stack.push(first);
 				}
+				case TokenTypes.QUESTION -> {
+					final var colon = second.getNextSibling();
+					stack.push(colon.getNextSibling());
+					stack.push(" : ");
+					stack.push(second);
+					stack.push(" ? ");
+					stack.push(first);
+				}
 				case TokenTypes.SL -> {
 					stack.push(second);
 					stack.push(" << ");
@@ -431,6 +489,16 @@ class AstUtil {
 					stack.push(" * ");
 					stack.push(first);
 				}
+				case TokenTypes.TYPECAST -> {
+					final var operandParts = new ArrayList<DetailAST>();
+					for (var part = node.findFirstToken(TokenTypes.RPAREN).getNextSibling(); part != null; part = part.getNextSibling())
+						operandParts.add(part);
+					for (var k = operandParts.size() - 1; k >= 0; --k)
+						stack.push(operandParts.get(k));
+					stack.push(") ");
+					stack.push(exprText(first));
+					stack.push("(");
+				}
 				case TokenTypes.UNARY_MINUS -> {
 					stack.push(first);
 					stack.push("-");
@@ -439,7 +507,10 @@ class AstUtil {
 					stack.push(first);
 					stack.push("+");
 				}
-				default -> sb.append(node.getText());
+				// A compound node type the switch does not format (e.g. LITERAL_NEW, a method
+				// reference, a lambda) falls back to leaf-text concatenation so its operands
+				// are rendered instead of dropped; a leaf node keeps its own text.
+				default -> sb.append(node.getChildCount() == 0 ? node.getText() : exprText(node));
 			}
 		}
 		return sb.toString();
@@ -458,9 +529,13 @@ class AstUtil {
 			final var first = current.getFirstChild();
 			if (first == null)
 				break;
-			final var second = first.getNextSibling();
-			if (second != null)
-				segments.add(second.getText());
+
+			// a generic segment carries its TYPE_ARGUMENTS as a sibling of its IDENT, so taking
+			// the sibling blind reads `Outer<String>.Inner` back as `Outer.TYPE_ARGUMENTS`
+			for (var sibling = first.getNextSibling(); sibling != null; sibling = sibling.getNextSibling()) {
+				if (sibling.getType() == TokenTypes.IDENT)
+					segments.add(sibling.getText());
+			}
 			current = first;
 		}
 		segments.add(current.getText());
@@ -500,15 +575,6 @@ class AstUtil {
 		return sb.toString();
 	}
 
-	/**
-	 * Extracts the class name from a LITERAL_NEW node, handling both
-	 * simple names ({@code new Foo()}) and qualified names
-	 * ({@code new pkg.Foo()}). Constructor-level type arguments
-	 * ({@code new <T>Foo()}) are correctly skipped by iterating direct
-	 * children until the first IDENT or DOT is found.
-	 *
-	 * @return the class name, or {@code null} for primitive arrays
-	 */
 	@CheckReturnValue
 	@Nullable
 	private static DetailAST findEnclosingClassDef(@Nonnull DetailAST node) {
@@ -568,11 +634,18 @@ class AstUtil {
 			matched = typeName;
 			++matchCount;
 		}
-		// Multiple overloads with the same return type: still safe to use.
-		// Multiple with different types: bailed above. Zero matches: null.
 		return matchCount > 0 ? matched : null;
 	}
 
+	/**
+	 * Extracts the class name from a LITERAL_NEW node, handling both
+	 * simple names ({@code new Foo()}) and qualified names
+	 * ({@code new pkg.Foo()}). Constructor-level type arguments
+	 * ({@code new <T>Foo()}) are correctly skipped by iterating direct
+	 * children until the first IDENT or DOT is found.
+	 *
+	 * @return the class name, or {@code null} for primitive arrays
+	 */
 	@CheckReturnValue
 	@Nullable
 	static String findNewClassName(@Nonnull DetailAST literalNew) {
@@ -613,8 +686,44 @@ class AstUtil {
 	}
 
 	/**
-	 * Extracts the method name from the last child of a METHOD_CALL's DOT.
+	 * Ascends to the compilation-unit root, then pre-order DFS for the first node
+	 * located at the given (zero-based) {@code line} and {@code column} that
+	 * satisfies {@code predicate}. The root carries no siblings (pinned by
+	 * {@code PreferPrefixIncrementCheckTest.testSpanFoundInSecondTopLevelClass}),
+	 * so one subtree covers the whole file.
 	 */
+	@CheckReturnValue
+	@Nullable
+	static DetailAST findNodeAt(@Nonnull DetailAST root, int line, int column, @Nonnull Predicate<DetailAST> predicate) {
+		var top = root;
+		while (top.getParent() != null)
+			top = top.getParent();
+		return findNodeAtInternal(top, line, column, predicate);
+	}
+
+	/**
+	 * Iterative so deeply nested generated expressions cannot overflow the stack:
+	 * children are pushed in reverse so the walk still visits them in source
+	 * order, matching the pre-order the callers rely on.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static DetailAST findNodeAtInternal(@Nonnull DetailAST node, int line, int column, @Nonnull Predicate<DetailAST> predicate) {
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(node);
+		while (!stack.isEmpty()) {
+			final var current = stack.pop();
+			if (current.getLineNo() == line + 1 && current.getColumnNo() == column && predicate.test(current))
+				return current;
+			final var children = new ArrayDeque<DetailAST>();
+			for (var child = current.getFirstChild(); child != null; child = child.getNextSibling())
+				children.push(child);
+			for (var child : children)
+				stack.push(child);
+		}
+		return null;
+	}
+
 	@CheckReturnValue
 	@Nullable
 	private static DetailAST findSameFileClassDef(@Nonnull DetailAST node, @Nonnull String className) {
@@ -643,6 +752,29 @@ class AstUtil {
 		return null;
 	}
 
+	/**
+	 * Column of the earliest token in the subtree: the smallest column among the
+	 * nodes sitting on {@link #firstLine(DetailAST)}. The subtree has to be
+	 * walked because an imaginary node carries its operator's position rather
+	 * than its first operand's ({@code EXPR} for {@code x = 5} sits at the
+	 * {@code =}, not at the {@code x}).
+	 */
+	@CheckReturnValue
+	static int firstColumn(@Nonnull DetailAST ast) {
+		final var first = firstLine(ast);
+		var column = Integer.MAX_VALUE;
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(ast);
+		while (!stack.isEmpty()) {
+			final var node = stack.pop();
+			if (node.getLineNo() == first && node.getColumnNo() < column)
+				column = node.getColumnNo();
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+				stack.push(child);
+		}
+		return column;
+	}
+
 	@CheckReturnValue
 	static int firstLine(@Nonnull DetailAST ast) {
 		var first = ast.getLineNo();
@@ -661,13 +793,53 @@ class AstUtil {
 
 	@CheckReturnValue
 	@Nullable
-	private static String getMethodName(@Nonnull DetailAST dot) {
-		var last = dot.getFirstChild();
-		if (last == null)
+	public static String getEnclosingTypeName(@Nonnull DetailAST objBlock) {
+		final var parent = objBlock.getParent();
+		if (parent == null)
 			return null;
-		while (last.getNextSibling() != null)
-			last = last.getNextSibling();
-		return last.getType() == TokenTypes.IDENT ? last.getText() : null;
+		final var type = parent.getType();
+		if (type != TokenTypes.CLASS_DEF && type != TokenTypes.INTERFACE_DEF
+				&& type != TokenTypes.ENUM_DEF && type != TokenTypes.RECORD_DEF
+				&& type != TokenTypes.ANNOTATION_DEF)
+			return null;
+		final var ident = parent.findFirstToken(TokenTypes.IDENT);
+		return ident == null ? null : ident.getText();
+	}
+
+	@CheckReturnValue
+	@Nullable
+	public static String getMethodName(@Nonnull DetailAST methodCall) {
+		final var firstChild = methodCall.getFirstChild();
+		if (firstChild == null)
+			return null;
+		if (firstChild.getType() == TokenTypes.IDENT)
+			return firstChild.getText();
+		if (firstChild.getType() == TokenTypes.DOT)
+			return lastIdent(firstChild);
+		return null;
+	}
+
+	@CheckReturnValue
+	@Nullable
+	public static String getPackageName(@Nonnull DetailAST node) {
+		var root = node;
+		while (root.getParent() != null)
+			root = root.getParent();
+		for (var child = root.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() != TokenTypes.PACKAGE_DEF)
+				continue;
+			final var dot = child.findFirstToken(TokenTypes.DOT);
+			if (dot != null) {
+				final var text = FullIdent.createFullIdent(dot).getText();
+				return text == null || text.isEmpty() ? null : text;
+			}
+			final var ident = child.findFirstToken(TokenTypes.IDENT);
+			if (ident != null) {
+				final var text = ident.getText();
+				return text.isEmpty() ? null : text;
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -708,38 +880,48 @@ class AstUtil {
 			@Nullable String packageName,
 			@Nonnull Set<String> imports
 	) {
-		final var simple = getReceiverTypeName(methodCall);
-		if (simple != null)
-			return simple;
-
-		final var firstChild = methodCall.getFirstChild();
-		if (firstChild == null || firstChild.getType() != TokenTypes.DOT)
-			return null;
-
-		final var receiver = firstChild.getFirstChild();
-		if (receiver == null || receiver.getType() != TokenTypes.METHOD_CALL)
-			return null;
-
-		final var innerReceiverType = getReceiverTypeName(receiver, packageName, imports);
-		if (innerReceiverType == null) {
-			// bare call in the same class (e.g. requireView().method()): can't
-			// resolve without knowing the enclosing class's own type
-			return null;
+		// Descend the receiver chain (base.m1().m2()...): each call's receiver is either an
+		// IDENT the simple rule resolves or an inner METHOD_CALL. Collect the inner calls'
+		// method names while descending, stop at the first receiver the simple rule resolves
+		// (a bare same-class call like requireView().m() has an IDENT receiver, so the simple
+		// rule returns null and the DOT guard below bails), then fold the method return types
+		// back outward. Iterative (not recursive) so a very long chain cannot overflow the
+		// stack, matching the other subtree walks in this file.
+		final var methodNames = new ArrayDeque<String>();
+		var current = methodCall;
+		String baseType;
+		while (true) {
+			final var simple = getReceiverTypeName(current);
+			if (simple != null) {
+				baseType = simple;
+				break;
+			}
+			final var firstChild = current.getFirstChild();
+			if (firstChild == null || firstChild.getType() != TokenTypes.DOT)
+				return null;
+			final var receiver = firstChild.getFirstChild();
+			if (receiver == null || receiver.getType() != TokenTypes.METHOD_CALL)
+				return null;
+			final var innerDot = receiver.getFirstChild();
+			if (innerDot == null || innerDot.getType() != TokenTypes.DOT)
+				return null;
+			final var innerMethodName = lastIdent(innerDot);
+			if (innerMethodName == null)
+				return null;
+			methodNames.push(innerMethodName);
+			current = receiver;
 		}
 
-		final var innerFqcn = ReflectionUtil.resolveClassName(innerReceiverType, packageName, imports);
-		if (innerFqcn == null)
-			return null;
-
-		final var innerDot = receiver.getFirstChild();
-		if (innerDot == null || innerDot.getType() != TokenTypes.DOT)
-			return null;
-
-		final var innerMethodName = getMethodName(innerDot);
-		if (innerMethodName == null)
-			return null;
-
-		return ReflectionUtil.getMethodReturnTypeName(innerFqcn, innerMethodName);
+		var type = baseType;
+		while (!methodNames.isEmpty()) {
+			final var fqcn = ReflectionUtil.resolveClassName(type, packageName, imports);
+			if (fqcn == null)
+				return null;
+			type = ReflectionUtil.getMethodReturnTypeName(fqcn, methodNames.pop());
+			if (type == null)
+				return null;
+		}
+		return type;
 	}
 
 	@CheckReturnValue
@@ -790,12 +972,45 @@ class AstUtil {
 		return false;
 	}
 
+	/**
+	 * True if {@code incDec} (an {@code INC}/{@code DEC}/{@code POST_INC}/{@code POST_DEC}) mutates an element
+	 * of a freshly-created array, e.g. {@code (new int[]{a})[0]++}. Such a mutation targets a throwaway array
+	 * whose backing store is never referenced again, so it has no observable side effect (the primitive was
+	 * copied into the array by value). An increment of a named array element ({@code arr[i]++}) or a variable
+	 * IS observable and is not matched.
+	 */
+	@CheckReturnValue
+	private static boolean incrementsFreshArrayElement(@Nonnull DetailAST incDec) {
+		var target = incDec.getFirstChild();
+		while (target != null) {
+			switch (target.getType()) {
+				case TokenTypes.INDEX_OP -> target = target.getFirstChild();
+				case TokenTypes.LITERAL_NEW -> {
+					return target.findFirstToken(TokenTypes.ARRAY_DECLARATOR) != null;
+				}
+				case TokenTypes.LPAREN, TokenTypes.RPAREN -> target = target.getNextSibling();
+				default -> {
+					return false;
+				}
+			}
+		}
+		return false;
+	}
+
+	@CheckReturnValue
+	static boolean isAssignmentOperator(int tokenType) {
+		return switch (tokenType) {
+			case TokenTypes.ASSIGN, TokenTypes.BAND_ASSIGN, TokenTypes.BOR_ASSIGN, TokenTypes.BSR_ASSIGN,
+			     TokenTypes.BXOR_ASSIGN, TokenTypes.DIV_ASSIGN, TokenTypes.MINUS_ASSIGN, TokenTypes.MOD_ASSIGN,
+			     TokenTypes.PLUS_ASSIGN, TokenTypes.SL_ASSIGN, TokenTypes.SR_ASSIGN, TokenTypes.STAR_ASSIGN -> true;
+			default -> false;
+		};
+	}
+
 	@CheckReturnValue
 	static boolean isEmptyBody(@Nonnull DetailAST body) {
 		return switch (body.getType()) {
-			// empty statement: if (x);
 			case TokenTypes.EMPTY_STAT -> true;
-			// empty block: if (x) {}
 			case TokenTypes.SLIST -> body.getChildCount() == 1
 					&& body.getFirstChild().getType() == TokenTypes.RCURLY;
 			default -> false;
@@ -831,7 +1046,6 @@ class AstUtil {
 					hasDigit = true;
 			}
 			else if (c == 'E' || c == 'P' || c == 'e' || c == 'p') {
-				// exponent: skip optional sign, remaining must be zeros
 				var j = i + 1;
 				if (j < s.length() && (s.charAt(j) == '+' || s.charAt(j) == '-'))
 					++j;
@@ -847,6 +1061,24 @@ class AstUtil {
 				return false;
 		}
 		return hasDigit;
+	}
+
+	@CheckReturnValue
+	public static boolean isPureDotChainOrIdent(@Nonnull DetailAST ast) {
+		var cur = ast;
+		while (true) {
+			if (cur.getType() == TokenTypes.IDENT)
+				return true;
+			if (cur.getType() != TokenTypes.DOT)
+				return false;
+			final var left = cur.getFirstChild();
+			if (left == null)
+				return false;
+			final var right = left.getNextSibling();
+			if (right == null || right.getType() != TokenTypes.IDENT)
+				return false;
+			cur = left;
+		}
 	}
 
 	/**
@@ -884,6 +1116,45 @@ class AstUtil {
 	}
 
 	/**
+	 * Returns true if evaluating {@code ast} cannot mutate program state: the subtree contains no
+	 * method call, constructor invocation, increment/decrement, or assignment. Array creation
+	 * ({@code new T[]{...}}) is permitted, since allocating an array runs no user code; its element and
+	 * dimension expressions are still checked (a call inside them is a side effect). Unlike
+	 * {@link #isPureExpression} (a strict whitelist that also rejects operators), this permits all operators,
+	 * comparisons, casts, and {@code instanceof}/pattern tests, blacklisting only the constructs that can have
+	 * side effects.
+	 */
+	@CheckReturnValue
+	public static boolean isSideEffectFree(@Nonnull DetailAST ast) {
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(ast);
+		while (!stack.isEmpty()) {
+			final var node = stack.pop();
+			final var type = node.getType();
+			switch (type) {
+				case TokenTypes.DEC, TokenTypes.INC, TokenTypes.POST_DEC, TokenTypes.POST_INC -> {
+					if (!incrementsFreshArrayElement(node))
+						return false;
+				}
+				case TokenTypes.LITERAL_NEW -> {
+					if (node.findFirstToken(TokenTypes.ARRAY_DECLARATOR) == null)
+						return false;
+				}
+				case TokenTypes.METHOD_CALL -> {
+					return false;
+				}
+				default -> {
+					if (isAssignmentOperator(type))
+						return false;
+				}
+			}
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+				stack.push(child);
+		}
+		return true;
+	}
+
+	/**
 	 * Returns true if the AST node is a numeric literal whose value is zero.
 	 * Handles all Java numeric literal forms: decimal, hex, binary, octal,
 	 * underscores, exponent notation, and type suffixes.
@@ -895,6 +1166,17 @@ class AstUtil {
 			     TokenTypes.NUM_INT, TokenTypes.NUM_LONG -> isNumericZero(ast.getText());
 			default -> false;
 		};
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static String lastIdent(@Nonnull DetailAST dot) {
+		var last = dot.getFirstChild();
+		if (last == null)
+			return null;
+		while (last.getNextSibling() != null)
+			last = last.getNextSibling();
+		return last.getType() == TokenTypes.IDENT ? last.getText() : null;
 	}
 
 	@CheckReturnValue
@@ -940,9 +1222,9 @@ class AstUtil {
 	/**
 	 * Resolve the declared return type of a method named {@code methodName}
 	 * with parameter count {@code arity} on any enclosing same-file class.
-	 * Returns null if zero or more than one overload at that arity exists, to
-	 * avoid corrupting downstream type inference when overloads return
-	 * different types.
+	 * Returns null when no overload at that arity exists, or when the overloads
+	 * at that arity return different types, to avoid corrupting downstream type
+	 * inference.
 	 */
 	@CheckReturnValue
 	@Nullable
@@ -985,27 +1267,55 @@ class AstUtil {
 		return null;
 	}
 
+	/**
+	 * The same-file type {@code className} resolves to from {@code scope}, or null when the
+	 * compilation unit declares no such type. The name may be qualified ({@code Outer.Box}), in
+	 * which case each segment after the first is looked up inside the previous one.
+	 */
+	@CheckReturnValue
+	@Nullable
+	static DetailAST sameFileClassDef(@Nonnull DetailAST scope, @Nonnull String className) {
+		final var segments = className.split("\\.");
+		if (segments.length == 0)
+			return null;
+
+		var classDef = findSameFileClassDef(scope, segments[0]);
+		for (var i = 1; i < segments.length && classDef != null; ++i)
+			classDef = findInnerClassDef(classDef, segments[i]);
+		return classDef;
+	}
+
 	@CheckReturnValue
 	@Nonnull
-	private static String serializeAst(@Nonnull DetailAST ast) {
-		if (ast.getChildCount() == 0)
-			return ast.getText();
-		final var sb = new StringBuilder();
-		final var stack = new ArrayDeque<DetailAST>();
-		stack.push(ast);
-		while (!stack.isEmpty()) {
-			final var node = stack.pop();
-			if (node.getChildCount() == 0) {
-				sb.append(node.getText());
-				continue;
-			}
-			final var children = new ArrayList<DetailAST>();
-			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
-				children.add(child);
-			for (var i = children.size() - 1; i >= 0; --i)
-				stack.push(children.get(i));
+	public static String simpleName(@Nonnull String fqcn) {
+		return fqcn.substring(fqcn.lastIndexOf('.') + 1);
+	}
+
+	/**
+	 * If {@code body} is a single-statement block (per {@link #unwrapSingleStatementBlock}) whose sole
+	 * statement is an expression statement ({@code EXPR}), returns that {@code EXPR}; otherwise
+	 * {@code null}. Only an expression statement is legal as a braceless lambda body, so a block holding
+	 * a {@code return}/{@code if}/{@code throw}/local-variable/... statement is NOT unwrappable.
+	 */
+	@CheckReturnValue
+	@Nullable
+	public static DetailAST singleExpressionStatementBody(@Nonnull DetailAST body) {
+		final var single = unwrapSingleStatementBlock(body);
+		return single != null && single.getType() == TokenTypes.EXPR ? single : null;
+	}
+
+	@CheckReturnValue
+	static int typeParameterCount(@Nonnull DetailAST classDef) {
+		final var typeParams = classDef.findFirstToken(TokenTypes.TYPE_PARAMETERS);
+		if (typeParams == null)
+			return 0;
+
+		var count = 0;
+		for (var child = typeParams.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.TYPE_PARAMETER)
+				++count;
 		}
-		return sb.toString();
+		return count;
 	}
 
 	@CheckReturnValue
@@ -1019,6 +1329,70 @@ class AstUtil {
 		if (dot != null)
 			return exprText(dot);
 		return "";
+	}
+
+	/**
+	 * Strips wrapping {@code LPAREN} and {@code EXPR} nodes from a value node,
+	 * descending into the parenthesized/expression-wrapped inner node. Returns
+	 * the first non-wrapper node, or {@code null} if the chain terminates.
+	 */
+	@CheckReturnValue
+	@Nullable
+	static DetailAST unwrapParensAndExpr(@Nullable DetailAST node) {
+		var cur = node;
+		while (cur != null) {
+			if (cur.getType() == TokenTypes.LPAREN)
+				cur = cur.getNextSibling();
+			else if (cur.getType() == TokenTypes.EXPR)
+				cur = cur.getFirstChild();
+			else
+				return cur;
+		}
+		return null;
+	}
+
+	/**
+	 * The reverse of {@link #unwrapParensAndExpr}: walks backward from a binary operator's last child to
+	 * its real right operand, stepping over a trailing {@code )} (and its inner) so a parenthesized right
+	 * operand ({@code a && (b)}) resolves to {@code b}. Needed because a binary node's children are the
+	 * operand tokens in source order, so the last child of {@code a && (b)} is the {@code RPAREN}, not the
+	 * operand.
+	 */
+	@CheckReturnValue
+	@Nullable
+	static DetailAST unwrapParensAndExprFromEnd(@Nullable DetailAST node) {
+		var cur = node;
+		while (cur != null) {
+			if (cur.getType() == TokenTypes.RPAREN)
+				cur = cur.getPreviousSibling();
+			else if (cur.getType() == TokenTypes.EXPR)
+				cur = cur.getFirstChild();
+			else
+				return cur;
+		}
+		return null;
+	}
+
+	/**
+	 * Unwraps a single-statement block. For a non-{@code SLIST} body, returns it
+	 * unchanged; for an {@code SLIST}, returns its sole statement (ignoring
+	 * {@code SEMI}/{@code RCURLY}) or {@code null} when the block holds zero or
+	 * more than one statement.
+	 */
+	@CheckReturnValue
+	@Nullable
+	public static DetailAST unwrapSingleStatementBlock(@Nonnull DetailAST body) {
+		if (body.getType() != TokenTypes.SLIST)
+			return body;
+		DetailAST single = null;
+		for (var child = body.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.SEMI || child.getType() == TokenTypes.RCURLY)
+				continue;
+			if (single != null)
+				return null;
+			single = child;
+		}
+		return single;
 	}
 
 	@CheckReturnValue
@@ -1039,8 +1413,8 @@ class AstUtil {
 		if (typeName != null)
 			return typeName;
 
-		// `var` type: infer from `new X(...)` initializer so checks can resolve
-		// the real type instead of giving up.
+		// `var` type: infer from the initializer so checks can resolve the real
+		// type instead of giving up.
 		if (node.getType() == TokenTypes.VARIABLE_DEF) {
 			final var assign = node.findFirstToken(TokenTypes.ASSIGN);
 			if (assign == null)
@@ -1083,11 +1457,13 @@ class AstUtil {
 			for (var child = init.getFirstChild(); child != null; child = child.getNextSibling()) {
 				switch (child.getType()) {
 					case TokenTypes.LITERAL_BOOLEAN, TokenTypes.LITERAL_BYTE,
-						 TokenTypes.LITERAL_CHAR, TokenTypes.LITERAL_DOUBLE,
-						 TokenTypes.LITERAL_FLOAT, TokenTypes.LITERAL_INT,
-						 TokenTypes.LITERAL_LONG, TokenTypes.LITERAL_SHORT ->
-						{ return child.getText() + "[]".repeat(dimensions); }
-					default -> {}
+					     TokenTypes.LITERAL_CHAR, TokenTypes.LITERAL_DOUBLE,
+					     TokenTypes.LITERAL_FLOAT, TokenTypes.LITERAL_INT,
+					     TokenTypes.LITERAL_LONG, TokenTypes.LITERAL_SHORT -> {
+						return child.getText() + "[]".repeat(dimensions);
+					}
+					default -> {
+					}
 				}
 			}
 			return null;

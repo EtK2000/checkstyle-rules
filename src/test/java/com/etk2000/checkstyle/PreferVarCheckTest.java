@@ -1,406 +1,277 @@
 package com.etk2000.checkstyle;
 
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+import com.puppycrawl.tools.checkstyle.JavaParser;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+import java.util.function.Predicate;
+
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+/**
+ * Direct AST tests for the positional predicates {@code PreferVarFixer} consults. They need a
+ * buffer that parses, which no fragment in the corpus is, so their refusal and unresolved arms
+ * are only reachable from here.
+ */
 public class PreferVarCheckTest {
-	private static final String DIR = "prefervar/";
+	private static final String CLEAN_FIXTURE = "prefervar/cases.clean.java";
 
-	@Test
-	public void testAllowedMethodsClean() throws Exception {
-		final var violations = BaseCheckTest.runCheck(
-				PreferVarCheck.class,
-				DIR + "InputPreferVarAllowedMethodClean.java",
-				"allowedMethods",
-				"genericMethod"
-		);
-		assertTrue(violations.isEmpty());
+	@CheckReturnValue
+	@Nullable
+	private static DetailAST find(@Nonnull DetailAST node, @Nonnull Predicate<DetailAST> predicate) {
+		for (var child = node; child != null; child = child.getNextSibling()) {
+			if (predicate.test(child))
+				return child;
+			final var found = find(child.getFirstChild(), predicate);
+			if (found != null)
+				return found;
+		}
+		return null;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static int[] leafPosition(@Nonnull DetailAST node) {
+		var leaf = node;
+		while (leaf.getFirstChild() != null)
+			leaf = leaf.getFirstChild();
+		return new int[]{leaf.getLineNo() - 1, leaf.getColumnNo()};
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static DetailAST locate(@Nonnull DetailAST root, @Nonnull Predicate<DetailAST> predicate) {
+		return requireNonNull(find(root, predicate), "no matching node in " + CLEAN_FIXTURE);
+	}
+
+	@CheckReturnValue
+	private static boolean parentIs(@Nonnull DetailAST node, int tokenType) {
+		return node.getParent() != null && node.getParent().getType() == tokenType;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static DetailAST parseFixture() throws Exception {
+		final var url = PreferVarCheckTest.class.getResource("/com/etk2000/checkstyle/inputs/" + CLEAN_FIXTURE);
+		requireNonNull(url, "Test input file not found: " + CLEAN_FIXTURE);
+		return JavaParser.parseFile(new File(url.toURI()), JavaParser.Options.WITHOUT_COMMENTS);
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static int[] typePosition(@Nonnull DetailAST varDef) {
+		return leafPosition(requireNonNull(varDef.findFirstToken(TokenTypes.TYPE), "declaration has no TYPE"));
+	}
+
+	@CheckReturnValue
+	private static boolean varDefNamed(@Nonnull DetailAST node, @Nonnull String name) {
+		if (node.getType() != TokenTypes.VARIABLE_DEF)
+			return false;
+		final var ident = node.findFirstToken(TokenTypes.IDENT);
+		return ident != null && name.equals(ident.getText());
 	}
 
 	@Test
-	public void testAllowedMethodsViolation() throws Exception {
-		final var violations = BaseCheckTest.runCheck(
-				PreferVarCheck.class,
-				DIR + "InputPreferVarAllowedMethodViolation.java",
-				"allowedMethods",
-				"genericMethod"
-		);
-		assertEquals(4, violations.size());
-
-		assertEquals(9, violations.getFirst().getLine());
-		assertEquals(SeverityLevel.WARNING, violations.getFirst().getSeverityLevel());
-		assertEquals("Prefer explicit type over type arguments on 'genericMethod'.", violations.getFirst().getMessage());
-
-		assertEquals(13, violations.get(1).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(1).getSeverityLevel());
-		assertEquals("Prefer explicit type over type arguments on 'genericMethod'.", violations.get(1).getMessage());
-
-		assertEquals(17, violations.get(2).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(2).getSeverityLevel());
-		assertEquals("Using 'var' with 'genericMethod' loses generic type information, consider using an explicit type.", violations.get(2).getMessage());
-
-		assertEquals(21, violations.get(3).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(3).getSeverityLevel());
-		assertEquals("Local variable must use 'var' instead of an explicit type.", violations.get(3).getMessage());
+	public void testDeclaredArgumentsMoveToDiamondAtBareAssignment() throws Exception {
+		final var root = parseFixture();
+		final Predicate<DetailAST> isStatementAssign =
+				node -> node.getType() == TokenTypes.ASSIGN && parentIs(node, TokenTypes.EXPR);
+		final var assign = locate(root, isStatementAssign);
+		final var at = leafPosition(requireNonNull(assign.getFirstChild(), "assignment has no left-hand side"));
+		assertFalse(PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, at[0], at[1]));
 	}
 
 	@Test
-	public void testChainClean() throws Exception {
-		assertTrue(BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarChainClean.java").isEmpty());
+	public void testDeclaredArgumentsMoveToDiamondAtConditionalWithAllNewArms() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "everyArmTernary")));
+		assertTrue(PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, at[0], at[1]));
 	}
 
 	@Test
-	public void testChainViolation() throws Exception {
-		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarChainViolation.java");
-		assertEquals(1, violations.size());
-
-		// var with chained generic return: GenericReturnHelper.create().find(1)
-		assertEquals(11, violations.getFirst().getLine());
-		assertEquals(SeverityLevel.WARNING, violations.getFirst().getSeverityLevel());
-		assertEquals("Using 'var' with 'find' loses generic type information, consider using an explicit type.", violations.getFirst().getMessage());
+	public void testDeclaredArgumentsMoveToDiamondAtConditionalWithNonNewArm() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "ternary")));
+		assertFalse(PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, at[0], at[1]));
 	}
 
 	@Test
-	public void testCleanVarUsage() throws Exception {
-		assertTrue(BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarClean.java").isEmpty());
+	public void testDeclaredArgumentsMoveToDiamondAtDeclarationWithoutInitializer() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "uninitialized")));
+		assertFalse(PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, at[0], at[1]));
 	}
 
 	@Test
-	public void testDiamondViolation() throws Exception {
-		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarDiamondViolation.java");
-		assertEquals(9, violations.size());
-
-		final var msg = "Use diamond operator '<>' instead of explicit '<Object>' with 'var'.";
-		var i = 0;
-
-		assertEquals(10, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(msg, violations.get(i++).getMessage());
-
-		assertEquals(19, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(msg, violations.get(i++).getMessage());
-		assertEquals(20, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(msg, violations.get(i++).getMessage());
-
-		assertEquals(24, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(msg, violations.get(i++).getMessage());
-
-		assertEquals(28, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(msg, violations.get(i++).getMessage());
-
-		assertEquals(32, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(msg, violations.get(i++).getMessage());
-
-		assertEquals(36, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(msg, violations.get(i++).getMessage());
-
-		assertEquals(40, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(msg, violations.get(i++).getMessage());
-		assertEquals(41, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(msg, violations.get(i++).getMessage());
+	public void testDeclaredArgumentsMoveToDiamondAtLocalNewInitializer() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "diamond")));
+		assertTrue(PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, at[0], at[1]));
 	}
 
 	@Test
-	public void testExplicitTypeLiteralMismatchViolation() throws Exception {
-		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarLiteralMismatchViolation.java");
-		assertEquals(65, violations.size());
-
-		final var msg = "Local variable must use 'var' instead of an explicit type.";
-		var i = 0;
-
-		for (var line : new int[]{6, 7, 8, 9, 10, 11}) {
-			assertEquals(line, violations.get(i).getLine());
-			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-		}
-
-		for (var line : new int[]{16, 17, 18}) {
-			assertEquals(line, violations.get(i).getLine());
-			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-		}
-
-		for (var line : new int[]{22, 23, 24, 25}) {
-			assertEquals(line, violations.get(i).getLine());
-			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-		}
-
-		for (var line : new int[]{29, 30, 31, 32, 33, 34}) {
-			assertEquals(line, violations.get(i).getLine());
-			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-		}
-
-		for (var line : new int[]{38, 39, 40}) {
-			assertEquals(line, violations.get(i).getLine());
-			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-		}
-
-		for (var line : new int[]{44, 45, 46, 47}) {
-			assertEquals(line, violations.get(i).getLine());
-			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-		}
-
-		for (var line : new int[]{51, 52, 53, 54, 55, 56}) {
-			assertEquals(line, violations.get(i).getLine());
-			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-		}
-
-		for (var line : new int[]{60, 61, 62, 63, 64, 65}) {
-			assertEquals(line, violations.get(i).getLine());
-			assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-		}
-
-		assertEquals(69, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-
-		// Byte.parseByte — matching (error), then widening to double/float/int/long/short (warning)
-		assertEquals(74, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-		for (var line : new int[]{76, 77, 78, 79, 80}) {
-			assertEquals(line, violations.get(i).getLine());
-			assertEquals(SeverityLevel.WARNING, violations.get(i++).getSeverityLevel());
-		}
-
-		assertEquals(84, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-
-		// Float.parseFloat — matching (error), widening to double (warning)
-		assertEquals(89, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-		assertEquals(91, violations.get(i).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(i++).getSeverityLevel());
-
-		// Integer.parseInt — matching (error), widening to double/float/long (warning)
-		assertEquals(96, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-		for (var line : new int[]{98, 99, 100}) {
-			assertEquals(line, violations.get(i).getLine());
-			assertEquals(SeverityLevel.WARNING, violations.get(i++).getSeverityLevel());
-		}
-
-		// Long.parseLong — matching (error), widening to double/float (warning)
-		assertEquals(105, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-		for (var line : new int[]{107, 108}) {
-			assertEquals(line, violations.get(i).getLine());
-			assertEquals(SeverityLevel.WARNING, violations.get(i++).getSeverityLevel());
-		}
-
-		// Short.parseShort — matching (error), widening to double/float/int/long (warning)
-		assertEquals(113, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i++).getSeverityLevel());
-		for (var line : new int[]{115, 116, 117, 118}) {
-			assertEquals(line, violations.get(i).getLine());
-			assertEquals(SeverityLevel.WARNING, violations.get(i++).getSeverityLevel());
-		}
-
-		// primitive with non-literal expression (warning): binary op, cast mismatch, shift, ternary
-		for (var line : new int[]{123, 124, 125, 126, 127}) {
-			assertEquals(line, violations.get(i).getLine());
-			assertEquals(SeverityLevel.WARNING, violations.get(i++).getSeverityLevel());
-		}
-
-		final var msgWarning = "Local variable should use 'var' instead of an explicit type.";
-		for (var v : violations) {
-			if (v.getSeverityLevel() == SeverityLevel.WARNING)
-				assertEquals(msgWarning, v.getMessage());
-			else
-				assertEquals(msg, v.getMessage());
-		}
+	public void testDeclaredArgumentsMoveToDiamondAtMethodCallInitializer() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "targetTyped")));
+		assertFalse(PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, at[0], at[1]));
 	}
 
 	@Test
-	public void testExplicitTypeViolation() throws Exception {
-		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarViolation.java");
-		assertEquals(23, violations.size());
-
-		final var localMsg = "Local variable must use 'var' instead of an explicit type.";
-		final var forEachMsg = "For-each loop must use 'var' instead of an explicit type.";
-		final var tryMsg = "Try-with-resources must use 'var' instead of an explicit type.";
-		final var arrayMsg = "Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.";
-		var i = 0;
-
-		assertEquals(15, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-
-		assertEquals(20, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-		assertEquals(21, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-
-		assertEquals(26, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(forEachMsg, violations.get(i++).getMessage());
-		assertEquals(29, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(forEachMsg, violations.get(i++).getMessage());
-
-		assertEquals(35, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(forEachMsg, violations.get(i++).getMessage());
-
-		assertEquals(41, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(forEachMsg, violations.get(i++).getMessage());
-
-		assertEquals(46, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-
-		assertEquals(52, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-
-		assertEquals(57, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-		assertEquals(58, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-		assertEquals(59, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-
-		assertEquals(60, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(arrayMsg, violations.get(i++).getMessage());
-		assertEquals(61, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(arrayMsg, violations.get(i++).getMessage());
-		assertEquals(62, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(arrayMsg, violations.get(i++).getMessage());
-
-		assertEquals(63, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-
-		assertEquals(74, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-		assertEquals(75, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-
-		assertEquals(79, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-		assertEquals(80, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-		assertEquals(81, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(localMsg, violations.get(i++).getMessage());
-
-		assertEquals(85, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(tryMsg, violations.get(i++).getMessage());
-
-		assertEquals(91, violations.get(i).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(i).getSeverityLevel());
-		assertEquals(tryMsg, violations.get(i++).getMessage());
+	public void testDeclaredArgumentsMoveToDiamondAtSwitchWithAllNewArms() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "everyArmSwitch")));
+		assertTrue(PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, at[0], at[1]));
 	}
 
 	@Test
-	public void testGenericReturnAutoDetectedClean() throws Exception {
-		assertTrue(BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarGenericReturnClean.java").isEmpty());
+	public void testDeclaredArgumentsMoveToDiamondAtTryResource() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> node.getType() == TokenTypes.RESOURCE));
+		assertTrue(PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, at[0], at[1]));
 	}
 
 	@Test
-	public void testGenericReturnAutoDetectedViolation() throws Exception {
-		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarGenericReturnViolation.java");
-		assertEquals(2, violations.size());
-
-		assertEquals(13, violations.getFirst().getLine());
-		assertEquals(SeverityLevel.WARNING, violations.getFirst().getSeverityLevel());
-		assertEquals("Using 'var' with 'cast' loses generic type information, consider using an explicit type.", violations.getFirst().getMessage());
-
-		assertEquals(17, violations.get(1).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(1).getSeverityLevel());
-		assertEquals("Local variable must use 'var' instead of an explicit type.", violations.get(1).getMessage());
+	public void testDeclaredArgumentsMoveToDiamondAtUnresolvedPosition() throws Exception {
+		final var root = parseFixture();
+		assertFalse(PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, 0, 0));
 	}
 
 	@Test
-	public void testMultiVarWarning() throws Exception {
-		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarMultiVarViolation.java");
-		assertEquals(9, violations.size());
-
-		final var msg = "Local variable should use 'var' instead of an explicit type.";
-
-		assertEquals(7, violations.get(0).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(0).getSeverityLevel());
-		assertEquals(msg, violations.get(0).getMessage());
-
-		assertEquals(12, violations.get(1).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(1).getSeverityLevel());
-		assertEquals(msg, violations.get(1).getMessage());
-
-		assertEquals(17, violations.get(2).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(2).getSeverityLevel());
-		assertEquals(msg, violations.get(2).getMessage());
-
-		assertEquals(22, violations.get(3).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(3).getSeverityLevel());
-		assertEquals(msg, violations.get(3).getMessage());
-
-		assertEquals(26, violations.get(4).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(4).getSeverityLevel());
-		assertEquals(msg, violations.get(4).getMessage());
-
-		assertEquals(27, violations.get(5).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(5).getSeverityLevel());
-		assertEquals(msg, violations.get(5).getMessage());
-
-		assertEquals(31, violations.get(6).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(6).getSeverityLevel());
-		assertEquals(msg, violations.get(6).getMessage());
-
-		assertEquals(35, violations.get(7).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(7).getSeverityLevel());
-		assertEquals(msg, violations.get(7).getMessage());
-
-		assertEquals(39, violations.get(8).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(8).getSeverityLevel());
-		assertEquals(msg, violations.get(8).getMessage());
+	public void testExplicitArrayInitAtDeclarationWithoutInitializer() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "uninitialized")));
+		assertFalse(PreferVarCheck.isExplicitArrayInitAt(root, at[0], at[1]));
 	}
 
 	@Test
-	public void testReflectionClean() throws Exception {
-		assertTrue(BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarReflectionClean.java").isEmpty());
+	public void testExplicitArrayInitAtImplicitArrayInitializer() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "numbers")));
+		assertFalse(PreferVarCheck.isExplicitArrayInitAt(root, at[0], at[1]));
 	}
 
 	@Test
-	public void testReflectionViolation() throws Exception {
-		final var violations = BaseCheckTest.runCheck(PreferVarCheck.class, DIR + "InputPreferVarReflectionViolation.java");
-		assertEquals(4, violations.size());
+	public void testExplicitArrayInitAtPlainDeclaration() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "diamond")));
+		assertFalse(PreferVarCheck.isExplicitArrayInitAt(root, at[0], at[1]));
+	}
 
-		assertEquals(8, violations.getFirst().getLine());
-		assertEquals(SeverityLevel.WARNING, violations.getFirst().getSeverityLevel());
-		assertEquals("Using 'var' with 'emptyList' loses generic type information, consider using an explicit type.", violations.getFirst().getMessage());
+	@Test
+	public void testExplicitArrayInitAtTryResource() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> node.getType() == TokenTypes.RESOURCE));
+		assertFalse(PreferVarCheck.isExplicitArrayInitAt(root, at[0], at[1]));
+	}
 
-		assertEquals(9, violations.get(1).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(1).getSeverityLevel());
-		assertEquals("Using 'var' with 'empty' loses generic type information, consider using an explicit type.", violations.get(1).getMessage());
+	@Test
+	public void testExplicitArrayInitAtUnresolvedPosition() throws Exception {
+		final var root = parseFixture();
+		assertFalse(PreferVarCheck.isExplicitArrayInitAt(root, 0, 0));
+	}
 
-		assertEquals(13, violations.get(2).getLine());
-		assertEquals(SeverityLevel.ERROR, violations.get(2).getSeverityLevel());
-		assertEquals("Local variable must use 'var' instead of an explicit type.", violations.get(2).getMessage());
+	@Test
+	public void testIsConvertibleDeclarationAtBareAssignment() throws Exception {
+		final var root = parseFixture();
+		final Predicate<DetailAST> isStatementAssign =
+				node -> node.getType() == TokenTypes.ASSIGN && parentIs(node, TokenTypes.EXPR);
+		final var assign = locate(root, isStatementAssign);
+		final var at = leafPosition(requireNonNull(assign.getFirstChild(), "assignment has no left-hand side"));
+		assertEquals(Boolean.FALSE, PreferVarCheck.isConvertibleDeclarationAt(root, at[0], at[1]));
+	}
 
-		assertEquals(17, violations.get(3).getLine());
-		assertEquals(SeverityLevel.WARNING, violations.get(3).getSeverityLevel());
-		assertEquals("Prefer explicit type over type arguments on 'emptyList'.", violations.get(3).getMessage());
+	@Test
+	public void testIsConvertibleDeclarationAtField() throws Exception {
+		final var root = parseFixture();
+		final Predicate<DetailAST> isField =
+				node -> varDefNamed(node, "x") && parentIs(node, TokenTypes.OBJBLOCK);
+		final var at = typePosition(locate(root, isField));
+		assertEquals(Boolean.FALSE, PreferVarCheck.isConvertibleDeclarationAt(root, at[0], at[1]));
+	}
+
+	@Test
+	public void testIsConvertibleDeclarationAtForEachVariable() throws Exception {
+		final var root = parseFixture();
+		final Predicate<DetailAST> isForEachVar = node -> node.getType() == TokenTypes.VARIABLE_DEF
+				&& parentIs(node, TokenTypes.FOR_EACH_CLAUSE);
+		final var at = typePosition(locate(root, isForEachVar));
+		assertEquals(Boolean.TRUE, PreferVarCheck.isConvertibleDeclarationAt(root, at[0], at[1]));
+	}
+
+	@Test
+	public void testIsConvertibleDeclarationAtForInit() throws Exception {
+		final var root = parseFixture();
+		final Predicate<DetailAST> isForInitVar = node -> node.getType() == TokenTypes.VARIABLE_DEF
+				&& parentIs(node, TokenTypes.FOR_INIT);
+		final var at = typePosition(locate(root, isForInitVar));
+		assertEquals(Boolean.TRUE, PreferVarCheck.isConvertibleDeclarationAt(root, at[0], at[1]));
+	}
+
+	@Test
+	public void testIsConvertibleDeclarationAtLocal() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "diamond")));
+		assertEquals(Boolean.TRUE, PreferVarCheck.isConvertibleDeclarationAt(root, at[0], at[1]));
+	}
+
+	@Test
+	public void testIsConvertibleDeclarationAtTryResource() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> node.getType() == TokenTypes.RESOURCE));
+		assertEquals(Boolean.TRUE, PreferVarCheck.isConvertibleDeclarationAt(root, at[0], at[1]));
+	}
+
+	@Test
+	public void testIsConvertibleDeclarationAtUnresolvedPosition() throws Exception {
+		final var root = parseFixture();
+		assertNull(PreferVarCheck.isConvertibleDeclarationAt(root, 0, 0));
+	}
+
+	@Test
+	public void testIsMultiVarDeclarationAtBareAssignment() throws Exception {
+		final var root = parseFixture();
+		final Predicate<DetailAST> isStatementAssign =
+				node -> node.getType() == TokenTypes.ASSIGN && parentIs(node, TokenTypes.EXPR);
+		final var assign = locate(root, isStatementAssign);
+		final var at = leafPosition(requireNonNull(assign.getFirstChild(), "assignment has no left-hand side"));
+		assertNull(PreferVarCheck.isMultiVarDeclarationAt(root, at[0], at[1]));
+	}
+
+	@Test
+	public void testIsMultiVarDeclarationAtMultiVar() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "y")));
+		assertEquals(Boolean.TRUE, PreferVarCheck.isMultiVarDeclarationAt(root, at[0], at[1]));
+	}
+
+	@Test
+	public void testIsMultiVarDeclarationAtSingleVar() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "diamond")));
+		assertEquals(Boolean.FALSE, PreferVarCheck.isMultiVarDeclarationAt(root, at[0], at[1]));
+	}
+
+	@Test
+	public void testIsMultiVarDeclarationAtTryResource() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> node.getType() == TokenTypes.RESOURCE));
+		assertEquals(Boolean.FALSE, PreferVarCheck.isMultiVarDeclarationAt(root, at[0], at[1]));
+	}
+
+	@Test
+	public void testIsMultiVarDeclarationAtUnresolvedPosition() throws Exception {
+		final var root = parseFixture();
+		assertNull(PreferVarCheck.isMultiVarDeclarationAt(root, 0, 0));
 	}
 }

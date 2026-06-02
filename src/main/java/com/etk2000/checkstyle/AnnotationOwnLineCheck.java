@@ -1,9 +1,9 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
+import java.util.HashMap;
 import java.util.HashSet;
 
 import javax.annotation.CheckReturnValue;
@@ -16,7 +16,7 @@ import javax.annotation.Nonnull;
  * annotation types, methods, constructors, fields, local variables, enum
  * constants, annotation fields, and package declarations.
  */
-public class AnnotationOwnLineCheck extends AbstractCheck {
+public class AnnotationOwnLineCheck extends AbstractAstCheck {
 	private static final String MSG_BLANK_LINE = "annotation.own.line.blank";
 	private static final String MSG_BLANK_LINE_INTERNAL = "annotation.own.line.blank.internal";
 	private static final String MSG_KEY = "annotation.own.line";
@@ -24,7 +24,6 @@ public class AnnotationOwnLineCheck extends AbstractCheck {
 
 	@CheckReturnValue
 	private static int declarationLine(@Nonnull DetailAST modifiersOrAnnotations) {
-		// for ANNOTATIONS under PACKAGE_DEF or ENUM_CONSTANT_DEF
 		if (modifiersOrAnnotations.getType() == TokenTypes.ANNOTATIONS) {
 			final var parent = modifiersOrAnnotations.getParent();
 			for (var child = parent.getFirstChild(); child != null; child = child.getNextSibling()) {
@@ -34,13 +33,11 @@ public class AnnotationOwnLineCheck extends AbstractCheck {
 			return parent.getLineNo();
 		}
 
-		// for MODIFIERS, find the first non-ANNOTATION sibling within MODIFIERS
 		for (var child = modifiersOrAnnotations.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() != TokenTypes.ANNOTATION)
 				return child.getLineNo();
 		}
 
-		// all children are annotations, so find the next sibling of MODIFIERS in the parent
 		final var nextSibling = modifiersOrAnnotations.getNextSibling();
 		if (nextSibling != null)
 			return nextSibling.getLineNo();
@@ -62,9 +59,9 @@ public class AnnotationOwnLineCheck extends AbstractCheck {
 		return switch (parent.getType()) {
 			case TokenTypes.ANNOTATION_DEF, TokenTypes.ANNOTATION_FIELD_DEF,
 			     TokenTypes.CLASS_DEF, TokenTypes.COMPACT_CTOR_DEF,
-			     TokenTypes.CTOR_DEF, TokenTypes.ENUM_CONSTANT_DEF,
-			     TokenTypes.ENUM_DEF, TokenTypes.INTERFACE_DEF,
-			     TokenTypes.METHOD_DEF, TokenTypes.RECORD_DEF -> true;
+			     TokenTypes.CTOR_DEF, TokenTypes.ENUM_DEF,
+			     TokenTypes.INTERFACE_DEF, TokenTypes.METHOD_DEF,
+			     TokenTypes.RECORD_DEF -> true;
 			case TokenTypes.VARIABLE_DEF -> {
 				final var grandparent = parent.getParent();
 				yield grandparent == null
@@ -77,20 +74,8 @@ public class AnnotationOwnLineCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.ANNOTATIONS, TokenTypes.MODIFIERS};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override
@@ -105,35 +90,29 @@ public class AnnotationOwnLineCheck extends AbstractCheck {
 		final var declLine = declarationLine(ast);
 		final var reportedLines = new HashSet<Integer>();
 
-		// check same-line violations (multiple annotations or annotation + declaration)
+		final var lineCount = new HashMap<Integer, Integer>();
+		for (var annotation : annotations)
+			lineCount.merge(annotation.getLineNo(), 1, Integer::sum);
+
 		for (var annotation : annotations) {
 			final var line = annotation.getLineNo();
 			if (reportedLines.contains(line))
 				continue;
 
-			var sharesLine = false;
-			for (var other : annotations) {
-				if (other != annotation && other.getLineNo() == line) {
-					sharesLine = true;
-					break;
-				}
-			}
-
-			if (sharesLine || line == declLine) {
+			if (lineCount.get(line) > 1 || line == declLine) {
 				log(annotation, MSG_KEY, AstUtil.annotationName(annotation));
 				reportedLines.add(line);
 			}
 		}
 
-		// check blank lines between consecutive annotations, and between last annotation and declaration
 		final var fileLines = getLines();
 		for (var i = 0; i < annotations.size(); ++i) {
 			final var annotation = annotations.get(i);
 			final var startLine = annotation.getLineNo();
 			final var currentLastLine = AstUtil.lastLine(annotation);
 
-			// check for blank lines inside multi-line annotations
-			for (var line = startLine; line < currentLastLine; ++line) {
+			final var internalScanEnd = Math.min(currentLastLine, fileLines.length);
+			for (var line = startLine; line < internalScanEnd; ++line) {
 				if (fileLines[line].isBlank()) {
 					log(line + 1, 0, MSG_BLANK_LINE_INTERNAL, AstUtil.annotationName(annotation));
 					break;
@@ -144,25 +123,18 @@ public class AnnotationOwnLineCheck extends AbstractCheck {
 					? annotations.get(i + 1).getLineNo()
 					: declLine;
 			if (nextLine - currentLastLine > 1) {
-				var inBlockComment = false;
-				for (var line = currentLastLine; line < nextLine - 1; ++line) {
-					final var trimmed = fileLines[line].stripLeading();
-					if (inBlockComment) {
-						if (trimmed.contains("*/"))
-							inBlockComment = false;
-						continue;
-					}
-					if (trimmed.startsWith("/*") && !trimmed.contains("*/"))
-						inBlockComment = true;
-					else if (fileLines[line].isBlank()) {
+				final var betweenScanEnd = Math.min(nextLine - 1, fileLines.length);
+				var state = JavaLineScanner.LexerState.NONE;
+				for (var line = currentLastLine; line < betweenScanEnd; ++line) {
+					if (!state.inBlockComment() && fileLines[line].isBlank()) {
 						log(currentLastLine, annotation.getColumnNo(), MSG_BLANK_LINE, AstUtil.annotationName(annotation));
 						break;
 					}
+					state = JavaLineScanner.stateAfter(fileLines[line], state);
 				}
 			}
 		}
 
-		// check alphabetical order
 		String previousName = null;
 		for (var annotation : annotations) {
 			final var name = AstUtil.annotationName(annotation);

@@ -5,90 +5,161 @@
 <suppressions>
 	<!-- Suppress each check in the directory whose test inputs intentionally violate it -->
 	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]annotationownline[\\/]" />
+	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="AvoidNoArgumentSuperConstructorCall" files="inputs[\\/]avoidnoargumentsuperconstructorcall[\\/]" />
+	<suppress checks="NoTrailingWhitespace" files="inputs[\\/]integrationtrailingws[\\/]" />
 	<suppress checks="ArrayTypeStyleCheck" files="inputs[\\/]arraytypestyle[\\/]" />
 	<suppress checks="ArrayTypeStyleCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="ArrayTypeStyleCheck" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="ArrayTypeStyleCheck" files="inputs[\\/]lambdaparametertype[\\/]" />
 	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]arraytypestyle[\\/]" />
+	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]arraytypestyle[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]arraytypestyle[\\/]" />
 	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]arraytypestyle[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]arraytypestyle[\\/]" />
 	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
+	<suppress checks="PreferPrefixIncrementCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
+	<suppress id="NoDoubleBlankLines" files="inputs[\\/]preferbulkoperation[\\/]" />
 	<suppress checks="AnnotationSameLineCheck" files="inputs[\\/]annotationsameline[\\/]" />
-	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]classstructure[\\/]" />
-	<suppress checks="ConstructorAssignmentOrderCheck" files="inputs[\\/]constructorassign[\\/]" />
-	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]controlflow[\\/]" />
-	<suppress checks="EmptyBodyCheck" files="inputs[\\/]classstructure[\\/]" />
-	<suppress checks="EmptyBodyCheck" files="inputs[\\/]constructorassign[\\/]" />
+	<suppress checks="AnnotationSameLineCheck" files="inputs[\\/]prefervar[\\/]" />
+	<suppress checks="AnnotationSameLineCheck" files="inputs[\\/]recordformatting[\\/]" />
+	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]prefervar[\\/]" />
+	<suppress checks="FinalLocalVariable" files="inputs[\\/]prefervar[\\/]" />
+	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]prefervar[\\/]" />
+	<suppress checks="RedundantArrayCreationCheck" files="inputs[\\/]prefervar[\\/]" />
+	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]recordformatting[\\/]" />
+	<suppress id="NoBlankLineBeforeClosingBrace" files="inputs[\\/]controlflowbraces[\\/]" />
+	<suppress checks="UpperEll" files="inputs[\\/]explicitinitialization[\\/]" />
+	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]annotationownline[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]annotationownline[\\/]" />
+	<suppress id="NoDoubleBlankLines" files="inputs[\\/]annotationownline[\\/]" />
+	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]classstructureorder[\\/]" />
+	<suppress checks="ConstructorAssignmentOrderCheck" files="inputs[\\/]constructorassignmentorder[\\/]" />
+	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]controlflowbraces[\\/]" />
+	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]controlflowbraces[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]classstructureorder[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]constructorassignmentorder[\\/]" />
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]emptybody[\\/]" />
 	<suppress checks="EmptySwitchCheck" files="inputs[\\/]emptyswitch[\\/]" />
-	<suppress checks="PreferExactAssertionCheck" files="inputs[\\/]exactassertion[\\/]" />
-	<suppress checks="PreferImportCheck" files="inputs[\\/]exactassertion[\\/]" />
+	<suppress checks="PreferExactAssertionCheck" files="inputs[\\/]preferexactassertion[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]preferexactassertion[\\/]" />
+	<suppress checks="ExplicitInitialization" files="inputs[\\/]explicitinitialization[\\/]" />
+	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]explicitinitialization[\\/]" />
+	<suppress checks="NumericalPrefixesInfixesSuffixesCharacterCase" files="inputs[\\/]explicitinitialization[\\/]" />
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]fieldsorting[\\/]" />
-	<suppress checks="InfiniteEmptyLoopCheck" files="inputs[\\/]emptybody[\\/]" />
+	<suppress checks="FinalLocalVariable" files="inputs[\\/]finallocalvariable[\\/]" />
+	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]finallocalvariable[\\/]" />
+	<suppress checks="EmptyLineSeparator" files="inputs[\\/]finallocalvariable[\\/]" />
+	<suppress id="NoDoubleBlankLines" files="inputs[\\/]finallocalvariable[\\/]" />
+	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]infiniteemptyloop[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]infiniteemptyloop[\\/]" />
+	<suppress checks="InfiniteEmptyLoopCheck" files="inputs[\\/]infiniteemptyloop[\\/]" />
 	<suppress checks="InstanceofBeforeCastCheck" files="inputs[\\/]instanceofbeforecast[\\/]" />
 	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]jitinefficiency[\\/]" />
 	<suppress checks="JitInefficiencyCheck" files="inputs[\\/]jitinefficiency[\\/]" />
-	<suppress checks="JitInefficiencyCheck" files="inputs[\\/]specificapi[\\/]" />
+	<suppress checks="JitInefficiencyCheck" files="inputs[\\/]preferspecificapi[\\/]" />
 	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]jitinefficiency[\\/]" />
+	<suppress checks="OneStatementPerLine" files="inputs[\\/]jitinefficiency[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]jitinefficiency[\\/]" />
+	<suppress checks="PreferPrefixIncrementCheck" files="inputs[\\/]jitinefficiency[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]jitinefficiency[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]jitinefficiency[\\/]" />
 	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]jitinefficiency[\\/]" />
-	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]methodorder[\\/]" />
-	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]overload[\\/]" />
-	<suppress checks="MultilineCallFormattingCheck" files="inputs[\\/]multilinecall[\\/]" />
-	<suppress checks="NoArrayTrailingCommaCheck" files="inputs[\\/]arraycomma[\\/]" />
-	<suppress checks="NoEnumTrailingSemicolonCheck" files="inputs[\\/]enumsemicolon[\\/]" />
-	<suppress checks="NoBlankLineBetweenSingleCasesCheck" files="inputs[\\/]singlecase[\\/]" />
-	<suppress checks="NoCaseBracesCheck" files="inputs[\\/]casebraces[\\/]" />
+	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]methodalphabeticalorder[\\/]" />
+	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]overloadmethodorder[\\/]" />
+	<suppress checks="MultilineCallFormattingCheck" files="inputs[\\/]multilinecallformatting[\\/]" />
+	<suppress checks="MultilineCallFormattingCheck" files="inputs[\\/]preferexactassertion[\\/]" />
+	<suppress checks="NoArrayTrailingCommaCheck" files="inputs[\\/]noarraytrailingcomma[\\/]" />
+	<suppress checks="NoEnumTrailingComma" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="NoEnumTrailingSemicolonCheck" files="inputs[\\/]noenumtrailingsemicolon[\\/]" />
+	<suppress checks="UpperEll" files="inputs[\\/]upperell[\\/]" />
+	<suppress checks="NoBlankLineBetweenSingleCasesCheck" files="inputs[\\/]noblanklinebetweensinglecases[\\/]" />
+	<suppress checks="NoCaseBracesCheck" files="inputs[\\/]controlflowbraces[\\/]" />
+	<suppress checks="NoCaseBracesCheck" files="inputs[\\/]nocasebraces[\\/]" />
+	<suppress checks="NoCaseBracesCheck" files="inputs[\\/]noblanklinebetweensinglecases[\\/]" />
+	<suppress checks="LambdaParameterTypeCheck" files="inputs[\\/]arraytypestyle[\\/]" />
 	<suppress checks="LambdaParameterTypeCheck" files="inputs[\\/]nofinalparameters[\\/]" />
 	<suppress checks="LambdaParameterTypeCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
 	<suppress checks="NoFinalParametersCheck" files="inputs[\\/]nofinalparameters[\\/]" />
 	<suppress checks="NoFinalParametersCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="NoFinalParametersCheck" files="inputs[\\/]regex[\\/]" />
+	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]constructorassignmentorder[\\/]" />
 	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]jitinefficiency[\\/]" />
-	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]unnecessarythis[\\/]" />
-	<suppress checks="OverloadMethodOrderCheck" files="inputs[\\/]overload[\\/]" />
+	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]markermatcher[\\/]" />
+	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]nounnecessarythis[\\/]" />
+	<suppress checks="NoUnnecessaryThisCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
+	<suppress checks="OverloadMethodOrderCheck" files="inputs[\\/]overloadmethodorder[\\/]" />
 	<suppress checks="PreferBulkOperationCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
-	<suppress checks="PreferCollectionInterfaceCheck" files="inputs[\\/]collectioninterface[\\/]" />
-	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]directbooleanreturn[\\/]" />
-	<suppress checks="EmptyBodyCheck" files="inputs[\\/]directbooleanreturn[\\/]" />
-	<suppress checks="PreferDirectBooleanReturnCheck" files="inputs[\\/]directbooleanreturn[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
+	<suppress checks="PreferCollectionInterfaceCheck" files="inputs[\\/]prefercollectioninterface[\\/]" />
+	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]preferdirectbooleanreturn[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]preferdirectbooleanreturn[\\/]" />
+	<suppress checks="PreferDirectBooleanReturnCheck" files="inputs[\\/]preferdirectbooleanreturn[\\/]" />
 	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]preferdowhile[\\/]" />
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]preferdowhile[\\/]" />
 	<suppress checks="PreferDoWhileCheck" files="inputs[\\/]preferdowhile[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]preferimport[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]preferlambda[\\/]" />
-	<suppress checks="PreferLiteralSuffixCheck" files="inputs[\\/]literalsuffix[\\/]" />
-	<suppress checks="PreferMathMethodCheck" files="inputs[\\/]mathmethod[\\/]" />
-	<suppress checks="PreferPatternMatchingInstanceofCheck" files="inputs[\\/]patterninstanceof[\\/]" />
-	<suppress checks="PreferPrefixIncrementCheck" files="inputs[\\/]prefix[\\/]" />
+	<suppress checks="PreferLiteralSuffixCheck" files="inputs[\\/]preferliteralsuffix[\\/]" />
+	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]prefermathmethod[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]prefermathmethod[\\/]" />
+	<suppress checks="FinalLocalVariable" files="inputs[\\/]prefermathmethod[\\/]" />
+	<suppress checks="PreferMathMethodCheck" files="inputs[\\/]prefermathmethod[\\/]" />
+	<suppress checks="PreferPatternMatchingInstanceofCheck" files="inputs[\\/]preferpatternmatchinginstanceof[\\/]" />
+	<suppress checks="PreferPrefixIncrementCheck" files="inputs[\\/]preferprefixincrement[\\/]" />
 	<suppress checks="PreferRecordCheck" files="inputs[\\/]preferrecord[\\/]" />
-	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]specificapi[\\/]" />
-	<suppress checks="PreferStandardCharsetsCheck" files="inputs[\\/]standardcharsets[\\/]" />
+	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]preferspecificapi[\\/]" />
+	<suppress checks="PreferStandardCharsetsCheck" files="inputs[\\/]preferstandardcharsets[\\/]" />
 	<suppress checks="PreferStaticImportCheck" files="inputs[\\/]preferstaticimport[\\/]" />
 	<suppress checks="PreferStaticImportConstantCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
-	<suppress checks="PreferStaticImportConstantCheck" files="inputs[\\/]standardcharsets[\\/]" />
+	<suppress checks="PreferStaticImportConstantCheck" files="inputs[\\/]preferstandardcharsets[\\/]" />
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
 	<suppress checks="JitInefficiencyCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="NoEnumTrailingSemicolonCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="RecordFormattingCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="UnusedImports" files="inputs[\\/]preferstaticimportconstant[\\/]cases\.out\.java" />
+	<suppress id="NoBlankLineAfterClassBrace" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress id="NoBlankLineBeforeClosingBrace" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress id="NoDoubleBlankLines" files="inputs[\\/]preferstaticimportconstant[\\/]cases\.(in|out)\.java" />
+	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="EmptyLineSeparatorCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="FieldSortingCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="FinalLocalVariableCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="OneStatementPerLineCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="RightCurlyCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="UseEnhancedSwitchCheck" files="inputs[\\/]preferstaticimportconstant[\\/]" />
+	<suppress checks="UseEnhancedSwitchCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="RecordFormattingCheck" files="inputs[\\/]recordformatting[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]recordformatting[\\/]" />
 	<suppress checks="RedundantArrayCreationCheck" files="inputs[\\/]redundantarraycreation[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]redundantarraycreation[\\/]" />
-	<suppress checks="RedundantEqualityBranchCheck" files="inputs[\\/]redundantequality[\\/]" />
-	<suppress checks="PreferMathMethodCheck" files="inputs[\\/]redundantequality[\\/]" />
-	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]annotationsyntax[\\/]" />
+	<suppress checks="NoArrayTrailingCommaCheck" files="inputs[\\/]redundantarraycreation[\\/]" />
+	<suppress checks="RedundantEqualityBranchCheck" files="inputs[\\/]redundantequalitybranch[\\/]" />
+	<suppress checks="PreferMathMethodCheck" files="inputs[\\/]redundantequalitybranch[\\/]" />
+	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]redundantequalitybranch[\\/]" />
+	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]redundantannotationsyntax[\\/]" />
+	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]redundantannotationsyntax[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]redundantannotationsyntax[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]preferrecord[\\/]" />
 	<suppress checks="RedundantCastCheck" files="inputs[\\/]redundantcast[\\/]" />
-	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]redundantsuffix[\\/]" />
-	<suppress checks="SwitchCaseOrderCheck" files="inputs[\\/]switchorder[\\/]" />
+	<suppress checks="RedundantModifier" files="inputs[\\/]redundantmodifier[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]redundantmodifier[\\/]" />
+	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]redundantnumericsuffix[\\/]" />
+	<suppress checks="UpperEll" files="inputs[\\/]redundantnumericsuffix[\\/]" />
+	<suppress checks="SwitchCaseOrderCheck" files="inputs[\\/]switchcaseorder[\\/]" />
+	<suppress checks="UnusedImports" files="inputs[\\/]unusedimports[\\/]" />
 
 	<!-- Suppress regex-based checks in the regex test directory (violation files intentionally break them) -->
 	<suppress id="BlankLineAfterBreak" files="inputs[\\/]regex[\\/]" />
@@ -102,83 +173,108 @@
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]preferrecord[\\/]" />
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]regex[\\/]" />
 
-	<suppress checks="PreferExactAssertionCheck" files="inputs[\\/]specificapi[\\/]" />
+	<suppress checks="PreferExactAssertionCheck" files="inputs[\\/]preferspecificapi[\\/]" />
 
 	<!-- Cross-check suppressions: test inputs for one check that naturally use constructs violating another -->
 	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]annotationsameline[\\/]" />
-	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]redundantsuffix[\\/]" />
+	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]redundantnumericsuffix[\\/]" />
 	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]emptybody[\\/]" />
-	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]patterninstanceof[\\/]" />
-	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]prefix[\\/]" />
+	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]preferpatternmatchinginstanceof[\\/]" />
+	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]preferprefixincrement[\\/]" />
 	<suppress checks="ControlFlowBracesCheck" files="inputs[\\/]regex[\\/]" />
 	<suppress checks="CovariantEquals" files="inputs[\\/]preferrecord[\\/]" />
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]astutil[\\/]" />
-	<suppress checks="EmptyBodyCheck" files="inputs[\\/]controlflow[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]controlflowbraces[\\/]" />
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]preferrecord[\\/]" />
-	<suppress checks="EmptyBodyCheck" files="inputs[\\/]specificapi[\\/]" />
-	<suppress checks="EmptyBodyCheck" files="inputs[\\/]unnecessarythis[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]preferspecificapi[\\/]" />
+	<suppress checks="EmptyBodyCheck" files="inputs[\\/]nounnecessarythis[\\/]" />
 	<suppress checks="EmptyLineSeparator" files="inputs[\\/]annotationownline[\\/]" />
-	<suppress checks="EmptyLineSeparator" files="inputs[\\/]redundantsuffix[\\/]" />
+	<suppress checks="EmptyLineSeparator" files="inputs[\\/]preferbulkoperation[\\/]" />
+	<suppress checks="EmptyLineSeparator" files="inputs[\\/]redundantnumericsuffix[\\/]" />
 	<suppress checks="EmptyLineSeparator" files="inputs[\\/]regex[\\/]" />
-	<suppress checks="EmptySwitchCheck" files="inputs[\\/]switchorder[\\/]" />
+	<suppress checks="EmptySwitchCheck" files="inputs[\\/]switchcaseorder[\\/]" />
 	<suppress checks="ExplicitInitialization" files="inputs[\\/]prefervar[\\/]" />
-	<suppress checks="ExplicitInitialization" files="inputs[\\/]redundantsuffix[\\/]" />
+	<suppress checks="ExplicitInitialization" files="inputs[\\/]redundantnumericsuffix[\\/]" />
 	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
-	<suppress checks="FieldSortingCheck" files="inputs[\\/]annotationsyntax[\\/]" />
+	<suppress checks="FieldSortingCheck" files="inputs[\\/]redundantannotationsyntax[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]annotationownline[\\/]" />
-	<suppress checks="FieldSortingCheck" files="inputs[\\/]multilinecall[\\/]" />
+	<suppress checks="FieldSortingCheck" files="inputs[\\/]multilinecallformatting[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]preferrecord[\\/]" />
-	<suppress checks="FieldSortingCheck" files="inputs[\\/]redundantsuffix[\\/]" />
+	<suppress checks="FieldSortingCheck" files="inputs[\\/]redundantnumericsuffix[\\/]" />
+	<suppress checks="IllegalSymbol" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="IllegalSymbol" files="inputs[\\/]prefervar[\\/]" />
-	<suppress checks="InstanceofBeforeCastCheck" files="inputs[\\/]patterninstanceof[\\/]" />
-	<suppress checks="NoBlankLineBetweenSingleCasesCheck" files="inputs[\\/]switchorder[\\/]" />
-	<suppress checks="NumericalPrefixesInfixesSuffixesCharacterCase" files="inputs[\\/]redundantsuffix[\\/]" />
-	<suppress checks="OneStatementPerLine" files="InputControlFlowOneLiner\.java" />
+	<suppress checks="InstanceofBeforeCastCheck" files="inputs[\\/]preferpatternmatchinginstanceof[\\/]" />
+	<suppress checks="NoBlankLineBetweenSingleCasesCheck" files="inputs[\\/]switchcaseorder[\\/]" />
+	<suppress checks="NumericalPrefixesInfixesSuffixesCharacterCase" files="inputs[\\/]redundantnumericsuffix[\\/]" />
+	<suppress checks="NumericalPrefixesInfixesSuffixesCharacterCase" files="inputs[\\/]prefervar[\\/]" />
+	<suppress checks="OneStatementPerLine" files="inputs[\\/]avoidnoargumentsuperconstructorcall[\\/]" />
+	<suppress checks="OneStatementPerLine" files="inputs[\\/]constructorassignmentorder[\\/]" />
+	<!-- a member sharing the enum's constant-list terminator line (`ALPHA; static final int VAL = 1;`)
+	     is two statements on one line by construction; it is the only shape that reproduces the
+	     suffix indent and code-bearing-suffix defects those slices pin -->
+	<!-- FieldConsolidationCheck's same-line field pair guard is about two declarations sharing one
+	     physical line, so the fixture that pins it is two statements on one line by construction -->
+	<suppress checks="OneStatementPerLine" files="inputs[\\/]fieldconsolidation[\\/]" />
+	<suppress checks="OneStatementPerLine" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="OneStatementPerLine" files="inputs[\\/]controlflowbraces[\\/]" />
+	<suppress checks="OneStatementPerLine" files="inputs[\\/]preferexactassertion[\\/]" />
+	<suppress checks="OneStatementPerLine" files="inputs[\\/]preferbulkoperation[\\/]" />
+	<suppress checks="OneStatementPerLine" files="inputs[\\/]prefervar[\\/]" />
+	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]preferexactassertion[\\/]" />
+	<suppress id="NoTrailingNewline" files="inputs[\\/]preferexactassertion[\\/]cases\.fixed\.java" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]astutil[\\/]" />
-	<suppress checks="PreferImportCheck" files="inputs[\\/]collectioninterface[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]prefercollectioninterface[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]preferlambda[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]preferrecord[\\/]" />
-	<suppress checks="PreferImportCheck" files="inputs[\\/]multilinecall[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]multilinecallformatting[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]redundantcast[\\/]" />
-	<suppress checks="PreferImportCheck" files="inputs[\\/]specificapi[\\/]" />
-	<suppress checks="PreferImportCheck" files="inputs[\\/]standardcharsets[\\/]" />
-	<suppress checks="PreferImportCheck" files="inputs[\\/]switchorder[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]preferspecificapi[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]preferstandardcharsets[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]switchcaseorder[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="FinalLocalVariable" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="ExplicitInitialization" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="PreferRecordCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
-	<suppress checks="PreferLambdaCheck" files="inputs[\\/]multilinecall[\\/]" />
+	<suppress checks="PreferLambdaCheck" files="inputs[\\/]multilinecallformatting[\\/]" />
+	<suppress checks="JitInefficiencyCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="PreferLambdaCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="PreferLiteralSuffixCheck" files="inputs[\\/]redundantcast[\\/]" />
 	<suppress checks="PreferPatternMatchingInstanceofCheck" files="inputs[\\/]instanceofbeforecast[\\/]" />
 	<suppress checks="PreferPrefixIncrementCheck" files="inputs[\\/]redundantcast[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]astutil[\\/]" />
-	<suppress checks="PreferVarCheck" files="inputs[\\/]controlflow[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]controlflowbraces[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]emptybody[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]nofinalparameters[\\/]" />
 	<suppress checks="RedundantCastCheck" files="inputs[\\/]prefervar[\\/]" />
+	<suppress checks="RedundantCastCheck" files="inputs[\\/]upperell[\\/]" />
 	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]prefervar[\\/]" />
-	<suppress checks="PreferVarCheck" files="inputs[\\/]literalsuffix[\\/]" />
+	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]upperell[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]preferliteralsuffix[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]redundantcast[\\/]" />
-	<suppress checks="PreferVarCheck" files="inputs[\\/]redundantsuffix[\\/]" />
-	<suppress checks="PreferVarCheck" files="inputs[\\/]standardcharsets[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]redundantnumericsuffix[\\/]" />
+	<suppress checks="PreferVarCheck" files="inputs[\\/]preferstandardcharsets[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]instanceofbeforecast[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]preferbulkoperation[\\/]" />
-	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]multilinecall[\\/]" />
+	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]multilinecallformatting[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]preferstaticimport[\\/]" />
 	<suppress checks="PreferSpecificApiCheck" files="inputs[\\/]prefervar[\\/]" />
-	<suppress checks="RedundantCastCheck" files="inputs[\\/]literalsuffix[\\/]" />
-	<suppress checks="RedundantCastCheck" files="inputs[\\/]redundantsuffix[\\/]" />
+	<suppress checks="RedundantCastCheck" files="inputs[\\/]preferliteralsuffix[\\/]" />
+	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]preferliteralsuffix[\\/]" />
+	<suppress checks="RedundantCastCheck" files="inputs[\\/]redundantnumericsuffix[\\/]" />
 	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]redundantcast[\\/]" />
-	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]switchorder[\\/]" />
-	<suppress checks="SimplifyBooleanExpression" files="inputs[\\/]multilinecall[\\/]" />
-	<suppress checks="SimplifyBooleanExpression" files="inputs[\\/]patterninstanceof[\\/]" />
+	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]switchcaseorder[\\/]" />
+	<suppress checks="SimplifyBooleanExpression" files="inputs[\\/]multilinecallformatting[\\/]" />
+	<suppress checks="SimplifyBooleanExpression" files="inputs[\\/]preferpatternmatchinginstanceof[\\/]" />
 	<suppress checks="UnnecessaryNullCheckWithInstanceOf" files="inputs[\\/]instanceofbeforecast[\\/]" />
-	<suppress checks="UseEnhancedSwitch" files="inputs[\\/]casebraces[\\/]" />
+	<suppress checks="UseEnhancedSwitch" files="inputs[\\/]nocasebraces[\\/]" />
 	<suppress checks="UseEnhancedSwitch" files="inputs[\\/]emptyswitch[\\/]" />
 	<suppress checks="UseEnhancedSwitch" files="inputs[\\/]regex[\\/]" />
-	<suppress checks="UseEnhancedSwitch" files="inputs[\\/]singlecase[\\/]" />
-	<suppress checks="UseEnhancedSwitch" files="inputs[\\/]switchorder[\\/]" />
+	<suppress checks="UseEnhancedSwitch" files="inputs[\\/]noblanklinebetweensinglecases[\\/]" />
+	<suppress checks="UseEnhancedSwitch" files="inputs[\\/]switchcaseorder[\\/]" />
 </suppressions>

@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -21,7 +20,7 @@ import javax.annotation.Nonnull;
  *       parenthesized ({@code (x) ->})</li>
  * </ul>
  */
-public class LambdaParameterTypeCheck extends AbstractCheck {
+public class LambdaParameterTypeCheck extends AbstractAstCheck {
 	static final String MSG_IMPLICIT = "lambda.param.use.implicit";
 	static final String MSG_PARENS = "lambda.param.unnecessary.parens";
 	static final String MSG_VAR = "lambda.param.use.var";
@@ -84,20 +83,8 @@ public class LambdaParameterTypeCheck extends AbstractCheck {
 
 	@Nonnull
 	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
-	@Nonnull
-	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.LAMBDA};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override

@@ -123,7 +123,14 @@ def main():
 		"  4. Boundary pairs (nearby clean/violation values)\n"
 		"  5. Edge cases (empty, nested, unusual constructs)\n"
 		"  6. Fixer return paths (null, SkipResult, FixResult triggers)\n\n"
-		"Write actual code snippets, not descriptions. The matrix IS the plan."
+		"Write actual code snippets, not descriptions. The matrix IS the plan.\n\n"
+		"IMPORTANT - the matrix must land in a COMPLETED turn BEFORE the edit:\n"
+		"  - This hook reads the transcript FILE, so the message you are writing\n"
+		"    right now is not in it yet. Presenting the matrix and calling Edit in\n"
+		"    the same turn is blocked again. Present it, end the turn, then edit.\n"
+		"  - Only your own assistant-role text counts. A test-matrix-author\n"
+		"    subagent report arrives as a tool result, not as your message, so it\n"
+		"    does NOT unblock this. Restate the matrix in your own message."
 	)
 	json.dump({
 		"hookSpecificOutput": {

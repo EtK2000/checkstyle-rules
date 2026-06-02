@@ -1,6 +1,5 @@
 package com.etk2000.checkstyle;
 
-import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -19,7 +18,7 @@ import javax.annotation.Nullable;
  *     <li>A parameter or local variable with the same name exists (shadowing)</li>
  * </ul>
  */
-public class NoUnnecessaryThisCheck extends AbstractCheck {
+public class NoUnnecessaryThisCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "no.unnecessary.this";
 
 	@CheckReturnValue
@@ -85,29 +84,10 @@ public class NoUnnecessaryThisCheck extends AbstractCheck {
 		return null;
 	}
 
-	@CheckReturnValue
-	private static boolean isFieldAssignment(@Nonnull DetailAST dot) {
-		final var parent = dot.getParent();
-		return parent != null && parent.getType() == TokenTypes.ASSIGN
-				&& parent.getFirstChild() == dot;
-	}
-
-	@Nonnull
-	@Override
-	public int[] getAcceptableTokens() {
-		return getDefaultTokens();
-	}
-
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.DOT};
-	}
-
-	@Nonnull
-	@Override
-	public int[] getRequiredTokens() {
-		return getDefaultTokens();
 	}
 
 	@Override
@@ -116,18 +96,17 @@ public class NoUnnecessaryThisCheck extends AbstractCheck {
 		if (firstChild == null || firstChild.getType() != TokenTypes.LITERAL_THIS)
 			return;
 
-		// get the member name after this.
 		final var memberIdent = firstChild.getNextSibling();
 		if (memberIdent == null || memberIdent.getType() != TokenTypes.IDENT)
 			return;
 
 		final var memberName = memberIdent.getText();
 
-		// allowed: this.field = value (assignment)
-		if (isFieldAssignment(ast))
+		final var assignParent = ast.getParent();
+		if (assignParent != null && assignParent.getType() == TokenTypes.ASSIGN
+				&& assignParent.getFirstChild() == ast)
 			return;
 
-		// allowed: shadowing — a parameter or local variable with the same name
 		final var enclosing = findEnclosingMethodOrCtor(ast);
 		if (enclosing != null && collectLocalNames(enclosing).contains(memberName))
 			return;

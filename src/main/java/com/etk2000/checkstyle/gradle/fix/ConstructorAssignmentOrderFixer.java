@@ -1,440 +1,295 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import com.etk2000.checkstyle.AstUtil;
+import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck;
+import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck.Assignment;
+import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck.BodyClassification;
+import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck.LocalVar;
+
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Pattern;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Fixer for {@code ConstructorAssignmentOrderCheck}. Sorts {@code this.xxx = ...}
- * assignments within constructor and initializer bodies by group (simple, multi-line,
- * variable-dependent) then alphabetically within each group.
+ * Fixer for {@code ConstructorAssignmentOrderCheck}. Reuses the check's
+ * {@link ConstructorAssignmentOrderCheck#classify AST classifier} to read the constructor/
+ * initializer body's {@code this.xxx = ...} assignments and local-variable declarations, then
+ * reorders them by group (simple, multi-line, variable-dependent), sub-group (variable
+ * declaration order), and field name, honoring field-to-field dependencies. Each local variable
+ * is emitted just before the first assignment that references it; an unreferenced one is moved to
+ * the tail. Returns a {@link SkipResult} when a comment or a non-assignment statement sits within
+ * the reordered region (either would be dropped or have its execution order changed).
  */
 class ConstructorAssignmentOrderFixer implements CheckstyleFixer {
-	private record AssignmentEntry(
-			@Nonnull String fieldName,
+	private record ClassifiedBody(@Nonnull DetailAST body, @Nonnull BodyClassification classification) {}
+
+	private static void addCoverage(@Nonnull int[] cover, int regionStart, int start, int end) {
+		for (var i = start; i <= end; ++i) {
+			final var idx = i - regionStart;
+			if (idx >= 0 && idx < cover.length)
+				++cover[idx];
+		}
+	}
+
+	/**
+	 * Computes each region var's emission slot: the index in {@code ordered} of the earliest
+	 * assignment that needs it, either directly or through another var that needs it, or
+	 * {@link Integer#MAX_VALUE} when no assignment needs it (emitted at the tail). A var dependency
+	 * always points at an earlier declaration, so propagating a dependent's slot down to the var it
+	 * reads (processing later declarations first) reaches a fixed point in one backward pass.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static int[] emissionSlots(@Nonnull List<Assignment> ordered, @Nonnull List<LocalVar> regionVars) {
+		final var slot = new int[regionVars.size()];
+		for (var i = 0; i < regionVars.size(); ++i) {
+			slot[i] = Integer.MAX_VALUE;
+			for (var a = 0; a < ordered.size(); ++a) {
+				if (ordered.get(a).usedVars().contains(regionVars.get(i).name())) {
+					slot[i] = a;
+					break;
+				}
+			}
+		}
+		for (var i = regionVars.size() - 1; i >= 0; --i) {
+			for (var j = i + 1; j < regionVars.size(); ++j) {
+				if (regionVars.get(j).usedVars().contains(regionVars.get(i).name()))
+					slot[i] = Math.min(slot[i], slot[j]);
+			}
+		}
+		return slot;
+	}
+
+	/**
+	 * Extends {@code regionStart} upward over the contiguous run of local-variable declarations
+	 * immediately above the first assignment (blank lines between them are skipped). A leading var
+	 * group must travel with the assignment that uses it, so it belongs to the reordered region.
+	 */
+	@CheckReturnValue
+	private static int extendOverLeadingVars(
 			@Nonnull List<String> lines,
-			int group,
-			int subGroup,
-			@Nonnull Set<String> referencedFields
-	) {}
-
-	private record LocalVar(@Nonnull String name, @Nonnull String line, int declOrder) {}
-
-	private static final int GROUP_MULTI = 1;
-	private static final int GROUP_SIMPLE = 0;
-	private static final int GROUP_VAR = 2;
-	private static final Pattern LOCAL_VAR_PATTERN = Pattern.compile(
-			"^\\s*(?:final\\s+)?(?:var|boolean|byte|char|double|float|int|long|short"
-					+ "|[A-Z]\\w*(?:<[^>]*>)?)(?:\\[])*\\s+(\\w+)\\s*="
-	);
-	private static final Pattern THIS_ASSIGN_PATTERN = Pattern.compile(
-			"^\\s*this\\.(\\w+)\\s*="
-	);
-
-	@CheckReturnValue
-	private static int assignmentGroup(
-			@Nonnull List<String> assignLines,
-			@Nonnull String rhsText,
-			@Nonnull Map<String, Integer> localVarOrder
+			@Nonnull List<LocalVar> localVars,
+			int regionStart,
+			int bodyStartLine
 	) {
-		for (var varName : localVarOrder.keySet()) {
-			if (containsWord(rhsText, varName))
-				return GROUP_VAR;
-		}
-		return assignLines.size() > 1 ? GROUP_MULTI : GROUP_SIMPLE;
-	}
-
-	@CheckReturnValue
-	private static int assignmentSubGroup(
-			@Nonnull String rhsText,
-			@Nonnull Map<String, Integer> localVarOrder
-	) {
-		var max = -1;
-		for (var entry : localVarOrder.entrySet()) {
-			if (containsWord(rhsText, entry.getKey()))
-				max = Math.max(max, entry.getValue());
-		}
-		return max;
-	}
-
-	@CheckReturnValue
-	private static boolean containsWord(@Nonnull String text, @Nonnull String word) {
-		var idx = text.indexOf(word);
-		while (idx >= 0) {
-			final var before = idx == 0 || !Character.isJavaIdentifierPart(text.charAt(idx - 1));
-			final var after = idx + word.length() >= text.length()
-					|| !Character.isJavaIdentifierPart(text.charAt(idx + word.length()));
-			if (before && after)
-				return true;
-			idx = text.indexOf(word, idx + 1);
-		}
-		return false;
-	}
-
-	@CheckReturnValue
-	@Nonnull
-	private static Set<String> extractFieldRefs(
-			@Nonnull String rhsText,
-			@Nonnull Set<String> assignedFieldNames
-	) {
-		final var refs = new LinkedHashSet<String>();
-		for (var fieldName : assignedFieldNames) {
-			if (containsWord(rhsText, "this." + fieldName))
-				refs.add(fieldName);
-		}
-		return refs;
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static String extractLocalVarName(@Nonnull String line) {
-		final var matcher = LOCAL_VAR_PATTERN.matcher(line);
-		return matcher.find() ? matcher.group(1) : null;
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static String extractThisFieldName(@Nonnull String line) {
-		final var matcher = THIS_ASSIGN_PATTERN.matcher(line);
-		return matcher.find() ? matcher.group(1) : null;
-	}
-
-	@CheckReturnValue
-	private static int findBodyEnd(@Nonnull List<String> lines, int afterOpen) {
-		var depth = 1;
-		var inBlockComment = false;
-		var inString = false;
-		var inChar = false;
-		for (var i = afterOpen; i < lines.size(); ++i) {
-			final var line = lines.get(i);
-			for (var j = 0; j < line.length(); ++j) {
-				final var c = line.charAt(j);
-				if (inBlockComment) {
-					if (c == '*' && j + 1 < line.length() && line.charAt(j + 1) == '/') {
-						inBlockComment = false;
-						++j;
-					}
-					continue;
-				}
-				if (inString) {
-					if (c == '"' && !isEscaped(line, j))
-						inString = false;
-				}
-				else if (inChar) {
-					if (c == '\'' && !isEscaped(line, j))
-						inChar = false;
-				}
-				else if (c == '"')
-					inString = true;
-				else if (c == '\'')
-					inChar = true;
-				else if (c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '/')
-					break;
-				else if (c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '*') {
-					inBlockComment = true;
-					++j;
-				}
-				else if (c == '{')
-					++depth;
-				else if (c == '}') {
-					--depth;
-					if (depth == 0)
-						return i;
-				}
-			}
-		}
-		return -1;
-	}
-
-	/**
-	 * Scans backward from the line before {@code fromLine} to find the enclosing
-	 * body opening brace. Skips the violation line itself because it may contain
-	 * braces from anonymous classes or lambdas within an assignment. Also skips
-	 * braces inside string literals by rejecting lines where the opening brace appears
-	 * after an {@code =} (field/variable initializers).
-	 */
-	@CheckReturnValue
-	private static int findBodyStart(@Nonnull List<String> lines, int fromLine) {
-		var depth = 0;
-		for (var i = fromLine - 1; i >= 0; --i) {
-			final var line = lines.get(i);
-			for (var j = line.length() - 1; j >= 0; --j) {
-				final var c = line.charAt(j);
-				if (c == '{' || c == '}') {
-					if (isInsideString(line, j))
-						continue;
-					if (c == '}')
-						++depth;
-					else if (depth == 0)
-						return i;
-					else
-						--depth;
-				}
-			}
-		}
-		return -1;
-	}
-
-	@CheckReturnValue
-	private static boolean isEscaped(@Nonnull String line, int pos) {
-		var backslashes = 0;
-		for (var i = pos - 1; i >= 0 && line.charAt(i) == '\\'; --i)
-			++backslashes;
-		return backslashes % 2 != 0;
-	}
-
-	/**
-	 * Checks if the character at {@code pos} is inside a string literal by
-	 * counting unescaped double-quote characters before it on the same line.
-	 * An odd count means the position is inside a string.
-	 */
-	@CheckReturnValue
-	private static boolean isInsideString(@Nonnull String line, int pos) {
-		var quotes = 0;
-		for (var i = 0; i < pos; ++i) {
-			final var c = line.charAt(i);
-			if (c == '"' && !isEscaped(line, i))
-				++quotes;
-			else if (c == '/' && i + 1 < line.length() && line.charAt(i + 1) == '/')
+		var start = regionStart;
+		for (;;) {
+			var i = start - 1;
+			while (i > bodyStartLine && lines.get(i).isBlank())
+				--i;
+			if (i <= bodyStartLine)
 				break;
+			final var lv = varEndingAt(localVars, i);
+			if (lv == null || lv.startLine() <= bodyStartLine)
+				break;
+			start = lv.startLine();
 		}
-		return quotes % 2 != 0;
+		return start;
 	}
 
 	/**
-	 * Reads a (possibly multi-line) statement starting at {@code startIdx},
-	 * tracking brace and paren depth. Returns the end index (inclusive).
+	 * Orders the assignments by group, sub-group, and field name, then refines that order with a
+	 * stable topological sort so a field is assigned before any assignment that reads it (Kahn's,
+	 * always taking the assignment earliest in the initial order among those with no unplaced
+	 * dependency). Returns {@code null} when a field-dependency cycle leaves some assignment
+	 * permanently blocked, since no order satisfies every dependency.
 	 */
 	@CheckReturnValue
-	private static int readStatementEnd(@Nonnull List<String> lines, int startIdx) {
-		var parenDepth = 0;
-		var braceDepth = 0;
-		var inBlockComment = false;
-		var inString = false;
-		var inChar = false;
-		for (var i = startIdx; i < lines.size(); ++i) {
-			final var line = lines.get(i);
-			for (var j = 0; j < line.length(); ++j) {
-				final var c = line.charAt(j);
-				if (inBlockComment) {
-					if (c == '*' && j + 1 < line.length() && line.charAt(j + 1) == '/') {
-						inBlockComment = false;
-						++j;
-					}
-					continue;
-				}
-				if (inString) {
-					if (c == '"' && !isEscaped(line, j))
-						inString = false;
-				}
-				else if (inChar) {
-					if (c == '\'' && !isEscaped(line, j))
-						inChar = false;
-				}
-				else if (c == '"')
-					inString = true;
-				else if (c == '\'')
-					inChar = true;
-				else if (c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '/')
-					break;
-				else if (c == '/' && j + 1 < line.length() && line.charAt(j + 1) == '*') {
-					inBlockComment = true;
-					++j;
-				}
-				else {
-					switch (c) {
-						case '(' -> ++parenDepth;
-						case ')' -> --parenDepth;
-						case '{' -> ++braceDepth;
-						case '}' -> --braceDepth;
-					}
-					if (c == ';' && parenDepth == 0 && braceDepth == 0)
-						return i;
+	@Nullable
+	private static List<Assignment> orderByDependency(@Nonnull List<Assignment> assignments) {
+		final var sorted = new ArrayList<>(assignments);
+		sorted.sort(Comparator
+				.comparingInt(Assignment::group)
+				.thenComparingInt(Assignment::subGroup)
+				.thenComparing(Assignment::fieldName, String.CASE_INSENSITIVE_ORDER));
+
+		final var n = sorted.size();
+		final var indegree = new int[n];
+		final var dependents = new ArrayList<List<Integer>>(n);
+		for (var i = 0; i < n; ++i)
+			dependents.add(new ArrayList<>());
+		for (var a = 0; a < n; ++a) {
+			for (var b = 0; b < n; ++b) {
+				if (a != b && sorted.get(a).fieldRefs().contains(sorted.get(b).fieldName())) {
+					++indegree[a];
+					dependents.get(b).add(a);
 				}
 			}
 		}
-		return startIdx;
+		final var ordered = new ArrayList<Assignment>(n);
+		final var emitted = new boolean[n];
+		for (var step = 0; step < n; ++step) {
+			var pick = -1;
+			for (var i = 0; i < n; ++i) {
+				if (!emitted[i] && indegree[i] == 0) {
+					pick = i;
+					break;
+				}
+			}
+			if (pick < 0)
+				return null;
+			ordered.add(sorted.get(pick));
+			emitted[pick] = true;
+			for (var d : dependents.get(pick))
+				--indegree[d];
+		}
+		return ordered;
+	}
+
+	@Nonnull
+	private static List<String> rebuild(
+			@Nonnull List<String> lines,
+			@Nonnull List<Assignment> ordered,
+			@Nonnull List<LocalVar> regionVars
+	) {
+		// declaration order is a valid topological order (a var reads only earlier-declared vars),
+		// so emitting each var at its slot, scanned in declaration order, always places a var after
+		// the vars it depends on
+		final var slot = emissionSlots(ordered, regionVars);
+		final var replacement = new ArrayList<String>();
+		final var placed = new boolean[regionVars.size()];
+		var prevGroup = -1;
+		var prevSubGroup = -1;
+		for (var a = 0; a < ordered.size(); ++a) {
+			final var entry = ordered.get(a);
+			if (!replacement.isEmpty()
+					&& (entry.group() != prevGroup
+					|| (entry.group() == ConstructorAssignmentOrderCheck.GROUP_VAR && entry.subGroup() != prevSubGroup)))
+				replacement.add("");
+
+			for (var i = 0; i < regionVars.size(); ++i) {
+				// slot[i] equals exactly one ordered index, so this fires at most once per var
+				if (slot[i] == a) {
+					placed[i] = true;
+					final var lv = regionVars.get(i);
+					replacement.addAll(lines.subList(lv.startLine(), lv.endLine() + 1));
+				}
+			}
+
+			replacement.addAll(lines.subList(entry.startLine(), entry.endLine() + 1));
+			prevGroup = entry.group();
+			prevSubGroup = entry.subGroup();
+		}
+
+		for (var i = 0; i < regionVars.size(); ++i) {
+			if (!placed[i]) {
+				final var lv = regionVars.get(i);
+				replacement.addAll(lines.subList(lv.startLine(), lv.endLine() + 1));
+			}
+		}
+		return replacement;
 	}
 
 	@CheckReturnValue
-	@Nonnull
-	private static String rhsText(@Nonnull List<String> assignLines) {
-		final var first = assignLines.getFirst();
-		final var eqIdx = first.indexOf('=');
-		if (eqIdx < 0)
-			return String.join("\n", assignLines);
-		final var sb = new StringBuilder(first.substring(eqIdx + 1));
-		for (var i = 1; i < assignLines.size(); ++i)
-			sb.append('\n').append(assignLines.get(i));
-		return sb.toString();
+	@Nullable
+	private static LocalVar varEndingAt(@Nonnull List<LocalVar> localVars, int line) {
+		for (var lv : localVars) {
+			if (lv.endLine() == line)
+				return lv;
+		}
+		return null;
 	}
 
 	@Nullable
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
-		if (lineIndex < 0 || lineIndex >= lines.size())
+		final var classified = FixerAst.withAst(
+				lines,
+				root -> {
+				final var found = ConstructorAssignmentOrderCheck.bodyAt(root, lineIndex, column);
+				return found == null ? null : new ClassifiedBody(found, ConstructorAssignmentOrderCheck.classify(found));
+				}
+		);
+		if (classified == null)
 			return null;
 
-		final var bodyStartLine = findBodyStart(lines, lineIndex);
-		if (bodyStartLine < 0)
-			return null;
-
-		final var bodyEndLine = findBodyEnd(lines, bodyStartLine + 1);
-		if (bodyEndLine < 0)
-			return null;
-
-		// first pass: collect local var names and field names
-		final var localVarOrder = new LinkedHashMap<String, Integer>();
-		final var localVars = new ArrayList<LocalVar>();
-		final var assignedFieldNames = new LinkedHashSet<String>();
-		var varDeclCount = 0;
-
-		for (var i = bodyStartLine + 1; i < bodyEndLine; ++i) {
-			final var line = lines.get(i);
-			final var varName = extractLocalVarName(line);
-			if (varName != null) {
-				localVarOrder.put(varName, varDeclCount);
-				localVars.add(new LocalVar(varName, line, varDeclCount));
-				++varDeclCount;
-				continue;
-			}
-			final var fieldName = extractThisFieldName(line);
-			if (fieldName != null) {
-				assignedFieldNames.add(fieldName);
-				i = readStatementEnd(lines, i);
-			}
-		}
-
-		if (assignedFieldNames.size() < 2)
-			return null;
-
-		// second pass: build assignment entries
-		final var assignments = new ArrayList<AssignmentEntry>();
-		var firstAssignLine = -1;
-		var lastAssignLine = -1;
-
-		for (var i = bodyStartLine + 1; i < bodyEndLine; ++i) {
-			final var fieldName = extractThisFieldName(lines.get(i));
-			if (fieldName == null)
-				continue;
-
-			final var endIdx = readStatementEnd(lines, i);
-			final var assignLines = new ArrayList<>(lines.subList(i, endIdx + 1));
-			final var rhs = rhsText(assignLines);
-			final var group = assignmentGroup(assignLines, rhs, localVarOrder);
-			final var subGroup = group == GROUP_VAR ? assignmentSubGroup(rhs, localVarOrder) : -1;
-			final var fieldRefs = extractFieldRefs(rhs, assignedFieldNames);
-
-			assignments.add(new AssignmentEntry(fieldName, assignLines, group, subGroup, fieldRefs));
-
-			if (firstAssignLine < 0)
-				firstAssignLine = i;
-			lastAssignLine = endIdx;
-			i = endIdx;
-		}
-
+		final var body = classified.body();
+		final var classification = classified.classification();
+		final var assignments = classification.assignments();
 		if (assignments.size() < 2)
 			return null;
 
-		// also expand range to include local vars that are between first and last assignment
-		for (var lv : localVars) {
-			for (var i = bodyStartLine + 1; i < bodyEndLine; ++i) {
-				if (lines.get(i).equals(lv.line) && i >= firstAssignLine && i <= lastAssignLine) {
-					firstAssignLine = Math.min(firstAssignLine, i);
-					lastAssignLine = Math.max(lastAssignLine, i);
-				}
-			}
+		// a field assigned more than once cannot be sorted by field name without changing which
+		// value a later read of that field sees, so refuse
+		final var seenFields = new HashSet<String>();
+		for (var a : assignments) {
+			if (!seenFields.add(a.fieldName()))
+				return new SkipResult(SkipMessages.CONSTRUCTOR_ASSIGN_SKIP_DUPLICATE_FIELD);
 		}
 
-		// also include blank lines within the range
-		// find the actual first non-blank content before first assignment (local vars)
-		for (var i = firstAssignLine - 1; i > bodyStartLine; --i) {
-			final var line = lines.get(i);
-			if (line.isBlank())
-				continue;
-			final var vn = extractLocalVarName(line);
-			if (vn != null && localVarOrder.containsKey(vn))
-				firstAssignLine = i;
-			else
-				break;
+		final var bodyStartLine = body.getLineNo() - 1;
+		var regionStart = assignments.getFirst().startLine();
+		var regionEnd = assignments.getFirst().endLine();
+		for (var a : assignments) {
+			regionStart = Math.min(regionStart, a.startLine());
+			regionEnd = Math.max(regionEnd, a.endLine());
 		}
-
-		// sort assignments
-		final var sorted = new ArrayList<>(assignments);
-		sorted.sort(Comparator
-				.comparingInt(AssignmentEntry::group)
-				.thenComparingInt(AssignmentEntry::subGroup)
-				.thenComparing(AssignmentEntry::fieldName, String.CASE_INSENSITIVE_ORDER));
-
-		// apply dependency adjustments: if A references this.B, A must come after B
-		// guard against circular dependencies with max iterations
-		var maxIter = sorted.size() * sorted.size();
-		for (var changed = true; changed && --maxIter >= 0; ) {
-			changed = false;
-			for (var i = 0; i < sorted.size(); ++i) {
-				final var entry = sorted.get(i);
-				for (var j = i + 1; j < sorted.size(); ++j) {
-					if (entry.referencedFields.contains(sorted.get(j).fieldName)) {
-						sorted.remove(i);
-						sorted.add(j, entry);
-						changed = true;
-						break;
-					}
-				}
-				if (changed)
-					break;
-			}
-		}
-
-		// build replacement
-		final var replacement = new ArrayList<String>();
-		final var placedVars = new LinkedHashSet<String>();
-		var prevGroup = -1;
-		var prevSubGroup = -1;
-
-		for (var entry : sorted) {
-			// blank line between groups or between var sub-groups
-			if (!replacement.isEmpty()
-					&& (entry.group != prevGroup
-					|| (entry.group == GROUP_VAR && entry.subGroup != prevSubGroup)))
-				replacement.add("");
-
-			// place local vars needed by this var-group entry
-			if (entry.group == GROUP_VAR) {
-				final var rhs = rhsText(entry.lines);
-				for (var lv : localVars) {
-					if (!placedVars.contains(lv.name) && containsWord(rhs, lv.name)) {
-						placedVars.add(lv.name);
-						replacement.add(lv.line);
-					}
-				}
-			}
-
-			replacement.addAll(entry.lines);
-			prevGroup = entry.group;
-			prevSubGroup = entry.subGroup;
-		}
-
-		// place any remaining local vars that weren't used by any assignment
-		for (var lv : localVars) {
-			if (!placedVars.contains(lv.name))
-				replacement.add(lv.line);
-		}
-
-		// idempotence check
-		final var original = new ArrayList<>(lines.subList(firstAssignLine, lastAssignLine + 1));
-		if (replacement.equals(original))
+		regionStart = extendOverLeadingVars(lines, classification.localVars(), regionStart, bodyStartLine);
+		if (regionStart < 0 || regionEnd >= lines.size())
 			return null;
 
-		return new FixResult(firstAssignLine, lastAssignLine, replacement);
+		final var regionVars = new ArrayList<LocalVar>();
+		for (var lv : classification.localVars()) {
+			if (lv.startLine() >= regionStart && lv.endLine() <= regionEnd)
+				regionVars.add(lv);
+		}
+
+		// every region line must belong to exactly one assignment or region-local var decl, or be
+		// blank. A line shared by two of them (or by one of them and another statement) can't be
+		// reordered by whole-line replacement without duplicating or dropping content; a stray
+		// comment or statement on its own line can't be reordered without losing it or changing
+		// execution order. Refuse in every such case.
+		final var cover = new int[regionEnd - regionStart + 1];
+		for (var a : assignments)
+			addCoverage(cover, regionStart, a.startLine(), a.endLine());
+		for (var lv : regionVars)
+			addCoverage(cover, regionStart, lv.startLine(), lv.endLine());
+		for (var i = regionStart; i <= regionEnd; ++i) {
+			final var covered = cover[i - regionStart];
+			final var isStatement = classification.statementLines().contains(i);
+			if (covered == 0) {
+				if (lines.get(i).isBlank())
+					continue;
+				return new SkipResult(isStatement
+						? SkipMessages.CONSTRUCTOR_ASSIGN_SKIP_STATEMENT
+						: SkipMessages.CONSTRUCTOR_ASSIGN_SKIP_COMMENT
+				);
+			}
+			if (covered >= 2 || isStatement)
+				return new SkipResult(SkipMessages.CONSTRUCTOR_ASSIGN_SKIP_SHARED_LINE);
+		}
+
+		final var ordered = orderByDependency(assignments);
+		if (ordered == null)
+			return new SkipResult(SkipMessages.CONSTRUCTOR_ASSIGN_SKIP_CYCLE);
+
+		// A var no assignment reads is emitted after every assignment, which moves its
+		// initializer's side effects (a lock acquisition, a timestamp, a log call) past
+		// the field writes. The output still compiles, so only runtime ordering changes.
+		final var slots = emissionSlots(ordered, regionVars);
+		for (var i = 0; i < regionVars.size(); ++i) {
+			if (slots[i] != Integer.MAX_VALUE)
+				continue;
+			// the declaration itself always holds an ASSIGN, so only the initializer
+			// expression under it says whether evaluating the var can be moved
+			final var assign = regionVars.get(i).ast().findFirstToken(TokenTypes.ASSIGN);
+			final var initializer = assign == null ? null : assign.getFirstChild();
+			if (initializer != null && !AstUtil.isSideEffectFree(initializer))
+				return new SkipResult(SkipMessages.CONSTRUCTOR_ASSIGN_SKIP_VAR_SIDE_EFFECT);
+		}
+
+		final var replacement = rebuild(lines, ordered, regionVars);
+		final var original = new ArrayList<>(lines.subList(regionStart, regionEnd + 1));
+		if (replacement.equals(original))
+			return null;
+		return new FixResult(regionStart, regionEnd, replacement);
 	}
 }

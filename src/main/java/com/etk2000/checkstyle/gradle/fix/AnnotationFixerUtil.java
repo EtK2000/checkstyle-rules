@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import com.etk2000.checkstyle.LineText;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -13,11 +15,15 @@ class AnnotationFixerUtil {
 	@CheckReturnValue
 	@Nonnull
 	static String annotationSortKey(@Nonnull String annotation) {
-		// extract simple name: skip @ and package prefix, stop at ( if present
-		final var start = annotation.lastIndexOf('.') + 1;
 		final var parenIdx = annotation.indexOf('(');
 		final var end = parenIdx >= 0 ? parenIdx : annotation.length();
-		return annotation.substring(Math.max(1, start), end);
+		if (end == 0)
+			return "";
+
+		// searched within the name only: an argument's own qualified constant
+		// (`@Target(ElementType.TYPE)`) otherwise holds the last '.', putting start past end
+		final var start = annotation.lastIndexOf('.', end - 1) + 1;
+		return annotation.substring(Math.clamp(start, 1, end), end);
 	}
 
 	@CheckReturnValue
@@ -27,9 +33,7 @@ class AnnotationFixerUtil {
 
 		var pos = 0;
 		while (pos < stripped.length() && stripped.charAt(pos) == '@') {
-			do ++pos;
-			while (pos < stripped.length()
-					&& (Character.isJavaIdentifierPart(stripped.charAt(pos)) || stripped.charAt(pos) == '.'));
+			pos = LineText.qualifiedNameEnd(stripped, pos + 1);
 
 			if (pos < stripped.length() && stripped.charAt(pos) == '(') {
 				var depth = 1;
@@ -60,10 +64,7 @@ class AnnotationFixerUtil {
 		return pos >= stripped.length();
 	}
 
-	/**
-	 * Parses all annotations from a content string (leading whitespace already stripped).
-	 * Returns the list of annotation strings and the remaining non-annotation content.
-	 */
+	/** Parses all annotations from a content string whose leading whitespace is already stripped. */
 	@CheckReturnValue
 	@Nonnull
 	static ParseResult parseAnnotations(@Nonnull String content) {
@@ -73,12 +74,13 @@ class AnnotationFixerUtil {
 		while (pos < content.length() && content.charAt(pos) == '@') {
 			final var start = pos;
 
-			// read annotation name (possibly qualified with dots)
-			do ++pos;
-			while (pos < content.length()
-					&& (Character.isJavaIdentifierPart(content.charAt(pos)) || content.charAt(pos) == '.'));
+			pos = LineText.qualifiedNameEnd(content, pos + 1);
 
-			// read params if present (balanced parens)
+			// `@` with no name after it is not an annotation this can hand back intact:
+			// emitting it as one splits `@ Deprecated` (legal Java) onto a line of its own
+			if (pos == start + 1)
+				return new ParseResult(annotations, content.substring(start).stripLeading());
+
 			if (pos < content.length() && content.charAt(pos) == '(') {
 				var depth = 1;
 				++pos;
@@ -89,7 +91,6 @@ class AnnotationFixerUtil {
 					else if (ch == ')')
 						--depth;
 					else if (ch == '"' || ch == '\'') {
-						// skip string/char literal
 						++pos;
 						while (pos < content.length() && content.charAt(pos) != ch) {
 							if (content.charAt(pos) == '\\')
@@ -100,11 +101,12 @@ class AnnotationFixerUtil {
 					if (pos < content.length())
 						++pos;
 				}
+				if (depth != 0)
+					return new ParseResult(annotations, content.substring(start).stripLeading());
 			}
 
 			annotations.add(content.substring(start, Math.min(pos, content.length())));
 
-			// skip whitespace between annotations
 			while (pos < content.length()
 					&& (content.charAt(pos) == ' ' || content.charAt(pos) == '\t'))
 				++pos;

@@ -11,6 +11,9 @@ public class AnchorClass {
 		public static final int X16 = 0;
 	}
 
+	public static final int CLASS_STRAY_SEMI = 0;
+	public static final int ENUM_MULTI_BLANK_SEMI = 0;
+	public static final int ENUM_SINGLE_BLANK_SEMI = 0;
 	public static final int X1 = 0;
 	public static final int X10 = 0;
 	public static final int X11 = 0;

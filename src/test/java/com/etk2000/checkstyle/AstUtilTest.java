@@ -1,10 +1,11 @@
 package com.etk2000.checkstyle;
 
-import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static java.util.Objects.requireNonNull;
 
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
@@ -31,32 +32,6 @@ import javax.annotation.Nullable;
 
 public class AstUtilTest {
 	private static DetailAST root;
-
-	private static void assertDisplayBinary(@Nonnull String op, int tokenType) throws Exception {
-		final var ast = parseSource("class T { void f(int a, int b) { var x = a " + op + " b; } }");
-		final var node = findFirst(ast, tokenType);
-		assertEquals("a " + op + " b", AstUtil.displayText(node));
-	}
-
-	private static void assertDisplayPrefixUnary(@Nonnull String op, int tokenType) throws Exception {
-		final var ast = parseSource("class T { void f(int a) { var x = " + op + "a; } }");
-		final var node = findFirst(ast, tokenType);
-		assertEquals(op + "a", AstUtil.displayText(node));
-	}
-
-	private static void assertNegativeZero(@Nonnull String literal) throws Exception {
-		final var ast = parseSource("class T { void f() { var x = " + literal + "; } }");
-		final var unaryMinus = findFirst(ast, TokenTypes.UNARY_MINUS);
-		assertFalse(AstUtil.isZeroLiteral(unaryMinus));
-		for (var type : new int[]{TokenTypes.NUM_DOUBLE, TokenTypes.NUM_FLOAT, TokenTypes.NUM_INT, TokenTypes.NUM_LONG}) {
-			final var num = findFirst(unaryMinus, type);
-			if (num != null) {
-				assertTrue(AstUtil.isZeroLiteral(num));
-				return;
-			}
-		}
-		throw new AssertionError("No numeric literal found in: " + literal);
-	}
 
 	static Stream<Arguments> canonicalTypeGenericProvider() {
 		return Stream.of(
@@ -116,6 +91,27 @@ public class AstUtilTest {
 		);
 	}
 
+	static Stream<Arguments> countArgumentsProvider() {
+		return Stream.of(
+				Arguments.of("class T { void f() { g(); } }", 0),
+				Arguments.of("class T { void f(int a) { g(a); } }", 1),
+				Arguments.of("class T { void f(int a, int b) { g(a, b); } }", 2),
+				Arguments.of("class T { void f(int a, int b, int c) { g(a, b, c); } }", 3),
+				Arguments.of("class T { void f(int a, int b) { g(a + b); } }", 1),
+				Arguments.of("class T { void f(int x, int y) { g(h(x, y)); } }", 1),
+				Arguments.of("class T { void f() { g(() -> 1); } }", 1),
+				Arguments.of("class T { void f() { g(() -> 1, () -> 2); } }", 2),
+				Arguments.of("class T { void f(int a) { g(() -> 1, a); } }", 2),
+				Arguments.of("class T { void f(int a) { g(a, () -> 1); } }", 2),
+				Arguments.of("class T { void f(int a, int b) { g(a, () -> 1, b); } }", 3),
+				Arguments.of("class T { void f() { g(() -> { return 1; }); } }", 1),
+				Arguments.of("class T { void f() { g((String s) -> 1); } }", 1),
+				Arguments.of("class T { void f() { g(T::new); } }", 1),
+				Arguments.of("class T { void f(int k) { g(switch (k) { default -> 1; }); } }", 1),
+				Arguments.of("class T { void f() { g(this::h); } }", 1)
+		);
+	}
+
 	static Stream<Arguments> displayTextBinaryProvider() {
 		return Stream.of(
 				Arguments.of("&", TokenTypes.BAND),
@@ -140,6 +136,32 @@ public class AstUtilTest {
 		);
 	}
 
+	static Stream<Arguments> displayTextMethodCallProvider() {
+		return Stream.of(
+				Arguments.of("class T { Object x = foo(); }", "foo()"),
+				Arguments.of("class T { Object x = foo(a); }", "foo(a)"),
+				Arguments.of("class T { Object x = foo( a ,b ); }", "foo(a, b)"),
+				Arguments.of("class T { Object x = foo(a, b, c); }", "foo(a, b, c)"),
+				Arguments.of("class T { Object x = getList(a, b); }", "getList(a, b)"),
+				Arguments.of("class T { Object x = Math.min(a, b); }", "Math.min(a, b)"),
+				Arguments.of("class T { Object x = map.values(); }", "map.values()"),
+				Arguments.of("class T { Object x = this.foo(); }", "this.foo()"),
+				Arguments.of("class T { Object x = super.toString(); }", "super.toString()"),
+				Arguments.of("class T { Object x = a.b().c(); }", "a.b().c()"),
+				Arguments.of("class T { Object x = arr[0].toString(); }", "arr[0].toString()"),
+				Arguments.of("class T { Object x = f(g(x)); }", "f(g(x))"),
+				Arguments.of("class T { Object x = Math.min(hi, foo(a, b)); }", "Math.min(hi, foo(a, b))"),
+				Arguments.of("class T { Object x = a + foo(b); }", "a + foo(b)"),
+				Arguments.of("class T { Object x = arr[foo(i)]; }", "arr[foo(i)]"),
+				Arguments.of("class T { Object x = !foo(); }", "!foo()"),
+				Arguments.of("class T { Object x = foo(\"a\", \"b\"); }", "foo(\"a\", \"b\")"),
+				Arguments.of("class T { Object x = foo(1, 2); }", "foo(1, 2)"),
+				Arguments.of("class T { Object x = foo(a + b); }", "foo(a + b)"),
+				Arguments.of("class T { Object x = foo(a, b + c); }", "foo(a, b + c)"),
+				Arguments.of("class T { Object x = f(g()); }", "f(g())")
+		);
+	}
+
 	static Stream<Arguments> displayTextPrefixUnaryProvider() {
 		return Stream.of(
 				Arguments.of("~", TokenTypes.BNOT),
@@ -157,7 +179,10 @@ public class AstUtilTest {
 				Arguments.of("class T { a.b.C<String> x; }", "a.b.C"),
 				Arguments.of("class T { a.b.C<@Deprecated String> x; }", "a.b.C"),
 				Arguments.of("class T { @Deprecated a.b.C x; }", "a.b.C"),
-				Arguments.of("class T { @Deprecated a.b.C<@Deprecated String> x; }", "a.b.C")
+				Arguments.of("class T { @Deprecated a.b.C<@Deprecated String> x; }", "a.b.C"),
+				Arguments.of("class T { Outer<String>.Inner<Integer> x; }", "Outer.Inner"),
+				Arguments.of("class T { Outer<A>.Mid<B>.Deep<C> x; }", "Outer.Mid.Deep"),
+				Arguments.of("class T { Outer<String>.Inner x; }", "Outer.Inner")
 		);
 	}
 
@@ -303,6 +328,24 @@ public class AstUtilTest {
 	@BeforeAll
 	public static void setUp() throws Exception {
 		root = parse("astutil/InputAstUtil.java");
+	}
+
+	static Stream<Arguments> simpleNameProvider() {
+		return Stream.of(
+				Arguments.of("java.util.List", "List"),
+				Arguments.of("a.b.c.D", "D"),
+				Arguments.of("a.b.Outer.Inner", "Inner"),
+				Arguments.of("List", "List"),
+				Arguments.of("T", "T"),
+				Arguments.of("java.util.", ""),
+				Arguments.of("", "")
+		);
+	}
+
+	private static int typeParameterCountOf(@Nonnull DetailAST scope, @Nonnull String className) {
+		return AstUtil.typeParameterCount(
+				requireNonNull(AstUtil.sameFileClassDef(scope, className), "no such type: " + className)
+		);
 	}
 
 	@Test
@@ -469,6 +512,22 @@ public class AstUtilTest {
 		assertEquals(expected, AstUtil.collectInstanceFieldTypes(objBlock));
 	}
 
+	@Test
+	public void testCollectMatchingNoMatch() throws Exception {
+		final var ast = parseSource("class T { void f() { a(); } }");
+		assertTrue(AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.LITERAL_TRY).isEmpty());
+	}
+
+	@Test
+	public void testCollectMatchingPreOrder() throws Exception {
+		final var ast = parseSource("class T { void f() { a(); b(c()); } }");
+		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL);
+		assertEquals(3, calls.size());
+		assertEquals("a", calls.get(0).getFirstChild().getText());
+		assertEquals("b", calls.get(1).getFirstChild().getText());
+		assertEquals("c", calls.get(2).getFirstChild().getText());
+	}
+
 	@MethodSource("collectParameterNamesProvider")
 	@ParameterizedTest
 	void testCollectParameterNames(String source, int tokenType, Set<String> expected) throws Exception {
@@ -509,10 +568,26 @@ public class AstUtilTest {
 		assertFalse(AstUtil.containsCastTo(method, "String", "obj"));
 	}
 
+	@MethodSource("countArgumentsProvider")
+	@ParameterizedTest
+	void testCountArguments(String source, int expected) throws Exception {
+		final var elist = findFirst(parseSource(source), TokenTypes.ELIST);
+		assertEquals(expected, AstUtil.countArguments(elist));
+	}
+
 	@MethodSource("displayTextBinaryProvider")
 	@ParameterizedTest
 	void testDisplayTextBinary(String op, int tokenType) throws Exception {
-		assertDisplayBinary(op, tokenType);
+		final var ast = parseSource("class T { void f(int a, int b) { var x = a " + op + " b; } }");
+		final var node = findFirst(ast, tokenType);
+		assertEquals("a " + op + " b", AstUtil.displayText(node));
+	}
+
+	@Test
+	public void testDisplayTextCompoundFallback() throws Exception {
+		final var node = parseExprFirstChild("class T { Object x = new Object(); }");
+		assertEquals(TokenTypes.LITERAL_NEW, node.getType(), "expected a non-switch compound node for this test to be meaningful");
+		assertEquals(AstUtil.exprText(node), AstUtil.displayText(node));
 	}
 
 	@Test
@@ -566,6 +641,12 @@ public class AstUtilTest {
 		assertEquals("this.x[0]", AstUtil.displayText(node));
 	}
 
+	@MethodSource("displayTextMethodCallProvider")
+	@ParameterizedTest
+	void testDisplayTextMethodCall(String source, String expected) throws Exception {
+		assertEquals(expected, AstUtil.displayText(parseExprFirstChild(source)));
+	}
+
 	@Test
 	public void testDisplayTextPostDec() throws Exception {
 		final var ast = parseSource("class T { void f(int a) { a--; } }");
@@ -583,7 +664,51 @@ public class AstUtilTest {
 	@MethodSource("displayTextPrefixUnaryProvider")
 	@ParameterizedTest
 	void testDisplayTextPrefixUnary(String op, int tokenType) throws Exception {
-		assertDisplayPrefixUnary(op, tokenType);
+		final var ast = parseSource("class T { void f(int a) { var x = " + op + "a; } }");
+		final var node = findFirst(ast, tokenType);
+		assertEquals(op + "a", AstUtil.displayText(node));
+	}
+
+	@Test
+	public void testDisplayTextQuestion() throws Exception {
+		final var ast = parseSource("class T { int f(boolean c, int a, int b) { return c ? a : b; } }");
+		final var node = findFirst(ast, TokenTypes.QUESTION);
+		assertEquals("c ? a : b", AstUtil.displayText(node));
+	}
+
+	@Test
+	public void testDisplayTextQuestionNested() throws Exception {
+		final var ast = parseSource("class T { int f(boolean c, boolean d, int a, int b, int e) { return c ? a : d ? b : e; } }");
+		final var node = findFirst(ast, TokenTypes.QUESTION);
+		assertEquals("c ? a : d ? b : e", AstUtil.displayText(node));
+	}
+
+	@Test
+	public void testDisplayTextTypecast() throws Exception {
+		final var ast = parseSource("class T { void f(Object o) { var x = (String) o; } }");
+		final var node = findFirst(ast, TokenTypes.TYPECAST);
+		assertEquals("(String) o", AstUtil.displayText(node));
+	}
+
+	@Test
+	public void testDisplayTextTypecastGeneric() throws Exception {
+		final var ast = parseSource("import java.util.List; class T { void f(Object o) { var x = (List<String>) o; } }");
+		final var node = findFirst(ast, TokenTypes.TYPECAST);
+		assertEquals("(List<String>) o", AstUtil.displayText(node));
+	}
+
+	@Test
+	public void testDisplayTextTypecastNested() throws Exception {
+		final var ast = parseSource("class T { void f(int x) { var y = (long) (int) x; } }");
+		final var node = findFirst(ast, TokenTypes.TYPECAST);
+		assertEquals("(long) (int) x", AstUtil.displayText(node));
+	}
+
+	@Test
+	public void testDisplayTextTypecastParenthesizedOperand() throws Exception {
+		final var ast = parseSource("class T { void f(Object o) { var x = (String) (o); } }");
+		final var node = findFirst(ast, TokenTypes.TYPECAST);
+		assertEquals("(String) (o)", AstUtil.displayText(node));
 	}
 
 	@Test
@@ -774,7 +899,6 @@ public class AstUtilTest {
 		final var ast = parseSource("class T { void f() { var x = new java.util.ArrayList<>(); } }");
 		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
 		final var typeArgs = AstUtil.findNewClassTypeArguments(literalNew);
-		// diamond <> has TYPE_ARGUMENTS but no TYPE_ARGUMENT children
 		assertTrue(typeArgs == null || typeArgs.findFirstToken(TokenTypes.TYPE_ARGUMENT) == null);
 	}
 
@@ -799,6 +923,186 @@ public class AstUtilTest {
 		final var literalNew = requireNonNull(findFirst(ast, TokenTypes.LITERAL_NEW));
 		final var typeArgs = AstUtil.findNewClassTypeArguments(literalNew);
 		assertTrue(typeArgs != null && typeArgs.findFirstToken(TokenTypes.TYPE_ARGUMENT) != null);
+	}
+
+	@Test
+	public void testFindNodeAtAscendsFromNonRoot() throws Exception {
+		final var root = parseSource("class T { void f() { a(); } }");
+		final var call = requireNonNull(findFirst(root, TokenTypes.METHOD_CALL));
+		final var deepChild = requireNonNull(findFirst(root, TokenTypes.SLIST));
+		final var found = AstUtil.findNodeAt(
+				deepChild,
+				call.getLineNo() - 1,
+				call.getColumnNo(),
+				n -> n.getType() == TokenTypes.METHOD_CALL
+		);
+		assertSame(call, found);
+	}
+
+	@Test
+	public void testFindNodeAtAscendsThenCrossesToEarlierSibling() throws Exception {
+		final var root = parseSource("class A { void g() {} }\nclass B { void h() {} }");
+		final var methodG = requireNonNull(findMethod(root, "g"));
+		final var deepInB = requireNonNull(findFirst(requireNonNull(findMethod(root, "h")), TokenTypes.SLIST));
+		final var found = AstUtil.findNodeAt(
+				deepInB,
+				methodG.getLineNo() - 1,
+				methodG.getColumnNo(),
+				n -> n.getType() == TokenTypes.METHOD_DEF
+		);
+		assertSame(methodG, found);
+	}
+
+	@Test
+	public void testFindNodeAtAscendsThenCrossesToLaterSibling() throws Exception {
+		final var root = parseSource("class A { void g() {} }\nclass B { void h() {} }");
+		final var methodH = requireNonNull(findMethod(root, "h"));
+		final var deepInA = requireNonNull(findFirst(requireNonNull(findMethod(root, "g")), TokenTypes.SLIST));
+		final var found = AstUtil.findNodeAt(
+				deepInA,
+				methodH.getLineNo() - 1,
+				methodH.getColumnNo(),
+				n -> n.getType() == TokenTypes.METHOD_DEF
+		);
+		assertSame(methodH, found);
+	}
+
+	@Test
+	public void testFindNodeAtColumnOffByOneReturnsNull() throws Exception {
+		final var root = parseSource("class T { void f() { a(); } }");
+		final var call = requireNonNull(findFirst(root, TokenTypes.METHOD_CALL));
+		assertNull(AstUtil.findNodeAt(
+				root,
+				call.getLineNo() - 1,
+				call.getColumnNo() + 1,
+				n -> n.getType() == TokenTypes.METHOD_CALL
+		));
+	}
+
+	@Test
+	public void testFindNodeAtDeepTree() throws Exception {
+		final var sb = new StringBuilder("class T { int f() { return 0");
+		for (var i = 0; i < 500; ++i)
+			sb.append("\n\t\t\t+ ").append(i);
+		sb.append("; } }");
+		final var root = parseSource(sb.toString());
+		assertNull(AstUtil.findNodeAt(root, 0, 0, n -> n.getType() == TokenTypes.LITERAL_TRY));
+	}
+
+	@Test
+	public void testFindNodeAtDisambiguatesByPredicate() throws Exception {
+		final var root = parseSource("class T { void f() { a(); } }");
+		final var call = requireNonNull(findFirst(root, TokenTypes.METHOD_CALL));
+		final var expr = requireNonNull(findFirst(root, TokenTypes.EXPR));
+		assertEquals(expr.getColumnNo(), call.getColumnNo(), "EXPR and its METHOD_CALL child must share a column for this test");
+		final var found = AstUtil.findNodeAt(
+				root,
+				call.getLineNo() - 1,
+				call.getColumnNo(),
+				n -> n.getType() == TokenTypes.METHOD_CALL
+		);
+		assertSame(call, found);
+	}
+
+	@Test
+	public void testFindNodeAtLineOffByOneReturnsNull() throws Exception {
+		final var root = parseSource("class T { void f() { a(); } }");
+		final var call = requireNonNull(findFirst(root, TokenTypes.METHOD_CALL));
+		assertNull(AstUtil.findNodeAt(
+				root,
+				call.getLineNo(),
+				call.getColumnNo(),
+				n -> n.getType() == TokenTypes.METHOD_CALL
+		));
+	}
+
+	@Test
+	public void testFindNodeAtNoMatch() throws Exception {
+		final var root = parseSource("class T { void f() { a(); } }");
+		final var call = requireNonNull(findFirst(root, TokenTypes.METHOD_CALL));
+		assertNull(AstUtil.findNodeAt(
+				root,
+				call.getLineNo() - 1,
+				call.getColumnNo(),
+				n -> n.getType() == TokenTypes.LITERAL_TRY
+		));
+	}
+
+	@Test
+	public void testFindNodeAtPredicateMatchesElsewhereReturnsNull() throws Exception {
+		final var root = parseSource("class T { void f() { a(); } }");
+		final var expr = requireNonNull(findFirst(root, TokenTypes.EXPR));
+		assertNull(AstUtil.findNodeAt(
+				root,
+				expr.getLineNo() - 1,
+				expr.getColumnNo(),
+				n -> n.getType() == TokenTypes.SLIST
+		));
+	}
+
+	@Test
+	public void testFindNodeAtReturnsShallowestWhenMultipleMatch() throws Exception {
+		final var root = parseSource("class T { void f() { a(); } }");
+		final var expr = requireNonNull(findFirst(root, TokenTypes.EXPR));
+		final var call = requireNonNull(findFirst(root, TokenTypes.METHOD_CALL));
+		assertEquals(expr.getColumnNo(), call.getColumnNo(), "EXPR and its METHOD_CALL child must share a column for this test");
+		final var found = AstUtil.findNodeAt(
+				root,
+				expr.getLineNo() - 1,
+				expr.getColumnNo(),
+				n -> n.getType() == TokenTypes.EXPR || n.getType() == TokenTypes.METHOD_CALL
+		);
+		assertSame(expr, found);
+	}
+
+	@Test
+	public void testFindNodeAtSecondTopLevelClass() throws Exception {
+		final var root = parseSource("class A { void g() {} }\nclass B { void h() {} }");
+		final var method = requireNonNull(findMethod(root, "h"));
+		final var found = AstUtil.findNodeAt(
+				root,
+				method.getLineNo() - 1,
+				method.getColumnNo(),
+				n -> n.getType() == TokenTypes.METHOD_DEF
+		);
+		assertSame(method, found);
+	}
+
+	@Test
+	public void testFirstColumnAssignmentExprStartsAtLeftOperand() throws Exception {
+		final var ast = parseSource("class T {\n\tvoid f(int x) {\n\t\tx = 5;\n\t}\n}");
+		final var assign = requireNonNull(findFirst(ast, TokenTypes.ASSIGN));
+		final var expr = assign.getParent();
+		assertEquals(assign.getColumnNo(), expr.getColumnNo(), "EXPR must sit at the '=' for this test to be meaningful");
+		assertEquals(assign.getFirstChild().getColumnNo(), AstUtil.firstColumn(expr));
+	}
+
+	@Test
+	public void testFirstColumnDeepTree() throws Exception {
+		final var prefix = "class T { int f() { return ";
+		final var sb = new StringBuilder(prefix).append('0');
+		for (var i = 0; i < 500; ++i)
+			sb.append("\n\t\t\t+ ").append(i);
+		sb.append("; } }");
+		final var ast = parseSource(sb.toString());
+		final var expr = requireNonNull(findFirst(ast, TokenTypes.EXPR));
+		assertEquals(prefix.length(), AstUtil.firstColumn(expr));
+	}
+
+	@Test
+	public void testFirstColumnFirstLineFromDescendant() throws Exception {
+		final var ast = parseSource("class T {\n\tvoid f(int x) {\n\t\tx\n\t\t\t\t= 5;\n\t}\n}");
+		final var assign = requireNonNull(findFirst(ast, TokenTypes.ASSIGN));
+		final var expr = assign.getParent();
+		assertEquals(4, expr.getLineNo(), "EXPR must sit on the '=' line for this test to be meaningful");
+		assertEquals(2, AstUtil.firstColumn(expr));
+	}
+
+	@Test
+	public void testFirstColumnIgnoresEarlierColumnsOnLaterLines() throws Exception {
+		final var ast = parseSource("class T {\n\tvoid f() {\n\t\tg(\n1\n\t\t);\n\t}\n\tvoid g(int a) {}\n}");
+		final var call = requireNonNull(findFirst(ast, TokenTypes.METHOD_CALL));
+		assertEquals(2, AstUtil.firstColumn(call));
 	}
 
 	@Test
@@ -859,6 +1163,83 @@ public class AstUtilTest {
 		final var ast = parseSource("class T { int x; }");
 		final var ident = requireNonNull(findFirst(ast, TokenTypes.IDENT));
 		assertEquals(ident.getLineNo(), AstUtil.firstLine(ident));
+	}
+
+	@Test
+	public void testGetEnclosingTypeNameAnnotationType() throws Exception {
+		final var ast = parseSource("@interface Foo {}");
+		final var objBlock = findFirst(ast, TokenTypes.OBJBLOCK);
+		assertEquals("Foo", AstUtil.getEnclosingTypeName(objBlock));
+	}
+
+	@Test
+	public void testGetEnclosingTypeNameAnonymousClass() throws Exception {
+		final var ast = parseSource("class T { Object o = new Object() {}; }");
+		final var anonBlock = findFirst(ast, TokenTypes.LITERAL_NEW).findFirstToken(TokenTypes.OBJBLOCK);
+		assertNull(AstUtil.getEnclosingTypeName(anonBlock));
+	}
+
+	@Test
+	public void testGetEnclosingTypeNameClass() throws Exception {
+		final var ast = parseSource("class Foo {}");
+		final var objBlock = findFirst(ast, TokenTypes.OBJBLOCK);
+		assertEquals("Foo", AstUtil.getEnclosingTypeName(objBlock));
+	}
+
+	@Test
+	public void testGetEnclosingTypeNameEnum() throws Exception {
+		final var ast = parseSource("enum Foo { A }");
+		final var objBlock = findFirst(ast, TokenTypes.OBJBLOCK);
+		assertEquals("Foo", AstUtil.getEnclosingTypeName(objBlock));
+	}
+
+	@Test
+	public void testGetEnclosingTypeNameInterface() throws Exception {
+		final var ast = parseSource("interface Foo {}");
+		final var objBlock = findFirst(ast, TokenTypes.OBJBLOCK);
+		assertEquals("Foo", AstUtil.getEnclosingTypeName(objBlock));
+	}
+
+	@Test
+	public void testGetEnclosingTypeNameRecord() throws Exception {
+		final var ast = parseSource("record Foo(int x) {}");
+		final var objBlock = findFirst(ast, TokenTypes.OBJBLOCK);
+		assertEquals("Foo", AstUtil.getEnclosingTypeName(objBlock));
+	}
+
+	@Test
+	public void testGetMethodNameBareCall() throws Exception {
+		final var ast = parseSource("class T { void foo() {} void f() { foo(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertEquals("foo", AstUtil.getMethodName(methodCall));
+	}
+
+	@Test
+	public void testGetMethodNameDottedCall() throws Exception {
+		final var ast = parseSource("class T { void f(String s) { s.trim(); } }");
+		final var methodCall = findFirst(ast, TokenTypes.METHOD_CALL);
+		assertEquals("trim", AstUtil.getMethodName(methodCall));
+	}
+
+	@Test
+	public void testGetPackageNameDefaultPackage() throws Exception {
+		final var ast = parseSource("class T {}");
+		final var objBlock = findFirst(ast, TokenTypes.OBJBLOCK);
+		assertNull(AstUtil.getPackageName(objBlock));
+	}
+
+	@Test
+	public void testGetPackageNameDotted() throws Exception {
+		final var ast = parseSource("package a.b.c;\nclass T {}");
+		final var objBlock = findFirst(ast, TokenTypes.OBJBLOCK);
+		assertEquals("a.b.c", AstUtil.getPackageName(objBlock));
+	}
+
+	@Test
+	public void testGetPackageNameSingleSegment() throws Exception {
+		final var ast = parseSource("package foo;\nclass T {}");
+		final var objBlock = findFirst(ast, TokenTypes.OBJBLOCK);
+		assertEquals("foo", AstUtil.getPackageName(objBlock));
 	}
 
 	@Test
@@ -1031,6 +1412,23 @@ public class AstUtilTest {
 		assertEquals(expected, AstUtil.hasSuppressWarnings(modifiers, key));
 	}
 
+	@ParameterizedTest
+	@ValueSource(ints = {TokenTypes.EQUAL, TokenTypes.NOT_EQUAL, TokenTypes.LE, TokenTypes.GE,
+			TokenTypes.METHOD_CALL, TokenTypes.INC, TokenTypes.DEC, TokenTypes.POST_INC, TokenTypes.POST_DEC,
+			TokenTypes.LAND, TokenTypes.LITERAL_NEW, TokenTypes.IDENT})
+	void testIsAssignmentOperatorFalse(int tokenType) {
+		assertFalse(AstUtil.isAssignmentOperator(tokenType));
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = {TokenTypes.ASSIGN, TokenTypes.BAND_ASSIGN, TokenTypes.BOR_ASSIGN,
+			TokenTypes.BSR_ASSIGN, TokenTypes.BXOR_ASSIGN, TokenTypes.DIV_ASSIGN, TokenTypes.MINUS_ASSIGN,
+			TokenTypes.MOD_ASSIGN, TokenTypes.PLUS_ASSIGN, TokenTypes.SL_ASSIGN, TokenTypes.SR_ASSIGN,
+			TokenTypes.STAR_ASSIGN})
+	void testIsAssignmentOperatorTrue(int tokenType) {
+		assertTrue(AstUtil.isAssignmentOperator(tokenType));
+	}
+
 	@Test
 	public void testIsEmptyBodyBlock() {
 		final var method = findMethod(root, "emptyBlock");
@@ -1060,6 +1458,36 @@ public class AstUtilTest {
 		final var rparen = ifNode.findFirstToken(TokenTypes.RPAREN);
 		final var body = rparen.getNextSibling();
 		assertTrue(AstUtil.isEmptyBody(body));
+	}
+
+	@Test
+	public void testIsPureDotChainOrIdentBareIdent() throws Exception {
+		final var node = parseExprFirstChild("class T { int x; void f() { int a = x; } }");
+		assertTrue(AstUtil.isPureDotChainOrIdent(node));
+	}
+
+	@Test
+	public void testIsPureDotChainOrIdentClassLiteral() throws Exception {
+		final var node = parseExprFirstChild("class T { Object x = String.class; }");
+		assertFalse(AstUtil.isPureDotChainOrIdent(node));
+	}
+
+	@Test
+	public void testIsPureDotChainOrIdentDeepChain() throws Exception {
+		final var node = parseExprFirstChild("class T { Object x = a.b.c.d; }");
+		assertTrue(AstUtil.isPureDotChainOrIdent(node));
+	}
+
+	@Test
+	public void testIsPureDotChainOrIdentNonDotNonIdent() throws Exception {
+		final var node = parseExprFirstChild("class T { void g() {} void f() { Object a = g(); } }");
+		assertFalse(AstUtil.isPureDotChainOrIdent(node));
+	}
+
+	@Test
+	public void testIsPureDotChainOrIdentSimpleDot() throws Exception {
+		final var node = parseExprFirstChild("class T { Object x = a.b; }");
+		assertTrue(AstUtil.isPureDotChainOrIdent(node));
 	}
 
 	@Test
@@ -1207,6 +1635,20 @@ public class AstUtilTest {
 	}
 
 	@ParameterizedTest
+	@ValueSource(strings = {"foo()", "a && foo()", "new boolean[]{foo()}[0]", "new Object() instanceof String", "++i > 0", "i++ > 0", "i-- > 0", "--i > 0", "flag = other", "flag &= other", "flag |= other", "flag ^= other", "(x += 1) > 0", "(x -= 1) > 0", "(x *= 2) > 0", "(x /= 2) > 0", "(x %= 2) > 0", "(x <<= 1) > 0", "(x >>= 1) > 0", "(x >>>= 1) > 0", "arr[i]++ > 0", "(new boolean[size()])[0]", "func(new boolean[]{a})", "(new String[]{s})[0].isEmpty()"})
+	void testIsSideEffectFreeFalse(String cond) throws Exception {
+		final var ast = parseSource("class T { void f(int i, int x, int n, int[] arr, boolean a, boolean b, boolean c, boolean flag, boolean other, Object obj, String s) { if (" + cond + ") {} } }");
+		assertFalse(AstUtil.isSideEffectFree(findFirst(ast, TokenTypes.EXPR)));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"a", "a && b", "x > 0", "i % x > 0", "arr.length > 0", "(boolean) obj", "!flag", "(a || b) && c", "new boolean[]{a}[0]", "obj instanceof String p", "a ? b : c", "(new int[]{x})[0]++ > 0", "--(new int[]{x})[0] > 0", "++(new int[]{x})[0] > 0", "(new int[]{x})[0]-- > 0", "(new boolean[n])[0]"})
+	void testIsSideEffectFreeTrue(String cond) throws Exception {
+		final var ast = parseSource("class T { void f(int i, int x, int n, int[] arr, boolean a, boolean b, boolean c, boolean flag, boolean other, Object obj, String s) { if (" + cond + ") {} } }");
+		assertTrue(AstUtil.isSideEffectFree(findFirst(ast, TokenTypes.EXPR)));
+	}
+
+	@ParameterizedTest
 	@ValueSource(strings = {"1", "1L", "1.0", "1.0f", "0x1", "0b1", ".1", "0.0e1"})
 	void testIsZeroLiteralFalse(String literal) throws Exception {
 		assertFalse(isZeroLiteral(literal));
@@ -1216,7 +1658,17 @@ public class AstUtilTest {
 	@ValueSource(strings = {"-0", "-0L", "-0.0", "-0.0f", "-0f", "-0.0d", "-0.", "-.0", "-0x0",
 			"-0X0", "-0x0L", "-0b0", "-0B0", "-0b0L", "-0_0", "-0.0e0", "-0.0e+0", "-0.0e-0"})
 	void testIsZeroLiteralNegativeZero(String literal) throws Exception {
-		assertNegativeZero(literal);
+		final var ast = parseSource("class T { void f() { var x = " + literal + "; } }");
+		final var unaryMinus = findFirst(ast, TokenTypes.UNARY_MINUS);
+		assertFalse(AstUtil.isZeroLiteral(unaryMinus));
+		for (var type : new int[]{TokenTypes.NUM_DOUBLE, TokenTypes.NUM_FLOAT, TokenTypes.NUM_INT, TokenTypes.NUM_LONG}) {
+			final var num = findFirst(unaryMinus, type);
+			if (num != null) {
+				assertTrue(AstUtil.isZeroLiteral(num));
+				return;
+			}
+		}
+		throw new AssertionError("No numeric literal found in: " + literal);
 	}
 
 	@Test
@@ -1472,10 +1924,6 @@ public class AstUtilTest {
 
 	@Test
 	public void testResolveVariableTypeVarMethodCallOverloadDisambiguated() {
-		// Two overloads; arity 1 matches the `int` overload. getTypeName returns
-		// null for bare primitive type names, so resolution returns null, but
-		// crucially NOT "String" (the wrong overload). This prevents the JIT
-		// check from falsely firing on the int variant.
 		final var method = findMethod(root, "varMethodCallOverloadAmbiguousLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
 		assertNull(AstUtil.resolveVariableType(slist.getLastChild(), "x"));
@@ -1738,6 +2186,44 @@ public class AstUtilTest {
 	}
 
 	@Test
+	public void testSameFileClassDefAndTypeParameterCount() throws Exception {
+		final var source = "class T { static class Box<V> {} enum Kind { A } interface Face"
+				+ " { class Deep<Y> {} } record Rec<A, B>() {} static class Holder { static class Mid"
+				+ " { static class Leaf<X> {} } static class Plain {} } void m() { Object x; } }";
+		final var ast = parseSource(source);
+		final var scope = requireNonNull(findFirst(ast, TokenTypes.VARIABLE_DEF), "no declaration");
+
+		assertEquals(1, typeParameterCountOf(scope, "Box"));
+		assertEquals(0, typeParameterCountOf(scope, "Kind"));
+		assertEquals(2, typeParameterCountOf(scope, "Rec"));
+		assertEquals(1, typeParameterCountOf(scope, "Face.Deep"));
+		assertEquals(0, typeParameterCountOf(scope, "Holder.Plain"));
+		assertEquals(1, typeParameterCountOf(scope, "Holder.Mid.Leaf"));
+
+		assertNull(AstUtil.sameFileClassDef(scope, "Absent"));
+		assertNull(AstUtil.sameFileClassDef(scope, "Holder.Missing"));
+		assertNull(AstUtil.sameFileClassDef(scope, "Holder.Mid.Missing"));
+		assertNull(AstUtil.sameFileClassDef(scope, "."));
+		assertSame(AstUtil.sameFileClassDef(scope, "Box"), AstUtil.sameFileClassDef(scope, "Box"));
+	}
+
+	@MethodSource("simpleNameProvider")
+	@ParameterizedTest
+	void testSimpleName(String input, String expected) {
+		assertEquals(expected, AstUtil.simpleName(input));
+	}
+
+	@Test
+	public void testSingleExpressionStatementBody() throws Exception {
+		final var exprBody = findFirst(parseSource("class C { Runnable r = () -> { foo(); }; }"), TokenTypes.SLIST);
+		assertEquals(TokenTypes.EXPR, AstUtil.singleExpressionStatementBody(exprBody).getType());
+		final var returnBody = findFirst(parseSource("class C { Runnable r = () -> { return; }; }"), TokenTypes.SLIST);
+		assertNull(AstUtil.singleExpressionStatementBody(returnBody));
+		final var multiBody = findFirst(parseSource("class C { Runnable r = () -> { a(); b(); }; }"), TokenTypes.SLIST);
+		assertNull(AstUtil.singleExpressionStatementBody(multiBody));
+	}
+
+	@Test
 	public void testTypeTextPrimitive() {
 		final var method = findMethod(root, "primitiveLocal");
 		final var slist = method.findFirstToken(TokenTypes.SLIST);
@@ -1766,5 +2252,96 @@ public class AstUtilTest {
 		final var varDef = slist.findFirstToken(TokenTypes.VARIABLE_DEF);
 		final var type = varDef.findFirstToken(TokenTypes.TYPE);
 		assertEquals("String", AstUtil.typeText(type));
+	}
+
+	@Test
+	public void testUnwrapParensAndExprExprWrapper() throws Exception {
+		final var assign = findFirst(parseSource("class T { Object x = a; }"), TokenTypes.ASSIGN);
+		final var unwrapped = AstUtil.unwrapParensAndExpr(requireNonNull(assign).getFirstChild());
+		assertEquals(TokenTypes.IDENT, requireNonNull(unwrapped).getType());
+		assertEquals("a", unwrapped.getText());
+	}
+
+	@Test
+	public void testUnwrapParensAndExprFromEndNestedParens() throws Exception {
+		final var land = findFirst(parseSource("class T { boolean f(boolean a, boolean b) { return a && (((b))); } }"), TokenTypes.LAND);
+		final var unwrapped = AstUtil.unwrapParensAndExprFromEnd(requireNonNull(land).getLastChild());
+		assertEquals(TokenTypes.IDENT, requireNonNull(unwrapped).getType());
+		assertEquals("b", unwrapped.getText());
+	}
+
+	@Test
+	public void testUnwrapParensAndExprFromEndNonWrapper() throws Exception {
+		final var operand = requireNonNull(findFirst(parseSource("class T { boolean f(boolean a, boolean b) { return a && b; } }"), TokenTypes.LAND)).getLastChild();
+		assertSame(operand, AstUtil.unwrapParensAndExprFromEnd(operand));
+	}
+
+	@Test
+	public void testUnwrapParensAndExprFromEndNull() {
+		assertNull(AstUtil.unwrapParensAndExprFromEnd(null));
+	}
+
+	@Test
+	public void testUnwrapParensAndExprFromEndParenOperand() throws Exception {
+		final var land = findFirst(parseSource("class T { boolean f(boolean a, boolean b) { return a && (b); } }"), TokenTypes.LAND);
+		final var unwrapped = AstUtil.unwrapParensAndExprFromEnd(requireNonNull(land).getLastChild());
+		assertEquals(TokenTypes.IDENT, requireNonNull(unwrapped).getType());
+		assertEquals("b", unwrapped.getText());
+	}
+
+	@Test
+	public void testUnwrapParensAndExprNestedParens() throws Exception {
+		final var assign = findFirst(parseSource("class T { Object x = (((a))); }"), TokenTypes.ASSIGN);
+		final var unwrapped = AstUtil.unwrapParensAndExpr(requireNonNull(assign).getFirstChild());
+		assertEquals(TokenTypes.IDENT, requireNonNull(unwrapped).getType());
+		assertEquals("a", unwrapped.getText());
+	}
+
+	@Test
+	public void testUnwrapParensAndExprNonWrapper() throws Exception {
+		final var ident = findFirst(parseSource("class T { Object x = a; }"), TokenTypes.IDENT);
+		assertEquals(ident, AstUtil.unwrapParensAndExpr(ident));
+	}
+
+	@Test
+	public void testUnwrapParensAndExprNull() {
+		assertNull(AstUtil.unwrapParensAndExpr(null));
+	}
+
+	@Test
+	public void testUnwrapParensAndExprParen() throws Exception {
+		final var assign = findFirst(parseSource("class T { Object x = (a); }"), TokenTypes.ASSIGN);
+		final var unwrapped = AstUtil.unwrapParensAndExpr(requireNonNull(assign).getFirstChild());
+		assertEquals(TokenTypes.IDENT, requireNonNull(unwrapped).getType());
+		assertEquals("a", unwrapped.getText());
+	}
+
+	@Test
+	public void testUnwrapSingleStatementBlockEmpty() throws Exception {
+		final var ast = parseSource("class T { void f() {} }");
+		final var slist = findMethod(ast, "f").findFirstToken(TokenTypes.SLIST);
+		assertNull(AstUtil.unwrapSingleStatementBlock(slist));
+	}
+
+	@Test
+	public void testUnwrapSingleStatementBlockMultiStatement() throws Exception {
+		final var ast = parseSource("class T { void g() {} void f() { g(); g(); } }");
+		final var slist = findMethod(ast, "f").findFirstToken(TokenTypes.SLIST);
+		assertNull(AstUtil.unwrapSingleStatementBlock(slist));
+	}
+
+	@Test
+	public void testUnwrapSingleStatementBlockNonSlist() throws Exception {
+		final var ast = parseSource("class T { void g() {} void f() { g(); } }");
+		final var expr = findFirst(findMethod(ast, "f"), TokenTypes.EXPR);
+		assertEquals(expr, AstUtil.unwrapSingleStatementBlock(expr));
+	}
+
+	@Test
+	public void testUnwrapSingleStatementBlockSingleStatement() throws Exception {
+		final var ast = parseSource("class T { void g() {} void f() { g(); } }");
+		final var slist = findMethod(ast, "f").findFirstToken(TokenTypes.SLIST);
+		final var unwrapped = AstUtil.unwrapSingleStatementBlock(slist);
+		assertEquals(TokenTypes.EXPR, requireNonNull(unwrapped).getType());
 	}
 }
