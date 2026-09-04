@@ -16,6 +16,14 @@ class InputUpperEllHexLiteralViolation {
 }
 // === end ===
 
+// === case: negated_literal ===
+class InputUpperEllNegatedLiteralViolation {
+	long m() {
+		return -3000000000L;
+	}
+}
+// === end ===
+
 // === case: replace_lowercase_l ===
 class InputUpperEllReplaceLowercaseLViolation {
 	long m() {

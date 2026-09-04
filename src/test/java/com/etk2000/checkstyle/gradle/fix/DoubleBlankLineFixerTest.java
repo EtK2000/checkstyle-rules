@@ -2,6 +2,7 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSimpleFix;
 import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkip;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkipResult;
 
 import org.junit.jupiter.api.Test;
 
@@ -9,6 +10,12 @@ public class DoubleBlankLineFixerTest {
 	private static final String TOPIC = "doubleblankline";
 
 	private final CheckstyleFixer fixer = new DoubleBlankLineFixer();
+
+	@Test
+	public void testCollapseBlankInsideBlockComment() throws Exception {
+		// can't migrate: NoDoubleBlankLines is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
+		assertSimpleFix(fixer, TOPIC, "collapse_blank_inside_block_comment");
+	}
 
 	@Test
 	public void testCollapseDoubleBlankToSingle() throws Exception {
@@ -35,6 +42,11 @@ public class DoubleBlankLineFixerTest {
 	@Test
 	public void testSingleBlankNotFixed() throws Exception {
 		assertSkip(fixer, TOPIC, "single_blank_not_fixed");
+	}
+
+	@Test
+	public void testSkipBlankInsideTextBlock() throws Exception {
+		assertSkipResult(fixer, TOPIC, "skip_blank_inside_text_block", SkipMessages.BLANK_LINE_SKIP_TEXT_BLOCK);
 	}
 
 	@Test

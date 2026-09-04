@@ -2,7 +2,7 @@ package com.etk2000.checkstyle.inputs.nofinalparameters;
 
 // === case: annotated_final_param ===
 class InputNoFinalParametersAnnotatedFinalParamSliceViolation {
-	void annotatedFinal(@SuppressWarnings("unused") final String s) {} // violation: Remove 'final' modifier from parameter 's'.
+	void annotatedFinal(@SuppressWarnings("unused") final String s) {} // violation: Remove the 'final' modifier from parameter 's'.
 }
 // === end ===
 
@@ -12,7 +12,7 @@ class InputNoFinalParametersCatchMultiWithFinalSliceViolation {
 		try {
 			System.out.println();
 		}
-		catch (final RuntimeException | Error e) { // violation: Remove 'final' modifier from parameter 'e'.
+		catch (final RuntimeException | Error e) { // violation: Remove the 'final' modifier from parameter 'e'.
 			System.out.println(e);
 		}
 	}
@@ -25,7 +25,7 @@ class InputNoFinalParametersCatchWithFinalSliceViolation {
 		try {
 			System.out.println();
 		}
-		catch (final Exception e) { // violation: Remove 'final' modifier from parameter 'e'.
+		catch (final Exception e) { // violation: Remove the 'final' modifier from parameter 'e'.
 			System.out.println(e);
 		}
 	}
@@ -34,19 +34,19 @@ class InputNoFinalParametersCatchWithFinalSliceViolation {
 
 // === case: constructor_param ===
 class InputNoFinalParametersConstructorParamSliceViolation {
-	InputNoFinalParametersConstructorParamSliceViolation(final int x) {} // violation: Remove 'final' modifier from parameter 'x'.
+	InputNoFinalParametersConstructorParamSliceViolation(final int x) {} // violation: Remove the 'final' modifier from parameter 'x'.
 }
 // === end ===
 
 // === case: final_annotated_param ===
 class InputNoFinalParametersFinalAnnotatedParamSliceViolation {
-	void finalAnnotated(final @SuppressWarnings("unused") int x) {} // violation: Remove 'final' modifier from parameter 'x'.
+	void finalAnnotated(final @SuppressWarnings("unused") int x) {} // violation: Remove the 'final' modifier from parameter 'x'.
 }
 // === end ===
 
 // === case: first_param_final ===
 class InputNoFinalParametersFirstParamFinalSliceViolation {
-	void firstParamFinal(final int x, String y) {} // violation: Remove 'final' modifier from parameter 'x'.
+	void firstParamFinal(final int x, String y) {} // violation: Remove the 'final' modifier from parameter 'x'.
 }
 // === end ===
 
@@ -54,7 +54,7 @@ class InputNoFinalParametersFirstParamFinalSliceViolation {
 // imports: java.util.List
 class InputNoFinalParametersForEachAnnotatedWithFinalSliceViolation {
 	void m(List<String> list) {
-		for (@SuppressWarnings("unused") final var item : list) // violation: Remove 'final' modifier from for-each variable 'item'.
+		for (@SuppressWarnings("unused") final var item : list) // violation: Remove the 'final' modifier from for-each variable 'item'.
 			System.out.println(item);
 	}
 }
@@ -64,7 +64,7 @@ class InputNoFinalParametersForEachAnnotatedWithFinalSliceViolation {
 // imports: java.util.List
 class InputNoFinalParametersForEachExplicitTypeWithFinalSliceViolation {
 	void m(List<Integer> list) {
-		for (final int item : list) // violation: Remove 'final' modifier from for-each variable 'item'.
+		for (final int item : list) // violation: Remove the 'final' modifier from for-each variable 'item'.
 			System.out.println(item);
 	}
 }
@@ -74,7 +74,7 @@ class InputNoFinalParametersForEachExplicitTypeWithFinalSliceViolation {
 // imports: java.util.List
 class InputNoFinalParametersForEachWithFinalSliceViolation {
 	void m(List<String> list) {
-		for (final var item : list) // violation: Remove 'final' modifier from for-each variable 'item'.
+		for (final var item : list) // violation: Remove the 'final' modifier from for-each variable 'item'.
 			System.out.println(item);
 	}
 }
@@ -83,7 +83,7 @@ class InputNoFinalParametersForEachWithFinalSliceViolation {
 // === case: for_init_multi_with_final ===
 class InputNoFinalParametersForInitMultiSliceViolation {
 	void m() {
-		for (final int i = 0, size = 10; i < size;) // violation: For-loop variable 'i' must not be final, move it before the loop. // violation: For-loop variable 'size' must not be final, move it before the loop.
+		for (final int i = 0, size = 10; i < size;) // violation: For-loop variable 'i' must not be 'final' (declare it before the loop instead). // violation: For-loop variable 'size' must not be 'final' (declare it before the loop instead).
 			break;
 	}
 }
@@ -93,7 +93,7 @@ class InputNoFinalParametersForInitMultiSliceViolation {
 // imports: java.util.List
 class InputNoFinalParametersForInitSingleSliceViolation {
 	void m(List<String> list) {
-		for (final var size = list.size(); size > 0;) // violation: For-loop variable 'size' must not be final, move it before the loop.
+		for (final var size = list.size(); size > 0;) // violation: For-loop variable 'size' must not be 'final' (declare it before the loop instead).
 			break;
 	}
 }
@@ -103,28 +103,28 @@ class InputNoFinalParametersForInitSingleSliceViolation {
 // multi-fix-expected
 // imports: java.util.List
 class InputNoFinalParametersViolation {
-	void bothFinal(final int x, final String y) {} // violation: Remove 'final' modifier from parameter 'x'. // violation: Remove 'final' modifier from parameter 'y'.
+	void bothFinal(final int x, final String y) {} // violation: Remove the 'final' modifier from parameter 'x'. // violation: Remove the 'final' modifier from parameter 'y'.
 
 	void lambdaWithFinal(List<String> list) {
-		list.sort((final String a, final String b) -> a.compareTo(b)); // violation: Remove 'final' modifier from parameter 'a'. // violation: Remove 'final' modifier from parameter 'b'.
+		list.sort((final String a, final String b) -> a.compareTo(b)); // violation: Remove the 'final' modifier from parameter 'a'. // violation: Remove the 'final' modifier from parameter 'b'.
 	}
 }
 // === end ===
 
 // === case: second_param_final ===
 class InputNoFinalParametersSecondParamFinalSliceViolation {
-	void secondParamFinal(int x, final String y) {} // violation: Remove 'final' modifier from parameter 'y'.
+	void secondParamFinal(int x, final String y) {} // violation: Remove the 'final' modifier from parameter 'y'.
 }
 // === end ===
 
 // === case: single_final_method ===
 class InputNoFinalParametersSingleFinalMethodSliceViolation {
-	void singleFinal(final int x) {} // violation: Remove 'final' modifier from parameter 'x'.
+	void singleFinal(final int x) {} // violation: Remove the 'final' modifier from parameter 'x'.
 }
 // === end ===
 
 // === case: varargs_final ===
 class InputNoFinalParametersVarargsFinalSliceViolation {
-	void varargsFinal(final String... args) {} // violation: Remove 'final' modifier from parameter 'args'.
+	void varargsFinal(final String... args) {} // violation: Remove the 'final' modifier from parameter 'args'.
 }
 // === end ===

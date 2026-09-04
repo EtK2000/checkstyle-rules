@@ -80,7 +80,7 @@ public class FinalLocalVariableFixerTest {
 				SkipResult.class,
 				fixer.fix(List.of(line), 0, line.length() - 2)
 		);
-		assertEquals("no declaration type line precedes the variable name", result.reason());
+		assertEquals("cannot add 'final': no declaration type line precedes the variable name", result.reason());
 	}
 
 	@Test

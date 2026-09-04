@@ -6,7 +6,10 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 import javax.annotation.Nonnull;
 
 /**
- * Checkstyle check that flags trailing commas in array initializers.
+ * Checkstyle check that flags trailing commas in array initializers, in both the
+ * expression form ({@code int[] x = {1, 2,};}, an {@code ARRAY_INIT}) and the
+ * annotation form ({@code @Anno({1, 2,})}, an {@code ANNOTATION_ARRAY_INIT}).
+ * Both hang their elements the same way, so one visitor serves both.
  */
 public class NoArrayTrailingCommaCheck extends AbstractAstCheck {
 	private static final String MSG_KEY = "no.array.trailing.comma";
@@ -14,12 +17,11 @@ public class NoArrayTrailingCommaCheck extends AbstractAstCheck {
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
-		return new int[]{TokenTypes.ARRAY_INIT};
+		return new int[]{TokenTypes.ANNOTATION_ARRAY_INIT, TokenTypes.ARRAY_INIT};
 	}
 
 	@Override
 	public void visitToken(@Nonnull DetailAST ast) {
-		// find the last child before RCURLY
 		DetailAST lastBeforeRCurly = null;
 		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() == TokenTypes.RCURLY)

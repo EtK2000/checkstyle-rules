@@ -73,10 +73,10 @@ skips them. No separate fixer configuration is needed.
 
 To make a check suppressible:
 
-1. In `visitToken()`, read the type's MODIFIERS and call `AstUtil.hasSuppressWarnings`:
+1. In `visitToken()`, read the type's MODIFIERS and call `AstQuery.hasSuppressWarnings`:
    ```java
    final var modifiers = ast.findFirstToken(TokenTypes.MODIFIERS);
-   if (modifiers != null && AstUtil.hasSuppressWarnings(modifiers, "MyCheckKey"))
+   if (modifiers != null && AstQuery.hasSuppressWarnings(modifiers, "MyCheckKey"))
        return;
    ```
 
@@ -85,7 +85,7 @@ To make a check suppressible:
    final var parent = ast.getParent();
    if (parent != null) {
        final var parentModifiers = parent.findFirstToken(TokenTypes.MODIFIERS);
-       if (parentModifiers != null && AstUtil.hasSuppressWarnings(parentModifiers, "MyCheckKey"))
+       if (parentModifiers != null && AstQuery.hasSuppressWarnings(parentModifiers, "MyCheckKey"))
            return;
    }
    ```

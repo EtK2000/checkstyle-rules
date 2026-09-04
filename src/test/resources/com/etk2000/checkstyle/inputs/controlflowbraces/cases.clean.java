@@ -232,6 +232,34 @@ class InputControlFlowClean {
 		while (x > 0);
 	}
 
+	void elseBodyIfPrefixedCall(boolean a, Runnable ifReady) {
+		if (a)
+			System.out.println(a);
+		else
+			ifReady.run();
+	}
+
+	void elseBracedIfThenStatement(boolean a, boolean b) {
+		if (a)
+			System.out.println(a);
+		else {
+			if (b)
+				System.out.println(b);
+			System.out.println(a);
+		}
+	}
+
+	void elseBracedSoleIf(boolean a, boolean b) {
+		if (a)
+			System.out.println(a);
+		else {
+			if (b) {
+				System.out.println(a);
+				System.out.println(b);
+			}
+		}
+	}
+
 	void elseIfChain(int x) {
 		if (x > 0)
 			System.out.println("positive");
@@ -239,6 +267,21 @@ class InputControlFlowClean {
 			System.out.println("negative");
 		else
 			System.out.println("zero");
+	}
+
+	void elseInCommentFollowedByIf(boolean a, boolean b) {
+		if (a)
+			System.out.println(a);
+		// else
+		if (b)
+			System.out.println(b);
+	}
+
+	void elseInlineCommentBeforeIf(boolean a, boolean b) {
+		if (a)
+			System.out.println(a);
+		else /* otherwise */ if (b)
+			System.out.println(b);
 	}
 
 	void emptyStatement(int x) {
@@ -326,6 +369,17 @@ class InputControlFlowClean {
 	void statementOnClosingBraceLine(int x) {
 		if (x > 0) {
 			--x; }
+	}
+
+	void textBlockContainingElseIf() {
+		final var s = """
+				if (a)
+					x();
+				else
+					if (b)
+						y();
+				""";
+		System.out.println(s);
 	}
 
 	void twoStatementsOnBodyLine(int x) {

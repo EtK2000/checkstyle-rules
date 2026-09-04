@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle.format;
 
-import com.etk2000.checkstyle.AstUtil;
+import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.etk2000.checkstyle.format.SpanReformat.CannotReformat;
 import com.etk2000.checkstyle.format.SpanReformat.Reason;
 import com.etk2000.checkstyle.format.SpanReformat.Reformatted;
@@ -22,16 +23,12 @@ import javax.annotation.Nonnull;
  * are unwrapped and the call is collapsed onto one line ({@code handler.postDelayed(() -> stmt, delay);});
  * otherwise (a multi-statement / non-expression lambda body, an anonymous class, or a collapsed form that
  * exceeds the width) the block opens on the {@code (} line, its body stays multi-line, and the closing
- * {@code }, delay);} lands on one line after the body. Indentation of the multi-line shape is delegated
- * to {@link JavaSpanReindenter}; slice/collapse/width primitives are shared via {@link SpanReformat}.
- *
- * <p>Reformatting utility that depends only on the shared {@link AstUtil} / {@link SpanReformat} /
- * {@link JavaSpanReindenter} utilities, never on a check or fixer.
+ * {@code }, delay);} lands on one line after the body.
  */
 public final class JavaPostDelayedReformatter {
 	/**
-	 * Re-lays-out {@code call} (a {@code postDelayed} {@code METHOD_CALL} with a braced-lambda first
-	 * argument and a delay second argument). {@code lines} are the current source lines the {@code call}
+	 * Re-lays-out {@code call} (a {@code postDelayed} {@code METHOD_CALL} with a braced-lambda or
+	 * anonymous-class first argument and a delay second argument). {@code lines} are the current source lines the {@code call}
 	 * AST was parsed from; the one-line form is produced only when it fits within {@code maxLineWidth}
 	 * (tabs expanded to {@code tabWidth}).
 	 */
@@ -58,8 +55,8 @@ public final class JavaPostDelayedReformatter {
 		if (lambdaArg == null || delayArg == null)
 			return new CannotReformat(Reason.STALE);
 
-		// the first arg is a direct braced inline block: a braced lambda (SLIST body) or an anonymous class
-		// (OBJBLOCK body). A lambda's SLIST node IS its `{`; an anon class's OBJBLOCK has an LCURLY child
+		// a braced lambda's body is an SLIST, an anonymous class's an OBJBLOCK; the SLIST node IS the lambda's
+		// `{`, while an OBJBLOCK has an LCURLY child
 		final var block = ArgLayoutClassifier.directInlineBlock(lambdaArg);
 		if (block == null)
 			return new CannotReformat(Reason.STALE);
@@ -74,51 +71,52 @@ public final class JavaPostDelayedReformatter {
 
 		final var openIdx = call.getLineNo() - 1;
 		final var lcurlyIdx = lcurly.getLineNo() - 1;
-		final var lcurlyCol = lcurly.getColumnNo();
+		final var lcurlyCol = SpanReformat.charColumn(lines, lcurly);
 		final var rcurlyIdx = rcurly.getLineNo() - 1;
-		final var rcurlyCol = rcurly.getColumnNo();
+		final var rcurlyCol = SpanReformat.charColumn(lines, rcurly);
 		final var closeIdx = rparen.getLineNo() - 1;
-		final var rparenCol = rparen.getColumnNo();
+		final var rparenCol = SpanReformat.charColumn(lines, rparen);
 		if (openIdx < 0 || closeIdx >= lines.size() || openIdx > lcurlyIdx || lcurlyIdx > rcurlyIdx || rcurlyIdx > closeIdx)
 			return new CannotReformat(Reason.STALE);
-		// the reported columns must still point at the block's `{`/`}` and the call's `)`; a prior same-pass
-		// edit that shifted them without shifting line numbers would otherwise slice at the wrong character
+		// a prior same-pass edit that shifted the columns without shifting line numbers would otherwise slice
+		// at the wrong character
 		if (!SpanReformat.pointsAt(lines, lcurlyIdx, lcurlyCol, '{')
 				|| !SpanReformat.pointsAt(lines, rcurlyIdx, rcurlyCol, '}')
 				|| !SpanReformat.pointsAt(lines, closeIdx, rparenCol, ')'))
 			return new CannotReformat(Reason.STALE);
 
-		// any // comment on a joined line would swallow the rest, and a text block / block comment cannot be
-		// collapsed onto one line; either way keep the source as-is
+		var lexer = SpanReformat.lexerStateAt(lines, openIdx);
 		for (var i = openIdx; i < closeIdx; ++i) {
-			if (SpanReformat.hasTrailingLineComment(lines.get(i)))
+			if (SpanReformat.hasTrailingLineComment(lines.get(i), lexer))
 				return new CannotReformat(Reason.COMMENT_ON_JOINED_LINE);
+			lexer = JavaLineScanner.stateAfter(lines.get(i), lexer);
 		}
+		if (SpanReformat.hasEscapedDelimiter(lines, openIdx, closeIdx))
+			return new CannotReformat(Reason.ESCAPED_DELIMITER);
 		if (SpanReformat.beginsInMultilineLiteral(lines, openIdx, closeIdx + 1))
 			return new CannotReformat(Reason.MULTILINE_LITERAL);
 
 		final var baseTabs = SpanReformat.leadingTabs(lines.get(openIdx));
+		final var firstLineIndent = SpanReformat.firstLineIndent(lines, openIdx);
 		final var suffix = lines.get(closeIdx).substring(rparenCol);
 
-		// only a braced lambda with a single EXPRESSION-statement body can be unwrapped onto one line; an anon
-		// class (OBJBLOCK) or a return/if/var-def/throw body keeps its braces via the multi-line fallback,
-		// else the unwrap would emit uncompilable source
-		if (AstUtil.singleExpressionStatementBody(braceBody) != null) {
+		// unwrapping the braces around anything but a single expression statement would emit uncompilable source
+		if (AstQuery.singleExpressionStatementBody(braceBody) != null) {
 			final var head = SpanReformat.collapse(SpanReformat.slice(lines, openIdx, 0, lcurlyIdx, lcurlyCol));
 			final var bodyRaw = SpanReformat.collapse(SpanReformat.slice(lines, lcurlyIdx, lcurlyCol + 1, rcurlyIdx, rcurlyCol));
 			final var body = bodyRaw.endsWith(";") ? bodyRaw.substring(0, bodyRaw.length() - 1).stripTrailing() : bodyRaw;
 			final var afterBrace = SpanReformat.collapse(SpanReformat.slice(lines, rcurlyIdx, rcurlyCol + 1, closeIdx, rparenCol));
-			final var oneLine = "\t".repeat(baseTabs) + head + " " + body + afterBrace + suffix;
+			final var oneLine = firstLineIndent + head + " " + body + afterBrace + suffix;
 			if (SpanReformat.tabExpandedWidth(oneLine, tabWidth) <= maxLineWidth)
 				return new Reformatted(openIdx, closeIdx, List.of(oneLine));
 		}
 
 		final var broken = new ArrayList<String>();
-		broken.add(SpanReformat.collapse(SpanReformat.slice(lines, openIdx, 0, lcurlyIdx, lcurlyCol + 1)));
+		broken.add(firstLineIndent + SpanReformat.collapse(SpanReformat.slice(lines, openIdx, 0, lcurlyIdx, lcurlyCol + 1)));
 		for (var i = lcurlyIdx + 1; i < rcurlyIdx; ++i)
 			broken.add(lines.get(i));
 		broken.add(SpanReformat.collapse(SpanReformat.slice(lines, rcurlyIdx, rcurlyCol, closeIdx, rparenCol + 1)) + suffix.substring(1));
-		return new Reformatted(openIdx, closeIdx, JavaSpanReindenter.reindent(broken, baseTabs));
+		return new Reformatted(openIdx, closeIdx, JavaSpanReindenter.reindent(broken, baseTabs, SpanReformat.lexerStateAt(lines, openIdx)));
 	}
 
 	private JavaPostDelayedReformatter() {

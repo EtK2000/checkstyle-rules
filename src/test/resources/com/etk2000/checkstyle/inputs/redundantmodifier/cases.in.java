@@ -67,6 +67,12 @@ interface InputRedundantModifierPublicFinalFieldSliceViolation {
 }
 // === end ===
 
+// === case: remove_public_followed_by_type_parameter ===
+interface InputRedundantModifierPublicTypeParameterSliceViolation {
+	public<T> T method(); // violation: Redundant 'public' modifier.
+}
+// === end ===
+
 // === case: remove_public_from_interface ===
 interface InputRedundantModifierPublicInterfaceSliceViolation {
 	public void method(); // violation: Redundant 'public' modifier.

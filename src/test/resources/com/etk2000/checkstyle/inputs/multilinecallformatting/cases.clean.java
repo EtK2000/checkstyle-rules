@@ -298,6 +298,24 @@ class InputMultilineCallClean {
 		);
 	}
 
+	void openCloseReformattedBracedLambda() {
+		method(
+				"k",
+				x -> {
+					System.out.println(x);
+				}
+		);
+	}
+
+	void openCloseReformattedTextBlockMiddleArg() {
+		method(
+				arg,
+				"""
+				text""",
+				x
+		);
+	}
+
 	Object other(Object... args) {
 		return args[0];
 	}
@@ -307,6 +325,14 @@ class InputMultilineCallClean {
 			public void run() {
 				doThing();
 			}
+		}, 1000);
+	}
+
+	void postDelayedBlockCommentBodyStaysMultiline() {
+		handler.postDelayed(() -> {
+			/* first
+			second */
+			doThing();
 		}, 1000);
 	}
 
@@ -321,6 +347,15 @@ class InputMultilineCallClean {
 	void postDelayedReturnBodyStacked() {
 		handler.postDelayed(() -> {
 			return;
+		}, 1000);
+	}
+
+	void postDelayedTextBlockBodyStaysMultiline() {
+		handler.postDelayed(() -> {
+			doThing(
+					"""
+							text"""
+			);
 		}, 1000);
 	}
 
@@ -385,6 +420,11 @@ class InputMultilineCallClean {
 				.put("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", 1);
 	}
 
+	void putJsonObjectSinglePutJustUnderLimitWithTrailingComment() {
+		new JSONObject()
+				.put("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", 1); // this trailing comment is what pushes the joined line past the limit
+	}
+
 	void putJsonObjectSinglePutMissingValue() {
 		new JSONObject()
 				.put("k");
@@ -398,6 +438,15 @@ class InputMultilineCallClean {
 		cache.put("someExtremelyLongKeyNameThatByItselfAlreadyForcesUsWellBeyondTheColumnBudget", new JSONObject()
 				.put("anotherFairlyLongInnerKeyNameHere", 123456789)
 		);
+	}
+
+	void putJsonObjectSinglePutTextBlockKey() {
+		new JSONObject()
+				.put(
+						"""
+								k""",
+						1
+				);
 	}
 
 	void putJsonObjectSinglePutThreeArgs() {
@@ -427,6 +476,14 @@ class InputMultilineCallClean {
 		cache.put(
 				"aKeyNameLongEnoughThatTheCollapsedSingleLineFormWouldExceedOneHundredTwentyColumns",
 				new JSONObject().put("innerKeyNameAlsoContributingLength", "theValueString")
+		);
+	}
+
+	void putKeyTextBlockChainedValueSuppressed() {
+		cache.put(
+				"""
+						k""",
+				new JSONObject().put("innerKey", "theValueString")
 		);
 	}
 
@@ -689,6 +746,151 @@ class InputMultilineCallClean {
 		);
 	}
 
+	void textBlockFormattedSoleArgMethodCallExempt() {
+		method("""
+				text %s""".formatted(x));
+	}
+
+	void textBlockFormattedThisFirstArgMethodCallExempt() {
+		method(this, """
+				text %s""".formatted(x));
+	}
+
+	void textBlockOnParenLinesAfterOneArg() {
+		method(arg, """
+				text""");
+	}
+
+	void textBlockOnParenLinesAfterTwoArgs() {
+		method(arg, arg1, """
+				text""");
+	}
+
+	void textBlockOnParenLinesAnonymousClassOwner() {
+		new Thread("""
+				worker""") {
+			@Override
+			public void run() {
+				step1();
+			}
+		}.start();
+	}
+
+	void textBlockOnParenLinesBlockCommentBeforeClose() {
+		method("""
+				text""" /* why */);
+	}
+
+	void textBlockOnParenLinesBlockCommentBeforeOpener() {
+		method(/* why */ """
+				text""");
+	}
+
+	void textBlockOnParenLinesChainAfterClose() {
+		String.valueOf("""
+				text""").trim();
+	}
+
+	void textBlockOnParenLinesEmpty() {
+		method("""
+				""");
+	}
+
+	void textBlockOnParenLinesEscapes() {
+		method("""
+				say \"""); done \\ end
+				""");
+	}
+
+	void textBlockOnParenLinesInBracedLambdaBody() {
+		handler.postDelayed(() -> {
+			method("""
+					text
+					""");
+		}, 1000);
+	}
+
+	void textBlockOnParenLinesInsideConstructorArg() {
+		method(new StringBuilder("""
+				text"""));
+	}
+
+	void textBlockOnParenLinesJsonObjectPut() {
+		new JSONObject().put("k", """
+				text""");
+	}
+
+	void textBlockOnParenLinesLineContinuation() {
+		method("""
+				first \
+				second
+				""");
+	}
+
+	void textBlockOnParenLinesListOfOwner() {
+		method(List.of("""
+				a"""));
+	}
+
+	void textBlockOnParenLinesNestedSoleCall() {
+		method(String.valueOf("""
+				text"""));
+	}
+
+	void textBlockOnParenLinesNewOwner() {
+		new StringBuilder("""
+				text""");
+	}
+
+	void textBlockOnParenLinesPutValue() {
+		cache.put("k", """
+				text""");
+	}
+
+	void textBlockOnParenLinesReceiverOnContinuationLine() {
+		obj
+				.method("""
+						text""");
+	}
+
+	void textBlockOnParenLinesResourceIdFirstArg() {
+		method(R.string.ok, """
+				text""");
+	}
+
+	void textBlockOnParenLinesSoleArg() {
+		method("""
+				text
+				""");
+	}
+
+	void textBlockOnParenLinesSoleArgCloserOnContentLine() {
+		method("""
+				text""");
+	}
+
+	void textBlockOnParenLinesStructuralContent() {
+		method("""
+				call(a, b) // not a comment )
+				""");
+	}
+
+	void textBlockOnParenLinesThisFirstArg() {
+		method(this, """
+				text""");
+	}
+
+	void textBlockOnParenLinesTrailingLineComment() {
+		method("""
+				text
+				"""); // note
+	}
+
+	void textBlockOnParenLinesTypeWitness() {
+		Collections.<String>singletonList("""
+				a""");
+	}
+
 	void thisAndAnonClass() {
 		method(this, new Runnable() {
 			public void run() {
@@ -821,9 +1023,25 @@ class InputMultilineCallGetStringNotContext {
 		);
 	}
 
+	void contextArrayParameterGetString(Context[] arrayCtx) {
+		method(
+				arrayCtx.getString(
+						1
+				)
+		);
+	}
+
 	void dottedNonContextMethodGetString() {
 		method(
 				something.notAContextMethod().getString(
+						1
+				)
+		);
+	}
+
+	void dottedTypeNotContextParameterGetString(content.Context.Inner innerCtx) {
+		method(
+				innerCtx.getString(
 						1
 				)
 		);
@@ -868,5 +1086,20 @@ class InputMultilineCallGetStringNotContext {
 						"key"
 				)
 		);
+	}
+
+	void varargsContextParameterGetString(Context... varargsCtx) {
+		method(
+				varargsCtx.getString(
+						1
+				)
+		);
+	}
+}
+
+class InputMultilineCallTextBlockSuperOwner extends Exception {
+	InputMultilineCallTextBlockSuperOwner() {
+		super("""
+				message""");
 	}
 }

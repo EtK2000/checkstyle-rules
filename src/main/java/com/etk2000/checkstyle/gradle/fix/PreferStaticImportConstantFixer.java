@@ -4,10 +4,13 @@ import static com.etk2000.checkstyle.gradle.fix.FqnResolver.resolveFqcn;
 import static com.etk2000.checkstyle.gradle.fix.FqnResolver.stripCommentsAndBom;
 import static com.etk2000.checkstyle.gradle.fix.FqnResolver.stripCommentsForClassification;
 
-import com.etk2000.checkstyle.AstUtil;
 import com.etk2000.checkstyle.JavaLineScanner;
 import com.etk2000.checkstyle.JavaLineScanner.LexerState;
+import com.etk2000.checkstyle.LineText;
 import com.etk2000.checkstyle.PreferStaticImportConstantCheck;
+import com.etk2000.checkstyle.ast.AstText;
+import com.etk2000.checkstyle.format.SpanReformat;
+import com.etk2000.checkstyle.gradle.fix.FixerAst.ThrowingParser;
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
@@ -49,12 +52,6 @@ import javax.annotation.Nullable;
  * for each reason's wording.</p>
  */
 class PreferStaticImportConstantFixer implements CheckstyleFixer {
-	@FunctionalInterface
-	interface ParseFn {
-		@Nonnull
-		DetailAST parse(@Nonnull List<String> lines) throws CheckstyleException;
-	}
-
 	private record MultiVarParse(int firstNameStart, @Nonnull List<VarSegment> segments) {}
 
 	/** A single identifier-to-identifier substitution applied by {@link #rewriteOutsideLiterals}. */
@@ -135,15 +132,17 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 		return replacement.isEmpty() ? replacement : List.of();
 	}
 
+	/** The identifier starting at code-point column {@code col} of {@code line}, or null when none does. */
 	@CheckReturnValue
 	@Nullable
 	private static String extractIdentForward(@Nonnull String line, int col) {
-		if (col < 0 || col >= line.length() || !Character.isJavaIdentifierStart(line.charAt(col)))
+		final var start = LineText.charIndexOfColumn(line, col);
+		if (start < 0 || start >= line.length() || !Character.isJavaIdentifierStart(line.charAt(start)))
 			return null;
-		var i = col;
+		var i = start;
 		while (i < line.length() && Character.isJavaIdentifierPart(line.charAt(i)))
 			++i;
-		return line.substring(col, i);
+		return line.substring(start, i);
 	}
 
 	/**
@@ -232,22 +231,22 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 		if (lcurly == null || rcurly == null)
 			return defaultResult;
 		final var lcurlyLine = lcurly.getLineNo() - 1;
-		final var lcurlyCol = lcurly.getColumnNo();
+		final var lcurlyCol = SpanReformat.charColumn(lines, lcurly);
 		final var rcurlyLine = rcurly.getLineNo() - 1;
-		final var rcurlyCol = rcurly.getColumnNo();
+		final var rcurlyCol = SpanReformat.charColumn(lines, rcurly);
 		if (lcurlyLine < 0 || rcurlyLine >= lines.size() || lcurlyLine >= rcurlyLine)
 			return defaultResult;
 		if (lcurlyLine < baseStart - 1 || rcurlyLine > baseEnd + 1)
 			return defaultResult;
 
 		final var openText = lines.get(lcurlyLine);
-		if (lcurlyCol >= openText.length() || openText.charAt(lcurlyCol) != '{')
+		if (lcurlyCol < 0 || lcurlyCol >= openText.length() || openText.charAt(lcurlyCol) != '{')
 			return defaultResult;
 		if (!openText.substring(lcurlyCol + 1).isBlank())
 			return defaultResult;
 
 		final var closeText = lines.get(rcurlyLine);
-		if (rcurlyCol >= closeText.length() || closeText.charAt(rcurlyCol) != '}')
+		if (rcurlyCol < 0 || rcurlyCol >= closeText.length() || closeText.charAt(rcurlyCol) != '}')
 			return defaultResult;
 		if (!closeText.substring(0, rcurlyCol).isBlank())
 			return defaultResult;
@@ -278,7 +277,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 		if (trailingSemi == null)
 			return defaultResult;
 		final var semiLine = trailingSemi.getLineNo() - 1;
-		final var semiCol = trailingSemi.getColumnNo();
+		final var semiCol = SpanReformat.charColumn(lines, trailingSemi);
 		if (semiLine < 0 || semiLine >= lines.size())
 			return defaultResult;
 		if (semiLine >= baseStart && semiLine <= baseEnd)
@@ -399,13 +398,12 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 	 * Parses {@code lines} and locates the {@link DetailAST} VARIABLE_DEF
 	 * whose identifier sits at the given {@code lineIndex} / {@code column}.
 	 * Returns {@code null} when the file can't be parsed cleanly (mid-fix
-	 * sibling damage) or no field at that location exists; the caller falls
-	 * back to a textual-only path.
+	 * sibling damage) or no field at that location exists.
 	 */
 	@CheckReturnValue
 	@Nullable
 	private static DetailAST findFieldDefForInline(@Nonnull List<String> lines, int lineIndex, int column) {
-		return findFieldDefForInlineUsing(lines, lineIndex, column, PreferStaticImportConstantFixer::parseLinesToAst);
+		return findFieldDefForInlineUsing(lines, lineIndex, column, FixerAst.DEFAULT_PARSER);
 	}
 
 	@CheckReturnValue
@@ -414,7 +412,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 			@Nonnull List<String> lines,
 			int lineIndex,
 			int column,
-			@Nonnull ParseFn parser
+			@Nonnull ThrowingParser parser
 	) {
 		if (lineIndex < 0 || lineIndex >= lines.size())
 			return null;
@@ -422,14 +420,9 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 		final var name = extractIdentForward(lineText, column);
 		if (name == null)
 			return null;
-		final DetailAST root;
-		try {
-			root = parser.parse(lines);
-		}
-		catch (CheckstyleException | RuntimeException | StackOverflowError |
-		       AssertionError ignored) {
+		final var root = FixerAst.parseOrNull(lines, parser);
+		if (root == null)
 			return null;
-		}
 		return findFieldDef(root, name, lineIndex + 1, column);
 	}
 
@@ -452,7 +445,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 			@Nonnull String name,
 			@Nonnull Set<Integer> skipLines1
 	) {
-		return findShadowKindUsing(lines, name, skipLines1, PreferStaticImportConstantFixer::parseLinesToAst);
+		return findShadowKindUsing(lines, name, skipLines1, FixerAst.DEFAULT_PARSER);
 	}
 
 	@CheckReturnValue
@@ -461,16 +454,11 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 			@Nonnull List<String> lines,
 			@Nonnull String name,
 			@Nonnull Set<Integer> skipLines1,
-			@Nonnull ParseFn parser
+			@Nonnull ThrowingParser parser
 	) {
-		final DetailAST root;
-		try {
-			root = parser.parse(lines);
-		}
-		catch (CheckstyleException | RuntimeException | StackOverflowError |
-		       AssertionError ignored) {
+		final var root = FixerAst.parseOrNull(lines, parser);
+		if (root == null)
 			return "potential shadow (file does not parse cleanly)";
-		}
 		return walkForShadow(root, name, skipLines1);
 	}
 
@@ -546,14 +534,9 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 		if (fieldName == null)
 			return new SkipResult(SkipMessages.PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT);
 
-		final DetailAST root;
-		try {
-			root = parseLinesToAst(lines);
-		}
-		catch (CheckstyleException | RuntimeException | StackOverflowError |
-		       AssertionError ignored) {
+		final var root = FixerAst.parseOrNull(lines);
+		if (root == null)
 			return new SkipResult(SkipMessages.PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT);
-		}
 
 		final var fieldDef = findFieldDef(root, fieldName, lineIndex + 1, column);
 		if (fieldDef == null)
@@ -563,8 +546,8 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 		if (objBlock == null || objBlock.getType() != TokenTypes.OBJBLOCK)
 			return new SkipResult(SkipMessages.PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT);
 
-		final var enclosingTypeName = AstUtil.getEnclosingTypeName(objBlock);
-		final var packageName = AstUtil.getPackageName(root);
+		final var enclosingTypeName = AstText.getEnclosingTypeName(objBlock);
+		final var packageName = AstText.getPackageName(root);
 		final var cinitAssign = PreferStaticImportConstantCheck.findStaticInitAssign(objBlock, fieldName);
 		if (cinitAssign == null)
 			return new SkipResult(SkipMessages.PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT);
@@ -590,7 +573,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 		var leftmostLhs = lhsNode;
 		while (leftmostLhs.getFirstChild() != null)
 			leftmostLhs = leftmostLhs.getFirstChild();
-		final var lhsLeftmostColumn = leftmostLhs.getColumnNo();
+		final var lhsLeftmostColumn = SpanReformat.charColumn(lines, leftmostLhs);
 		if (lineIndex == cinitLine && leftmostLhs.getLineNo() - 1 != cinitLine)
 			return new SkipResult(SkipMessages.PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT);
 
@@ -692,8 +675,8 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 							lines,
 							maybeStaticInit.getLineNo() - 1,
 							lastChild.getLineNo() - 1,
-							maybeStaticInit.getColumnNo(),
-							lastChild.getColumnNo(),
+							SpanReformat.charColumn(lines, maybeStaticInit),
+							SpanReformat.charColumn(lines, lastChild),
 							cinitLine,
 							lhsLeftmostColumn,
 							rhsSemiPos
@@ -712,7 +695,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 		if (lineIndex == cinitLine) {
 			if (fieldDef.getLineNo() - 1 != lineIndex)
 				return new SkipResult(SkipMessages.PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT);
-			final var fieldDeclStart = fieldDef.getColumnNo();
+			final var fieldDeclStart = SpanReformat.charColumn(lines, fieldDef);
 			final var lineText = lines.get(lineIndex);
 			final int spliceMidEndCol;
 			final int spliceTailStartCol;
@@ -720,8 +703,8 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 				if (staticInit.getLineNo() - 1 != cinitLine
 						|| staticInitRcurly.getLineNo() - 1 != cinitLine)
 					return new SkipResult(SkipMessages.PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT);
-				spliceMidEndCol = staticInit.getColumnNo();
-				spliceTailStartCol = staticInitRcurly.getColumnNo() + 1;
+				spliceMidEndCol = SpanReformat.charColumn(lines, staticInit);
+				spliceTailStartCol = SpanReformat.charColumn(lines, staticInitRcurly) + 1;
 			}
 			else {
 				spliceMidEndCol = lhsLeftmostColumn;
@@ -765,7 +748,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 		final var fieldDeclStartLine = Math.min(lineIndex, astFieldLine);
 		if (fieldDeclStartLine < lineIndex) {
 			final var fieldStartLineText = lines.get(fieldDeclStartLine);
-			final var rawFieldCol = Math.max(0, fieldDef.getColumnNo());
+			final var rawFieldCol = Math.max(0, SpanReformat.charColumn(lines, fieldDef));
 			final var fieldStartCol = Math.min(rawFieldCol, fieldStartLineText.length());
 			final var prefix = fieldStartLineText.substring(0, fieldStartCol);
 			if (!stripCommentsForClassification(prefix, inTextBlockMask[fieldDeclStartLine]).isBlank())
@@ -1068,10 +1051,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 	/**
 	 * State-aware scan returning {@code true} when {@code line} contains a
 	 * real {@code //} line-comment marker (i.e. one not sitting inside a
-	 * string, char, text-block, or block-comment literal). Used by
-	 * {@link #fixMultiVar} to bail when stitching the declaration would
-	 * collapse newlines and let the {@code //} comment extend through the
-	 * rest of the declaration.
+	 * string, char, text-block, or block-comment literal).
 	 */
 	@CheckReturnValue
 	private static boolean hasUnconfinedLineComment(@Nonnull String line) {
@@ -1428,7 +1408,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 		var lastIdentStart = -1;
 		var lastIdentEnd = -1;
 
-		// Phase 1: walk to the first depth-0 '=', remembering the last identifier run before it (the
+		// Walk to the first depth-0 '=', remembering the last identifier run before it (the
 		// first variable's name). Masking blanks string/char/comment/text-block content; annotation
 		// argument lists sit at paren depth > 0, so any '='/','/';' inside them is skipped without a
 		// dedicated annotation scan.
@@ -1507,7 +1487,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 			@Nonnull List<Rewrite> rewrites
 	) {
 		final var modified = new TreeMap<Integer, String>();
-		final var maskedLines = JavaLineScanner.maskAll(lines);
+		final var maskedLines = FixerAst.maskAll(lines);
 		for (var lineIdx = 0; lineIdx < lines.size(); ++lineIdx) {
 			if (lineIdx >= skipStart && lineIdx <= skipEnd)
 				continue;
@@ -1688,10 +1668,11 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
 		final var line = lines.get(lineIndex);
-		if (column < 0 || column >= line.length())
-			return null;
+		if (charColumn < 0 || charColumn >= line.length())
+			return new SkipResult(SkipMessages.FIX_POSITION_BOUNDS);
+		final var column = LineText.columnOfCharIndex(line, charColumn);
 
 		final var masks = FqnResolver.computeLineMasks(lines);
 		final var inBlockCommentMask = masks.inBlockComment();

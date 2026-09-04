@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.inputs.preferexactassertion;
 
 // === case: mixedimports_comparison_assert_false_still_fires ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.Assert.assertFalse
 class MixedimportsComparisonAssertFalseStillFiresSlice {
 	void m() {
@@ -11,7 +11,7 @@ class MixedimportsComparisonAssertFalseStillFiresSlice {
 // === end ===
 
 // === case: mixedimports_comparison_still_fires ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.Assert.assertTrue
 class MixedimportsComparisonStillFiresSlice {
 	void m() {

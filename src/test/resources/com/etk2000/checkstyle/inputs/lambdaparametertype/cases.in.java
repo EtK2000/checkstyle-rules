@@ -5,7 +5,7 @@ class InputLambdaParamAnnotationArgCharCloseParenSliceViolation {
 	@interface A {}
 
 	void m() {
-		final BiConsumer<X, Y> c = (@A(')') int a, int y) -> {}; // violation: Lambda parameter with annotation should use 'var' instead of 'int'. // violation: Lambda parameter with annotation should use 'var' instead of 'int'.
+		final BiConsumer<X, Y> c = (@A(')') int a, int y) -> {}; // violation: Annotated lambda parameter must use 'var' instead of 'int'. // violation: Annotated lambda parameter must use 'var' instead of 'int'.
 	}
 }
 // === end ===
@@ -15,7 +15,7 @@ class InputLambdaParamAnnotationArgCloseParenSliceViolation {
 	@interface A {}
 
 	void m() {
-		final BiConsumer<X, Y> c = (@A(")") String x, String y) -> {}; // violation: Lambda parameter with annotation should use 'var' instead of 'String'. // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		final BiConsumer<X, Y> c = (@A(")") String x, String y) -> {}; // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 }
 // === end ===
@@ -25,7 +25,7 @@ class InputLambdaParamAnnotationArgCommaStringSliceViolation {
 	@interface A {}
 
 	void m() {
-		final BiConsumer<X, Y> c = (@A("a,b") String x, String y) -> {}; // violation: Lambda parameter with annotation should use 'var' instead of 'String'. // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		final BiConsumer<X, Y> c = (@A("a,b") String x, String y) -> {}; // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 }
 // === end ===
@@ -35,7 +35,7 @@ class InputLambdaParamAnnotationArgOpenParenSliceViolation {
 	@interface A {}
 
 	void m() {
-		final BiConsumer<X, Y> c = (@A("(") String x, String y) -> {}; // violation: Lambda parameter with annotation should use 'var' instead of 'String'. // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		final BiConsumer<X, Y> c = (@A("(") String x, String y) -> {}; // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 }
 // === end ===
@@ -45,7 +45,18 @@ class InputLambdaParamAnnotationArgStringArrowSliceViolation {
 	@interface A {}
 
 	void m() {
-		final BiConsumer<X, Y> c = (@A(") ->") String x, int y) -> {}; // violation: Lambda parameter with annotation should use 'var' instead of 'String'. // violation: Lambda parameter with annotation should use 'var' instead of 'int'.
+		final BiConsumer<X, Y> c = (@A(") ->") String x, int y) -> {}; // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'int'.
+	}
+}
+// === end ===
+
+// === case: block_comment_before_annotation ===
+// imports: java.util.List
+class InputLambdaParamBlockCommentBeforeAnnotationSliceViolation {
+	@interface A {}
+
+	void m(List<String> list) {
+		list.forEach((/* c */ @A String x) -> System.out.println(x)); // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 }
 // === end ===
@@ -54,7 +65,36 @@ class InputLambdaParamAnnotationArgStringArrowSliceViolation {
 // imports: java.util.List
 class InputLambdaParamBlockCommentBeforeArrowSliceViolation {
 	void m(List<String> list) {
-		list.forEach((/* ) -> */ String x) -> System.out.println(x)); // violation: Lambda parameter should use implicit type instead of 'String'.
+		list.forEach((/* ) -> */ String x) -> System.out.println(x)); // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: block_comment_trailing_name ===
+// imports: java.util.List
+class InputLambdaParamBlockCommentTrailingNameSliceViolation {
+	void m(List<String> list) {
+		list.forEach((String x /* c */) -> System.out.println(x)); // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: block_comment_trailing_name_annotated ===
+// imports: java.util.List
+class InputLambdaParamBlockCommentTrailingNameAnnotatedSliceViolation {
+	@interface A {}
+
+	void m(List<String> list) {
+		list.forEach((@A String x /* c */) -> System.out.println(x)); // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: block_comment_trailing_name_second_param ===
+// imports: java.util.List
+class InputLambdaParamBlockCommentTrailingNameSecondParamSliceViolation {
+	void m(List<String> list) {
+		list.sort((String x, String y /* c */) -> x.compareTo(y)); // violation: Lambda parameter must use an implicit type instead of 'String'. // violation: Lambda parameter must use an implicit type instead of 'String'.
 	}
 }
 // === end ===
@@ -63,7 +103,7 @@ class InputLambdaParamBlockCommentBeforeArrowSliceViolation {
 // imports: java.util.function.Consumer
 class InputLambdaParamImplicitArrayTypeSliceViolation {
 	void m() {
-		final Consumer<String[]> c = (String[] x) -> System.out.println(x.length); // violation: Lambda parameter should use implicit type instead of 'String'.
+		final Consumer<String[]> c = (String[] x) -> System.out.println(x.length); // violation: Lambda parameter must use an implicit type instead of 'String'.
 	}
 }
 // === end ===
@@ -72,7 +112,343 @@ class InputLambdaParamImplicitArrayTypeSliceViolation {
 // imports: java.util.function.IntConsumer
 class InputLambdaParamImplicitPrimitiveTypeSliceViolation {
 	void m() {
-		final IntConsumer c = (int x) -> System.out.println(x); // violation: Lambda parameter should use implicit type instead of 'int'.
+		final IntConsumer c = (int x) -> System.out.println(x); // violation: Lambda parameter must use an implicit type instead of 'int'.
+	}
+}
+// === end ===
+
+// === case: multiline_annotated_both_lines ===
+// imports: java.util.Comparator
+// multi-fix-expected
+class InputLambdaParamMultilineAnnotatedBothLinesSliceViolation {
+	@interface A {}
+
+	@interface B {}
+
+	void m() {
+		final Comparator<String> c = (@A String x, // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+				@B String y) -> x.compareTo(y); // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_annotated_on_first_line ===
+// imports: java.util.Comparator
+// multi-fix-expected
+class InputLambdaParamMultilineAnnotatedOnFirstLineSliceViolation {
+	@interface A {}
+
+	void m() {
+		final Comparator<String> c = (@A String x, // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+				String y) -> x.compareTo(y); // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_annotated_on_second_line ===
+// imports: java.util.Comparator
+// multi-fix-expected
+class InputLambdaParamMultilineAnnotatedOnSecondLineSliceViolation {
+	@interface A {}
+
+	void m() {
+		final Comparator<String> c = (String x, // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+				@A String y) -> x.compareTo(y); // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_arrow_after_close_paren ===
+// imports: java.util.Comparator
+class InputLambdaParamMultilineArrowAfterCloseParenSliceViolation {
+	void m() {
+		final Comparator<String> c = (String x, String y) // violation: Lambda parameter must use an implicit type instead of 'String'. // violation: Lambda parameter must use an implicit type instead of 'String'.
+				-> x.compareTo(y);
+	}
+}
+// === end ===
+
+// === case: multiline_break_after_comma ===
+// imports: java.util.Comparator
+// multi-fix-expected
+class InputLambdaParamMultilineBreakAfterCommaSliceViolation {
+	void m() {
+		final Comparator<String> c = (String x, // violation: Lambda parameter must use an implicit type instead of 'String'.
+				String y) -> x.compareTo(y); // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_break_after_open_paren ===
+// imports: java.util.Comparator
+class InputLambdaParamMultilineBreakAfterOpenParenSliceViolation {
+	void m() {
+		final Comparator<String> c = (
+				String x, String y) -> x.compareTo(y); // violation: Lambda parameter must use an implicit type instead of 'String'. // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_break_before_close_paren ===
+// imports: java.util.Comparator
+class InputLambdaParamMultilineBreakBeforeCloseParenSliceViolation {
+	void m() {
+		final Comparator<String> c = (String x, String y // violation: Lambda parameter must use an implicit type instead of 'String'. // violation: Lambda parameter must use an implicit type instead of 'String'.
+				) -> x.compareTo(y);
+	}
+}
+// === end ===
+
+// === case: multiline_budget_exactly_at_limit ===
+// imports: java.util.Comparator
+// multi-fix-expected
+class InputLambdaParamMultilineBudgetExactlyAtLimitSliceViolation {
+	void m() {
+		final Comparator<String> c = (String firstParameterPaddedTo37CharactersAbc, // violation: Lambda parameter must use an implicit type instead of 'String'.
+				String secondParameterPaddedTo36CharsAbcdef) -> 0; // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_budget_relaxation_arm ===
+// imports: java.util.Comparator
+class InputLambdaParamMultilineBudgetRelaxationArmSliceViolation {
+	void m() {
+		final Comparator<String> c = (String firstParameterWithAnExtremelyLongDescriptiveNameHere, String secondParameterWithALongName // violation: Lambda parameter must use an implicit type instead of 'String'. // violation: Lambda parameter must use an implicit type instead of 'String'.
+		) -> 0;
+	}
+}
+// === end ===
+
+// === case: multiline_budget_relaxation_at_equality ===
+// imports: java.util.Comparator
+class InputLambdaParamMultilineBudgetRelaxationAtEqualitySliceViolation {
+	void m() {
+		final Comparator<String> c = (String firstParameterPaddedTo37CharactersAbc, String secondParameterPaddedTo37CharsAbcdefg // violation: Lambda parameter must use an implicit type instead of 'String'. // violation: Lambda parameter must use an implicit type instead of 'String'.
+		) -> 0 + 1234;
+	}
+}
+// === end ===
+
+// === case: multiline_comment_after_the_list ===
+// imports: java.util.Comparator
+// multi-fix-expected
+class InputLambdaParamMultilineCommentAfterTheListSliceViolation {
+	void m() {
+		final Comparator<String> c = (String x, // violation: Lambda parameter must use an implicit type instead of 'String'.
+				String y) -> x.compareTo(y); /* tail */ // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_comment_before_the_list ===
+// imports: java.util.Comparator
+// multi-fix-expected
+class InputLambdaParamMultilineCommentBeforeTheListSliceViolation {
+	void m() {
+		final Comparator<String> c = /* note */ (String x, // violation: Lambda parameter must use an implicit type instead of 'String'.
+				String y) -> x.compareTo(y); // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_curried_lambdas_sharing_a_line ===
+// multi-fix-expected
+class InputLambdaParamMultilineCurriedLambdasSharingALineSliceViolation {
+	void m() {
+		final Bi b = (String p, // violation: Lambda parameter must use an implicit type instead of 'String'.
+				String q) -> (String r, // violation: Lambda parameter must use an implicit type instead of 'String'. // violation: Lambda parameter must use an implicit type instead of 'String'.
+				String s) -> p; // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_inner_list_with_clean_outer ===
+// multi-fix-expected
+class InputLambdaParamMultilineInnerListWithCleanOuterSliceViolation {
+	void m() {
+		final Bi b = (p, q) -> (String r, // violation: Lambda parameter must use an implicit type instead of 'String'.
+				String s) -> p; // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_open_and_close_alone ===
+// imports: java.util.Comparator
+// multi-fix-expected
+class InputLambdaParamMultilineOpenAndCloseAloneSliceViolation {
+	void m() {
+		final Comparator<String> c = (
+				String x, // violation: Lambda parameter must use an implicit type instead of 'String'.
+				String y // violation: Lambda parameter must use an implicit type instead of 'String'.
+		) -> x.compareTo(y);
+	}
+}
+// === end ===
+
+// === case: multiline_outer_list_with_nested_naked_lambda ===
+// imports: java.util.Comparator
+// multi-fix-expected
+class InputLambdaParamMultilineOuterListWithNestedNakedLambdaSliceViolation {
+	void m() {
+		final Comparator<String> c = (String x, // violation: Lambda parameter must use an implicit type instead of 'String'.
+				String y) -> x.chars().map(z -> z).sum() - y.length(); // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_parens_arrow_after_close_paren ===
+// imports: java.util.function.UnaryOperator
+class InputLambdaParamMultilineParensArrowAfterCloseParenSliceViolation {
+	void m() {
+		final UnaryOperator<String> u = (x)
+				-> x; // violation: Remove the unnecessary parentheses around the single lambda parameter.
+	}
+}
+// === end ===
+
+// === case: multiline_parens_break_after_open_paren ===
+// imports: java.util.function.UnaryOperator
+class InputLambdaParamMultilineParensBreakAfterOpenParenSliceViolation {
+	void m() {
+		final UnaryOperator<String> u = (
+				x) -> x; // violation: Remove the unnecessary parentheses around the single lambda parameter.
+	}
+}
+// === end ===
+
+// === case: multiline_parens_break_before_close_paren ===
+// imports: java.util.function.UnaryOperator
+class InputLambdaParamMultilineParensBreakBeforeCloseParenSliceViolation {
+	void m() {
+		final UnaryOperator<String> u = (x
+				) -> x; // violation: Remove the unnecessary parentheses around the single lambda parameter.
+	}
+}
+// === end ===
+
+// === case: multiline_single_annotated_param ===
+// imports: java.util.function.UnaryOperator
+class InputLambdaParamMultilineSingleAnnotatedParamSliceViolation {
+	@interface A {}
+
+	void m() {
+		final UnaryOperator<String> u = (
+				@A String x) -> x; // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_single_explicit_param ===
+// imports: java.util.function.UnaryOperator
+class InputLambdaParamMultilineSingleExplicitParamSliceViolation {
+	void m() {
+		final UnaryOperator<String> u = (String x // violation: Lambda parameter must use an implicit type instead of 'String'.
+				) -> x;
+	}
+}
+// === end ===
+
+// === case: multiline_string_literal_masking_to_itself ===
+// imports: java.util.Comparator
+// multi-fix-expected
+class InputLambdaParamMultilineStringLiteralMaskingToItselfSliceViolation {
+	@interface A {}
+
+	void m() {
+		final Comparator<String> c = (@A(" ") String x, // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+				@A(" ") String y) -> x.compareTo(y); // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_three_params_each_own_line ===
+// multi-fix-expected
+class InputLambdaParamMultilineThreeParamsEachOwnLineSliceViolation {
+	void m() {
+		final Tri t = (String a, // violation: Lambda parameter must use an implicit type instead of 'String'.
+				String b, // violation: Lambda parameter must use an implicit type instead of 'String'.
+				String c) -> a + b + c; // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_three_params_first_annotated ===
+// multi-fix-expected
+class InputLambdaParamMultilineThreeParamsFirstAnnotatedSliceViolation {
+	@interface A {}
+
+	void m() {
+		final Tri t = (@A String a, // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+				String b, // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+				String c) -> a + b + c; // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_three_params_last_annotated ===
+// multi-fix-expected
+class InputLambdaParamMultilineThreeParamsLastAnnotatedSliceViolation {
+	@interface A {}
+
+	void m() {
+		final Tri t = (String a, // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+				String b, // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+				@A String c) -> a + b + c; // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_three_params_middle_annotated ===
+// multi-fix-expected
+class InputLambdaParamMultilineThreeParamsMiddleAnnotatedSliceViolation {
+	@interface A {}
+
+	void m() {
+		final Tri t = (String a, // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+				@A String b, // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+				String c) -> a + b + c; // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_three_params_two_on_first_line ===
+// multi-fix-expected
+class InputLambdaParamMultilineThreeParamsTwoOnFirstLineSliceViolation {
+	void m() {
+		final Tri t = (String a, String b, // violation: Lambda parameter must use an implicit type instead of 'String'. // violation: Lambda parameter must use an implicit type instead of 'String'.
+				String c) -> a + b + c; // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_three_params_two_on_last_line ===
+// multi-fix-expected
+class InputLambdaParamMultilineThreeParamsTwoOnLastLineSliceViolation {
+	void m() {
+		final Tri t = (String a, // violation: Lambda parameter must use an implicit type instead of 'String'.
+				String b, String c) -> a + b + c; // violation: Lambda parameter must use an implicit type instead of 'String'. // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: multiline_two_type_names ===
+// multi-fix-expected
+class InputLambdaParamMultilineTwoTypeNamesSliceViolation {
+	void m() {
+		final BiFn f = (String x, // violation: Lambda parameter must use an implicit type instead of 'String'.
+				int y) -> x; // violation: Lambda parameter must use an implicit type instead of 'int'.
+	}
+}
+// === end ===
+
+// === case: multiline_var_type ===
+// imports: java.util.Comparator
+// multi-fix-expected
+class InputLambdaParamMultilineVarTypeSliceViolation {
+	void m() {
+		final Comparator<String> c = (var x, // violation: Lambda parameter must use an implicit type instead of 'var'.
+				var y) -> x.compareTo(y); // violation: Lambda parameter must use an implicit type instead of 'var'.
 	}
 }
 // === end ===
@@ -83,7 +459,15 @@ class InputLambdaParamNestedInnerAnnotationArgParenSliceViolation {
 	@interface A {}
 
 	void m(List<List<String>> lists) {
-		lists.forEach(inner -> inner.forEach((@A(")") String y) -> System.out.println(y))); // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		lists.forEach(inner -> inner.forEach((@A(")") String y) -> System.out.println(y))); // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: no_space_before_arrow ===
+class InputLambdaParamNoSpaceBeforeArrowSliceViolation {
+	void m() {
+		final F f = (String[] s)-> s.length; // violation: Lambda parameter must use an implicit type instead of 'String'.
 	}
 }
 // === end ===
@@ -92,7 +476,7 @@ class InputLambdaParamNestedInnerAnnotationArgParenSliceViolation {
 // imports: java.util.List
 class InputLambdaParamParensBracedBodySliceViolation {
 	void m(List<String> list) {
-		list.forEach((x) -> { // violation: Remove unnecessary parentheses around single lambda parameter.
+		list.forEach((x) -> { // violation: Remove the unnecessary parentheses around the single lambda parameter.
 			System.out.println(x);
 		});
 	}
@@ -103,7 +487,7 @@ class InputLambdaParamParensBracedBodySliceViolation {
 // imports: java.util.List
 class InputLambdaParamParensExpressionBodySliceViolation {
 	void m(List<String> list) {
-		list.forEach((x) -> System.out.println(x)); // violation: Remove unnecessary parentheses around single lambda parameter.
+		list.forEach((x) -> System.out.println(x)); // violation: Remove the unnecessary parentheses around the single lambda parameter.
 	}
 }
 // === end ===
@@ -111,7 +495,7 @@ class InputLambdaParamParensExpressionBodySliceViolation {
 // === case: remove_type_c_style_array_interior_space ===
 class InputLambdaParamRemoveTypeCStyleArrayInteriorSpaceSliceViolation {
 	void m() {
-		final BiConsumer<X, Y> c = (int a[ ], int y) -> {}; // violation: Lambda parameter should use implicit type instead of 'int'. // violation: Lambda parameter should use implicit type instead of 'int'.
+		final BiConsumer<X, Y> c = (int a[ ], int y) -> {}; // violation: Lambda parameter must use an implicit type instead of 'int'. // violation: Lambda parameter must use an implicit type instead of 'int'.
 	}
 }
 // === end ===
@@ -119,7 +503,7 @@ class InputLambdaParamRemoveTypeCStyleArrayInteriorSpaceSliceViolation {
 // === case: remove_type_c_style_array_last ===
 class InputLambdaParamRemoveTypeCStyleArrayLastSliceViolation {
 	void m() {
-		final BiConsumer<X, Y> c = (int a, int y[]) -> {}; // violation: Lambda parameter should use implicit type instead of 'int'. // violation: Lambda parameter should use implicit type instead of 'int'.
+		final BiConsumer<X, Y> c = (int a, int y[]) -> {}; // violation: Lambda parameter must use an implicit type instead of 'int'. // violation: Lambda parameter must use an implicit type instead of 'int'.
 	}
 }
 // === end ===
@@ -127,7 +511,7 @@ class InputLambdaParamRemoveTypeCStyleArrayLastSliceViolation {
 // === case: remove_type_c_style_array_middle ===
 class InputLambdaParamRemoveTypeCStyleArrayMiddleSliceViolation {
 	void m() {
-		final TriConsumer<X, Y, Z> t = (int a, int b[], int c) -> {}; // violation: Lambda parameter should use implicit type instead of 'int'. // violation: Lambda parameter should use implicit type instead of 'int'. // violation: Lambda parameter should use implicit type instead of 'int'.
+		final TriConsumer<X, Y, Z> t = (int a, int b[], int c) -> {}; // violation: Lambda parameter must use an implicit type instead of 'int'. // violation: Lambda parameter must use an implicit type instead of 'int'. // violation: Lambda parameter must use an implicit type instead of 'int'.
 	}
 }
 // === end ===
@@ -135,7 +519,7 @@ class InputLambdaParamRemoveTypeCStyleArrayMiddleSliceViolation {
 // === case: remove_type_c_style_array_multi ===
 class InputLambdaParamRemoveTypeCStyleArrayMultiSliceViolation {
 	void m() {
-		final BiConsumer<X, Y> c = (int a[], int y) -> {}; // violation: Lambda parameter should use implicit type instead of 'int'. // violation: Lambda parameter should use implicit type instead of 'int'.
+		final BiConsumer<X, Y> c = (int a[], int y) -> {}; // violation: Lambda parameter must use an implicit type instead of 'int'. // violation: Lambda parameter must use an implicit type instead of 'int'.
 	}
 }
 // === end ===
@@ -143,7 +527,7 @@ class InputLambdaParamRemoveTypeCStyleArrayMultiSliceViolation {
 // === case: remove_type_c_style_array_multidim ===
 class InputLambdaParamRemoveTypeCStyleArrayMultidimSliceViolation {
 	void m() {
-		final BiConsumer<X, Y> c = (int a[][], int y) -> {}; // violation: Lambda parameter should use implicit type instead of 'int'. // violation: Lambda parameter should use implicit type instead of 'int'.
+		final BiConsumer<X, Y> c = (int a[][], int y) -> {}; // violation: Lambda parameter must use an implicit type instead of 'int'. // violation: Lambda parameter must use an implicit type instead of 'int'.
 	}
 }
 // === end ===
@@ -152,7 +536,7 @@ class InputLambdaParamRemoveTypeCStyleArrayMultidimSliceViolation {
 // imports: java.util.function.Consumer
 class InputLambdaParamRemoveTypeCStyleArraySingleSliceViolation {
 	void m() {
-		final Consumer<X> c = (int a[]) -> {}; // violation: Lambda parameter should use implicit type instead of 'int'.
+		final Consumer<X> c = (int a[]) -> {}; // violation: Lambda parameter must use an implicit type instead of 'int'.
 	}
 }
 // === end ===
@@ -160,7 +544,7 @@ class InputLambdaParamRemoveTypeCStyleArraySingleSliceViolation {
 // === case: remove_type_c_style_array_space_before_bracket ===
 class InputLambdaParamRemoveTypeCStyleArraySpaceBeforeBracketSliceViolation {
 	void m() {
-		final BiConsumer<X, Y> c = (int a [], int y) -> {}; // violation: Lambda parameter should use implicit type instead of 'int'. // violation: Lambda parameter should use implicit type instead of 'int'.
+		final BiConsumer<X, Y> c = (int a [], int y) -> {}; // violation: Lambda parameter must use an implicit type instead of 'int'. // violation: Lambda parameter must use an implicit type instead of 'int'.
 	}
 }
 // === end ===
@@ -168,7 +552,7 @@ class InputLambdaParamRemoveTypeCStyleArraySpaceBeforeBracketSliceViolation {
 // === case: remove_type_c_style_array_tab_before_name ===
 class InputLambdaParamRemoveTypeCStyleArrayTabBeforeNameSliceViolation {
 	void m() {
-		final BiConsumer<X, Y> c = (int	a[], int y) -> {}; // violation: Lambda parameter should use implicit type instead of 'int'. // violation: Lambda parameter should use implicit type instead of 'int'.
+		final BiConsumer<X, Y> c = (int	a[], int y) -> {}; // violation: Lambda parameter must use an implicit type instead of 'int'. // violation: Lambda parameter must use an implicit type instead of 'int'.
 	}
 }
 // === end ===
@@ -176,7 +560,7 @@ class InputLambdaParamRemoveTypeCStyleArrayTabBeforeNameSliceViolation {
 // === case: remove_type_c_style_array_with_java_style_type ===
 class InputLambdaParamRemoveTypeCStyleArrayWithJavaStyleTypeSliceViolation {
 	void m() {
-		final BiConsumer<X, Y> c = (int[] a[], int y) -> {}; // violation: Lambda parameter should use implicit type instead of 'int'. // violation: Lambda parameter should use implicit type instead of 'int'.
+		final BiConsumer<X, Y> c = (int[] a[], int y) -> {}; // violation: Lambda parameter must use an implicit type instead of 'int'. // violation: Lambda parameter must use an implicit type instead of 'int'.
 	}
 }
 // === end ===
@@ -184,7 +568,7 @@ class InputLambdaParamRemoveTypeCStyleArrayWithJavaStyleTypeSliceViolation {
 // === case: remove_type_c_style_array_with_java_style_type_spaced ===
 class InputLambdaParamRemoveTypeCStyleArrayWithJavaStyleTypeSpacedSliceViolation {
 	void m() {
-		final BiConsumer<X, Y> c = (int [ ] a [ ], int y) -> {}; // violation: Lambda parameter should use implicit type instead of 'int'. // violation: Lambda parameter should use implicit type instead of 'int'.
+		final BiConsumer<X, Y> c = (int [ ] a [ ], int y) -> {}; // violation: Lambda parameter must use an implicit type instead of 'int'. // violation: Lambda parameter must use an implicit type instead of 'int'.
 	}
 }
 // === end ===
@@ -192,7 +576,7 @@ class InputLambdaParamRemoveTypeCStyleArrayWithJavaStyleTypeSpacedSliceViolation
 // === case: remove_type_c_style_mixed_with_java_style ===
 class InputLambdaParamRemoveTypeCStyleMixedWithJavaStyleSliceViolation {
 	void m() {
-		final BiConsumer<X, Y> c = (int a[], int[] b) -> {}; // violation: Lambda parameter should use implicit type instead of 'int'. // violation: Lambda parameter should use implicit type instead of 'int'.
+		final BiConsumer<X, Y> c = (int a[], int[] b) -> {}; // violation: Lambda parameter must use an implicit type instead of 'int'. // violation: Lambda parameter must use an implicit type instead of 'int'.
 	}
 }
 // === end ===
@@ -200,7 +584,31 @@ class InputLambdaParamRemoveTypeCStyleMixedWithJavaStyleSliceViolation {
 // === case: remove_type_c_style_object_array ===
 class InputLambdaParamRemoveTypeCStyleObjectArraySliceViolation {
 	void m() {
-		final BiConsumer<X, Y> c = (String a[], String y) -> {}; // violation: Lambda parameter should use implicit type instead of 'String'. // violation: Lambda parameter should use implicit type instead of 'String'.
+		final BiConsumer<X, Y> c = (String a[], String y) -> {}; // violation: Lambda parameter must use an implicit type instead of 'String'. // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: remove_type_generic_array_param ===
+class InputLambdaParamRemoveTypeGenericArrayParamSliceViolation {
+	void m() {
+		final BiFunction<X, Y, Z> c = (Map<String, Integer> m, Integer x[]) -> 0; // violation: Lambda parameter must use an implicit type instead of 'Map'. // violation: Lambda parameter must use an implicit type instead of 'Integer'.
+	}
+}
+// === end ===
+
+// === case: remove_type_generic_param_with_comma ===
+class InputLambdaParamRemoveTypeGenericParamWithCommaSliceViolation {
+	void m() {
+		final BiFunction<X, Y, Z> c = (Map<String, Integer> m, Integer x) -> m.size() + x; // violation: Lambda parameter must use an implicit type instead of 'Map'. // violation: Lambda parameter must use an implicit type instead of 'Integer'.
+	}
+}
+// === end ===
+
+// === case: remove_type_generic_single_param ===
+class InputLambdaParamRemoveTypeGenericSingleParamSliceViolation {
+	void m() {
+		final Function<X, Z> c = (Map<String, Integer> m) -> m.size(); // violation: Lambda parameter must use an implicit type instead of 'Map'.
 	}
 }
 // === end ===
@@ -208,7 +616,7 @@ class InputLambdaParamRemoveTypeCStyleObjectArraySliceViolation {
 // === case: remove_type_java_style_array ===
 class InputLambdaParamRemoveTypeJavaStyleArraySliceViolation {
 	void m() {
-		final BiConsumer<X, Y> c = (int[] a, int y) -> {}; // violation: Lambda parameter should use implicit type instead of 'int'. // violation: Lambda parameter should use implicit type instead of 'int'.
+		final BiConsumer<X, Y> c = (int[] a, int y) -> {}; // violation: Lambda parameter must use an implicit type instead of 'int'. // violation: Lambda parameter must use an implicit type instead of 'int'.
 	}
 }
 // === end ===
@@ -217,7 +625,15 @@ class InputLambdaParamRemoveTypeJavaStyleArraySliceViolation {
 // imports: java.util.List
 class InputLambdaParamRemoveTypeMultiSliceViolation {
 	void m(List<String> list) {
-		list.sort((String x, String y) -> x.compareTo(y)); // violation: Lambda parameter should use implicit type instead of 'String'. // violation: Lambda parameter should use implicit type instead of 'String'.
+		list.sort((String x, String y) -> x.compareTo(y)); // violation: Lambda parameter must use an implicit type instead of 'String'. // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: remove_type_nested_generics_param ===
+class InputLambdaParamRemoveTypeNestedGenericsParamSliceViolation {
+	void m() {
+		final BiFunction<X, Y, Z> c = (Map<String, List<Integer>> m, Map<Integer, String> n) -> {}; // violation: Lambda parameter must use an implicit type instead of 'Map'. // violation: Lambda parameter must use an implicit type instead of 'Map'.
 	}
 }
 // === end ===
@@ -226,7 +642,7 @@ class InputLambdaParamRemoveTypeMultiSliceViolation {
 // imports: java.util.List
 class InputLambdaParamRemoveTypeSingleSliceViolation {
 	void m(List<String> list) {
-		list.forEach((String x) -> System.out.println(x)); // violation: Lambda parameter should use implicit type instead of 'String'.
+		list.forEach((String x) -> System.out.println(x)); // violation: Lambda parameter must use an implicit type instead of 'String'.
 	}
 }
 // === end ===
@@ -235,7 +651,55 @@ class InputLambdaParamRemoveTypeSingleSliceViolation {
 // imports: java.util.List
 class InputLambdaParamRemoveTypeTabSliceViolation {
 	void m(List<String> list) {
-		list.forEach((String	x) -> System.out.println(x)); // violation: Lambda parameter should use implicit type instead of 'String'.
+		list.forEach((String	x) -> System.out.println(x)); // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: remove_type_trailing_space_in_list ===
+class InputLambdaParamRemoveTypeTrailingSpaceSliceViolation {
+	void m() {
+		final F f = (String a , String b , String c ) -> a + b + c; // violation: Lambda parameter must use an implicit type instead of 'String'. // violation: Lambda parameter must use an implicit type instead of 'String'. // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: remove_type_varargs_primitive ===
+class InputLambdaParamRemoveTypeVarargsPrimitiveSliceViolation {
+	void m() {
+		final F f = (int... xs) -> xs.length; // violation: Lambda parameter must use an implicit type instead of 'int'.
+	}
+}
+// === end ===
+
+// === case: remove_type_varargs_reference ===
+class InputLambdaParamRemoveTypeVarargsReferenceSliceViolation {
+	void m() {
+		final F f = (String... parts) -> parts.length; // violation: Lambda parameter must use an implicit type instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: remove_type_wildcard_bare ===
+class InputLambdaParamRemoveTypeWildcardBareSliceViolation {
+	void m() {
+		final F f = (List<?> n) -> n.size(); // violation: Lambda parameter must use an implicit type instead of 'List'.
+	}
+}
+// === end ===
+
+// === case: remove_type_wildcard_lower ===
+class InputLambdaParamRemoveTypeWildcardLowerSliceViolation {
+	void m() {
+		final F f = (List<? super Integer> n) -> n.size(); // violation: Lambda parameter must use an implicit type instead of 'List'.
+	}
+}
+// === end ===
+
+// === case: remove_type_wildcard_upper ===
+class InputLambdaParamRemoveTypeWildcardUpperSliceViolation {
+	void m() {
+		final F f = (List<? extends Number> n) -> n.size(); // violation: Lambda parameter must use an implicit type instead of 'List'.
 	}
 }
 // === end ===
@@ -246,7 +710,7 @@ class InputLambdaParamReplaceVarAnnotatedSliceViolation {
 	@interface A {}
 
 	void m(List<String> list) {
-		list.forEach((@A String x) -> System.out.println(x)); // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		list.forEach((@A String x) -> System.out.println(x)); // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 }
 // === end ===
@@ -256,7 +720,21 @@ class InputLambdaParamReplaceVarAnnotationWithArgsSliceViolation {
 	@interface A {}
 
 	void m() {
-		final BiConsumer<X, Y> c = (@A("v") String x, String y) -> {}; // violation: Lambda parameter with annotation should use 'var' instead of 'String'. // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		final BiConsumer<X, Y> c = (@A("v") String x, String y) -> {}; // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: replace_type_with_var_annotation_with_comma_args ===
+class InputLambdaParamReplaceVarAnnotationWithCommaArgsSliceViolation {
+	@interface A {
+		int x();
+
+		int y();
+	}
+
+	void m() {
+		final BiFunction<X, Y, Z> c = (@A(x = 1, y = 2) Map<String, Integer> m, Integer x) -> 0; // violation: Annotated lambda parameter must use 'var' instead of 'Map'. // violation: Annotated lambda parameter must use 'var' instead of 'Integer'.
 	}
 }
 // === end ===
@@ -269,7 +747,7 @@ class InputLambdaParamReplaceVarBothParamsAnnotatedSliceViolation {
 	@interface B {}
 
 	void m(List<String> list) {
-		list.sort((@A String x, @B String y) -> x.compareTo(y)); // violation: Lambda parameter with annotation should use 'var' instead of 'String'. // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		list.sort((@A String x, @B String y) -> x.compareTo(y)); // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 }
 // === end ===
@@ -279,7 +757,7 @@ class InputLambdaParamReplaceVarCStyleAnnotatedSliceViolation {
 	@interface A {}
 
 	void m() {
-		final BiConsumer<X, Y> c = (@A int a[], String y) -> {}; // violation: Lambda parameter with annotation should use 'var' instead of 'int'. // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		final BiConsumer<X, Y> c = (@A int a[], String y) -> {}; // violation: Annotated lambda parameter must use 'var' instead of 'int'. // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 }
 // === end ===
@@ -289,7 +767,7 @@ class InputLambdaParamReplaceVarCStyleBothSliceViolation {
 	@interface A {}
 
 	void m() {
-		final BiConsumer<X, Y> c = (@A int a[], int b[]) -> {}; // violation: Lambda parameter with annotation should use 'var' instead of 'int'. // violation: Lambda parameter with annotation should use 'var' instead of 'int'.
+		final BiConsumer<X, Y> c = (@A int a[], int b[]) -> {}; // violation: Annotated lambda parameter must use 'var' instead of 'int'. // violation: Annotated lambda parameter must use 'var' instead of 'int'.
 	}
 }
 // === end ===
@@ -299,7 +777,7 @@ class InputLambdaParamReplaceVarCStyleMultidimSliceViolation {
 	@interface A {}
 
 	void m() {
-		final BiConsumer<X, Y> c = (@A int a[][], String y) -> {}; // violation: Lambda parameter with annotation should use 'var' instead of 'int'. // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		final BiConsumer<X, Y> c = (@A int a[][], String y) -> {}; // violation: Annotated lambda parameter must use 'var' instead of 'int'. // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 }
 // === end ===
@@ -309,7 +787,7 @@ class InputLambdaParamReplaceVarCStyleNonAnnotatedSliceViolation {
 	@interface A {}
 
 	void m() {
-		final BiConsumer<X, Y> c = (@A String x, int b[]) -> {}; // violation: Lambda parameter with annotation should use 'var' instead of 'String'. // violation: Lambda parameter with annotation should use 'var' instead of 'int'.
+		final BiConsumer<X, Y> c = (@A String x, int b[]) -> {}; // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'int'.
 	}
 }
 // === end ===
@@ -319,7 +797,7 @@ class InputLambdaParamReplaceVarCStyleNonAnnotatedMultidimSliceViolation {
 	@interface A {}
 
 	void m() {
-		final BiConsumer<X, Y> c = (@A String x, int b[][]) -> {}; // violation: Lambda parameter with annotation should use 'var' instead of 'String'. // violation: Lambda parameter with annotation should use 'var' instead of 'int'.
+		final BiConsumer<X, Y> c = (@A String x, int b[][]) -> {}; // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'int'.
 	}
 }
 // === end ===
@@ -330,7 +808,7 @@ class InputLambdaParamReplaceVarFirstParamAnnotatedMultiSliceViolation {
 	@interface A {}
 
 	void m(List<String> list) {
-		list.sort((@A String x, String y) -> x.compareTo(y)); // violation: Lambda parameter with annotation should use 'var' instead of 'String'. // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		list.sort((@A String x, String y) -> x.compareTo(y)); // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 }
 // === end ===
@@ -340,7 +818,7 @@ class InputLambdaParamReplaceVarJavaStyleAnnotatedSliceViolation {
 	@interface A {}
 
 	void m() {
-		final BiConsumer<X, Y> c = (@A int[] a, String y) -> {}; // violation: Lambda parameter with annotation should use 'var' instead of 'int'. // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		final BiConsumer<X, Y> c = (@A int[] a, String y) -> {}; // violation: Annotated lambda parameter must use 'var' instead of 'int'. // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 }
 // === end ===
@@ -350,7 +828,7 @@ class InputLambdaParamReplaceVarJavaStyleNonAnnotatedSliceViolation {
 	@interface A {}
 
 	void m() {
-		final BiConsumer<X, Y> c = (@A String x, int[] b) -> {}; // violation: Lambda parameter with annotation should use 'var' instead of 'String'. // violation: Lambda parameter with annotation should use 'var' instead of 'int'.
+		final BiConsumer<X, Y> c = (@A String x, int[] b) -> {}; // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'int'.
 	}
 }
 // === end ===
@@ -363,7 +841,7 @@ class InputLambdaParamReplaceVarMultiAnnotationSliceViolation {
 	@interface B {}
 
 	void m(List<String> list) {
-		list.forEach((@A @B String x) -> System.out.println(x)); // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		list.forEach((@A @B String x) -> System.out.println(x)); // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 }
 // === end ===
@@ -374,7 +852,37 @@ class InputLambdaParamReplaceVarSecondParamAnnotatedMultiSliceViolation {
 	@interface A {}
 
 	void m(List<String> list) {
-		list.sort((String x, @A String y) -> x.compareTo(y)); // violation: Lambda parameter with annotation should use 'var' instead of 'String'. // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		list.sort((String x, @A String y) -> x.compareTo(y)); // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: replace_type_with_var_three_params_last_annotated ===
+class InputLambdaParamReplaceVarThreeParamsLastSliceViolation {
+	@interface A {}
+
+	void m() {
+		final F f = (String a, String b, @A String c) -> a + b + c; // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: replace_type_with_var_three_params_middle_annotated ===
+class InputLambdaParamReplaceVarThreeParamsMiddleSliceViolation {
+	@interface A {}
+
+	void m() {
+		final F f = (String a, @A String b, String c) -> a + b + c; // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'String'. // violation: Annotated lambda parameter must use 'var' instead of 'String'.
+	}
+}
+// === end ===
+
+// === case: replace_type_with_var_varargs_annotated ===
+class InputLambdaParamReplaceVarVarargsSliceViolation {
+	@interface A {}
+
+	void m() {
+		final F f = (@A String... parts) -> parts.length; // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 }
 // === end ===
@@ -383,7 +891,7 @@ class InputLambdaParamReplaceVarSecondParamAnnotatedMultiSliceViolation {
 // imports: java.util.List
 class InputLambdaParamStringArrowAfterArrowSliceViolation {
 	void m(List<String> list) {
-		list.forEach((String x) -> System.out.println("a->b")); // violation: Lambda parameter should use implicit type instead of 'String'.
+		list.forEach((String x) -> System.out.println("a->b")); // violation: Lambda parameter must use an implicit type instead of 'String'.
 	}
 }
 // === end ===
@@ -392,12 +900,21 @@ class InputLambdaParamStringArrowAfterArrowSliceViolation {
 // imports: java.util.List
 class InputLambdaParamStringParenAfterArrowSliceViolation {
 	void m(List<String> list) {
-		list.forEach((x) -> System.out.println(")")); // violation: Remove unnecessary parentheses around single lambda parameter.
+		list.forEach((x) -> System.out.println(")")); // violation: Remove the unnecessary parentheses around the single lambda parameter.
+	}
+}
+// === end ===
+
+// === case: two_arrows_on_one_line ===
+class InputLambdaParamTwoArrowsOnOneLineSliceViolation {
+	void m() {
+		final F f = (String a) -> () -> System.out.println(a); // violation: Lambda parameter must use an implicit type instead of 'String'.
 	}
 }
 // === end ===
 
 // === case: var ===
+// multi-fix-expected
 // imports: java.util.List
 class InputLambdaParamVarViolation {
 	@interface C {}
@@ -405,11 +922,11 @@ class InputLambdaParamVarViolation {
 	@interface D {}
 
 	void annotatedExplicitSingle(List<String> list) {
-		list.forEach((@C String x) -> System.out.println(x)); // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		list.forEach((@C String x) -> System.out.println(x)); // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 
 	void annotatedMultiAnnotation(List<String> list) {
-		list.forEach((@C @D String x) -> System.out.println(x)); // violation: Lambda parameter with annotation should use 'var' instead of 'String'.
+		list.forEach((@C @D String x) -> System.out.println(x)); // violation: Annotated lambda parameter must use 'var' instead of 'String'.
 	}
 }
 // === end ===
@@ -418,7 +935,7 @@ class InputLambdaParamVarViolation {
 // imports: java.util.List
 class InputLambdaParamVarMultiSliceViolation {
 	void m(List<String> list) {
-		list.sort((var x, var y) -> x.compareTo(y)); // violation: Lambda parameter should use implicit type instead of 'var'. // violation: Lambda parameter should use implicit type instead of 'var'.
+		list.sort((var x, var y) -> x.compareTo(y)); // violation: Lambda parameter must use an implicit type instead of 'var'. // violation: Lambda parameter must use an implicit type instead of 'var'.
 	}
 }
 // === end ===
@@ -427,7 +944,7 @@ class InputLambdaParamVarMultiSliceViolation {
 // imports: java.util.List
 class InputLambdaParamVarSingleSliceViolation {
 	void m(List<String> list) {
-		list.forEach((var x) -> System.out.println(x)); // violation: Lambda parameter should use implicit type instead of 'var'.
+		list.forEach((var x) -> System.out.println(x)); // violation: Lambda parameter must use an implicit type instead of 'var'.
 	}
 }
 // === end ===

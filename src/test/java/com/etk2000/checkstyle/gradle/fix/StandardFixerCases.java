@@ -3,8 +3,11 @@ package com.etk2000.checkstyle.gradle.fix;
 import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertCaseFix;
 import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertCaseFixMultiViolation;
 import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertCaseFixMultiViolationSkip;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertCaseFixSupplementary;
 import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertCaseSkip;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertCaseSkipSupplementary;
 import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.collectImportFqcns;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.supplementaryApplies;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.DynamicContainer.dynamicContainer;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
@@ -15,6 +18,7 @@ import com.etk2000.checkstyle.TestResources.CaseSlice;
 import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 
 import org.junit.jupiter.api.DynamicNode;
+import org.junit.jupiter.api.DynamicTest;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -31,7 +35,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public final class StandardFixerCases {
-	private static final int MAX_FIX_PASSES = 10;
+	// passes the single-fixer clean fixed-point loop makes; separate from the task's own cap
+	private static final int MAX_CLEAN_FIXER_PASSES = 10;
 	private static final String CASE_MARKER_PREFIX = "// === case:";
 	private static final String IMPORT_PREFIX = "import ";
 	private static final String INPUTS_BASE = "/com/etk2000/checkstyle/inputs/";
@@ -63,10 +68,10 @@ public final class StandardFixerCases {
 		final var propertyArgs = PropertiesUtil.propertiesAsArray(properties);
 		final var fixers = Map.of(checkClass.getName(), fixer);
 		final var lines = new ArrayList<>(List.of(original.split("\n", -1)));
-		for (var pass = 0; pass < MAX_FIX_PASSES; ++pass) {
+		for (var pass = 0; pass < MAX_CLEAN_FIXER_PASSES; ++pass) {
 			final var violations = BaseCheckTest.runCheckInline(checkClass, String.join("\n", lines), propertyArgs);
 			final var result = CheckstyleFixAction.applyFixes(lines, violations, fixers);
-			if (result.fixCount() == 0 && !result.needsSecondPass())
+			if (result.fixCount() == 0 && !result.needsAnotherPass())
 				break;
 		}
 		assertEquals(
@@ -150,6 +155,7 @@ public final class StandardFixerCases {
 			contentForViolations.addAll(sliceLines);
 			final var perCase = new ArrayList<DynamicNode>();
 			final var skipReason = findSkipReason(sliceLines);
+			DynamicTest supplementary = null;
 			perCase.add(dynamicTest(
 					skipReason == null ? "violations" : "violations (skipped: " + skipReason + ")",
 					() -> BaseCheckTest.assertCheckMatchesMarkers(checkClass, contentForViolations, topic + "/" + name, propertyArgs)
@@ -160,12 +166,20 @@ public final class StandardFixerCases {
 							"fix",
 							() -> assertCaseFix(checkClass, fixer, topic, name, properties)
 					));
+					supplementary = dynamicTest(
+							"fix-supplementary",
+							() -> assertCaseFixSupplementary(checkClass, fixer, topic, name, properties)
+					);
 				}
 				else {
 					perCase.add(dynamicTest(
 							"fix-skip",
 							() -> assertCaseSkip(checkClass, fixer, topic, name, sliceLines, skipReason, propertyArgs)
 					));
+					supplementary = dynamicTest(
+							"fix-skip-supplementary",
+							() -> assertCaseSkipSupplementary(checkClass, fixer, topic, name, properties, skipReason)
+					);
 				}
 			}
 			else if (hasFixer && countLinesWithGatedInMarkers(sliceLines, properties) == 0) {
@@ -184,14 +198,27 @@ public final class StandardFixerCases {
 						"fix-multi",
 						() -> assertCaseFixMultiViolation(checkClass, fixer, topic, name, properties)
 				));
+				supplementary = dynamicTest(
+						"fix-multi-supplementary",
+						() -> assertCaseFixSupplementary(checkClass, fixer, topic, name, properties)
+				);
 			}
 			else if (hasFixer && skipReason != null && hasMultiFixOptIn(sliceLines)) {
 				perCase.add(dynamicTest(
 						"fix-multi-skip",
 						() -> assertCaseFixMultiViolationSkip(checkClass, fixer, topic, name, sliceLines, skipReason, propertyArgs)
 				));
+				supplementary = dynamicTest(
+						"fix-multi-skip-supplementary",
+						() -> assertCaseSkipSupplementary(checkClass, fixer, topic, name, properties, skipReason)
+				);
 			}
-			nodes.add(dynamicContainer(name, perCase.stream()));
+			// text ahead of a violation reported at its line's first non-blank char cannot make its
+			// code-point and char columns differ, so the supplementary sub-tests need one past it.
+			// Finding that runs the check, so the filter stays lazy and runs on the container's own
+			// worker: evaluated here, every slice's run would land on the one thread walking the factory
+			final var supplementaryCase = Stream.ofNullable(supplementary).filter(test -> supplementaryApplies(checkClass, topic, name, properties));
+			nodes.add(dynamicContainer(name, Stream.concat(perCase.stream(), supplementaryCase)));
 		}
 		return nodes.stream();
 	}
@@ -206,16 +233,6 @@ public final class StandardFixerCases {
 		return propSuffix + "." + fixtureKey;
 	}
 
-	/**
-	 * The auto-pipeline runs {@code assertCaseFix}, which invokes the fixer
-	 * once at the first violation and expects the result to equal the Fixed
-	 * slice. That model works when every marker is on a single line (the
-	 * fixer's single call rewrites that line, resolving all markers on it),
-	 * and breaks when markers span multiple lines (each line needs its own
-	 * fix call). So slices with exactly one violation-bearing line are
-	 * eligible; everything else is overview content for the {@code
-	 * violations} dynamic test.
-	 */
 	@CheckReturnValue
 	private static int countLinesWithGatedInMarkers(@Nonnull List<String> lines, @Nonnull Map<String, String> properties) {
 		final var seenLines = new HashSet<Integer>();

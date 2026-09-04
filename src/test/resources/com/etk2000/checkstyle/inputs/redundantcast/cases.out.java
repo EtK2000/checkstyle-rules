@@ -1,5 +1,21 @@
 package com.etk2000.checkstyle.inputs.redundantcast;
 
+// === case: block_comment_after_subject_in_wrap ===
+class InputRedundantCastCommentAfterSubjectSliceViolation {
+	int m(String s) {
+		return /* legacy */ s.length();
+	}
+}
+// === end ===
+
+// === case: block_comment_both_sides_of_subject ===
+class InputRedundantCastCommentBothSidesSliceViolation {
+	int m(String s) {
+		return /* a */ /* b */ s.length();
+	}
+}
+// === end ===
+
 // === case: block_comment_hides_method_call ===
 class InputRedundantCastBlockCommentHidesCallSliceViolation {
 	String foo(String x) {
@@ -15,7 +31,15 @@ class InputRedundantCastBlockCommentHidesCallSliceViolation {
 // === case: block_comment_in_receiver_wrap ===
 class InputRedundantCastBlockCommentInReceiverSliceViolation {
 	int m(String s) {
-		return (/* note */ s).length();
+		return /* note */ s.length();
+	}
+}
+// === end ===
+
+// === case: block_comment_in_receiver_wrap_no_space ===
+class InputRedundantCastCommentInWrapNoSpaceSliceViolation {
+	int m(String s) {
+		return/* note */ s.length();
 	}
 }
 // === end ===
@@ -32,6 +56,14 @@ class InputRedundantCastInlineBlockCommentSliceViolation {
 class InputRedundantCastLeadingBlockCommentSliceViolation {
 	void m() {
 		/* leading */ final String s = null;
+	}
+}
+// === end ===
+
+// === case: cast_with_two_block_comments ===
+class InputRedundantCastTwoBlockCommentsSliceViolation {
+	void m() {
+		final String s = /* a */ /* b */ null;
 	}
 }
 // === end ===
@@ -100,6 +132,14 @@ class InputRedundantCastCompoundPlusSliceViolation {
 }
 // === end ===
 
+// === case: compound_assignment_plus_double_target ===
+class InputRedundantCastCompoundPlusDoubleTargetSliceViolation {
+	void m(double d, int y) {
+		d += y;
+	}
+}
+// === end ===
+
 // === case: compound_assignment_sl ===
 class InputRedundantCastCompoundSlSliceViolation {
 	void m(long x, int y) {
@@ -120,6 +160,82 @@ class InputRedundantCastCompoundSrSliceViolation {
 class InputRedundantCastCompoundStarSliceViolation {
 	void m(long x, int y) {
 		x *= y;
+	}
+}
+// === end ===
+
+// === case: division_before_relocated_comment ===
+class InputRedundantCastDivisionBeforeCommentSliceViolation {
+	int m(int a, int b) {
+		return a/ /* round down */ b;
+	}
+}
+// === end ===
+
+// === case: division_before_wrapped_cast_comment ===
+class InputRedundantCastDivisionBeforeWrappedCommentSliceViolation {
+	int m(int a, int i) {
+		return a/ /* c */ i*2;
+	}
+}
+// === end ===
+
+// === case: double_wrap_receiver ===
+class InputRedundantCastDoubleWrapReceiverSliceViolation {
+	int m(String s) {
+		return s.length();
+	}
+}
+// === end ===
+
+// === case: instanceof_after_receiver_wrap ===
+class InputRedundantCastInstanceofAfterWrapSliceViolation {
+	boolean m(String s) {
+		return s instanceof Object;
+	}
+}
+// === end ===
+
+// === case: line_comment_between_cast_and_subject ===
+// skip-reason: cannot remove the cast: the text it spans cannot be rewritten without losing a comment or a literal
+class InputRedundantCastLineCommentBeforeSubjectSliceViolation {
+	void m(String s) {
+		final String t = (String)
+				// note
+				s;
+	}
+}
+// === end ===
+
+// === case: multi_line_cast_parens ===
+class InputRedundantCastMultiLineCastParensSliceViolation {
+	void m(String s) {
+		final String t = s;
+	}
+}
+// === end ===
+
+// === case: multi_line_receiver_wrap_dot_below ===
+class InputRedundantCastMultiLineReceiverWrapSliceViolation {
+	int m(String s) {
+		return s
+				.length();
+	}
+}
+// === end ===
+
+// === case: multi_line_receiver_wrap_open_above ===
+class InputRedundantCastMultiLineWrapOpenSliceViolation {
+	int m(String s) {
+		return s.length();
+	}
+}
+// === end ===
+
+// === case: multi_line_subject_below ===
+class InputRedundantCastMultiLineSubjectBelowSliceViolation {
+	void m(String s) {
+		final String t = s;
 	}
 }
 // === end ===
@@ -180,7 +296,7 @@ class InputRedundantCastPriorLineIdentSliceViolation {
 // === case: path_b_inner_string_literal ===
 class InputRedundantCastPathBInnerStringSliceViolation {
 	String m() {
-		return ("x");
+		return "x";
 	}
 }
 // === end ===
@@ -188,7 +304,17 @@ class InputRedundantCastPathBInnerStringSliceViolation {
 // === case: path_b_outer_not_adjacent ===
 class InputRedundantCastPathBOuterNotAdjacentSliceViolation {
 	String m(String s) {
-		return ( s );
+		return s;
+	}
+}
+// === end ===
+
+// === case: receiver_wrap_line_comment_after_subject ===
+class InputRedundantCastReceiverWrapLineCommentSliceViolation {
+	int m(String s) {
+		return (s
+				// note
+				).length();
 	}
 }
 // === end ===
@@ -197,6 +323,14 @@ class InputRedundantCastPathBOuterNotAdjacentSliceViolation {
 class InputRedundantCastReturnTrailingCommentSliceViolation {
 	int m(String s) {
 		return /* note */s.length();
+	}
+}
+// === end ===
+
+// === case: same_type_cast_array_one ===
+class InputRedundantCastSameTypeArrayOneSliceViolation {
+	void m(String[] arr) {
+		final Object o = arr;
 	}
 }
 // === end ===
@@ -230,6 +364,15 @@ class InputRedundantCastSameTypeForInitSliceViolation {
 }
 // === end ===
 
+// === case: same_type_cast_generic ===
+// imports: java.util.List
+class InputRedundantCastSameTypeGenericSliceViolation {
+	void m(List<String> l) {
+		final Object o = l;
+	}
+}
+// === end ===
+
 // === case: same_type_cast_new ===
 class InputRedundantCastSameTypeNewSliceViolation {
 	void m() {
@@ -242,6 +385,15 @@ class InputRedundantCastSameTypeNewSliceViolation {
 class InputRedundantCastSameTypeParameterSliceViolation {
 	void m(String s) {
 		final String x = s;
+	}
+}
+// === end ===
+
+// === case: same_type_cast_raw_list ===
+// imports: java.util.List
+class InputRedundantCastSameTypeRawListSliceViolation {
+	void m(List raw) {
+		final Object o = raw;
 	}
 }
 // === end ===
@@ -322,10 +474,56 @@ class InputRedundantCastReceiverParenYieldSliceViolation {
 }
 // === end ===
 
+// === case: same_type_cast_return_no_space_no_wrap ===
+class InputRedundantCastReturnNoSpaceNoWrapSliceViolation {
+	String m(String s) {
+		return s;
+	}
+}
+// === end ===
+
 // === case: same_type_cast_this ===
 class InputRedundantCastSameTypeThisSliceViolation {
 	InputRedundantCastSameTypeThisSliceViolation m() {
 		return this;
+	}
+}
+// === end ===
+
+// === case: same_type_cast_this_anonymous_subclass ===
+class InputRedundantCastSameTypeThisAnonymousSubclassSliceViolation {
+	void m() {
+		final InputRedundantCastSameTypeThisAnonymousSubclassSliceViolation sub =
+				new InputRedundantCastSameTypeThisAnonymousSubclassSliceViolation() {
+					void inner() {
+						final Object o = this;
+					}
+				};
+	}
+}
+// === end ===
+
+// === case: same_type_cast_this_enum_constant_body ===
+enum InputRedundantCastSameTypeThisEnumConstantBodySliceViolation {
+	A {
+		@Override
+		Object self() {
+			return this;
+		}
+	};
+
+	abstract Object self();
+}
+// === end ===
+
+// === case: same_type_cast_this_local_class ===
+class InputRedundantCastSameTypeThisLocalClassSliceViolation {
+	void m() {
+		class Local {
+			Object self() {
+				return this;
+			}
+		}
 	}
 }
 // === end ===
@@ -401,6 +599,14 @@ class InputRedundantCastSiblingDoubleSliceViolation {
 }
 // === end ===
 
+// === case: sibling_double_literal_long_cast ===
+class InputRedundantCastSiblingDoubleLongCastSliceViolation {
+	void m(int x) {
+		final double d = x * 1.5;
+	}
+}
+// === end ===
+
 // === case: sibling_float_literal ===
 class InputRedundantCastSiblingFloatSliceViolation {
 	void m() {
@@ -447,6 +653,22 @@ class InputRedundantCastStringEscapeQuoteSliceViolation {
 }
 // === end ===
 
+// === case: supplementary_identifier_after_return ===
+class InputRedundantCastSupplementaryIdentifierSliceViolation {
+	String m(String 𝒜) {
+		return 𝒜;
+	}
+}
+// === end ===
+
+// === case: supplementary_identifier_before_instanceof ===
+class InputRedundantCastSupplementaryBeforeInstanceofSliceViolation {
+	boolean m(String 𝒜) {
+		return 𝒜 instanceof Object;
+	}
+}
+// === end ===
+
 // === case: ternary_false_branch ===
 class InputRedundantCastTernaryFalseBranchSliceViolation {
 	void m(boolean flag) {
@@ -461,6 +683,14 @@ class InputRedundantCastTernaryReturnSliceViolation {
 	long m(boolean flag) {
 		final int x = 5;
 		return flag ? x : 0L;
+	}
+}
+// === end ===
+
+// === case: ternary_sibling_gate_var_target ===
+class InputRedundantCastTernarySiblingGateVarTargetSliceViolation {
+	void m(boolean flag, int x) {
+		final var z = flag ? x : 1L;
 	}
 }
 // === end ===
@@ -491,6 +721,14 @@ class InputRedundantCastTernaryLongTargetSliceViolation {
 		final int x = 5;
 		final int z = 10;
 		final long y = flag ? x : z;
+	}
+}
+// === end ===
+
+// === case: two_casts_one_line ===
+class InputRedundantCastTwoCastsOneLineSliceViolation {
+	int m(String a, String b) {
+		return a.length() + b.length();
 	}
 }
 // === end ===
@@ -563,7 +801,7 @@ class InputRedundantCastWideningStandaloneAssignSliceViolation {
 class InputRedundantCastWideningIntToDoubleSliceViolation {
 	void m() {
 		final int x = 5;
-		final double x = x;
+		final double widened = x;
 	}
 }
 // === end ===
@@ -572,7 +810,7 @@ class InputRedundantCastWideningIntToDoubleSliceViolation {
 class InputRedundantCastWideningIntToFloatSliceViolation {
 	void m() {
 		final int x = 5;
-		final float x = x;
+		final float widened = x;
 	}
 }
 // === end ===
@@ -581,7 +819,7 @@ class InputRedundantCastWideningIntToFloatSliceViolation {
 class InputRedundantCastWideningIntToLongSliceViolation {
 	void m() {
 		final int x = 5;
-		final long x = x;
+		final long widened = x;
 	}
 }
 // === end ===
@@ -626,6 +864,44 @@ class InputRedundantCastWideningShortToLongSliceViolation {
 	void m() {
 		final short s = 5;
 		final long x = s;
+	}
+}
+// === end ===
+
+// === case: wrap_keeps_comment_inside_subject ===
+class InputRedundantCastCommentInsideSubjectSliceViolation {
+	static class Foo {
+		int hash() {
+			return 0;
+		}
+	}
+
+	int m() {
+		return new Foo(/* note */).hash();
+	}
+}
+// === end ===
+
+// === case: wrap_keeps_multi_line_subject ===
+class InputRedundantCastMultiLineSubjectWrapSliceViolation {
+	abstract static class Base {
+		abstract String name();
+
+		abstract int size();
+	}
+
+	String m() {
+		return (new Base() {
+			@Override
+			String name() {
+				return "x";
+			}
+
+			@Override
+			int size() {
+				return 1;
+			}
+		}).name();
 	}
 }
 // === end ===

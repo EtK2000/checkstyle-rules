@@ -11,6 +11,9 @@ import javax.annotation.Nullable;
  * lines, the regex match starts on a blank line within the group. The
  * fixer scans both directions from {@code lineIndex} to find and delete
  * all consecutive blank lines in the group.
+ *
+ * <p>A run that is text-block content is refused rather than deleted; see
+ * {@link TextBlockGuard}.
  */
 class BlankLineBeforeClosingBraceFixer implements CheckstyleFixer {
 	@Nullable
@@ -20,14 +23,15 @@ class BlankLineBeforeClosingBraceFixer implements CheckstyleFixer {
 		if (blankStart >= lines.size() || !lines.get(blankStart).isBlank())
 			return null;
 
-		// scan backward to find the first blank in the group
 		while (blankStart > 0 && lines.get(blankStart - 1).isBlank())
 			--blankStart;
 
-		// scan forward to find the last blank in the group
 		var blankEnd = blankStart;
 		while (blankEnd + 1 < lines.size() && lines.get(blankEnd + 1).isBlank())
 			++blankEnd;
+
+		if (TextBlockGuard.containsTextBlockContent(lines, blankStart, blankEnd))
+			return new SkipResult(SkipMessages.BLANK_LINE_SKIP_TEXT_BLOCK);
 
 		return new FixResult(blankStart, blankEnd, List.of());
 	}

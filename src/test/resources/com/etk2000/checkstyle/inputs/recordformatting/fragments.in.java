@@ -1,3 +1,8 @@
+// === case: fix_column_past_code_point_count_returns_null ===
+// target: col=29
+	record R(int a) /* 𝐀𝐁 */{}
+// === end ===
+
 // === case: fix_component_empty_leading_component_returns_null ===
 // target: col=10
 	record R(, int a,

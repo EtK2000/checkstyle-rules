@@ -56,4 +56,16 @@ public class PreferLiteralSuffixCheckTest {
 	public void hasNegativeIntValueWhenWidened_positiveAndDecimal_returnsFalse(String literal) {
 		assertFalse(PreferLiteralSuffixCheck.hasNegativeIntValueWhenWidened(literal));
 	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"", "_", "00", "0_0", "010", "0xFF", "0XFF", "0b1010", "0B1010", "1a", "1 0"})
+	public void isPlainDecimal_notPlainDecimal_returnsFalse(String literal) {
+		assertFalse(PreferLiteralSuffixCheck.isPlainDecimal(literal));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"0", "1", "100", "1_000", "2147483647"})
+	public void isPlainDecimal_plainDecimal_returnsTrue(String literal) {
+		assertTrue(PreferLiteralSuffixCheck.isPlainDecimal(literal));
+	}
 }

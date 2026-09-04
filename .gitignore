@@ -12,4 +12,5 @@ local.properties
 .claude/settings.local.json
 .claude/state
 
+**/__pycache__/
 **/.DS_Store

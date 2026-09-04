@@ -1,3 +1,35 @@
+// === case: annotated_base_dimension_lambda_param ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+// imports: java.util.function.BiConsumer
+@SuppressWarnings("unused")
+class InputArrayTypeStyleAnnotatedBaseDimensionLambdaParamSliceViolation {
+	@interface A {}
+
+	BiConsumer<int[][], Integer> b = (a, y) -> {};
+}
+// === end ===
+
+// === case: annotated_base_dimension_multi_line_method_return ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+@SuppressWarnings("unused")
+class InputArrayTypeStyleAnnotatedBaseDimensionMultiLineMethodReturnSliceViolation {
+	@interface A {}
+
+	int @A [] method()
+			[] { return null; }
+}
+// === end ===
+
+// === case: for_loop_single_var_fixed ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleForLoopSingleVarFixedSliceViolation {
+	void m(int[] a, int step) {
+		for (var x = a; x.length < 10; step += 1)
+			break;
+	}
+}
+// === end ===
+
 // === case: generic_method_multi_param_lambda ===
 @SuppressWarnings("unused")
 class InputArrayTypeStyleGenericMethodMultiParamLambdaSliceViolation {

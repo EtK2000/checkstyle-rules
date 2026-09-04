@@ -1,5 +1,100 @@
 package com.etk2000.checkstyle.inputs.controlflowbraces;
 
+// === case: brace_on_own_line_do_body_on_brace_line ===
+// skip-reason: cannot remove the braces: other content shares the brace line
+class InputControlFlowBracesBraceOnOwnLineDoBodyOnBraceLineSliceViolation {
+	void m(int x) {
+		do { --x;
+		} while (x > 0);
+	}
+}
+// === end ===
+
+// === case: brace_on_own_line_do_comment_on_brace_line ===
+// skip-reason: cannot remove the braces: other content shares the brace line
+class InputControlFlowBracesBraceOnOwnLineDoCommentOnBraceLineSliceViolation {
+	void m(int x) {
+		do {
+			/* note */
+			--x;
+		}
+		while (x > 0);
+	}
+}
+// === end ===
+
+// === case: brace_on_own_line_do_with_comment_on_do_and_body ===
+// skip-reason: cannot remove the braces: other content shares the brace line
+class InputControlFlowBracesBraceOnOwnLineDoWithCommentOnDoAndBodySliceViolation {
+	void m(int x) {
+		do { // note
+			--x; // pending
+		}
+		while (x > 0);
+	}
+}
+// === end ===
+
+// === case: brace_on_own_line_do_with_comment_on_do_and_brace ===
+// skip-reason: cannot remove the braces: other content shares the brace line
+class InputControlFlowBracesBraceOnOwnLineDoWithCommentOnDoAndBraceSliceViolation {
+	void m(int x) {
+		do { // note
+			// brace note
+			--x;
+		}
+		while (x > 0);
+	}
+}
+// === end ===
+
+// === case: brace_on_own_line_if_close_brace_after_text_block ===
+// skip-reason: cannot reshape the body: the block does not end where the body does
+class InputControlFlowBracesBraceOnOwnLineIfCloseBraceAfterTextBlockSliceViolation {
+	void m(int x) {
+		var s = "";
+		if (x > 0) {
+			s = """
+} """; }
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: brace_on_own_line_if_comment_before_close_brace ===
+// skip-reason: cannot remove the braces: other content shares the brace line
+class InputControlFlowBracesBraceOnOwnLineIfCommentBeforeCloseBraceSliceViolation {
+	void m(int x) {
+		if (x > 0) {
+			--x;
+		/* trailing note */ }
+	}
+}
+// === end ===
+
+// === case: brace_on_own_line_if_comment_on_brace_line ===
+// skip-reason: cannot remove the braces: other content shares the brace line
+class InputControlFlowBracesBraceOnOwnLineIfCommentOnBraceLineSliceViolation {
+	void m(int x) {
+		if (x > 0) {
+			/* note */
+			--x;
+		}
+	}
+}
+// === end ===
+
+// === case: brace_on_own_line_with_block_comment_on_brace ===
+// skip-reason: cannot remove the braces: other content shares the brace line
+class InputControlFlowBracesBraceOnOwnLineWithBlockCommentOnBraceSliceViolation {
+	void m(int x) {
+		if (x > 0) { /* important */
+			--x;
+		}
+	}
+}
+// === end ===
+
 // === case: braced_tier3_this_chained_call ===
 class InputControlFlowBracesBracedTier3ThisChainedCallSliceViolation {
 	private void chain() { }
@@ -12,6 +107,36 @@ class InputControlFlowBracesBracedTier3ThisChainedCallSliceViolation {
 		do
 			helper().chain();
 		while (x > 0);
+	}
+}
+// === end ===
+
+// === case: else_if_split_cuddled_comment_header_opens_block_comment ===
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
+class InputControlFlowBracesElseIfSplitCuddledCommentHeaderOpensBlockCommentSliceViolation {
+	void m(boolean a, boolean b) {
+		if (a) {
+			System.out.println(a);
+			System.out.println(b);
+		} else // note
+			if (b) { /* c
+				d */
+				System.out.println(a);
+				System.out.println(b);
+			}
+	}
+}
+// === end ===
+
+// === case: else_if_split_inner_allman ===
+class InputControlFlowBracesElseIfSplitInnerAllmanSliceViolation {
+	void m(boolean a, boolean b) {
+		if (a)
+			System.out.println(a);
+		else if (b) {
+			System.out.println(a);
+			System.out.println(b);
+		}
 	}
 }
 // === end ===

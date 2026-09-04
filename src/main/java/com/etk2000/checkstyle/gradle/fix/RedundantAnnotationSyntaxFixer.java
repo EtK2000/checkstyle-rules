@@ -1,316 +1,252 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import com.etk2000.checkstyle.AstSpan;
+import com.etk2000.checkstyle.AstSpan.TextPos;
+import com.etk2000.checkstyle.AstSpan.TextSpan;
 import com.etk2000.checkstyle.JavaLineScanner;
 import com.etk2000.checkstyle.JavaLineScanner.LexerState;
 import com.etk2000.checkstyle.LineText;
-import com.etk2000.checkstyle.format.SpanReformat;
+import com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck;
+import com.etk2000.checkstyle.RedundantAnnotationSyntaxCheck.AnnotationSyntaxTarget;
+import com.etk2000.checkstyle.SpanComments;
+import com.etk2000.checkstyle.format.SpanEdges;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+/**
+ * Deletes the redundant part of an annotation: the empty parentheses, or the {@code value =} key in
+ * front of the one value they hold.
+ */
 class RedundantAnnotationSyntaxFixer implements CheckstyleFixer {
 	/**
-	 * A run of whitespace and comments with no code: the block comments (and an
-	 * optional trailing {@code //} line comment) in order, plus whether the run
-	 * ends with a line comment. When folded onto one line, a line comment must be
-	 * the last content (it swallows the rest of the physical line), so callers
-	 * inspect {@link #endsWithLineComment} to reject a swallow.
+	 * Whether a block comment inside {@code span} runs across one of its line breaks. Such a comment
+	 * cannot be written on a single line, so no fold joining those lines is safe.
 	 */
-	private record CommentRun(@Nonnull List<String> comments, boolean endsWithLineComment) {}
-
-	private static final Pattern EMPTY_PARENS = Pattern.compile("(@\\w[\\w.]*)\\s*\\(\\s*\\)");
-	private static final Pattern EXPLICIT_VALUE = Pattern.compile("\\(\\s*value\\s*=\\s*");
-	private static final Pattern EXPLICIT_VALUE_LINE = Pattern.compile("\\s*value\\s*=\\s*");
+	@CheckReturnValue
+	private static boolean commentCrossesALine(@Nonnull List<String> lines, @Nonnull TextSpan span) {
+		var state = LexerState.NONE;
+		for (var i = span.start().line(); i < span.end().line(); ++i) {
+			final var line = lines.get(i);
+			state = JavaLineScanner.stateAfter(
+					i == span.start().line() ? line.substring(span.start().index()) : line, state
+			);
+			if (state.inBlockComment())
+				return true;
+		}
+		return false;
+	}
 
 	/**
-	 * Parses {@code text} as a {@link CommentRun}: whitespace, block comments, and
-	 * at most one trailing {@code //} line comment, with no code. Returns
-	 * {@code null} when any code (a string, identifier, ...) is present. The check
-	 * fires on comment-only parentheses too (comments aren't AST nodes), so this
-	 * both decides whether the parentheses are truly empty and yields any comment
-	 * to re-emit after the annotation name when the parentheses are removed. A
-	 * {@code /*} without a closing {@code *}{@code /} on {@code text} is captured
-	 * verbatim.
+	 * The edit taking {@code target}'s empty parentheses out, or the reason there is none. The span
+	 * runs from the end of the name to past the closing parenthesis, so whatever was written between
+	 * the name and the {@code (} goes with it, and every comment the span held is re-emitted after
+	 * the name.
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static CommentRun commentRun(@Nonnull String text) {
-		final var comments = new ArrayList<String>();
-		var i = 0;
-		while (i < text.length()) {
-			final var c = text.charAt(i);
-			if (c == '/' && i + 1 < text.length() && text.charAt(i + 1) == '*') {
-				final var start = i;
-				i += 2;
-				while (i + 1 < text.length() && !(text.charAt(i) == '*' && text.charAt(i + 1) == '/'))
-					++i;
-				i = Math.min(i + 2, text.length());
-				comments.add(text.substring(start, i));
-			}
-			else if (c == '/' && i + 1 < text.length() && text.charAt(i + 1) == '/') {
-				comments.add(text.substring(i));
-				return new CommentRun(List.copyOf(comments), true);
-			}
-			else if (Character.isWhitespace(c))
-				++i;
-			else
+	private static FixAttempt emptyParensFix(@Nonnull List<String> lines, @Nonnull AnnotationSyntaxTarget target) {
+		final var start = AstSpan.spanEnd(lines, target.name());
+		final var end = AstSpan.tokenEnd(lines, target.rparen());
+		if (start == null || end == null || AstSpan.outOfBounds(lines, start, end))
+			return null;
+
+		final var span = new TextSpan(start, end);
+		final var comments = SpanComments.inside(lines, span, List.of());
+		final var edges = SpanEdges.of(lines, start.line(), start.index(), end.line(), end.index());
+		final var suffix = edges.suffix();
+		final var refusal = foldRefusal(lines, span, comments, suffix);
+		if (refusal != null)
+			return refusal;
+
+		// taking the parentheses out puts the name, or the last comment carried after it, straight
+		// against whatever followed them: an identifier or another annotation there needs a space of
+		// its own (@Override()void -> @Override void, @A()@B -> @A @B), while a tail already opening
+		// with whitespace, or with punctuation that cannot read as one token with a name, does not.
+		// LineText's test rather than Character's, because the first char of a type name spelled with
+		// a supplementary letter is a lone high surrogate, which the char-wise test rejects: measured,
+		// omitting the space there fused the names and the result did not parse
+		final var separated = !suffix.isEmpty()
+				&& (LineText.isIdentifierPart(suffix.charAt(0)) || suffix.charAt(0) == '@');
+		final var body = (comments.isEmpty() ? "" : ' ' + String.join(" ", comments)) + (separated ? " " : "");
+		return rewritten(lines, span, edges, body);
+	}
+
+	/**
+	 * The edit taking {@code target}'s {@code value =} out, or the reason there is none. The whole
+	 * annotation is folded onto one line when it was written across several and folding is safe;
+	 * otherwise only the key and the {@code =} go, which leaves the annotation spread as written.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static FixAttempt explicitValueFix(@Nonnull List<String> lines, @Nonnull AnnotationSyntaxTarget target) {
+		final var keyStart = AstSpan.tokenStart(lines, target.key());
+		final var valueStart = AstSpan.spanStart(lines, target.value());
+		if (keyStart == null || valueStart == null || AstSpan.outOfBounds(lines, keyStart, valueStart))
+			return null;
+
+		final var folded = foldedAnnotation(lines, target, valueStart);
+		if (folded != null)
+			return folded;
+
+		final var span = new TextSpan(keyStart, valueStart);
+		final var edges = SpanEdges.of(
+				lines, keyStart.line(), keyStart.index(), valueStart.line(), valueStart.index()
+		);
+		final var comments = SpanComments.inside(lines, span, List.of());
+		final var refusal = foldRefusal(lines, span, comments, edges.suffix());
+		if (refusal != null)
+			return refusal;
+
+		// the value follows immediately, so a carried comment is spaced off it rather than off the
+		// `(` in front, which cannot read as one token with anything
+		final var body = comments.isEmpty() ? "" : String.join(" ", comments) + ' ';
+		return rewritten(lines, span, edges, body);
+	}
+
+	/**
+	 * {@code target}'s whole annotation on one line without the {@code value =}, or null when it is
+	 * already on one line, when folding it would lose something, or when the result would not fit.
+	 * Null here is a fall-back rather than a refusal: the key still goes, the annotation just keeps
+	 * the lines it was written on.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static FixResult foldedAnnotation(
+			@Nonnull List<String> lines, @Nonnull AnnotationSyntaxTarget target, @Nonnull TextPos valueStart
+	) {
+		final var start = AstSpan.spanStart(lines, target.annotation());
+		final var valueEnd = AstSpan.spanEnd(lines, target.value());
+		final var end = AstSpan.tokenEnd(lines, target.rparen());
+		if (start == null || valueEnd == null || end == null
+				|| start.line() == end.line() || AstSpan.outOfBounds(lines, start, end))
+			return null;
+
+		// the name is sliced rather than spelled from the reported one, which is the unqualified
+		// form: rebuilding `@com.example.A` from it would drop the package
+		final var nameEnd = AstSpan.spanEnd(lines, target.name());
+		final var head = AstSpan.sliceSpan(lines, start, nameEnd);
+		final var value = AstSpan.sliceSpan(lines, valueStart, valueEnd);
+		final var span = new TextSpan(start, end);
+		if (head == null || value == null || AstSpan.outOfBounds(lines, valueEnd, end)
+				|| commentCrossesALine(lines, span))
+			return null;
+
+		// the head is copied as written, so a comment written between the `@` and the name
+		// travels with it and must not be carried a second time
+		final var leading = SpanComments.inside(
+				lines, new TextSpan(start, valueStart), List.of(new TextSpan(start, nameEnd))
+		);
+		final var trailing = SpanComments.inside(lines, new TextSpan(valueEnd, end), List.of());
+		for (var comment : leading) {
+			if (comment.startsWith("//"))
 				return null;
 		}
-		return new CommentRun(List.copyOf(comments), false);
+		for (var comment : trailing) {
+			if (comment.startsWith("//"))
+				return null;
+		}
+
+		final var edges = SpanEdges.of(lines, start.line(), start.index(), end.line(), end.index());
+		final var collapsed = edges.prefix()
+				+ head + '('
+				+ (leading.isEmpty() ? "" : String.join(" ", leading) + ' ')
+				+ value
+				+ (trailing.isEmpty() ? "" : ' ' + String.join(" ", trailing))
+				+ ')'
+				+ edges.suffix();
+		// no exemption for a span already over the budget, which is the rule the other emission site
+		// carries: joining can make a line far longer than any it replaces, so the exemption would
+		// buy nothing and cost that
+		return overBudget(collapsed) ? null : new FixResult(start.line(), end.line(), List.of(collapsed));
 	}
 
 	/**
-	 * The lexer state entering {@code lines.get(lineIndex)}, folded over the
-	 * preceding lines so a line that continues a multi-line comment or text block
-	 * is masked correctly.
+	 * Why {@code span} will not fold onto one line, or null when it will. Only a span that really
+	 * does cross lines can refuse: nothing is joined inside one line, so a comment written there
+	 * travels with the text around it.
+	 *
+	 * <p>A {@code //} comment survives a fold only as the last thing on the joined line, since it
+	 * takes the rest of that line with it. Anything emitted after it, another comment or the text
+	 * standing past the span, would be commented out.
 	 */
+	@CheckReturnValue
+	@Nullable
+	private static SkipResult foldRefusal(
+			@Nonnull List<String> lines,
+			@Nonnull TextSpan span,
+			@Nonnull List<String> comments,
+			@Nonnull String suffix
+	) {
+		// nothing below can answer true for a single-line span: the line-boundary scan has no
+		// boundary to cross, and a `//` inside the span would have commented out the token the span
+		// ends at. Stated here rather than left to fall out of both
+		if (span.start().line() == span.end().line())
+			return null;
+		if (commentCrossesALine(lines, span))
+			return new SkipResult(SkipMessages.ANNOTATION_SYNTAX_SKIP_COMMENT);
+
+		for (var i = 0; i < comments.size(); ++i) {
+			if (comments.get(i).startsWith("//") && (i < comments.size() - 1 || !suffix.isBlank()))
+				return new SkipResult(SkipMessages.ANNOTATION_SYNTAX_SKIP_LINE_COMMENT);
+		}
+		return null;
+	}
+
+	/**
+	 * Whether {@code emitted} pushes a line past the budget that was not already past it. A span
+	 * whose own source is already over the limit cannot be brought under it by taking an annotation
+	 * apart, and refusing those would keep the redundant syntax for good.
+	 */
+	@CheckReturnValue
+	private static boolean lengthensPastBudget(
+			@Nonnull List<String> lines, @Nonnull TextSpan span, @Nonnull String emitted
+	) {
+		if (!overBudget(emitted))
+			return false;
+
+		for (var line = span.start().line(); line <= span.end().line(); ++line) {
+			if (overBudget(lines.get(line)))
+				return false;
+		}
+		return true;
+	}
+
+	@CheckReturnValue
+	private static boolean overBudget(@Nonnull String line) {
+		return LineLength.tabExpandedLength(line) > LineLength.MAX_LINE_LENGTH;
+	}
+
+	/** The edit replacing {@code span} with {@code body}, or the reason there is none. */
 	@CheckReturnValue
 	@Nonnull
-	private static LexerState entryStateAt(@Nonnull List<String> lines, int lineIndex) {
-		var state = LexerState.NONE;
-		for (var i = 0; i < lineIndex; ++i)
-			state = JavaLineScanner.stateAfter(lines.get(i), state);
-		return state;
-	}
-
-	/**
-	 * Net paren depth (opens minus closes) over a masked line.
-	 */
-	@CheckReturnValue
-	private static int parenDepth(@Nonnull String mask) {
-		var depth = 0;
-		for (var i = 0; i < mask.length(); ++i) {
-			final var c = mask.charAt(i);
-			if (c == '(')
-				++depth;
-			else if (c == ')')
-				--depth;
-		}
-		return depth;
+	private static FixAttempt rewritten(
+			@Nonnull List<String> lines,
+			@Nonnull TextSpan span,
+			@Nonnull SpanEdges edges,
+			@Nonnull String body
+	) {
+		final var rewritten = edges.prefix() + body + edges.suffix();
+		return lengthensPastBudget(lines, span, rewritten)
+				? new SkipResult(SkipMessages.ANNOTATION_SYNTAX_SKIP_LINE_BUDGET)
+				: new FixResult(span.start().line(), span.end().line(), List.of(rewritten));
 	}
 
 	@Nullable
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
-		final var line = lines.get(lineIndex);
-		if (column < 0 || column >= line.length())
+		final var target = FixerAst.locate(
+				lines, lineIndex, column, RedundantAnnotationSyntaxCheck::redundantSyntaxAt
+		);
+		if (target == null)
 			return null;
-		// Match every syntax pattern on a literal/comment/text-block-aware mask
-		// (positions preserved, output spliced from the original line) so a
-		// decoy @A() / (value = / value = inside a string or comment is never
-		// matched, and continuation lines inside a multi-line comment/text block
-		// are masked with the correct entry state.
-		final var entryState = entryStateAt(lines, lineIndex);
-		final var mask = JavaLineScanner.stripCommentsAndStrings(line, entryState);
 
-		// rule 1: single-line empty parens @A() / @A ( ) -> @A. A comment inside
-		// the parens (or between the name and the parens) is preserved by moving it
-		// after the name (@A(/* c */) -> @A /* c */), matching the multiline rule's
-		// spacing. The mask keeps string/char delimiter quotes, so a real argument
-		// like @A("") leaves a non-blank interior that never matches EMPTY_PARENS;
-		// commentRun then pulls the comments out of the blank interior (only
-		// whitespace and block comments can reach it single-line) to re-emit them.
-		final var emptyMatcher = EMPTY_PARENS.matcher(mask);
-		if (emptyMatcher.find(column)) {
-			final var nameEnd = emptyMatcher.end(1);
-			final var openParenIdx = mask.indexOf('(', nameEnd);
-			final var closeParenIdx = emptyMatcher.end() - 1;
-			final var interiorRun = commentRun(line.substring(openParenIdx + 1, closeParenIdx));
-			final var preRun = commentRun(line.substring(nameEnd, openParenIdx));
-			if (interiorRun != null && preRun != null) {
-				final var comments = new ArrayList<>(preRun.comments());
-				comments.addAll(interiorRun.comments());
-				final var glue = comments.isEmpty() ? "" : " " + String.join(" ", comments);
-				final var tail = line.substring(closeParenIdx + 1);
-				// removing the parens would fuse the name (or a folded comment) into the
-				// next token: keep a separator when the tail begins with an identifier
-				// (@Override()void -> @Override void, @B(/* c */)String -> @B /* c */ String)
-				// or another annotation (@A()@B -> @A @B). A tail already starting with
-				// whitespace (or a ')' / ',' ...) needs no added space.
-				final var needsSpace = !tail.isEmpty()
-						&& (Character.isJavaIdentifierPart(tail.charAt(0)) || tail.charAt(0) == '@');
-				final var fixed = line.substring(0, nameEnd) + glue + (needsSpace ? " " : "") + tail;
-				return new FixResult(lineIndex, lineIndex, List.of(fixed));
-			}
-		}
-
-		// rule 1: multiline empty parens @A(\n) -> @A. Comment-only lines between the
-		// parens are stepped over and their comments folded after the name in source
-		// order (open tail, middle lines, close prefix), then any code after the ')'.
-		final var maskTrimmed = mask.stripTrailing();
-		if (maskTrimmed.endsWith("(") && maskTrimmed.contains("@")) {
-			final var openParenIdx = maskTrimmed.length() - 1;
-			final var midComments = new ArrayList<String>();
-			var spanHasMultilineComment = false;
-			var state = JavaLineScanner.stateAfter(line, entryState);
-			for (var i = lineIndex + 1; i < lines.size(); ++i) {
-				final var raw = lines.get(i);
-				final var entryInComment = state.inBlockComment();
-				final var exitState = JavaLineScanner.stateAfter(raw, state);
-				final var nextMask = JavaLineScanner.stripCommentsAndStrings(raw, state);
-				if (!entryInComment && nextMask.stripLeading().startsWith(")")) {
-					// A block comment that spanned line boundaries can't be re-emitted on
-					// one line, so the (now confirmed) empty-parens annotation is left as-is.
-					if (spanHasMultilineComment)
-						return new SkipResult(SkipMessages.ANNOTATION_SYNTAX_SKIP);
-					// closeParenIdx comes from the mask (comments blanked), so the pre-')'
-					// text is read from the ORIGINAL line: a leading block comment there
-					// (@B(\n/* c */)) is folded in, not sliced off as if ')' were first.
-					final var closeParenIdx = nextMask.indexOf(')');
-					final var openRun = commentRun(line.substring(openParenIdx + 1));
-					final var closeRun = commentRun(raw.substring(0, closeParenIdx));
-					if (openRun == null || closeRun == null)
-						return new SkipResult(SkipMessages.ANNOTATION_SYNTAX_SKIP);
-					final var afterParen = raw.substring(closeParenIdx + 1).strip();
-					final var comments = new ArrayList<>(openRun.comments());
-					comments.addAll(midComments);
-					comments.addAll(closeRun.comments());
-					// A // line comment folds only as the last content on the merged line:
-					// a later comment, or code after the ')', would be swallowed by it.
-					for (var k = 0; k < comments.size(); ++k) {
-						if (comments.get(k).startsWith("//") && (k < comments.size() - 1 || !afterParen.isEmpty()))
-							return new SkipResult(SkipMessages.ANNOTATION_SYNTAX_SKIP);
-					}
-					var fixed = line.substring(0, openParenIdx).stripTrailing();
-					if (!comments.isEmpty())
-						fixed += " " + String.join(" ", comments);
-					if (!afterParen.isEmpty())
-						fixed += " " + afterParen;
-					return new FixResult(lineIndex, i, List.of(fixed));
-				}
-				// A line inside a multi-line block comment: record it and keep scanning
-				// (the parens may still hold a value, which rule 2 handles); only bail
-				// once the ')' confirms the parens are actually empty.
-				if (entryInComment || exitState.inBlockComment()) {
-					spanHasMultilineComment = true;
-					state = exitState;
-					continue;
-				}
-				// A code line between the parens: not empty parens -> break (rule 2 next).
-				if (!nextMask.isBlank())
-					break;
-				// A blank or single-line-comment-only line: collect its comments, step over.
-				final var run = commentRun(raw);
-				if (run != null)
-					midComments.addAll(run.comments());
-				state = exitState;
-			}
-		}
-
-		// rule 2: single-line explicit value key @A(value = x) -> @A(x). A block
-		// comment in any gap of the removed key (before 'value', between 'value' and
-		// '=', or after '=') is folded in after the '(' rather than dropped. Each gap
-		// holds only whitespace and block comments once the mask-based match succeeds.
-		final var valueMatcher = EXPLICIT_VALUE.matcher(mask);
-		if (valueMatcher.find(column)) {
-			final var openParenIdx = valueMatcher.start();
-			final var valueKeyIdx = mask.indexOf("value", openParenIdx + 1);
-			final var eqIdx = mask.indexOf('=', valueKeyIdx);
-			final var preRun = commentRun(line.substring(openParenIdx + 1, valueKeyIdx));
-			final var midRun = commentRun(line.substring(valueKeyIdx + "value".length(), eqIdx));
-			final var postRun = commentRun(line.substring(eqIdx + 1, valueMatcher.end()));
-			final var comments = new ArrayList<String>();
-			if (preRun != null)
-				comments.addAll(preRun.comments());
-			if (midRun != null)
-				comments.addAll(midRun.comments());
-			if (postRun != null)
-				comments.addAll(postRun.comments());
-			final var tail = line.substring(valueMatcher.end());
-			final var glue = comments.isEmpty() ? "" : String.join(" ", comments) + (tail.isEmpty() ? "" : " ");
-			final var fixed = line.substring(0, openParenIdx + 1) + glue + tail;
-			return new FixResult(lineIndex, lineIndex, List.of(fixed));
-		}
-
-		// rule 2: multiline explicit value key. Collapse the whole annotation onto one
-		// line (@A(\n value = x \n) -> @A(x)) when the span has no // comment and no
-		// block comment spanning line boundaries, and the collapsed line fits the
-		// max width; otherwise fall back to the minimal edit that strips only
-		// 'value = ' on its line. Only scan when this annotation's '(' is still open
-		// (parenDepth > 0); a closed annotation would corrupt an unrelated following
-		// `value = ...` statement.
-		if (parenDepth(mask) > 0) {
-			final var openTrim = mask.stripTrailing();
-			var valueLineIdx = -1;
-			var valueMatchEnd = -1;
-			var closeLineIdx = -1;
-			var closeCol = -1;
-			var canCollapse = openTrim.endsWith("(");
-			// a // line comment in the open tail (after the '(') would be pulled inline by
-			// the collapse and swallow the value, so refuse to collapse (block comments in
-			// the open tail are fine to fold). The subsequent-line scan below only sees
-			// lines after the open line, so this open-line check is separate.
-			if (canCollapse) {
-				final var openTail = commentRun(line.substring(openTrim.length()));
-				if (openTail == null || openTail.endsWithLineComment())
-					canCollapse = false;
-			}
-			var depth = parenDepth(mask);
-			var state = JavaLineScanner.stateAfter(line, entryState);
-			for (var i = lineIndex + 1; i < lines.size() && closeLineIdx < 0; ++i) {
-				final var raw = lines.get(i);
-				// a // comment or a block comment spanning line boundaries in the span
-				// can't be one-lined, so the collapse is refused for it (a text block is
-				// unreachable here: checkstyle can't parse one as an annotation value)
-				final var marker = JavaLineScanner.firstCommentMarker(raw, state);
-				if (state.inBlockComment()
-						|| (marker >= 0 && marker + 1 < raw.length() && raw.charAt(marker + 1) == '/'))
-					canCollapse = false;
-				final var exitState = JavaLineScanner.stateAfter(raw, state);
-				if (exitState.inBlockComment())
-					canCollapse = false;
-				final var nextMask = JavaLineScanner.stripCommentsAndStrings(raw, state);
-				if (valueLineIdx < 0) {
-					final var valueLineMatcher = EXPLICIT_VALUE_LINE.matcher(nextMask);
-					if (valueLineMatcher.lookingAt()) {
-						valueLineIdx = i;
-						valueMatchEnd = valueLineMatcher.end();
-					}
-					// a non-blank line that isn't the value line means the parens don't
-					// hold a lone `value = ...` (e.g. `notValue = 1`) -> nothing to fix
-					else if (!nextMask.isBlank())
-						break;
-				}
-				for (var c = 0; c < nextMask.length(); ++c) {
-					final var ch = nextMask.charAt(c);
-					if (ch == '(')
-						++depth;
-					else if (ch == ')' && --depth == 0) {
-						closeLineIdx = i;
-						closeCol = c;
-						break;
-					}
-				}
-				state = exitState;
-			}
-			if (valueLineIdx >= 0) {
-				if (canCollapse && closeLineIdx >= 0) {
-					final var indent = LineText.extractIndent(line);
-					final var openParenIdx = openTrim.length() - 1;
-					final var pieces = new ArrayList<String>();
-					pieces.add(line.substring(indent.length(), openParenIdx + 1));
-					for (var k = lineIndex; k <= closeLineIdx; ++k) {
-						final var kRaw = lines.get(k);
-						final var start = k == lineIndex ? openParenIdx + 1 : 0;
-						final var end = k == closeLineIdx ? closeCol : kRaw.length();
-						pieces.add(kRaw.substring(k == valueLineIdx ? valueMatchEnd : start, end));
-					}
-					pieces.add(lines.get(closeLineIdx).substring(closeCol));
-					final var collapsed = indent + SpanReformat.collapse(pieces);
-					if (LineLength.tabExpandedLength(collapsed) <= LineLength.MAX_LINE_LENGTH)
-						return new FixResult(lineIndex, closeLineIdx, List.of(collapsed));
-				}
-				final var raw = lines.get(valueLineIdx);
-				final var fixed = LineText.extractIndent(raw) + raw.substring(valueMatchEnd);
-				return new FixResult(valueLineIdx, valueLineIdx, List.of(fixed));
-			}
-		}
-
-		return new SkipResult(SkipMessages.ANNOTATION_SYNTAX_SKIP);
+		return switch (target.redundancy()) {
+			case EMPTY_PARENS -> emptyParensFix(lines, target);
+			case EXPLICIT_VALUE -> explicitValueFix(lines, target);
+		};
 	}
 }

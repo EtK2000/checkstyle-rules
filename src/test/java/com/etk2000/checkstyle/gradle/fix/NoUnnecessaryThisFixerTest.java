@@ -10,12 +10,12 @@ public class NoUnnecessaryThisFixerTest {
 	private final CheckstyleFixer fixer = new NoUnnecessaryThisFixer();
 
 	@Test
-	public void testColumnEqualsLineLength() throws Exception {
-		assertSkip(fixer, TOPIC, "column_equals_line_length");
+	public void testStaleColumnAfterSiblingEdit() throws Exception {
+		assertSkip(fixer, TOPIC, "stale_column_after_sibling_edit");
 	}
 
 	@Test
-	public void testThisStartMinusOne() throws Exception {
-		assertSkip(fixer, TOPIC, "this_start_minus_one");
+	public void testUnparseableBuffer() throws Exception {
+		assertSkip(fixer, TOPIC, "unparseable_buffer");
 	}
 }

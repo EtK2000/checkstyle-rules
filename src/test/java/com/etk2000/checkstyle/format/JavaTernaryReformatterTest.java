@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import com.etk2000.checkstyle.MultilineCallFormattingCheck;
+import com.etk2000.checkstyle.MultilineCallMoves;
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FileContents;
@@ -25,7 +25,7 @@ import javax.annotation.Nonnull;
 
 /**
  * Direct-AST tests for {@link JavaTernaryReformatter} and
- * {@link MultilineCallFormattingCheck#resolvableTernaryLayoutQuestion} that drive guards the
+ * {@link MultilineCallMoves#resolvableTernaryLayoutQuestion} that drive guards the
  * slice-based topic pipeline cannot reach: the {@code STALE} column-mismatch bail, a ternary nested
  * inside a larger expression (not a bare call argument), and a ternary that is one of several plain
  * arguments (a surviving non-ternary violation the re-emission would not resolve).
@@ -61,9 +61,18 @@ public class JavaTernaryReformatterTest {
 	private static DetailAST resolvableQuestion(@Nonnull String source) throws Exception {
 		final var root = parse(source);
 		final var question = findQuestion(root);
-		return MultilineCallFormattingCheck.resolvableTernaryLayoutQuestion(
+		return MultilineCallMoves.resolvableTernaryLayoutQuestion(
 				root, List.of(source.split("\n", -1)), question.getLineNo() - 1, question.getColumnNo()
 		);
+	}
+
+	@Test
+	public void reformatDeclinesEscapedDelimiter() throws Exception {
+		final var escapedBackslash = "\\" + "u005c";
+		final var source = "class C {\n\tvoid m() {\n\t\tmethod(true\n\t\t\t\t? \"a\" : \"x" + escapedBackslash.repeat(2) + "y\"\n\t\t);\n\t}\n\tvoid method(Object a) {\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaTernaryReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findQuestion(root));
+		assertEquals(SpanReformat.Reason.ESCAPED_DELIMITER, assertInstanceOf(SpanReformat.CannotReformat.class, result).reason());
 	}
 
 	@Test
@@ -73,6 +82,15 @@ public class JavaTernaryReformatterTest {
 		final var result = JavaTernaryReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findQuestion(root));
 		final var reformatted = assertInstanceOf(SpanReformat.Reformatted.class, result);
 		assertEquals(List.of("\t\tmethod(true", "\t\t\t\t? /* c1", "\t\t\t\tc2 */ \"a\"", "\t\t\t\t: \"b\"", "\t\t);"), reformatted.lines());
+	}
+
+	@Test
+	public void reformatKeepsRawIndentWhenTheOpeningLineBeginsInsideABlockComment() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\t/* off\n\t\t   it was flaky */ method(true ?\n\t\t\t\t\"a\"\n\t\t\t\t: \"b\"\n\t\t);\n\t}\n\tvoid method(Object a) {\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaTernaryReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findQuestion(root));
+		final var reformatted = assertInstanceOf(SpanReformat.Reformatted.class, result);
+		assertEquals(List.of("\t\t   it was flaky */ method(true", "\t\t\t\t? \"a\"", "\t\t\t\t: \"b\"", "\t\t);"), reformatted.lines());
 	}
 
 	@Test
@@ -127,16 +145,12 @@ public class JavaTernaryReformatterTest {
 
 	@Test
 	public void resolvableIsNullForTernaryAmongMultiplePlainArgs() throws Exception {
-		// two-arg call: not a single/compact-first ternary, so a whole-ternary re-emission cannot resolve
-		// the shared-line violation the layout carries; the classifier must defer
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(cond ?\n\t\t\t\t\"a\" : \"b\", other);\n\t}\n\tvoid method(Object x, Object y) {\n\t}\n}";
 		assertNull(resolvableQuestion(source));
 	}
 
 	@Test
 	public void resolvableIsNullForTernaryNestedInLargerExpression() throws Exception {
-		// the ternary is not a bare call argument (it sits inside a parenthesized additive expression),
-		// so its parent is not the EXPR of an ELIST and the classifier returns null
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod((cond ? 1 : 2) + 3);\n\t}\n\tvoid method(int a) {\n\t}\n}";
 		assertNull(resolvableQuestion(source));
 	}

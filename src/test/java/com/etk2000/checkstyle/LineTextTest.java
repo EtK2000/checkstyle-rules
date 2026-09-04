@@ -42,6 +42,31 @@ public class LineTextTest {
 	}
 
 	@Test
+	public void testColumnOfCharIndexBeyondEndClamps() {
+		assertEquals(2, LineText.columnOfCharIndex("ab", 5));
+	}
+
+	@Test
+	public void testColumnOfCharIndexBeyondEndOfSupplementaryLineClamps() {
+		assertEquals(3, LineText.columnOfCharIndex("x𝐀c", 10));
+	}
+
+	@Test
+	public void testColumnOfCharIndexNegativeClamps() {
+		assertEquals(0, LineText.columnOfCharIndex("ab", -1));
+	}
+
+	@Test
+	public void testColumnOfCharIndexPastSupplementary() {
+		assertEquals(2, LineText.columnOfCharIndex("x𝐀c", 3));
+	}
+
+	@Test
+	public void testColumnOfCharIndexPlainAscii() {
+		assertEquals(2, LineText.columnOfCharIndex("abc", 2));
+	}
+
+	@Test
 	public void testExtractIndentEmpty() {
 		assertEquals("", LineText.extractIndent(""));
 	}
@@ -301,6 +326,47 @@ public class LineTextTest {
 	}
 
 	@Test
+	public void testIsIdentifierPartAsciiCharsAndPunctuation() {
+		assertTrue(LineText.isIdentifierPart('a'));
+		assertTrue(LineText.isIdentifierPart('7'));
+		assertFalse(LineText.isIdentifierPart('.'));
+		assertFalse(LineText.isIdentifierPart(' '));
+	}
+
+	@Test
+	public void testIsIdentifierPartCodePoints() {
+		assertTrue(LineText.isIdentifierPart(0x1D465));
+		assertFalse(LineText.isIdentifierPart(0x1F600));
+	}
+
+	@Test
+	public void testIsIdentifierPartSurrogateHalves() {
+		final var pair = Character.toChars(0x1D465);
+		assertTrue(LineText.isIdentifierPart(pair[0]));
+		assertTrue(LineText.isIdentifierPart(pair[1]));
+	}
+
+	@Test
+	public void testIsIdentifierStartAsciiChars() {
+		assertTrue(LineText.isIdentifierStart('a'));
+		assertTrue(LineText.isIdentifierStart('_'));
+		assertFalse(LineText.isIdentifierStart('7'));
+	}
+
+	@Test
+	public void testIsIdentifierStartCodePoints() {
+		assertTrue(LineText.isIdentifierStart(0x1D465));
+		assertFalse(LineText.isIdentifierStart("7".codePointAt(0)));
+	}
+
+	@Test
+	public void testIsIdentifierStartSurrogateHalves() {
+		final var pair = Character.toChars(0x1D465);
+		assertTrue(LineText.isIdentifierStart(pair[0]));
+		assertTrue(LineText.isIdentifierStart(pair[1]));
+	}
+
+	@Test
 	public void testIsWordAtFollowedByIdentifierChar() {
 		assertFalse(LineText.isWordAt("doWork();", 0, "do"));
 	}
@@ -356,11 +422,6 @@ public class LineTextTest {
 	}
 
 	@Test
-	public void testLiteralTokenEndMatchesRedundantNumericSuffixCallSite() {
-		assertEquals(4, LineText.literalTokenEnd("100L", 0));
-	}
-
-	@Test
 	public void testLiteralTokenEndMatchesUpperEllCallSite() {
 		assertEquals(2, LineText.literalTokenEnd("5l;", 0));
 	}
@@ -408,6 +469,11 @@ public class LineTextTest {
 	@Test
 	public void testLiteralTokenEndUnicodeLetterConsumed() {
 		assertEquals(4, LineText.literalTokenEnd("café;", 0));
+	}
+
+	@Test
+	public void testLiteralTokenEndUppercaseSuffixConsumed() {
+		assertEquals(4, LineText.literalTokenEnd("100L", 0));
 	}
 
 	@Test

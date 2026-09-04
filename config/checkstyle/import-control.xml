@@ -1,0 +1,25 @@
+<?xml version="1.0"?><!DOCTYPE import-control PUBLIC
+	"-//Checkstyle//DTD ImportControl Configuration 1.4//EN"
+	"https://checkstyle.org/dtds/import_control_1_4.dtd">
+
+<!--
+	Gives AstResolve's @apiNote teeth. Its answers are a best effort, not the JLS: a null means
+	"unknown" rather than "no such type", and same-file overloads are picked by arity. That is
+	acceptable for a check deciding whether to log, and not acceptable for a fixer deciding whether
+	to rewrite a user's file, so the fix package must go through the owning check's public static
+	method instead. Everything else stays allowed.
+-->
+<import-control pkg="com.etk2000.checkstyle">
+	<allow pkg=".*" regex="true" />
+
+	<subpackage name="gradle">
+		<subpackage name="fix">
+			<!-- regex, and with the member tail: a plain `disallow class` compares the full member
+			     path for a static import, so `import static ...AstResolve.resolveVariableType`
+			     slips past the exact-match form and falls through to the allow below. Verified
+			     both spellings against the checkstyle CLI. -->
+			<disallow class="com\.etk2000\.checkstyle\.ast\.AstResolve(\..*)?" regex="true" />
+			<allow pkg=".*" regex="true" />
+		</subpackage>
+	</subpackage>
+</import-control>

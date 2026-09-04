@@ -2,9 +2,9 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import static com.etk2000.checkstyle.gradle.fix.FqnResolver.stripCommentsAndBom;
 
-import com.etk2000.checkstyle.LineText;
 import com.etk2000.checkstyle.PreferImportCheck;
 import com.etk2000.checkstyle.ReflectionUtil;
+import com.etk2000.checkstyle.ScopeLookup;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -33,9 +33,13 @@ import javax.annotation.Nullable;
  * <p>Resolution delegates to {@link FqnResolver} (shared with
  * {@code PreferStaticImportConstantFixer}); this fixer layers on the extra
  * safety gates the strip needs: an in-file shadow guard (a nested type or type
- * parameter with the same simple name), a wildcard gate on {@code java.lang}
- * names, and a reflection check for a same-package type contributed by a
- * dependency. Every case it cannot prove safe returns a {@link SkipResult}.
+ * parameter with the same simple name), a member type of that name a supertype
+ * outside the file may pass down to the site
+ * ({@link PreferImportCheck#inheritedMemberTypeAt}), a wildcard gate on {@code java.lang}
+ * names, a static import bringing in a member type of that name
+ * ({@link PreferImportCheck#staticImportedMemberType}), and a reflection check for a
+ * same-package type contributed by a dependency. Every case it cannot prove safe returns a
+ * {@link SkipResult}.
  */
 final class PreferImportFixer implements CheckstyleFixer {
 	@CheckReturnValue
@@ -82,10 +86,8 @@ final class PreferImportFixer implements CheckstyleFixer {
 
 	@CheckReturnValue
 	@Nullable
-	private static int[] findQualifiedName(@Nonnull String line, int fromColumn) {
-		// the reported column counts code points; used raw it starts the scan early on
-		// a line with a supplementary character and can latch onto an earlier dotted run
-		var i = LineText.charIndexOfColumn(line, Math.clamp(fromColumn, 0, line.codePointCount(0, line.length())));
+	private static int[] findQualifiedName(@Nonnull String line, int from) {
+		var i = Math.clamp(from, 0, line.length());
 		// the check reports the column at the dotted run's first token for a
 		// plain type, but at a preceding keyword/operator (`new`, `@`) for
 		// others; if it lands inside a dotted run, rewind to that run's start
@@ -133,6 +135,36 @@ final class PreferImportFixer implements CheckstyleFixer {
 		return false;
 	}
 
+	/**
+	 * Whether a single static import, or with {@code onDemandToo} also a static on-demand import, of
+	 * the file {@code root} heads brings in a member type of {@code fqn}'s simple name other than
+	 * {@code fqn}: FOUND when one does, UNKNOWN when none does but an imported class cannot be read.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static ScopeLookup staticImportLookup(@Nonnull DetailAST root, @Nonnull String fqn, boolean onDemandToo) {
+		final var single = PreferImportCheck.staticImportedMemberType(root, fqn, false);
+		if (single == ScopeLookup.FOUND || !onDemandToo)
+			return single;
+		final var onDemand = PreferImportCheck.staticImportedMemberType(root, fqn, true);
+		return onDemand == ScopeLookup.ABSENT ? single : onDemand;
+	}
+
+	/**
+	 * The skip for shortening {@code fqn} where a static import would take the simple name over
+	 * ({@link #staticImportLookup}), or null when none would.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static SkipResult staticImportSkip(@Nonnull List<String> lines, @Nonnull String fqn, boolean onDemandToo) {
+		return switch (FixerAst.withAst(lines, root -> staticImportLookup(root, fqn, onDemandToo))) {
+			case ABSENT -> null;
+			case FOUND -> new SkipResult(SkipMessages.IMPORT_SKIP_STATIC_IMPORT_MEMBER_TYPE);
+			case UNKNOWN -> new SkipResult(SkipMessages.IMPORT_SKIP_STATIC_IMPORT_MEMBER_TYPE_UNKNOWN);
+			case null -> new SkipResult(SkipMessages.IMPORT_SKIP_UNPARSEABLE);
+		};
+	}
+
 	@Nonnull
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
@@ -159,6 +191,11 @@ final class PreferImportFixer implements CheckstyleFixer {
 			return new SkipResult(SkipMessages.IMPORT_SKIP_UNPARSEABLE);
 		if (shadowing.contains(simpleName))
 			return new SkipResult(SkipMessages.IMPORT_SKIP_SHADOW);
+		final var inherited = FixerAst.locate(lines, lineIndex, start, (root, astLine, astColumn) -> PreferImportCheck.inheritedMemberTypeAt(root, astLine, astColumn, fqn));
+		if (inherited == ScopeLookup.FOUND)
+			return new SkipResult(SkipMessages.IMPORT_SKIP_INHERITED_MEMBER_TYPE);
+		if (inherited == ScopeLookup.UNKNOWN)
+			return new SkipResult(SkipMessages.IMPORT_SKIP_INHERITED_MEMBER_TYPE_UNKNOWN);
 
 		final var maskedLines = FqnResolver.computeLineMasks(lines).maskedLines();
 		final var packageName = findPackageName(lines, maskedLines);
@@ -174,17 +211,17 @@ final class PreferImportFixer implements CheckstyleFixer {
 					yield new SkipResult(SkipMessages.IMPORT_SKIP_NAME_COLLISION);
 				if (hasWildcardImport(lines, maskedLines))
 					yield new SkipResult(SkipMessages.IMPORT_SKIP_WILDCARD_AMBIGUITY);
-				yield strip(line, lineIndex, start, end, simpleName, Set.of());
+				yield stripUnlessStaticallyImported(lines, lineIndex, start, end, fqn, true);
 			}
 			case NONE -> {
 				if (!dependencyShadow)
 					yield new SkipResult(SkipMessages.IMPORT_SKIP_UNRESOLVABLE);
 				yield fqn.equals(packageName + "." + simpleName)
-						? strip(line, lineIndex, start, end, simpleName, Set.of())
+						? stripUnlessStaticallyImported(lines, lineIndex, start, end, fqn, false)
 						: new SkipResult(SkipMessages.IMPORT_SKIP_NAME_COLLISION);
 			}
 			case SAME_PACKAGE_SIBLING -> fqn.equals(resolution.fqn())
-					? strip(line, lineIndex, start, end, simpleName, Set.of())
+					? stripUnlessStaticallyImported(lines, lineIndex, start, end, fqn, false)
 					: new SkipResult(SkipMessages.IMPORT_SKIP_NAME_COLLISION);
 			case WILDCARD -> new SkipResult(SkipMessages.IMPORT_SKIP_WILDCARD);
 		};
@@ -202,5 +239,25 @@ final class PreferImportFixer implements CheckstyleFixer {
 	) {
 		final var newLine = line.substring(0, start) + keptName + line.substring(end);
 		return new FixResult(lineIndex, lineIndex, List.of(newLine), importsToAdd);
+	}
+
+	/**
+	 * Strips {@code fqn}, which needs no import, at {@code start..end} of line {@code lineIndex},
+	 * unless a static import would take the simple name over: a single static import outranks the
+	 * package and {@code java.lang}, and with {@code onDemandToo} (a {@code java.lang} name, which is
+	 * itself on demand) a static on-demand import makes it ambiguous.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private FixAttempt stripUnlessStaticallyImported(
+			@Nonnull List<String> lines,
+			int lineIndex,
+			int start,
+			int end,
+			@Nonnull String fqn,
+			boolean onDemandToo
+	) {
+		final var skip = staticImportSkip(lines, fqn, onDemandToo);
+		return skip != null ? skip : strip(lines.get(lineIndex), lineIndex, start, end, fqn.substring(fqn.lastIndexOf('.') + 1), Set.of());
 	}
 }

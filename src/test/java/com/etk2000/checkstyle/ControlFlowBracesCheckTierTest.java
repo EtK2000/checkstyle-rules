@@ -209,6 +209,12 @@ public class ControlFlowBracesCheckTierTest {
 	}
 
 	@Test
+	public void testBodyAtElseIfReturnsNull() throws Exception {
+		final var elseAst = findKeyword("if (x > 0)\n\t\t--x;\n\telse if (y > 0\n\t\t\t\t&& x < 0)\n\t\t++x;", TokenTypes.LITERAL_ELSE);
+		assertNull(ControlFlowBracesCheck.bodyAt(elseAst, elseAst.getLineNo() - 1, elseAst.getColumnNo()));
+	}
+
+	@Test
 	public void testBodyAtElseReportsKeywordLineAsHeader() throws Exception {
 		final var elseAst = findKeyword("if (x > 0)\n\t\t--x;\n\telse { ++x; }", TokenTypes.LITERAL_ELSE);
 		final var found = ControlFlowBracesCheck.bodyAt(elseAst, elseAst.getLineNo() - 1, elseAst.getColumnNo());
@@ -240,6 +246,24 @@ public class ControlFlowBracesCheckTierTest {
 		assertEquals(-1, found.endLine());
 		assertEquals(-1, found.endColumn());
 		assertEquals(ifAst.getLineNo() + 1, found.lastLine());
+	}
+
+	@Test
+	public void testElseIfSplitAtLabeledBodyReturnsNull() throws Exception {
+		final var elseAst = findKeyword("if (x > 0)\n\t\t--x;\n\telse\n\t\tlabel: if (y > 0)\n\t\t\t++x;", TokenTypes.LITERAL_ELSE);
+		assertNull(ControlFlowBracesCheck.elseIfSplitAt(elseAst, elseAst.getLineNo() - 1, elseAst.getColumnNo()));
+	}
+
+	@Test
+	public void testElseIfSplitAtLocatesElse() throws Exception {
+		final var elseAst = findKeyword("if (x > 0)\n\t\t--x;\n\telse\n\t\tif (y > 0)\n\t\t\t++x;", TokenTypes.LITERAL_ELSE);
+		assertEquals(elseAst, ControlFlowBracesCheck.elseIfSplitAt(elseAst, elseAst.getLineNo() - 1, elseAst.getColumnNo()));
+	}
+
+	@Test
+	public void testElseIfSplitAtSameLineReturnsNull() throws Exception {
+		final var elseAst = findKeyword("if (x > 0)\n\t\t--x;\n\telse if (y > 0)\n\t\t++x;", TokenTypes.LITERAL_ELSE);
+		assertNull(ControlFlowBracesCheck.elseIfSplitAt(elseAst, elseAst.getLineNo() - 1, elseAst.getColumnNo()));
 	}
 
 	@ParameterizedTest
@@ -459,5 +483,29 @@ public class ControlFlowBracesCheckTierTest {
 	void testTierClassification(String doWhileCode, int expectedTier) throws Exception {
 		final var doAst = findDoNode(doWhileCode);
 		assertEquals(expectedTier, ControlFlowBracesCheck.determineTier(doAst.getFirstChild()));
+	}
+
+	@Test
+	public void testUnwrapRebindsElseBracelessBodyReturnsFalse() throws Exception {
+		final var ifAst = findKeyword("if (x > 0)\n\t\t--y;\n\telse\n\t\t--x;", TokenTypes.LITERAL_IF);
+		assertFalse(ControlFlowBracesCheck.unwrapRebindsElse(ifAst, ifAst.getLineNo() - 1, ifAst.getColumnNo()));
+	}
+
+	@Test
+	public void testUnwrapRebindsElseColumnMissesReturnsFalse() throws Exception {
+		final var ifAst = findKeyword("if (x > 0) { if (y > 0); } else --x;", TokenTypes.LITERAL_IF);
+		assertFalse(ControlFlowBracesCheck.unwrapRebindsElse(ifAst, ifAst.getLineNo() - 1, ifAst.getColumnNo() + 99));
+	}
+
+	@Test
+	public void testUnwrapRebindsElseDanglingIfWithEnclosingElse() throws Exception {
+		final var ifAst = findKeyword("if (x > 0) { if (y > 0); } else --x;", TokenTypes.LITERAL_IF);
+		assertTrue(ControlFlowBracesCheck.unwrapRebindsElse(ifAst, ifAst.getLineNo() - 1, ifAst.getColumnNo()));
+	}
+
+	@Test
+	public void testUnwrapRebindsElseMultiStatementBlockReturnsFalse() throws Exception {
+		final var ifAst = findKeyword("if (x > 0) { if (y > 0); --y; } else --x;", TokenTypes.LITERAL_IF);
+		assertFalse(ControlFlowBracesCheck.unwrapRebindsElse(ifAst, ifAst.getLineNo() - 1, ifAst.getColumnNo()));
 	}
 }

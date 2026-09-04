@@ -38,8 +38,6 @@ public class CasesFileLevelImportsTest {
 
 	@CheckReturnValue
 	private static boolean isCasesFile(@Nonnull String filename) {
-		// `cases.*.clean.*.java` files are full-file clean fixtures (not sliced);
-		// file-level imports are legitimate there since the file has no slices to attach to.
 		return filename.startsWith("cases.") && filename.endsWith(".java")
 				&& !filename.contains(".clean.");
 	}

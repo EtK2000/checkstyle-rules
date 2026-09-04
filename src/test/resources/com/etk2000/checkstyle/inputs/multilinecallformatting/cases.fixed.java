@@ -1,5 +1,5 @@
 // === case: list_of_fqn_not_on_opening ===
-// skip-reason: multiline formatting fix not yet supported for this shape
+// skip-reason: cannot reformat: this multi-line call shape is not supported yet
 // imports: java.util.List
 class InputMultilineCallSpecialMethodListOfFqnNotOnOpeningSliceViolation {
 	void m() {
@@ -14,7 +14,7 @@ class InputMultilineCallSpecialMethodListOfFqnNotOnOpeningSliceViolation {
 // === end ===
 
 // === case: list_of_fqn_type_witness_not_on_opening ===
-// skip-reason: multiline formatting fix not yet supported for this shape
+// skip-reason: cannot reformat: this multi-line call shape is not supported yet
 // imports: java.util.List
 class InputMultilineCallSpecialMethodListOfFqnTypeWitnessNotOnOpeningSliceViolation {
 	void m() {

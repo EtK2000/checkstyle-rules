@@ -5,7 +5,27 @@ class InputThisRemoveSliceViolation {
 	String field;
 
 	String m() {
-		return this.field; // violation: Unnecessary 'this.field', only use when shadowing or in field assignment.
+		return this.field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_array_element_assignment_target ===
+class InputThisArrayElementAssignmentTargetSliceViolation {
+	int[] values;
+
+	void m() {
+		this.values[0] = 1; // violation: Remove the unnecessary 'this.' from 'this.values' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_assignment_right_hand_side ===
+class InputThisAssignmentRightHandSideSliceViolation {
+	int field, other;
+
+	void m() {
+		other = this.field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
 	}
 }
 // === end ===
@@ -13,10 +33,116 @@ class InputThisRemoveSliceViolation {
 // === case: remove_this_at_start_of_line ===
 class InputThisStartOfLineSliceViolation {
 	void caller() {
-this.doSomething(); // violation: Unnecessary 'this.doSomething', only use when shadowing or in field assignment.
+this.doSomething(); // violation: Remove the unnecessary 'this.' from 'this.doSomething' (only needed when shadowing or assigning a field).
 	}
 
 	void doSomething() {}
+}
+// === end ===
+
+// === case: remove_this_block_comment_spanning_lines ===
+// skip-reason: cannot remove the 'this.' qualifier: the text between it and the member cannot be folded onto one line without losing a comment
+class InputThisBlockCommentSpanningLinesSliceViolation {
+	String field;
+
+	String m() {
+		return this /* a
+				b */ .field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_comment_after_dot ===
+class InputThisCommentAfterDotSliceViolation {
+	String field;
+
+	String m() {
+		return this./* c */field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_comment_before_dot ===
+class InputThisCommentBeforeDotSliceViolation {
+	String field;
+
+	String m() {
+		return this/* c */.field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_comment_before_dot_on_a_call ===
+class InputThisCommentBeforeDotOnACallSliceViolation {
+	void caller() {
+		this/* c */.doSomething(); // violation: Remove the unnecessary 'this.' from 'this.doSomething' (only needed when shadowing or assigning a field).
+	}
+
+	void doSomething() {}
+}
+// === end ===
+
+// === case: remove_this_compound_assignment ===
+class InputThisCompoundAssignmentSliceViolation {
+	int field;
+
+	void m() {
+		this.field += 1; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_division_before_carried_comment ===
+class InputThisDivisionBeforeCarriedCommentSliceViolation {
+	int divisor, field;
+
+	int m() {
+		return divisor/this/* c */.field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_dot_on_next_line ===
+class InputThisDotOnNextLineSliceViolation {
+	String field;
+
+	String m() {
+		return this
+				.field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_dot_on_next_line_with_line_comment ===
+// skip-reason: cannot remove the 'this.' qualifier: the text between it and the member cannot be folded onto one line without losing a comment
+class InputThisDotOnNextLineWithLineCommentSliceViolation {
+	String field;
+
+	String m() {
+		return this // why
+				.field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_in_colon_switch ===
+class InputThisInColonSwitchSliceViolation {
+	String field;
+
+	void m(int k) {
+		switch (k) {
+			case 1:
+				System.out.println(this.field); // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+				// falls through
+			case 2:
+				System.out.println(k);
+				break;
+
+			default:
+				System.out.println(-k);
+				break;
+		}
+	}
 }
 // === end ===
 
@@ -25,8 +151,29 @@ class InputThisRemoveInExpressionSliceViolation {
 	int value;
 
 	int m() {
-		return this.value + 1; // violation: Unnecessary 'this.value', only use when shadowing or in field assignment.
+		return this.value + 1; // violation: Remove the unnecessary 'this.' from 'this.value' (only needed when shadowing or assigning a field).
 	}
+}
+// === end ===
+
+// === case: remove_this_in_field_initializer_reading_earlier_declarator ===
+class InputThisFieldInitEarlierDeclaratorSliceViolation {
+	int beta = 2, alpha = this.beta; // violation: Remove the unnecessary 'this.' from 'this.beta' (only needed when shadowing or assigning a field).
+}
+// === end ===
+
+// === case: remove_this_in_field_initializer_reading_earlier_field ===
+class InputThisFieldInitEarlierFieldSliceViolation {
+	int beta;
+	long alpha = this.beta; // violation: Remove the unnecessary 'this.' from 'this.beta' (only needed when shadowing or assigning a field).
+}
+// === end ===
+
+// === case: remove_this_in_field_initializer_with_later_field_sharing_prefix ===
+class InputThisFieldInitLaterPrefixFieldSliceViolation {
+	int beta;
+	long alpha = this.beta; // violation: Remove the unnecessary 'this.' from 'this.beta' (only needed when shadowing or assigning a field).
+	String betaTwo;
 }
 // === end ===
 
@@ -35,7 +182,7 @@ class InputThisInstanceInitSliceViolation {
 	int field;
 
 	{
-		System.out.println(this.field); // violation: Unnecessary 'this.field', only use when shadowing or in field assignment.
+		System.out.println(this.field); // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
 	}
 }
 // === end ===
@@ -45,7 +192,7 @@ class InputThisLambdaSliceViolation {
 	int field;
 
 	void lambdaWithoutShadowing() {
-		final Runnable r = () -> System.out.println(this.field); // violation: Unnecessary 'this.field', only use when shadowing or in field assignment.
+		final Runnable r = () -> System.out.println(this.field); // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
 	}
 }
 // === end ===
@@ -53,10 +200,22 @@ class InputThisLambdaSliceViolation {
 // === case: remove_this_in_method_call ===
 class InputThisRemoveInMethodCallSliceViolation {
 	void caller() {
-		this.doSomething(); // violation: Unnecessary 'this.doSomething', only use when shadowing or in field assignment.
+		this.doSomething(); // violation: Remove the unnecessary 'this.' from 'this.doSomething' (only needed when shadowing or assigning a field).
 	}
 
 	void doSomething() {}
+}
+// === end ===
+
+// === case: remove_this_in_multiline_chain ===
+class InputThisInMultilineChainSliceViolation {
+	String field;
+
+	int m() {
+		return this.field // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+				.trim()
+				.length();
+	}
 }
 // === end ===
 
@@ -65,17 +224,72 @@ class InputThisRemoveInParensSliceViolation {
 	int bar;
 
 	void caller() {
-		foo(this.bar); // violation: Unnecessary 'this.bar', only use when shadowing or in field assignment.
+		foo(this.bar); // violation: Remove the unnecessary 'this.' from 'this.bar' (only needed when shadowing or assigning a field).
 	}
 
 	void foo(int x) {}
 }
 // === end ===
 
+// === case: remove_this_in_record_accessor_override ===
+record InputThisInRecordAccessorOverrideSliceViolation(int field) {
+	@Override
+	public int field() {
+		return this.field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
 // === case: remove_this_in_record_compact_constructor ===
 record InputThisRecordSliceViolation(int field) {
 	InputThisRecordSliceViolation {
-		System.out.println(this.field); // violation: Unnecessary 'this.field', only use when shadowing or in field assignment.
+		System.out.println(this.field); // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_in_string_neighbourhood ===
+class InputThisInStringNeighbourhoodSliceViolation {
+	String field;
+
+	String m() {
+		return "this.field" + this.field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_in_switch_expression_yield ===
+class InputThisInSwitchExpressionYieldSliceViolation {
+	String field;
+
+	String m(int k) {
+		return switch (k) {
+			case 1 -> {
+				System.out.println(k);
+				yield this.field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+			}
+			default -> "";
+		};
+	}
+}
+// === end ===
+
+// === case: remove_this_in_three_declarator_field ===
+class InputThisInThreeDeclaratorFieldSliceViolation {
+	int alpha = 1, beta = 2, gamma = this.alpha; // violation: Remove the unnecessary 'this.' from 'this.alpha' (only needed when shadowing or assigning a field).
+}
+// === end ===
+
+// === case: remove_this_in_try_resource_variable_access ===
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputThisTryResourceVariableAccessSliceViolation {
+	final StringReader reader = new StringReader("");
+
+	void m() throws IOException {
+		try (this.reader) { // violation: Remove the unnecessary 'this.' from 'this.reader' (only needed when shadowing or assigning a field).
+			System.out.println(reader.read());
+		}
 	}
 }
 // === end ===
@@ -85,7 +299,191 @@ class InputThisVoidMethodSliceViolation {
 	int field;
 
 	void method() {
-		System.out.println(this.field); // violation: Unnecessary 'this.field', only use when shadowing or in field assignment.
+		System.out.println(this.field); // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_qualified_assignment_target ===
+class InputThisQualifiedAssignmentTargetSliceViolation {
+	static class Inner {
+		int field;
+	}
+
+	Inner inner;
+
+	void m() {
+		this.inner.field = 1; // violation: Remove the unnecessary 'this.' from 'this.inner' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_receiver_parameter ===
+class InputThisReceiverParameterSliceViolation {
+	String field;
+
+	String m(InputThisReceiverParameterSliceViolation this) {
+		return this.field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_space_after_dot ===
+class InputThisSpaceAfterDotSliceViolation {
+	String field;
+
+	String m() {
+		return this. field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_space_before_dot ===
+class InputThisSpaceBeforeDotSliceViolation {
+	String field;
+
+	String m() {
+		return this .field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_spaced_dot ===
+class InputThisSpacedDotSliceViolation {
+	String field;
+
+	String m() {
+		return this . field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_supplementary_in_span ===
+class InputThisSupplementaryInSpanSliceViolation {
+	String field;
+
+	String m() {
+		return this/* 𝒜 */.field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_two_comments_in_span ===
+class InputThisTwoCommentsInSpanSliceViolation {
+	String field;
+
+	String m() {
+		return this /* a */ . /* b */ field; // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
+	}
+}
+// === end ===
+
+// === case: remove_this_with_bindings_of_other_names ===
+// multi-fix-expected
+// imports: java.io.IOException
+// imports: java.io.StringReader
+// imports: java.util.List
+// imports: java.util.function.Predicate
+class InputThisBindingsOfOtherNamesSliceViolation {
+	record Box(Object other) {}
+
+	final Object name = "n";
+	final boolean matches = name instanceof String other && other.equals(this.name); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+	final Predicate<Object> sameName = other -> this.name.equals(other); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+	final Runnable dump = () -> {
+		final var other = "tmp";
+		System.out.println(this.name + other); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+	};
+
+	void catchParameter() {
+		try {
+			System.out.println(name);
+		}
+		catch (RuntimeException other) {
+			System.out.println(this.name + other.getMessage()); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+		}
+	}
+
+	void forEachVariable(List<Object> values) {
+		for (var other : values)
+			System.out.println(this.name.toString() +other); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+	}
+
+	void instanceofPattern(Object value) {
+		if (value instanceof String other)
+			System.out.println(this.name + other); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+	}
+
+	void localAnnotationBinding() {
+		final var holder = new Object() {
+			@interface Local {
+				String name = "a";
+			}
+		};
+
+		System.out.println(holder + this.name); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+	}
+
+	void localClassBinding() {
+		class Local {
+			void print(Object name) {
+				System.out.println(name);
+			}
+		}
+
+		new Local().print(this.name); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+	}
+
+	void localEnumBinding() {
+		enum Local {
+			ONE;
+
+			static final String name = "e";
+		}
+
+		System.out.println(Local.ONE + this.name); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+	}
+
+	void localInterfaceBinding() {
+		interface Local {
+			void print(Object name);
+		}
+
+		System.out.println(Local.class + this.name); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+	}
+
+	void localRecordBinding() {
+		record Local(Object name) {}
+
+		System.out.println(new Local("r") + this.name); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+	}
+
+	void recordPattern(Object value) {
+		if (value instanceof Box(var other))
+			System.out.println(this.name.toString() +other); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+	}
+
+	void switchPattern(Object value) {
+		switch (value) {
+			case String other -> System.out.println(this.name + other); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+			default -> System.out.println(value);
+		}
+	}
+
+	void tryResource() throws IOException {
+		try (var other = new StringReader("")) {
+			System.out.println(this.name.toString() +other.read()); // violation: Remove the unnecessary 'this.' from 'this.name' (only needed when shadowing or assigning a field).
+		}
+	}
+}
+// === end ===
+
+// === case: remove_this_with_trailing_comment ===
+class InputThisWithTrailingCommentSliceViolation {
+	String field;
+
+	String m() {
+		return this.field; /* keeps this.field as written */ // violation: Remove the unnecessary 'this.' from 'this.field' (only needed when shadowing or assigning a field).
 	}
 }
 // === end ===

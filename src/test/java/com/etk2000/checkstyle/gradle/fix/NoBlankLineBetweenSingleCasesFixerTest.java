@@ -1,9 +1,12 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSimpleFix;
-import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkip;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkipResult;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 public class NoBlankLineBetweenSingleCasesFixerTest {
 	private static final String TOPIC = "noblanklinebetweensinglecases";
@@ -17,8 +20,20 @@ public class NoBlankLineBetweenSingleCasesFixerTest {
 	}
 
 	@Test
+	public void testCommentOnlyGapIsStale() throws Exception {
+		assertSkipResult(fixer, TOPIC, "comment_only_gap_is_stale", SkipMessages.NO_BLANK_CASES_SKIP_STALE);
+	}
+
+	@Test
 	public void testFirstLine() throws Exception {
-		assertSkip(fixer, TOPIC, "first_line");
+		assertSkipResult(fixer, TOPIC, "first_line", SkipMessages.NO_BLANK_CASES_SKIP_STALE);
+	}
+
+	@Test
+	public void testLineIndexOutsideTheBufferIsOutOfBounds() {
+		final var lines = List.of("}", "", "");
+		for (var lineIndex : new int[]{-1, lines.size(), lines.size() + 1})
+			assertEquals(new SkipResult(SkipMessages.FIX_BOUNDS), fixer.fix(lines, lineIndex, 0), "lineIndex " + lineIndex);
 	}
 
 	@Test
@@ -29,7 +44,7 @@ public class NoBlankLineBetweenSingleCasesFixerTest {
 
 	@Test
 	public void testNoBlankLinesAbove() throws Exception {
-		assertSkip(fixer, TOPIC, "no_blank_lines_above");
+		assertSkipResult(fixer, TOPIC, "no_blank_lines_above", SkipMessages.NO_BLANK_CASES_SKIP_STALE);
 	}
 
 	@Test

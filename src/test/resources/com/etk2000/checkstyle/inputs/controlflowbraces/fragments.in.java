@@ -3,6 +3,24 @@
 	} else x = 5 6;
 // === end ===
 
+// === case: else_if_split_unparseable_buffer_refused ===
+// target: col=1
+	else
+		if (b) x = 5 6;
+// === end ===
+
+// === case: else_if_stale_position_refused ===
+// target: line=3 col=2
+class T {
+	void m(boolean a, boolean b) {
+		if (a) System.out.println(a);
+		else if (b
+				&& a)
+			System.out.println(b);
+	}
+}
+// === end ===
+
 // === case: for_keyword_unparseable_buffer_refused ===
 // target: col=1
 	for (var item : list) x = 5 6;

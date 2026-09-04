@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.format.SpanReformat;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -14,9 +15,7 @@ class AvoidNoArgumentSuperCallFixer implements CheckstyleFixer {
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
-		var state = JavaLineScanner.LexerState.NONE;
-		for (var i = 0; i < lineIndex; ++i)
-			state = JavaLineScanner.stateAfter(lines.get(i), state);
+		final var state = SpanReformat.lexerStateAt(lines, lineIndex);
 		final var matcher = BARE_SUPER_CALL.matcher(JavaLineScanner.stripCommentsAndStrings(line, state));
 		if (!matcher.find())
 			return new SkipResult(SkipMessages.AVOID_SUPER_SKIP);

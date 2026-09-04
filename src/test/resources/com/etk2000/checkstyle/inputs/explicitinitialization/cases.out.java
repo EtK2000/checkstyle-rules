@@ -19,6 +19,13 @@ class InputExplicitInitMultiDeclarationFirstVarCommaInCommentSliceViolation {
 }
 // === end ===
 
+// === case: multi_declaration_first_var_wrapped ===
+class InputExplicitInitMultiDeclarationFirstVarWrappedSliceViolation {
+	int x,
+			y;
+}
+// === end ===
+
 // === case: multi_declaration_second_var ===
 class InputExplicitInitMultiDeclarationSecondVarSliceViolation {
 	int x, y;

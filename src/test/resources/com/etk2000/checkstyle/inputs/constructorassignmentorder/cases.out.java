@@ -24,7 +24,7 @@ class InputConstructorAssignAlphabeticalThreeFieldsSliceViolation {
 // === end ===
 
 // === case: assignment_shares_line_with_statement ===
-// skip-reason: cannot reorder: multiple statements share a line
+// skip-reason: cannot reorder assignments: multiple statements share a line
 class InputConstructorAssignSharesLineWithStatementSliceViolation {
 	int alpha, beta;
 
@@ -104,7 +104,7 @@ class InputConstructorAssignBlankBetweenAssignments {
 // === end ===
 
 // === case: block_comment_between_assignments ===
-// skip-reason: cannot reorder: an interleaved comment would be lost
+// skip-reason: cannot reorder assignments: an interleaved comment would be lost
 class InputConstructorAssignBlockCommentBetweenAssignmentsSliceViolation {
 	int alpha, beta;
 
@@ -118,7 +118,7 @@ class InputConstructorAssignBlockCommentBetweenAssignmentsSliceViolation {
 // === end ===
 
 // === case: comment_between_assignments ===
-// skip-reason: cannot reorder: an interleaved comment would be lost
+// skip-reason: cannot reorder assignments: an interleaved comment would be lost
 class InputConstructorAssignCommentBetweenAssignmentsSliceViolation {
 	int alpha, beta;
 
@@ -141,7 +141,7 @@ record InputConstructorAssignCompactCtorReorderSliceViolation(int alpha, int bet
 // === end ===
 
 // === case: dependency_cycle ===
-// skip-reason: cannot reorder: a field dependency cycle has no valid order
+// skip-reason: cannot reorder assignments: a field dependency cycle has no valid order
 class InputConstructorAssignDependencyCycleSliceViolation {
 	int alpha, beta, gamma;
 
@@ -165,7 +165,7 @@ class InputConstructorAssignDependencyViolation {
 // === end ===
 
 // === case: duplicate_field_assignment ===
-// skip-reason: cannot reorder: a field is assigned more than once
+// skip-reason: cannot reorder assignments: a field is assigned more than once
 class InputConstructorAssignDuplicateFieldAssignmentSliceViolation {
 	int x, y;
 
@@ -325,7 +325,7 @@ class InputConstructorAssignMultiBeforeSimple {
 // === end ===
 
 // === case: multiline_local_var_decl_untracked ===
-// skip-reason: cannot reorder: relocating an unused local would move its initializer's side effects
+// skip-reason: cannot reorder assignments: relocating an unused local would move its initializer's side effects
 class InputConstructorAssignMultilineLocalVarDeclUntrackedSliceViolation {
 	int alpha, beta;
 
@@ -411,7 +411,7 @@ class InputConstructorAssignQualifiedChainDependency {
 // === end ===
 
 // === case: shared_line_statements ===
-// skip-reason: cannot reorder: multiple statements share a line
+// skip-reason: cannot reorder assignments: multiple statements share a line
 class InputConstructorAssignSharedLineStatementsSliceViolation {
 	int alpha, beta;
 
@@ -422,7 +422,7 @@ class InputConstructorAssignSharedLineStatementsSliceViolation {
 // === end ===
 
 // === case: statement_after_second_assignment ===
-// skip-reason: cannot reorder: an interleaved statement would change execution order
+// skip-reason: cannot reorder assignments: an interleaved statement would change execution order
 class InputConstructorAssignStatementAfterSecondAssignmentSliceViolation {
 	int alpha, beta, gamma;
 
@@ -436,7 +436,7 @@ class InputConstructorAssignStatementAfterSecondAssignmentSliceViolation {
 // === end ===
 
 // === case: statement_between_assignments ===
-// skip-reason: cannot reorder: an interleaved statement would change execution order
+// skip-reason: cannot reorder assignments: an interleaved statement would change execution order
 class InputConstructorAssignStatementBetweenAssignmentsSliceViolation {
 	int alpha, beta;
 

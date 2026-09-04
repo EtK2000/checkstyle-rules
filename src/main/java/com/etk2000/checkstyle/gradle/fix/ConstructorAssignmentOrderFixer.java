@@ -1,11 +1,11 @@
 package com.etk2000.checkstyle.gradle.fix;
 
-import com.etk2000.checkstyle.AstUtil;
 import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck;
 import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck.Assignment;
 import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck.BodyClassification;
 import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck.LocalVar;
 
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -25,8 +25,7 @@ import javax.annotation.Nullable;
  * reorders them by group (simple, multi-line, variable-dependent), sub-group (variable
  * declaration order), and field name, honoring field-to-field dependencies. Each local variable
  * is emitted just before the first assignment that references it; an unreferenced one is moved to
- * the tail. Returns a {@link SkipResult} when a comment or a non-assignment statement sits within
- * the reordered region (either would be dropped or have its execution order changed).
+ * the tail.
  */
 class ConstructorAssignmentOrderFixer implements CheckstyleFixer {
 	private record ClassifiedBody(@Nonnull DetailAST body, @Nonnull BodyClassification classification) {}
@@ -166,7 +165,6 @@ class ConstructorAssignmentOrderFixer implements CheckstyleFixer {
 				replacement.add("");
 
 			for (var i = 0; i < regionVars.size(); ++i) {
-				// slot[i] equals exactly one ordered index, so this fires at most once per var
 				if (slot[i] == a) {
 					placed[i] = true;
 					final var lv = regionVars.get(i);
@@ -200,12 +198,14 @@ class ConstructorAssignmentOrderFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
-		final var classified = FixerAst.withAst(
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
+		final var classified = FixerAst.locate(
 				lines,
-				root -> {
-				final var found = ConstructorAssignmentOrderCheck.bodyAt(root, lineIndex, column);
-				return found == null ? null : new ClassifiedBody(found, ConstructorAssignmentOrderCheck.classify(found));
+				lineIndex,
+				charColumn,
+				(root, line, column) -> {
+					final var found = ConstructorAssignmentOrderCheck.bodyAt(root, line, column);
+					return found == null ? null : new ClassifiedBody(found, ConstructorAssignmentOrderCheck.classify(found));
 				}
 		);
 		if (classified == null)
@@ -215,7 +215,7 @@ class ConstructorAssignmentOrderFixer implements CheckstyleFixer {
 		final var classification = classified.classification();
 		final var assignments = classification.assignments();
 		if (assignments.size() < 2)
-			return null;
+			return new SkipResult(SkipMessages.CONSTRUCTOR_ASSIGN_SKIP_TOO_FEW);
 
 		// a field assigned more than once cannot be sorted by field name without changing which
 		// value a later read of that field sees, so refuse
@@ -282,14 +282,10 @@ class ConstructorAssignmentOrderFixer implements CheckstyleFixer {
 			// expression under it says whether evaluating the var can be moved
 			final var assign = regionVars.get(i).ast().findFirstToken(TokenTypes.ASSIGN);
 			final var initializer = assign == null ? null : assign.getFirstChild();
-			if (initializer != null && !AstUtil.isSideEffectFree(initializer))
+			if (initializer != null && !AstQuery.isSideEffectFree(initializer))
 				return new SkipResult(SkipMessages.CONSTRUCTOR_ASSIGN_SKIP_VAR_SIDE_EFFECT);
 		}
 
-		final var replacement = rebuild(lines, ordered, regionVars);
-		final var original = new ArrayList<>(lines.subList(regionStart, regionEnd + 1));
-		if (replacement.equals(original))
-			return null;
-		return new FixResult(regionStart, regionEnd, replacement);
+		return new FixResult(regionStart, regionEnd, rebuild(lines, ordered, regionVars));
 	}
 }

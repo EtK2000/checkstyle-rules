@@ -100,8 +100,6 @@ final class FragmentMigrationDetector {
 			new Wrapper(List.of("class __FragWrap {"), List.of("}")),
 			new Wrapper(List.of("class __FragWrap {", "\tvoid __frag() {"), List.of("\t}", "}")),
 			new Wrapper(List.of("class __FragWrap {", "\t__FragWrap() {"), List.of("\t}", "}")),
-			// Append an annotatable member so a body ending in a bare annotation
-			// (@A(x) with nothing after it) parses and can be judged.
 			new Wrapper(List.of("class __FragWrap {"), List.of("\tint __x;", "}")),
 			// Non-class type contexts. A modifier is only redundant on an interface
 			// or @interface member (public/abstract/static/final are implicit there),
@@ -110,10 +108,6 @@ final class FragmentMigrationDetector {
 			new Wrapper(List.of("interface __FragWrap {"), List.of("}")),
 			new Wrapper(List.of("@interface __FragWrap {"), List.of("}")),
 			new Wrapper(List.of("enum __FragWrap {", "\t;"), List.of("}")),
-			// Top-level compilation unit (empty prefix/suffix). A body that is itself a
-			// package or import declaration, or one or more top-level type declarations,
-			// cannot nest inside any class/interface/enum shape above, so it is judged
-			// as-is. Placed last so it only wins when no nesting shape parses-and-fires.
 			new Wrapper(List.of(), List.of())
 	);
 	static final Map<String, String> UNMAPPED_TOPICS = Map.ofEntries(
@@ -133,9 +127,6 @@ final class FragmentMigrationDetector {
 			Map.entry("unusedimportsfixcontext", "fix-context fixtures; check-silent fixer branches (re-verify/malformed/wildcard) the single check never drives")
 	);
 	private static final Path INPUTS_ROOT = Path.of("src/test/resources/com/etk2000/checkstyle/inputs");
-	// The two per-line style invariants the project refuses to suppress for a slice
-	// (checkstyle-test-resources.xml ids NoSpaceIndent and NoTrailingWhitespace). A
-	// body that trips either can only stay a fragment, never migrate to a slice.
 	private static final Pattern SPACE_INDENT = Pattern.compile("^ (?!\\*)(?!@)");
 	private static final Pattern TRAILING_WHITESPACE = Pattern.compile("[ \\t]+$");
 	private static final String FRAGMENTS_IN = "fragments.in.java";
@@ -178,11 +169,6 @@ final class FragmentMigrationDetector {
 		final var eval = firstFiringWrapper(checkClass, codeIn);
 		if (eval == null)
 			return Verdict.NON_COMPILABLE;
-		// A compilable body the check never fires on is a disguised clean case: the
-		// fixer is never invoked at a position the check does not report, so driving
-		// it at a synthetic // target: here tests nothing production reaches. It
-		// belongs in cases.clean.java unless it trips a non-suppressible style
-		// invariant, which no lint-clean slice may carry.
 		if (eval.violations().isEmpty())
 			return violatesStyleInvariant(codeIn) ? Verdict.STYLE_INVARIANT : Verdict.MIGRATABLE_CLEAN;
 
@@ -201,9 +187,6 @@ final class FragmentMigrationDetector {
 				? matchesReportedPosition(declaredTarget, eval, wrappedIn)
 				: targetOutcomeMatchesReported(fixer, eval, wrappedIn, declaredTarget));
 		final var verdict = redundant ? Verdict.REDUNDANT_TARGET : fixedPoint;
-		// A migratable body that trips a non-suppressible style invariant (space
-		// indent, trailing whitespace) can only stay a fragment: it would fail the
-		// full-config lint as a slice and the policy forbids suppressing those.
 		if ((verdict == Verdict.MIGRATABLE || verdict == Verdict.REDUNDANT_TARGET)
 				&& (violatesStyleInvariant(codeIn) || (codeOut != null && violatesStyleInvariant(codeOut))))
 			return Verdict.STYLE_INVARIANT;
@@ -254,7 +237,7 @@ final class FragmentMigrationDetector {
 		final var lineIndex = event.getLine() - 1;
 		if (lineIndex < 0 || lineIndex >= wrappedIn.size())
 			return Verdict.FIXER_SKIPS;
-		final var charColumn = CheckstyleFixAction.tabColumnToCharIndex(wrappedIn.get(lineIndex), event.getColumn() - 1);
+		final var charColumn = CheckstyleFixAction.eventCharIndex(wrappedIn.get(lineIndex), event);
 
 		final var working = new ArrayList<>(wrappedIn);
 		final var attempt = invokeFix(fixer, working, lineIndex, charColumn);
@@ -333,7 +316,7 @@ final class FragmentMigrationDetector {
 				continue;
 			if (wrappedLineIndex - prefixSize != target.line())
 				continue;
-			if (CheckstyleFixAction.tabColumnToCharIndex(wrappedIn.get(wrappedLineIndex), v.getColumn() - 1) == target.column())
+			if (CheckstyleFixAction.eventCharIndex(wrappedIn.get(wrappedLineIndex), v) == target.column())
 				return true;
 		}
 		return false;
@@ -437,7 +420,7 @@ final class FragmentMigrationDetector {
 			final var reportedLine = v.getLine() - 1;
 			if (reportedLine < 0 || reportedLine >= wrappedIn.size())
 				continue;
-			final var reportedColumn = CheckstyleFixAction.tabColumnToCharIndex(wrappedIn.get(reportedLine), v.getColumn() - 1);
+			final var reportedColumn = CheckstyleFixAction.eventCharIndex(wrappedIn.get(reportedLine), v);
 			if (applyAttempt(fixer, wrappedIn, reportedLine, reportedColumn).equals(targetDoc))
 				return true;
 		}

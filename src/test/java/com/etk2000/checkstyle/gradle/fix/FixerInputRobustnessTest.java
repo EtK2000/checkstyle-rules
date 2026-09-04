@@ -1,6 +1,8 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.puppycrawl.tools.checkstyle.checks.imports.RedundantImportCheck;
@@ -31,11 +33,42 @@ import javax.annotation.Nonnull;
  */
 public class FixerInputRobustnessTest {
 	// Fixers that operate on the whole target line rather than locating a construct
-	// at the column, so an out-of-range column is not meaningful to them. FLAG
-	// (docs/TODO-fragment-migration.md): confirm these are intentionally
-	// column-independent, not silently ignoring a bad column.
+	// at the column, so an out-of-range column is not meaningful to them. TODO: confirm
+	// these are intentionally column-independent, not silently ignoring a bad column.
 	private static final Set<String> COLUMN_INDEPENDENT = Set.of(
 			RedundantImportCheck.class.getName()
+	);
+	/**
+	 * Fixers that index their target line before testing that it exists, so a {@code lineIndex}
+	 * naming no line throws out of {@code fix} instead of refusing. {@code applyFixes} rejects such
+	 * an event before any fixer sees it, so this is unreachable in production and the list is a
+	 * backlog rather than a defect report: the fixers that have been migrated to
+	 * {@code FixerAst.locate} are guarded by it and are absent here, and the list shrinks as the
+	 * rest follow. See {@code docs/todo/TODO-fixer-ast-migration-program.md}.
+	 */
+	private static final Set<String> UNGUARDED_LINE_INDEX = Set.of(
+			"com.etk2000.checkstyle.ArrayTypeStyleCheck",
+			"com.etk2000.checkstyle.ControlFlowBracesCheck",
+			"com.etk2000.checkstyle.MultilineCallFormattingCheck",
+			"com.etk2000.checkstyle.NoArrayTrailingCommaCheck",
+			"com.etk2000.checkstyle.NoEnumTrailingSemicolonCheck",
+			"com.etk2000.checkstyle.NoFinalParametersCheck",
+			"com.etk2000.checkstyle.PreferCollectionInterfaceCheck",
+			"com.etk2000.checkstyle.PreferImportCheck",
+			"com.etk2000.checkstyle.PreferMathMethodCheck",
+			"com.etk2000.checkstyle.PreferPrefixIncrementCheck",
+			"com.etk2000.checkstyle.PreferStandardCharsetsCheck",
+			"com.etk2000.checkstyle.PreferStaticImportConstantCheck",
+			"com.etk2000.checkstyle.PreferVarCheck",
+			"com.etk2000.checkstyle.RecordFormattingCheck",
+			"com.etk2000.checkstyle.RedundantEqualityBranchCheck",
+			"com.puppycrawl.tools.checkstyle.checks.UpperEllCheck",
+			"com.puppycrawl.tools.checkstyle.checks.coding.AvoidNoArgumentSuperConstructorCallCheck",
+			"com.puppycrawl.tools.checkstyle.checks.coding.ExplicitInitializationCheck",
+			"com.puppycrawl.tools.checkstyle.checks.coding.FinalLocalVariableCheck",
+			"com.puppycrawl.tools.checkstyle.checks.coding.NoEnumTrailingCommaCheck",
+			"com.puppycrawl.tools.checkstyle.checks.imports.UnusedImportsCheck",
+			"com.puppycrawl.tools.checkstyle.checks.modifier.RedundantModifierCheck"
 	);
 	private static final String PROBE_LINE = "a benign robustness probe line";
 
@@ -64,22 +97,106 @@ public class FixerInputRobustnessTest {
 		}
 	}
 
+	@CheckReturnValue
+	@Nonnull
+	private static Stream<Arguments> lineIndexGuardedFixers() {
+		return CheckstyleFixAction.FIXERS.entrySet().stream()
+				.filter(e -> !UNGUARDED_LINE_INDEX.contains(e.getKey()))
+				.map(e -> Arguments.of(e.getKey(), e.getValue()));
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static Stream<CheckstyleFixer> positionBoundsGuardedFixers() {
+		return Stream.of(
+				new ArrayTypeStyleFixer(),
+				new ExplicitInitializationFixer(),
+				new NoArrayTrailingCommaFixer(),
+				new NoEnumTrailingSemicolonFixer(),
+				new PreferCollectionInterfaceFixer(),
+				new PreferStaticImportConstantFixer(),
+				new RecordFormattingFixer(),
+				new RedundantModifierFixer(),
+				new UpperEllFixer()
+		);
+	}
+
 	@Test
-	public void fieldConsolidationInvalidColumnProducesNoFix() throws IOException {
-		// the shared probe drives lineIndex 0, which this fixer rejects outright (a merge
-		// needs a preceding field line), so the parameterized case never reaches its
-		// column guards; a two-line buffer is required to exercise them
-		final var lines = List.of("\tint alpha;", "\tint beta;");
-		for (var column : new int[]{-1, -100, 10, 11, 10_000})
-			assertNull(invoke(new FieldConsolidationFixer(), new ArrayList<>(lines), 1, column));
+	public void arrayTypeStyleOutOfRangeColumnOnAParseableBufferSkipsWithPositionBounds() throws IOException {
+		final var lines = List.of("class Robustness", "{", "\tint field[];", "}");
+		final var line = lines.get(2);
+		for (var column : new int[]{-1, line.length(), line.length() + 1}) {
+			assertEquals(
+					new SkipResult(SkipMessages.FIX_POSITION_BOUNDS),
+					invoke(new ArrayTypeStyleFixer(), new ArrayList<>(lines), 2, column),
+					"column " + column
+			);
+		}
+	}
+
+	@Test
+	public void collectionInterfaceNonIdentifierColumnIsStale() throws IOException {
+		// the shared probe drives only out-of-range columns, which bail at the bounds guard; the
+		// identifier guard is reachable only from a stale column landing inside the line
+		final var lines = List.of("\tvoid f(List<String> items) {}");
+		for (var column : new int[]{0, 5, 7, 12, 19}) {
+			assertEquals(
+					new SkipResult(SkipMessages.COLLECTION_INTERFACE_STALE),
+					invoke(new PreferCollectionInterfaceFixer(), new ArrayList<>(lines), 0, column),
+					"column " + column
+			);
+		}
+	}
+
+	@Test
+	public void collectionInterfaceOutOfRangeColumnOnAParseableBufferSkipsWithPositionBounds() throws IOException {
+		// a parseable buffer reaches the record-pair and type-identifier checks, which the bounds
+		// guard must come ahead of
+		final var lines = List.of("class Robustness", "{", "\tvoid f(java.util.ArrayList<String> items) {}", "}");
+		final var line = lines.get(2);
+		for (var column : new int[]{-1, line.length(), line.length() + 1}) {
+			assertEquals(
+					new SkipResult(SkipMessages.FIX_POSITION_BOUNDS),
+					invoke(new PreferCollectionInterfaceFixer(), new ArrayList<>(lines), 2, column),
+					"column " + column
+			);
+		}
+	}
+
+	@Test
+	public void collectionInterfaceOutOfRangeColumnSkipsWithPositionBounds() throws IOException {
+		// the shared probe line holds no type; this one does, so the bounds guard is shown to come
+		// ahead of the identifier scan that would otherwise answer for it
+		final var line = "\tvoid f(List<String> items) {}";
+		for (var column : new int[]{-1, -100, line.length(), line.length() + 1, 10_000}) {
+			assertEquals(
+					new SkipResult(SkipMessages.FIX_POSITION_BOUNDS),
+					invoke(new PreferCollectionInterfaceFixer(), new ArrayList<>(List.of(line)), 0, column),
+					"column " + column
+			);
+		}
+	}
+
+	@MethodSource("lineIndexGuardedFixers")
+	@ParameterizedTest
+	public void emptyBufferNeverProducesFixOrThrows(@Nonnull String checkName, @Nonnull CheckstyleFixer fixer) throws IOException {
+		final var result = invoke(fixer, new ArrayList<>(), 0, 0);
+		assertFalse(FixResult.class.isInstance(result), checkName + " produced a FixResult over an empty buffer");
+	}
+
+	@Test
+	public void fieldConsolidationColumnAtOrPastLineEndFindsTheLinesDeclarator() throws IOException {
+		// the shared probe drives lineIndex 0, which holds no field here, so it never reaches the
+		// column handling; a parseable class with a run is needed. A column at or just past the
+		// end of the line (FieldConsolidationFixerTest covers the negative and far-out ones) still
+		// resolves to the line's only declarator
+		final var lines = List.of("class Robustness", "{", "\tint alpha;", "\tint beta;", "}");
+		for (var column : new int[]{10, 11})
+			assertEquals(new FixResult(2, 3, List.of("\tint alpha, beta;")), invoke(new FieldConsolidationFixer(), new ArrayList<>(lines), 3, column));
 	}
 
 	@Test
 	public void fieldSortingNoMemberAtPositionProducesNoFix() throws IOException {
-		// a parseable buffer with no VARIABLE_DEF/ENUM_CONSTANT_DEF at the reported
-		// position: FieldSortingCheck.objblockAt returns null, so the fixer must
-		// not attempt (or misapply) a fix. It returns null (pipeline treats that as
-		// not-fixable) rather than a FixResult.
 		final var result = invoke(new FieldSortingFixer(), new ArrayList<>(List.of("class Robustness", "{", "}")), 0, 0);
 		assertNull(result);
 	}
@@ -88,8 +205,7 @@ public class FixerInputRobustnessTest {
 	public void fieldSortingSingleConstantEnumProducesNoFix() throws IOException {
 		// a stale coordinate landing on the sole constant of a one-constant enum: the
 		// check can never report an ordering violation there, so the rebuild's
-		// fewer-than-two-constants guard is only reachable this way. It must return
-		// null rather than throw on the empty sort.
+		// fewer-than-two-constants guard is only reachable this way
 		final var result = invoke(
 				new FieldSortingFixer(), new ArrayList<>(List.of("enum Robustness", "{", "\tONLY", "}")), 2, 1
 		);
@@ -106,5 +222,48 @@ public class FixerInputRobustnessTest {
 					checkName + " produced a FixResult at invalid column " + column
 			);
 		}
+	}
+
+	@MethodSource("lineIndexGuardedFixers")
+	@ParameterizedTest
+	public void invalidLineIndexNeverProducesFixOrThrows(@Nonnull String checkName, @Nonnull CheckstyleFixer fixer) throws IOException {
+		for (var lineIndex : new int[]{-1, -100, Integer.MIN_VALUE, 1, 2, 10_000}) {
+			final var result = invoke(fixer, new ArrayList<>(List.of(PROBE_LINE)), lineIndex, 0);
+			assertFalse(
+					FixResult.class.isInstance(result),
+					checkName + " produced a FixResult at invalid lineIndex " + lineIndex
+			);
+		}
+	}
+
+	/**
+	 * A column at the line's end is the one out-of-range position the pipeline can hand a fixer:
+	 * {@code eventCharIndex} clamps into {@code [0, codePointCount]}, so an empty line or a line a
+	 * sibling fix shortened arrives there. The first and last chars are the boundary partners that
+	 * must get past the guard.
+	 */
+	@MethodSource("positionBoundsGuardedFixers")
+	@ParameterizedTest
+	public void outOfRangeColumnSkipsWithPositionBounds(@Nonnull CheckstyleFixer fixer) throws IOException {
+		final var bounds = new SkipResult(SkipMessages.FIX_POSITION_BOUNDS);
+		for (var column : new int[]{-1, -100, PROBE_LINE.length(), PROBE_LINE.length() + 1, 10_000})
+			assertEquals(bounds, invoke(fixer, new ArrayList<>(List.of(PROBE_LINE)), 0, column), "column " + column);
+		assertEquals(bounds, invoke(fixer, new ArrayList<>(List.of("")), 0, 0));
+		assertNotEquals(bounds, invoke(fixer, new ArrayList<>(List.of(PROBE_LINE)), 0, 0));
+		assertNotEquals(bounds, invoke(fixer, new ArrayList<>(List.of(PROBE_LINE)), 0, PROBE_LINE.length() - 1));
+	}
+
+	/**
+	 * Each guard counts chars, not code points: on a line holding supplementary characters the
+	 * chars past the code point count are still on the line and must get through.
+	 */
+	@MethodSource("positionBoundsGuardedFixers")
+	@ParameterizedTest
+	public void supplementaryLineColumnPastCodePointCountIsInRange(@Nonnull CheckstyleFixer fixer) throws IOException {
+		final var line = "a benign " + Character.toString(0x1D400) + Character.toString(0x1D401) + " probe";
+		final var bounds = new SkipResult(SkipMessages.FIX_POSITION_BOUNDS);
+		assertNotEquals(bounds, invoke(fixer, new ArrayList<>(List.of(line)), 0, line.codePointCount(0, line.length())));
+		assertNotEquals(bounds, invoke(fixer, new ArrayList<>(List.of(line)), 0, line.length() - 1));
+		assertEquals(bounds, invoke(fixer, new ArrayList<>(List.of(line)), 0, line.length()));
 	}
 }

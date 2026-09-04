@@ -7,6 +7,11 @@ import com.etk2000.checkstyle.ControlFlowBracesCheck.OneLinerBody;
 import com.etk2000.checkstyle.JavaLineScanner;
 import com.etk2000.checkstyle.JavaLineScanner.LexerState;
 import com.etk2000.checkstyle.LineText;
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.format.JavaSpanReindenter;
+import com.etk2000.checkstyle.format.SpanReformat;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +25,7 @@ import javax.annotation.Nullable;
  * one-liner body moved to its own line, unnecessary braces removed, or missing
  * braces added. Do-while violations are reshaped to their formatting tier.
  */
-class ControlFlowBracesFixer implements CheckstyleFixer {
+public final class ControlFlowBracesFixer implements CheckstyleFixer {
 	/**
 	 * Text the reshaped do-while has to carry over from lines its replacement
 	 * range covers but the two/three-line tier form would otherwise drop.
@@ -32,6 +37,100 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	 */
 	private record CarriedText(@Nonnull String doLineTrailer, @Nonnull List<String> beforeWhile) {
 		static final CarriedText NONE = new CarriedText("", List.of());
+	}
+
+	/**
+	 * The check's classification of a keyword already in hand, which needs no walk of the tree to
+	 * find it.
+	 */
+	private record KeywordSite(@Nonnull DetailAST keyword) implements Site {
+		@Nullable
+		@Override
+		public ControlBody body() {
+			return ControlFlowBracesCheck.bodyOf(keyword);
+		}
+
+		@Nullable
+		@Override
+		public DetailAST elseIfSplit() {
+			return keyword.getType() == TokenTypes.LITERAL_ELSE && ControlFlowBracesCheck.isElseIfSplit(keyword) ? keyword : null;
+		}
+
+		@Nullable
+		@Override
+		public OneLinerBody oneLiner() {
+			return ControlFlowBracesCheck.oneLinerBodyOf(keyword);
+		}
+
+		@Override
+		public boolean rebindsElse() {
+			return ControlFlowBracesCheck.unwrapRebindsElse(keyword);
+		}
+
+		@Nullable
+		@Override
+		public DoWhileShape shape() {
+			return ControlFlowBracesCheck.shapeOf(keyword);
+		}
+	}
+
+	/**
+	 * The check's classification of whatever it reported at {@code (line, column)} of {@code root}.
+	 */
+	private record PositionSite(@Nonnull DetailAST root, int line, int column) implements Site {
+		@Nullable
+		@Override
+		public ControlBody body() {
+			return ControlFlowBracesCheck.bodyAt(root, line, column);
+		}
+
+		@Nullable
+		@Override
+		public DetailAST elseIfSplit() {
+			return ControlFlowBracesCheck.elseIfSplitAt(root, line, column);
+		}
+
+		@Nullable
+		@Override
+		public OneLinerBody oneLiner() {
+			return ControlFlowBracesCheck.oneLinerBodyAt(root, line, column);
+		}
+
+		@Override
+		public boolean rebindsElse() {
+			return ControlFlowBracesCheck.unwrapRebindsElse(root, line, column);
+		}
+
+		@Nullable
+		@Override
+		public DoWhileShape shape() {
+			return ControlFlowBracesCheck.shapeAt(root, line, column);
+		}
+	}
+
+	/**
+	 * What the check classifies at a violation, asked lazily since each route needs only some of
+	 * the answers.
+	 */
+	private interface Site {
+		@CheckReturnValue
+		@Nullable
+		ControlBody body();
+
+		@CheckReturnValue
+		@Nullable
+		DetailAST elseIfSplit();
+
+		@CheckReturnValue
+		@Nullable
+		OneLinerBody oneLiner();
+
+		@CheckReturnValue
+		boolean rebindsElse();
+
+		@CheckReturnValue
+		@Nullable
+		DoWhileShape shape();
 	}
 
 	/**
@@ -127,7 +226,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		final var trailingIsCode = !trailing.isBlank() && !isCommentOnly(trailing);
 
 		final var keywordLine = lines.get(lineIndex);
-		final var commentIdx = findTrailingComment(keywordLine, entryStateAt(lines, lineIndex));
+		final var commentIdx = findTrailingComment(keywordLine, FixerAst.entryState(lines, lineIndex));
 		final var result = new ArrayList<String>();
 		if (commentIdx >= 0)
 			result.add(keywordLine.substring(0, commentIdx).stripTrailing() + " { " + keywordLine.substring(commentIdx));
@@ -184,20 +283,6 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		return new FixResult(startLine, endLine, result);
 	}
 
-	/**
-	 * The lexer state {@code lineIndex} begins in. Threaded from the top rather
-	 * than read off the line above alone, since a line reading {@code """;} in
-	 * isolation looks like an opener when it is really a closer.
-	 */
-	@CheckReturnValue
-	@Nonnull
-	private static LexerState entryStateAt(@Nonnull List<String> lines, int lineIndex) {
-		var state = LexerState.NONE;
-		for (var i = 0; i < lineIndex; ++i)
-			state = JavaLineScanner.stateAfter(lines.get(i), state);
-		return state;
-	}
-
 	@CheckReturnValue
 	private static int findTrailingComment(@Nonnull String line) {
 		return JavaLineScanner.firstLineComment(line, JavaLineScanner.LexerState.NONE);
@@ -226,6 +311,80 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		return bodyStart < lines.size() ? bodyStart : -1;
 	}
 
+	/**
+	 * The fix for the violation at {@code (lineIndex, charColumn)}, classified by {@code site}, which
+	 * is {@code null} when the buffer does not parse.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static FixAttempt fixAt(@Nonnull List<String> lines, int lineIndex, int charColumn, @Nullable Site site) {
+		final var line = lines.get(lineIndex);
+		final var stripped = line.stripLeading();
+		final var indent = LineText.extractIndent(line);
+		final var entryState = FixerAst.entryState(lines, lineIndex);
+
+		// a line whose carried comment content opens with `do ` is not a do-while: the
+		// keyword text is literal content, and routing there drops a fixable violation
+		if (entryState.inMultilineLiteral() || !LineText.startsWithWord(stripped, "do")) {
+			if (site != null) {
+				final var split = site.elseIfSplit();
+				if (split != null)
+					return fixElseIfSplit(lines, split);
+
+				final var oneLiner = site.oneLiner();
+				if (oneLiner != null)
+					return fixNonDoWhileOneLiner(lines, lineIndex, indent, oneLiner);
+
+				final var body = site.body();
+				if (body != null)
+					return fixNonDoWhileFromAst(lines, lineIndex, indent, site, body);
+			}
+			// Every body span comes from the check's own AST classifier, so a buffer that
+			// does not parse cannot have produced a violation in the first place, and a
+			// parsed buffer with no node at the position means an earlier fix in this pass
+			// moved it; they are reported apart because only the second is a stale coordinate.
+			if (!isNonDoWhileKeyword(JavaLineScanner.stripCommentsAndStrings(line, entryState)))
+				return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_NO_KEYWORD);
+			return new SkipResult(site == null
+					? SkipMessages.CONTROL_FLOW_SKIP_NO_BODY
+					: SkipMessages.CONTROL_FLOW_SKIP_STALE_POSITION
+			);
+		}
+
+		final var shape = site == null ? null : site.shape();
+		// a parsed buffer with no shape at the position is a stale coordinate, not a missing parse
+		if (shape == null) {
+			return new SkipResult(site == null
+					? SkipMessages.CONTROL_FLOW_SKIP_NO_TIER
+					: SkipMessages.CONTROL_FLOW_SKIP_STALE_POSITION
+			);
+		}
+		// every reshape re-emits the terminator's line at the keyword's indent, so a
+		// line that begins inside a block comment or text block would have its
+		// content moved away from the opener it belongs to
+		if (opensInsideLiteral(lines, shape.whileLine()))
+			return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_UNTERMINATED_LITERAL);
+
+		// the separator after `do` is optional (`do{` is legal), so the shape is
+		// decided by what follows the keyword rather than by a fixed prefix
+		final var afterKeyword = stripped.substring(2).stripLeading();
+		if (afterKeyword.startsWith("{"))
+			return fixBracedBody(lines, lineIndex, lineIndex, indent, shape, "");
+
+		// a text block gets the more specific reason: it cannot be carried onto the
+		// reshaped line at all, not merely "it opened here"
+		final var afterState = JavaLineScanner.stateAfter(afterKeyword, JavaLineScanner.LexerState.NONE);
+		if (afterState.inTextBlock())
+			return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_TEXT_BLOCK);
+		if (afterState.inBlockComment())
+			return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_UNTERMINATED_LITERAL);
+
+		if (afterKeyword.isEmpty() || isCommentOnly(afterKeyword))
+			return fixOwnLine(lines, lineIndex, indent, shape, afterKeyword);
+
+		return fixOnDoLine(lines, lineIndex, charColumn, line, indent, shape);
+	}
+
 	@Nullable
 	private static FixAttempt fixBracedBody(
 			@Nonnull List<String> lines,
@@ -237,7 +396,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	) {
 		// searched on a masked buffer so a `}` inside a string, comment, or text block
 		// is not mistaken for the block's own brace
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		var closeBraceLine = -1;
 		for (var i = braceLine + 1; i < lines.size(); ++i) {
 			if (masked.get(i).stripLeading().startsWith("}")) {
@@ -345,6 +504,47 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	}
 
 	/**
+	 * Merges every {@code else} of the chain starting at {@code elseKeyword} whose body is an
+	 * {@code if} on a later line into {@code else if}, innermost first so the earlier lines keep their
+	 * indices, then re-indents everything the outermost such {@code if} owns, its whole {@code else}
+	 * chain included, to the structure the parser gave it rather than to how it was indented.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static FixAttempt fixElseIfSplit(@Nonnull List<String> lines, @Nonnull DetailAST elseKeyword) {
+		final var startLine = elseKeyword.getLineNo() - 1;
+		final var endLine = AstQuery.lastLine(elseKeyword.getFirstChild()) - 1;
+		if (SpanReformat.hasEscapedDelimiter(lines, startLine, endLine))
+			return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_ESCAPED_DELIMITER);
+
+		final var splits = new ArrayList<DetailAST>();
+		for (var link = elseKeyword; link != null && link.getFirstChild().getType() == TokenTypes.LITERAL_IF;
+		     link = link.getFirstChild().findFirstToken(TokenTypes.LITERAL_ELSE)) {
+			if (ControlFlowBracesCheck.isElseIfSplit(link))
+				splits.add(link);
+		}
+
+		// an inner link that cannot merge stays split and reports its own refusal from its own event;
+		// only the reported one's refusal leaves nothing to fix
+		final var work = new ArrayList<>(lines.subList(startLine, endLine + 1));
+		for (var i = splits.size() - 1; i >= 0; --i) {
+			if (!mergeElseIf(work, startLine, splits.get(i)) && i == 0)
+				return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_UNTERMINATED_LITERAL);
+		}
+
+		// the reindenter reads the span as statements, so a `}` cuddled ahead of the outermost `else`,
+		// which closes a block opened before the span, is set aside and put back afterwards
+		final var elseText = lines.get(startLine);
+		final var cuddle = elseText.substring(0, LineText.charIndexOfColumn(elseText, elseKeyword.getColumnNo()));
+		if (!cuddle.isBlank())
+			work.set(0, work.getFirst().substring(cuddle.length()));
+		final var reindented = new ArrayList<>(JavaSpanReindenter.reindent(work, SpanReformat.leadingTabs(elseText)));
+		if (!cuddle.isBlank())
+			reindented.set(0, cuddle + reindented.getFirst().stripLeading());
+		return new FixResult(startLine, endLine, reindented);
+	}
+
+	/**
 	 * Wraps a multi-line braceless do-while body in braces. The {@code while} can
 	 * be cuddled onto the body's last line, in which case that line splits: the
 	 * body part stays where it is and the terminator moves down to the added
@@ -384,7 +584,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		if (braceLine < 0 || braceLine >= lines.size())
 			return null;
 
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		final var bodyLine = JavaLineScanner.nextCodeLine(masked, braceLine + 1);
 		if (bodyLine < 0)
 			return null;
@@ -435,6 +635,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 			@Nonnull List<String> lines,
 			int lineIndex,
 			@Nonnull String indent,
+			@Nonnull Site site,
 			@Nonnull ControlBody body
 	) {
 		// every handler below rewrites the keyword line and takes the body from the
@@ -444,6 +645,10 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 			return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_MULTILINE_HEADER);
 		if (!body.block())
 			return fixNonDoWhileMissingBracesFromAst(lines, lineIndex, indent, body);
+		// both brace-removal routes below drop the block's two brace lines without
+		// looking at what surrounds it, so the re-binding has to be refused here
+		if (site.rebindsElse())
+			return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_ELSE_REBIND);
 		return body.line() == lineIndex
 				? fixNonDoWhileUnnecessaryBraces(lines, lineIndex, LineText.charIndexOfColumn(lines.get(lineIndex), body.column()), indent)
 				: fixNonDoWhileBraceOnOwnLine(lines, lineIndex, body.line(), indent);
@@ -545,7 +750,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 
 		// a line comment after the `{` documents the statement, not the block, so it
 		// stays on the keyword line rather than being dropped with the brace
-		final var commentIdx = findTrailingComment(line, entryStateAt(lines, lineIndex));
+		final var commentIdx = findTrailingComment(line, FixerAst.entryState(lines, lineIndex));
 		// anything else after the `{` is code (or a block comment the line-comment
 		// scan does not see), and rebuilding the keyword line would drop it
 		if (!(commentIdx > braceIdx ? line.substring(braceIdx + 1, commentIdx) : line.substring(braceIdx + 1)).isBlank())
@@ -555,7 +760,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 				? line.substring(0, braceIdx).stripTrailing() + " " + line.substring(commentIdx).stripTrailing()
 				: line.substring(0, braceIdx).stripTrailing();
 
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		final var bodyLine = JavaLineScanner.nextCodeLine(masked, lineIndex + 1);
 		if (bodyLine < 0)
 			return null;
@@ -595,13 +800,12 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	private static FixAttempt fixOnDoLine(
 			@Nonnull List<String> lines,
 			int lineIndex,
-			int column,
+			int doIdx,
 			@Nonnull String line,
 			@Nonnull String indent,
 			@Nonnull DoWhileShape shape
 	) {
-		final var doIdx = LineText.charIndexOfColumn(line, column);
-		if (doIdx < 0 || !LineText.isWordAt(line, doIdx, "do"))
+		if (doIdx < 0 || doIdx >= line.length() || !LineText.isWordAt(line, doIdx, "do"))
 			return null;
 		// the statement is rebuilt from the keyword's indent alone, so a do-while
 		// written ahead of this one, enclosing or sibling, would be dropped
@@ -681,7 +885,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 
 		// a comment between the `do` and its own-line `{` still leaves a braced body:
 		// treating the comment as the body would brace the existing block a second time
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		final var braceLine = JavaLineScanner.nextCodeLine(masked, bodyStart);
 		if (braceLine >= 0 && masked.get(braceLine).stripLeading().startsWith("{")) {
 			// the `{` shares its line with a comment ahead of it, so every index below
@@ -816,13 +1020,18 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	 * so keeping them would leave stray gaps inside it. A blank line reached while a
 	 * block comment or text block is open is that literal's own content rather than a
 	 * gap, so it is kept.
+	 *
+	 * <p>A {@code from} past the end of the buffer throws rather than reading the end-of-buffer
+	 * state, which {@link FixerAst#entryState} would answer: with {@code to <= from + 1} the walk
+	 * below reads nothing and cannot throw either, so the fixer would go on to build a
+	 * {@code FixResult} over a line range that does not exist.
 	 */
 	@CheckReturnValue
 	@Nonnull
 	private static List<String> keptLines(@Nonnull List<String> lines, int from, int to) {
-		var state = JavaLineScanner.LexerState.NONE;
-		for (var i = 0; i <= from; ++i)
-			state = JavaLineScanner.stateAfter(lines.get(i), state);
+		if (from >= lines.size())
+			throw new IndexOutOfBoundsException(from);
+		var state = FixerAst.entryState(lines, from + 1);
 
 		final var kept = new ArrayList<String>();
 		for (var i = from + 1; i < to; ++i) {
@@ -838,16 +1047,13 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	 * Whether a block comment or text block is still open after the lines
 	 * {@code from..to}. State is threaded from the top of the buffer rather than
 	 * started cold at {@code from}: a line reading {@code """;} in isolation looks
-	 * like an opener when it is really a closer, and {@code from} itself may sit
-	 * inside a literal opened above, whose carried content a cold lexer reads as
-	 * code.
+	 * like an opener when it is really a closer.
 	 */
 	@CheckReturnValue
 	private static boolean leavesLiteralOpen(@Nonnull List<String> lines, int from, int to) {
-		var state = entryStateAt(lines, from);
-		for (var i = from; i <= to; ++i)
-			state = JavaLineScanner.stateAfter(lines.get(i), state);
-		return state.inMultilineLiteral();
+		if (to >= lines.size())
+			throw new IndexOutOfBoundsException(to);
+		return FixerAst.entryState(lines, to < from ? from : to + 1).inMultilineLiteral();
 	}
 
 	/**
@@ -861,12 +1067,98 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	}
 
 	/**
+	 * Joins {@code elseKeyword}'s line with the line its {@code if} body starts on, in {@code work},
+	 * the buffer's lines from {@code startLine} on. A comment on the {@code else} line or ahead of the
+	 * {@code if} moves to the end of the merged header, unless a comment already ends that header;
+	 * those, and any comment between the two lines, move onto their own lines above the {@code else}.
+	 * A cuddled {@code } else} has no line of its own above it, so every comment goes to the end of the
+	 * header there, after a {@code //} comment already ending it as part of its text. Returns false,
+	 * leaving {@code work} untouched, for a block comment that spans lines where it cannot keep doing
+	 * so (opened on the {@code else} line, or between the lines of a cuddled {@code else}), and for a
+	 * cuddled {@code else}'s comments behind a header that ends inside a block comment or text block.
+	 */
+	@CheckReturnValue
+	private static boolean mergeElseIf(@Nonnull List<String> work, int startLine, @Nonnull DetailAST elseKeyword) {
+		final var ifKeyword = elseKeyword.getFirstChild();
+		final var rparen = ifKeyword.findFirstToken(TokenTypes.RPAREN);
+		final var elseRow = elseKeyword.getLineNo() - 1 - startLine;
+		final var ifRow = ifKeyword.getLineNo() - 1 - startLine;
+		final var headerRow = (rparen == null ? ifKeyword.getLineNo() : rparen.getLineNo()) - 1 - startLine;
+
+		final var elseText = work.get(elseRow);
+		final var elseIdx = LineText.charIndexOfColumn(elseText, elseKeyword.getColumnNo());
+		final var afterElse = elseText.substring(elseIdx + "else".length());
+		if (JavaLineScanner.stateAfter(afterElse, LexerState.NONE).inBlockComment())
+			return false;
+		final var cuddle = elseText.substring(0, elseIdx);
+		final var cuddled = !cuddle.isBlank();
+
+		final var between = new ArrayList<String>();
+		var state = LexerState.NONE;
+		var multiLineBetween = false;
+		for (var row = elseRow + 1; row < ifRow; ++row) {
+			final var text = work.get(row);
+			if (!text.isBlank() || state.inBlockComment())
+				between.add(text);
+			state = JavaLineScanner.stateAfter(text, state);
+			multiLineBetween |= state.inBlockComment();
+		}
+		final var ifText = work.get(ifRow);
+		final var ifIdx = LineText.charIndexOfColumn(ifText, ifKeyword.getColumnNo());
+		final var beforeIf = ifText.substring(0, ifIdx);
+		// a comment that closes ahead of the `if` continues the lines between rather than leading it
+		if (state.inBlockComment())
+			between.add(beforeIf.stripTrailing());
+		final var leading = afterElse.isBlank() ? List.<String>of() : List.of(afterElse.strip());
+		final var ahead = beforeIf.isBlank() || state.inBlockComment() ? List.<String>of() : List.of(beforeIf.strip());
+
+		final var merged = new ArrayList<>(work.subList(ifRow, headerRow + 1));
+		merged.set(0, cuddle + "else " + ifText.substring(ifIdx));
+		final var header = merged.getLast();
+		final var headerEntry = SpanReformat.lexerStateAt(merged, merged.size() - 1);
+		final var headerExit = JavaLineScanner.stateAfter(header, headerEntry);
+		final var above = new ArrayList<String>();
+		final var trailing = new ArrayList<String>();
+		if (cuddled) {
+			if (multiLineBetween)
+				return false;
+			trailing.addAll(leading);
+			for (var line : between)
+				trailing.add(line.strip());
+			trailing.addAll(ahead);
+		}
+		else if (JavaLineScanner.firstLineComment(header, headerEntry) >= 0 || headerExit.inMultilineLiteral()) {
+			above.addAll(leading);
+			above.addAll(shiftedComments(between, cuddle));
+			above.addAll(ahead);
+		}
+		else {
+			trailing.addAll(leading);
+			above.addAll(shiftedComments(between, cuddle));
+			trailing.addAll(ahead);
+		}
+		if (!trailing.isEmpty()) {
+			// only a cuddled `else` gets here with a header still inside a literal, which would swallow
+			// the comments
+			if (headerExit.inMultilineLiteral())
+				return false;
+			merged.set(merged.size() - 1, header.stripTrailing() + ' ' + String.join(" ", trailing));
+		}
+
+		final var replaced = work.subList(elseRow, headerRow + 1);
+		replaced.clear();
+		replaced.addAll(above);
+		replaced.addAll(merged);
+		return true;
+	}
+
+	/**
 	 * Whether a block comment or text block is still open where {@code lineIndex}
 	 * begins, so the text there is that literal's content rather than code.
 	 */
 	@CheckReturnValue
 	private static boolean opensInsideLiteral(@Nonnull List<String> lines, int lineIndex) {
-		return entryStateAt(lines, lineIndex).inMultilineLiteral();
+		return FixerAst.entryState(lines, lineIndex).inMultilineLiteral();
 	}
 
 	/**
@@ -875,8 +1167,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	private static boolean opensUnterminatedLiteral(@Nonnull String s) {
-		final var state = JavaLineScanner.stateAfter(s, JavaLineScanner.LexerState.NONE);
-		return state.inMultilineLiteral();
+		return JavaLineScanner.stateAfter(s, JavaLineScanner.LexerState.NONE).inMultilineLiteral();
 	}
 
 	/**
@@ -902,6 +1193,37 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	}
 
 	/**
+	 * Drops this thread's cached parse, mask and lexer states, which {@link #unwrapsBraces} fills
+	 * from outside the fix pipeline that otherwise releases them.
+	 */
+	public static void releaseCache() {
+		FixerAst.clearCache();
+	}
+
+	/**
+	 * {@code comments}, comment lines read in order from code, moved to {@code indent}. A block
+	 * comment's continuation lines shift by as much as the line opening it, which keeps them lined up
+	 * under it; one not carrying the opener's indent stays as written.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static List<String> shiftedComments(@Nonnull List<String> comments, @Nonnull String indent) {
+		final var shifted = new ArrayList<String>(comments.size());
+		var state = LexerState.NONE;
+		var openerIndent = "";
+		for (var line : comments) {
+			if (!state.inBlockComment()) {
+				openerIndent = LineText.extractIndent(line);
+				shifted.add(indent + line.stripLeading());
+			}
+			else
+				shifted.add(line.startsWith(openerIndent) ? indent + line.substring(openerIndent.length()) : line);
+			state = JavaLineScanner.stateAfter(line, state);
+		}
+		return shifted;
+	}
+
+	/**
 	 * Splits the terminator's line around the {@code while} the check's AST
 	 * located, or {@code null} when a sibling fix in this pass has since moved that
 	 * position out of the buffer.
@@ -923,73 +1245,22 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 				: new Terminator(shape.whileLine(), index, before, text.substring(index));
 	}
 
+	/**
+	 * Whether fixing the unnecessary braces the check reports at {@code keyword} succeeds, rather
+	 * than being refused.
+	 */
+	@CheckReturnValue
+	public static boolean unwrapsBraces(@Nonnull List<String> lines, @Nonnull DetailAST keyword) {
+		final var lineIndex = keyword.getLineNo() - 1;
+		final var charColumn = LineText.charIndexOfColumn(lines.get(lineIndex), keyword.getColumnNo());
+		return fixAt(lines, lineIndex, charColumn, new KeywordSite(keyword)) instanceof FixResult;
+	}
+
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
-		final var line = lines.get(lineIndex);
-		final var stripped = line.stripLeading();
-		final var indent = LineText.extractIndent(line);
-
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
 		final var root = FixerAst.parseOrNull(lines);
-		final var entryState = entryStateAt(lines, lineIndex);
-
-		// a line whose carried comment content opens with `do ` is not a do-while: the
-		// keyword text is literal content, and routing there drops a fixable violation
-		if (entryState.inMultilineLiteral() || !LineText.startsWithWord(stripped, "do")) {
-			if (root != null) {
-				final var oneLiner = ControlFlowBracesCheck.oneLinerBodyAt(root, lineIndex, column);
-				if (oneLiner != null)
-					return fixNonDoWhileOneLiner(lines, lineIndex, indent, oneLiner);
-
-				final var body = ControlFlowBracesCheck.bodyAt(root, lineIndex, column);
-				if (body != null)
-					return fixNonDoWhileFromAst(lines, lineIndex, indent, body);
-			}
-			// Every body span comes from the check's own AST classifier, so a buffer that
-			// does not parse cannot have produced a violation in the first place, and a
-			// parsed buffer with no node at the position means an earlier fix in this pass
-			// moved it; they are reported apart because only the second is a stale coordinate.
-			if (!isNonDoWhileKeyword(JavaLineScanner.stripCommentsAndStrings(line, entryState)))
-				return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_NO_KEYWORD);
-			return new SkipResult(root == null
-					? SkipMessages.CONTROL_FLOW_SKIP_NO_BODY
-					: SkipMessages.CONTROL_FLOW_SKIP_STALE_POSITION
-			);
-		}
-
-		final var shape = root == null ? null : ControlFlowBracesCheck.shapeAt(root, lineIndex, column);
-		// the do-while route reads every span off the shape; without one it can only
-		// refuse. Split for the same reason the non-do-while side is: a parsed buffer with
-		// no shape at the position is a stale coordinate, not a missing parse
-		if (shape == null) {
-			return new SkipResult(root == null
-					? SkipMessages.CONTROL_FLOW_SKIP_NO_TIER
-					: SkipMessages.CONTROL_FLOW_SKIP_STALE_POSITION
-			);
-		}
-		// every reshape re-emits the terminator's line at the keyword's indent, so a
-		// line that begins inside a block comment or text block would have its
-		// content moved away from the opener it belongs to
-		if (opensInsideLiteral(lines, shape.whileLine()))
-			return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_UNTERMINATED_LITERAL);
-
-		// the separator after `do` is optional (`do{` is legal), so the shape is
-		// decided by what follows the keyword rather than by a fixed prefix
-		final var afterKeyword = stripped.substring(2).stripLeading();
-		if (afterKeyword.startsWith("{"))
-			return fixBracedBody(lines, lineIndex, lineIndex, indent, shape, "");
-
-		// a text block gets the more specific reason: it cannot be carried onto the
-		// reshaped line at all, not merely "it opened here"
-		final var afterState = JavaLineScanner.stateAfter(afterKeyword, JavaLineScanner.LexerState.NONE);
-		if (afterState.inTextBlock())
-			return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_TEXT_BLOCK);
-		if (afterState.inBlockComment())
-			return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_UNTERMINATED_LITERAL);
-
-		if (afterKeyword.isEmpty() || isCommentOnly(afterKeyword))
-			return fixOwnLine(lines, lineIndex, indent, shape, afterKeyword);
-
-		return fixOnDoLine(lines, lineIndex, column, line, indent, shape);
+		final var column = LineText.columnOfCharIndex(lines.get(lineIndex), charColumn);
+		return fixAt(lines, lineIndex, charColumn, root == null ? null : new PositionSite(root, lineIndex, column));
 	}
 }

@@ -2,8 +2,7 @@ package com.etk2000.checkstyle.inputs.preferstaticimport;
 
 // === case: wildcard_collectors_to_set_two_uses ===
 // imports: java.util.Set
-// imports: java.util.stream.Collectors
-// imports: java.util.stream.Stream
+// imports: java.util.stream.*
 // imports: static java.util.stream.Collectors.toSet
 class InputPreferStaticImportWildcardCollectorsToSetTwoUsesSliceViolation {
 	Set<String> collectorsTwoUses(Stream<String> a, Stream<String> b) {
@@ -16,7 +15,7 @@ class InputPreferStaticImportWildcardCollectorsToSetTwoUsesSliceViolation {
 // === end ===
 
 // === case: wildcard_objects_require_non_null_two_uses ===
-// imports: java.util.Objects
+// imports: java.util.*
 // imports: static java.util.Objects.requireNonNull
 class InputPreferStaticImportWildcardObjectsRequireNonNullTwoUsesSliceViolation {
 	Object objectsTwoUses(Object a, Object b) {
@@ -29,7 +28,7 @@ class InputPreferStaticImportWildcardObjectsRequireNonNullTwoUsesSliceViolation 
 
 // === case: wildcard_predicate_not_two_uses ===
 // imports: java.util.List
-// imports: java.util.function.Predicate
+// imports: java.util.function.*
 // imports: static java.util.function.Predicate.not
 class InputPreferStaticImportWildcardPredicateNotTwoUsesSliceViolation {
 	List<String> predicateTwoUses(List<String> list) {

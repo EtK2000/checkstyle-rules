@@ -5,6 +5,13 @@
 		case B:
 // === end ===
 
+// === case: comment_only_gap_is_stale ===
+// target: line=2 col=0
+			return 1;
+		// note
+		case B:
+// === end ===
+
 // === case: first_line ===
 // target: col=0
 		case A:

@@ -1,10 +1,10 @@
 package com.etk2000.checkstyle.inputs.prefervar;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.Closeable;
 import java.io.InputStream;
-import java.io.Reader;
 import java.io.Serializable;
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -13,7 +13,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -87,6 +86,9 @@ class InputPreferVarClean {
 		System.out.println(inStaticInit);
 	}
 
+	final Object[] widenedArrayField = new String[]{"a"};
+	final String[] sameArrayField = new String[]{"a"};
+
 	String field = "not flagged";
 
 	void annotatedLocalVariable() {
@@ -118,18 +120,13 @@ class InputPreferVarClean {
 		System.out.println(name);
 	}
 
-	void conditionalDiamondWhoseClassCannotTakeTheDeclaredArguments(boolean flag, int key) {
-		final Function<String, Integer> everyArmTernary = flag ? new MyFunc<>() : new MyFunc<>();
-		final Function<String, Integer> everyArmSwitch = switch (key) { default -> new MyFunc<>(); };
-		final Src<String, Integer> firstArmCannotTake = flag ? new MyPair<>() : new Src<>();
-		final Src<String, Integer> secondArmCannotTake = flag ? new Src<>() : new MyPair<>();
-		final Src<String, Integer> switchArmCannotTake = switch (key) { case 1 -> new Src<>(); default -> new MyPair<>(); };
-		final Src<String, Integer> nestedArmCannotTake = flag ? new Src<>() : key == 1 ? new Src<>() : new MyPair<>();
-		final java.util.function.Function<String, Integer> qualifiedArmCannotTake = flag ? new MyFunc<>() : new MyFunc<>();
+	void conditionalDiamondArmsTheCheckLeavesAlone(boolean flag, int key) {
+		final var everyArmTernary = flag ? new ArrayList<>() : new ArrayList<>();
+		final var everyArmSwitch = switch (key) { default -> new ArrayList<>(); };
 		final java.util.List<String> parenthesisedCondition = (flag) ? new ArrayList<>() : new ArrayList<>();
-		System.out.println(everyArmTernary + "" + everyArmSwitch + parenthesisedCondition);
-		System.out.println(firstArmCannotTake + "" + secondArmCannotTake + switchArmCannotTake);
-		System.out.println(nestedArmCannotTake + "" + qualifiedArmCannotTake);
+		System.out.println(everyArmTernary);
+		System.out.println(everyArmSwitch);
+		System.out.println(parenthesisedCondition);
 	}
 
 	void conditionalInitializerColonFormSwitch(int key) {
@@ -158,12 +155,6 @@ class InputPreferVarClean {
 		System.out.println(diamond.size() + typed.size());
 	}
 
-	void declaredTypeArgumentsExceedConstructedClassArity() {
-		// Properties declares no type parameters, so the two supplied have no diamond to move to
-		final Map<Object, Object> props = new Properties();
-		System.out.println(props.size());
-	}
-
 	void declaredTypeArgumentsOfANestedQualifierSegment(@Nonnull Nest<Object>.Mid<String>.Deep<Integer> deep) {
 		final Nest<Object>.Mid<String>.Deep<Integer> nested = deep;
 		System.out.println(nested);
@@ -179,16 +170,25 @@ class InputPreferVarClean {
 		System.out.println(plain);
 	}
 
-	void diamondWhoseClassCannotTakeTheDeclaredArguments() {
-		// MyFunc declares one type parameter, Function supplies two
-		final Function<String, Integer> converter = new MyFunc<>();
-		System.out.println(converter);
-	}
-
 	void diamondWithConstructorArguments() {
 		final var sized = new ArrayList<Object>(16);
 		final var tuned = new HashMap<Object, Object>(8, 0.5f);
 		System.out.println(sized.size() + tuned.size());
+	}
+
+	void explicitArrayInitOfAnotherArrayType() {
+		final Object[] widenedValues = new String[]{"a"};
+		final Number[] boxedNumbers = new Integer[]{1};
+		final Exception[] errors = new RuntimeException[]{new RuntimeException()};
+		final Object primitiveArray = new int[]{1};
+		final Serializable serializable = new String[]{"a"};
+		final java.lang.Object[] qualifiedWidened = new String[]{"a"};
+		final Object cStyle[] = new String[]{"a"};
+		final List<?>[] wildcards = new List<?>[]{List.of()};
+		Object[] nonFinal = new String[]{"a"};
+		nonFinal = new Integer[]{1};
+		System.out.println(widenedValues.length + boxedNumbers.length + errors.length + qualifiedWidened.length + cStyle.length);
+		System.out.println(primitiveArray + "" + serializable + wildcards.length + nonFinal.length);
 	}
 
 	void forEach() {
@@ -293,7 +293,6 @@ class InputPreferVarClean {
 		final List<Number> widenedList = List.of(1, 2);
 		final Map<String, List<Object>> nestedWidened = Map.of("k", List.of(1));
 		final List<Map<String, Object>> deeplyWidened = List.of(Map.of("k", 1));
-		final List rawDiamond = new ArrayList<>();
 		final List<String> emptyFactory = Collections.emptyList();
 		final java.util.List<java.lang.Object> qualifiedWidened = List.of(1, 2);
 		final java.util.List<?> qualifiedWildcard = List.of(1, 2);
@@ -478,25 +477,6 @@ class InputPreferVarClean {
 		final var obj = new Object();
 	}
 
-	void qualifiedNewWhoseSameFileClassRemapsItsTypeParameters() {
-		// Swapped takes two parameters like Pairing, but passes them up reversed
-		final Pairing<String, Integer> remapped = new Remap.Swapped<>();
-		System.out.println(remapped);
-	}
-
-	void qualifiedNewWhoseSameFileClassTakesADifferentArity() {
-		// Holder.Slot declares two parameters, and Absent.Slot is not declared here at all
-		final Slot<String> collided = new Holder.Slot<>();
-		final Slot<String> offFile = new Absent.Slot<>();
-		System.out.println(collided + "" + offFile);
-	}
-
-	void qualifiedNewWhoseSimpleNameCollidesWithTheDeclaredType() {
-		// Impl.Cache takes one parameter, not two, despite the matching simple names
-		final Api.Cache<String, Integer> cache = new Impl.Cache<>();
-		System.out.println(cache);
-	}
-
 	void reassignedWideningDeclarationStaysSilent(boolean flag) {
 		Object widened = new StringBuilder();
 		if (flag)
@@ -548,15 +528,6 @@ class InputPreferVarClean {
 		try (Src<String, Integer> nonNewArm = flag ? new Src<>() : existing) {
 			System.out.println(nonNewArm);
 		}
-		try (Src<String, Integer> armCannotTake = flag ? new Src<>() : new MyPair<>()) {
-			System.out.println(armCannotTake);
-		}
-	}
-
-	void tryWithResourcesDeclaredSupertype() throws Exception {
-		try (InputStream in = new ByteArrayInputStream(new byte[0])) {
-			System.out.println(in.read());
-		}
 	}
 
 	void tryWithResourcesExistingVariable(@Nonnull ByteArrayInputStream existing) throws Exception {
@@ -571,16 +542,9 @@ class InputPreferVarClean {
 		}
 	}
 
-	void tryWithResourcesNarrowingClose(@Nonnull String text) throws Exception {
-		try (Reader reader = new StringReader(text)) {
-			System.out.println(reader.read());
-		}
-	}
-
-	void tryWithResourcesWhoseClassCannotTakeTheDeclaredArguments() throws Exception {
-		// MyPair declares one type parameter, so both declared arguments cannot move
-		try (Src<String, Integer> pair = new MyPair<>()) {
-			System.out.println(pair);
+	void tryWithResourcesNullInitializer() throws Exception {
+		try (Closeable closeable = null) {
+			System.out.println(closeable);
 		}
 	}
 
@@ -597,7 +561,51 @@ class InputPreferVarClean {
 	}
 }
 
+class InputPreferVarTryResourceClean {
+	static <T extends AutoCloseable> T acquire() {
+		return null;
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void existingVariablePassedToAnOverload(@Nonnull Closeable existing) throws Exception {
+		try (existing) {
+			System.out.println(use(existing));
+		}
+	}
+
+	void targetTypedGenericCall() throws Exception {
+		try (BufferedReader reader = acquire()) {
+			System.out.println(reader.readLine());
+		}
+	}
+
+	void unresolvableBareCall() throws Exception {
+		try (ByteArrayInputStream in = absentFactory()) {
+			System.out.println(in.read());
+		}
+	}
+
+	void unresolvableQualifiedCall() throws Exception {
+		try (InputStream in = com.example.Missing.open()) {
+			System.out.println(in.read());
+		}
+	}
+}
+
 class InputPreferVarGenericReturnClean {
+	static class Util {
+		static <T> T make() {
+			return null;
+		}
+	}
+
 	static <T> T cast(Object obj) {
 		return (T) obj;
 	}
@@ -608,6 +616,10 @@ class InputPreferVarGenericReturnClean {
 
 	static <T> T findByType(Class<T> type) {
 		return null;
+	}
+
+	static String make() {
+		return "";
 	}
 
 	void autoDetectedGenericExplicitType() {
@@ -621,6 +633,10 @@ class InputPreferVarGenericReturnClean {
 
 	void inferableFromParamType() {
 		final var s = findByType(String.class);
+	}
+
+	void nonEnclosingTypeQualifiedCall() {
+		final String s = Util.make();
 	}
 }
 

@@ -136,7 +136,6 @@ public class TestResourcesParseTest {
 
 	@Test
 	public void mostSpecificCauseTerminatesOnCyclicCause() {
-		// an A->B->A cause cycle must stop the walk, not spin forever
 		final var a = new RuntimeException("A");
 		final var b = new RuntimeException("B");
 		a.initCause(b);

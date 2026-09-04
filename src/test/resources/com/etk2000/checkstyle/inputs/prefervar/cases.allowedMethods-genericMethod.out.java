@@ -12,6 +12,20 @@ class InputPreferVarAllowedMethodTypeArgsExplicitTypeSliceViolation {
 }
 // === end ===
 
+// === case: allowed_method_type_args_resource ===
+class InputPreferVarAllowedMethodTypeArgsResourceSliceViolation {
+	static <T> T genericMethod(int id) {
+		return null;
+	}
+
+	void m() throws Exception {
+		try (var reader = InputPreferVarAllowedMethodTypeArgsResourceSliceViolation.<java.io.BufferedReader>genericMethod(1)) {
+			System.out.println(reader.readLine());
+		}
+	}
+}
+// === end ===
+
 // === case: allowed_method_type_args_var ===
 class InputPreferVarAllowedMethodTypeArgsVarSliceViolation {
 	static <T> T genericMethod(int id) {

@@ -11,7 +11,8 @@ import javax.annotation.Nullable;
 class PreferPrefixIncrementFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
+		final var column = LineText.columnOfCharIndex(lines.get(lineIndex), charColumn);
 		final var root = FixerAst.parseOrNull(lines);
 		if (root == null)
 			return null;
@@ -27,9 +28,10 @@ class PreferPrefixIncrementFixer implements CheckstyleFixer {
 		final var operandStart = LineText.charIndexOfColumn(line, span.operandColumn());
 		final var operatorStart = LineText.charIndexOfColumn(line, span.operatorColumn());
 		final var operator = span.increment() ? "++" : "--";
-		if (operandStart < 0 || operatorStart < 0 || operandStart >= operatorStart
-				|| !line.startsWith(operator, operatorStart))
-			return null;
+		// the span comes from parsing this very text, and checkstyle's parser rejects an escaped
+		// operator, so a mismatch is a bug; splicing on would drop two chars that are not the operator
+		if (operandStart < 0 || operandStart >= operatorStart || !line.startsWith(operator, operatorStart))
+			throw new IllegalStateException("postfix span does not match line " + lineIndex + ": " + line);
 
 		// whitespace separating the operand from the operator would trail the
 		// rebuilt line when the operator was its last token

@@ -45,6 +45,12 @@
 	var x = new ArrayList<Object();
 // === end ===
 
+// === case: dotted_expression_is_not_a_declaration ===
+// target: col=5
+	foo(a.b = c);
+	} } }
+// === end ===
+
 // === case: double_equals_after_name ===
 // target: col=1
 	int b == true;
@@ -58,26 +64,6 @@
 // === case: equals_only_double_equals ===
 // target: col=1
 	var b == true;
-// === end ===
-
-// === case: explicit_array_init_no_brace ===
-// target: col=1
-	int[] a = new int[]
-// === end ===
-
-// === case: explicit_array_init_no_brace_var ===
-// target: col=1
-	final var a = new String[]
-// === end ===
-
-// === case: explicit_array_init_unbalanced_angle_brackets ===
-// target: col=1
-	var a = new List<String[]{"a"};
-// === end ===
-
-// === case: explicit_array_init_unbalanced_paren ===
-// target: col=1
-	var x) = new String[]{"a"};
 // === end ===
 
 // === case: multi_var_text_fallback ===

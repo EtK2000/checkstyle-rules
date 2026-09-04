@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle.format;
 
+import com.etk2000.checkstyle.JavaLineScanner.LexerState;
 import com.etk2000.checkstyle.format.SpanReformat.CannotReformat;
 import com.etk2000.checkstyle.format.SpanReformat.Reason;
 import com.etk2000.checkstyle.format.SpanReformat.Reformatted;
@@ -17,18 +18,18 @@ import javax.annotation.Nonnull;
  * Re-lays-out a multi-line ternary that is a call argument into the project's canonical shape: the
  * condition on the opening {@code (} line, {@code ? <trueBranch>} on the next line,
  * {@code : <falseBranch>} on the line after, and the closing {@code )} on its own line, with each
- * part collapsed onto a single line. Indentation is delegated to {@link JavaSpanReindenter}; the
- * slice/collapse/comment primitives and the result vocabulary are shared via {@link SpanReformat}.
+ * part collapsed onto a single line.
  *
  * <p>The source is sliced at the {@code (}, {@code ?}, {@code :} and {@code )} tokens (read off the
  * AST, so a nested ternary, string, or comment inside a branch is carried verbatim within its
  * segment). Because the whole ternary is re-emitted, this also satisfies the opening/closing layout
  * rules on the same ternary. Collapsing is refused when a {@code //} comment would be swallowed by a
- * joined segment or a branch spans a text block or multi-line block comment.
+ * joined segment; a segment that spans a text block or multi-line block comment is re-emitted verbatim
+ * instead. A span that spells a delimiter as a Unicode escape is refused outright, since the literal scan
+ * cannot see where it opens a literal or comment.
  *
- * <p>This is a reformatting utility with no dependency on any particular check or fixer, so a future
- * formatting fixer can reuse it. It applies no line-length policy: callers measure the returned lines
- * and decide whether the result is acceptable.
+ * <p>It applies no line-length policy: callers measure the returned lines and decide whether the result
+ * is acceptable.
  */
 public final class JavaTernaryReformatter {
 	/**
@@ -72,8 +73,7 @@ public final class JavaTernaryReformatter {
 	}
 
 	/**
-	 * Re-lays-out the ternary whose {@code QUESTION} node is {@code question} (as returned by
-	 * {@code MultilineCallFormattingCheck.resolvableTernaryLayoutQuestion}). The ternary must be a call
+	 * Re-lays-out the ternary whose {@code QUESTION} node is {@code question}. The ternary must be a call
 	 * argument; {@code lines} are the current source lines the {@code question} AST was parsed from.
 	 */
 	@CheckReturnValue
@@ -89,11 +89,11 @@ public final class JavaTernaryReformatter {
 		final var lparen = call.findFirstToken(TokenTypes.LPAREN);
 		final var openIdx = (lparen != null ? lparen.getLineNo() : call.getLineNo()) - 1;
 		final var qIdx = question.getLineNo() - 1;
-		final var qCol = question.getColumnNo();
+		final var qCol = SpanReformat.charColumn(lines, question);
 		final var cIdx = colon.getLineNo() - 1;
-		final var cCol = colon.getColumnNo();
+		final var cCol = SpanReformat.charColumn(lines, colon);
 		final var closeIdx = rparen.getLineNo() - 1;
-		final var closeCol = rparen.getColumnNo();
+		final var closeCol = SpanReformat.charColumn(lines, rparen);
 
 		if (openIdx < 0 || closeIdx >= lines.size() || openIdx > qIdx || qIdx > cIdx || cIdx > closeIdx)
 			return new CannotReformat(Reason.STALE);
@@ -101,9 +101,9 @@ public final class JavaTernaryReformatter {
 				|| !SpanReformat.pointsAt(lines, cIdx, cCol, ':')
 				|| !SpanReformat.pointsAt(lines, closeIdx, closeCol, ')'))
 			return new CannotReformat(Reason.STALE);
+		if (SpanReformat.hasEscapedDelimiter(lines, openIdx, closeIdx))
+			return new CannotReformat(Reason.ESCAPED_DELIMITER);
 
-		// which lines begin inside a text block / multi-line comment: a segment spanning one cannot be
-		// joined onto its canonical line, so it is re-emitted verbatim instead
 		final var beginsInLiteral = SpanReformat.beginsInMultilineLiteralByLine(lines, openIdx, closeIdx);
 		final var headVerbatim = spansLiteral(beginsInLiteral, openIdx, openIdx, qIdx);
 		final var trueVerbatim = spansLiteral(beginsInLiteral, openIdx, qIdx, cIdx);
@@ -113,10 +113,12 @@ public final class JavaTernaryReformatter {
 		final var trueFragments = SpanReformat.slice(lines, qIdx, qCol + 1, cIdx, cCol);
 		final var falseFragments = SpanReformat.slice(lines, cIdx, cCol + 1, closeIdx, closeCol);
 
-		// a `//` comment on a joined line would swallow the rest, but only for a segment being COLLAPSED
-		if ((!headVerbatim && SpanReformat.swallowsComment(headFragments))
-				|| (!trueVerbatim && SpanReformat.swallowsComment(trueFragments))
-				|| (!falseVerbatim && SpanReformat.swallowsComment(falseFragments)))
+		// a `//` comment on a joined line would swallow the rest, but only for a segment being COLLAPSED.
+		// The head slice starts at column 0, so it needs the state threaded from the file start; the other
+		// two start just past the `?`/`:`, which is code, so they begin in NONE
+		if ((!headVerbatim && SpanReformat.swallowsComment(headFragments, SpanReformat.lexerStateAt(lines, openIdx)))
+				|| (!trueVerbatim && SpanReformat.swallowsComment(trueFragments, LexerState.NONE))
+				|| (!falseVerbatim && SpanReformat.swallowsComment(falseFragments, LexerState.NONE)))
 			return new CannotReformat(Reason.COMMENT_ON_JOINED_LINE);
 
 		final var broken = new ArrayList<String>();
@@ -124,7 +126,12 @@ public final class JavaTernaryReformatter {
 		emitSegment(broken, lines, qIdx, qCol + 1, cIdx, cCol, "? ", trueVerbatim, trueFragments);
 		emitSegment(broken, lines, cIdx, cCol + 1, closeIdx, closeCol, ": ", falseVerbatim, falseFragments);
 		broken.add(lines.get(closeIdx).substring(closeCol));
-		return new Reformatted(openIdx, closeIdx, JavaSpanReindenter.reindent(broken, SpanReformat.leadingTabs(lines.get(openIdx))));
+		broken.set(0, SpanReformat.firstLineIndent(lines, openIdx) + broken.getFirst());
+		return new Reformatted(
+				openIdx,
+				closeIdx,
+				JavaSpanReindenter.reindent(broken, SpanReformat.leadingTabs(lines.get(openIdx)), SpanReformat.lexerStateAt(lines, openIdx))
+		);
 	}
 
 	@CheckReturnValue

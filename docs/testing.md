@@ -1,14 +1,11 @@
 # Testing
 
-How tests work in this project, common pitfalls, and how to ensure coverage.
-
 ## Architecture
 
 ### Check tests
 
 Check tests are driven by `StandardCheckTests` / `StandardFixerCases`,
-which expand each `ENTRIES` row into per-case dynamic tests (see
-"`StandardCheckTests` and the per-case fixer pipeline" above). Every new
+which expand each `ENTRIES` row into per-case dynamic tests. Every new
 check should land in `ENTRIES`. Each check has:
 
 - **Clean file** (`cases.clean.java`): valid code that must produce zero violations. For a
@@ -26,7 +23,7 @@ which parses the file's `// violation:` markers (honouring `[minSdk>=N]`
 and other predicates) and asserts an exact 1:1 match against the check's
 output (count + line + severity + message). Do not call `runCheck()`
 directly in a new test to assert violation absence under a different
-property combination — register that combination as another `ENTRIES`
+property combination. Register that combination as another `ENTRIES`
 row instead, so the marker pipeline runs against it too.
 
 ### Regex tests
@@ -50,15 +47,48 @@ full output. Integration tests are split across three classes:
 - **`CheckstyleFixUtilTest`**: pure utility tests (hint message formatting, tab-column conversion,
   skip reason tracking) with no file I/O
 
+## Reading fixtures
+
+Fixture files are large (`jitinefficiency/cases.in.java` holds 465 cases in 6,180 lines), but
+every case is delimited:
+
+```java
+// === case: <name> ===
+...
+// === end ===
+```
+
+`tools/slice` reads one case instead of the whole file. Reach for it before any Read of a fixture.
+
+| Command | What it gives |
+| ------- | ------------- |
+| `tools/slice list` | every topic and its case count |
+| `tools/slice list <topic>` | case names + line numbers in the topic's canonical input |
+| `tools/slice list <topic> --all` | same, for every sliced file in the topic |
+| `tools/slice show <topic> <name>` | the case from each sliced file, with line ranges |
+| `tools/slice find <pattern>` | case names matching a regex, across all topics |
+
+`show` is the one to use when changing a case: it prints the `in`, `out` and `fixed` versions
+together, so a `.out` vs `.fixed` divergence is visible in one call rather than three file reads.
+Both a topic name and a direct file path work as the first argument.
+
+`find` answers "does a case for this exist already" without reading any fixture. Case names are
+descriptive, so a pattern search over names usually locates prior coverage on its own.
+
+`cases.clean.java` files carry no case markers, so `list` and `show` skip them; clean files are
+whole-file fixtures by design.
+
 ## Tab-expanded columns
 
 Checkstyle reports column numbers with tabs expanded to the configured `tabWidth`. This project
 sets `tabWidth=4` (see `LineLength.TAB_WIDTH`), so a tab at position 0 makes the next character
 report as column 4 instead of 1.
 
-`CheckstyleFixTask.tabColumnToCharIndex()` converts tab-expanded columns to character indices.
-Any code that uses `event.getColumn()` to index into a line string must convert first. This
-applies to all fixers since `applyFixes` does the conversion before calling `fix()`.
+`CheckstyleFixAction.eventCharIndex()` converts a tab-expanded column to an index into the line's
+chars, which is what `fix()` receives, in the pipeline and in the harness alike. A fixer matching
+it against an AST position, which counts code points, converts it back with
+`LineText.columnOfCharIndex`, which matters on any line containing a supplementary character. See
+the `getColumnNo()` note in `adding-a-check.md` for the full rule.
 
 **Diagnosis**: if a fixer works in unit tests (no tabs) but fails on real files (tabs), the column
 conversion is the first thing to check. Write integration tests with tab-indented files to catch
@@ -72,9 +102,10 @@ The fix task runs ALL fixable checks simultaneously. Multiple checks can fire on
 - `RedundantImport` and `UnusedImports` both fire on `import java.lang.String;`
 - `FinalLocalVariable` fires twice on `int x, y;` (once per variable)
 
-When two violations target the same line and one deletes/modifies it, the second violation operates
-on stale line indices. Bottom-to-top processing (sorting by line descending) handles most cases,
-but same-line violations can still interfere.
+When two violations target the same line and one deletes/modifies it, the second violation would
+operate on stale text. Bottom-to-top processing (sorting by line, then column, descending) handles
+most cases, and an event on a line an earlier fix in the pass changed is mostly held back to the
+next pass (see the second-pass triggers in `adding-a-fixer.md`).
 
 **Integration tests must account for this.** Use inputs that isolate a single check. For example,
 test UpperEll with `3000000000l` (exceeds int range, so RedundantNumericSuffix doesn't also fire)
@@ -102,14 +133,26 @@ Use this as a **driving process while writing code**, not a post-hoc audit. Do n
 then write a fixer, then write tests. Instead: write one branch of the check, write its tests, then
 the next branch and its tests, then the fixer and its tests.
 
+The detailed coverage rules live in `docs/testing/`, one file per concern, so each reader loads only
+what its task needs. The steps below say which file to read at each point. **Reading the file a step
+names is part of that step, not optional.**
+
+| File | Read when | Sections |
+| ---- | --------- | -------- |
+| [testing/matrix.md](testing/matrix.md) | building or auditing a test matrix (steps 1-8) | Permutation matrix, Multi-item permutation coverage, Boundary pairing, Axis coverage, Context coverage, Expression form coverage, Annotation placement coverage, Numeric literal permutations, Comparison operator coverage, Single-arg vs multi-arg dispatch |
+| [testing/fixers.md](testing/fixers.md) | writing, changing, or auditing a fixer or its tests (step 10) | Three-layer fixer coverage, Integration coverage, Fixer regex robustness, Negation insertion in fixers |
+| [testing/resources.md](testing/resources.md) | adding or moving fixture cases, registering a check in `checkstyle.xml`, or testing checks that share token types | Cross-check testing, Cross-check impact of new checks, Test resource consolidation, Fragment-migration guard, File formatting in test resources |
+| [testing/audit.md](testing/audit.md) | before declaring check/fixer work done, and when auditing coverage (steps 11-14) | Exhaustive audit process (the 6-step audit), Branch coverage, Severity coverage, Guard regression, Clean file coverage, Direct AST unit tests, AST structure awareness |
+
 ### Before writing any code (BLOCKING - do not skip or defer)
 
 These steps produce the test matrix. No code is written until the matrix is complete and reviewed.
+Read [testing/matrix.md](testing/matrix.md) first: it lists the dimensions the matrix must cover.
 
 1. List every AST token type the check will visit and every expression/body type it will classify
 2. If the check has categories (tiers, modes, severity levels), build the full NxN permutation
-   matrix
-   (see "Permutation matrix" below). Write out every cell explicitly
+   matrix (see "Permutation matrix" in [testing/matrix.md](testing/matrix.md)). Write out every
+   cell explicitly
 3. For each category/token type, list: clean example, violation example, boundary example (nearby
    value that should NOT fire). Be specific - write actual code snippets, not descriptions
 4. For each violation type (message key), repeat step 3
@@ -128,492 +171,38 @@ These steps produce the test matrix. No code is written until the matrix is comp
 9. Write ONE branch of the check. Immediately write the clean and violation test resource lines for
    that branch. Immediately write the check test assertions. Run `./gradlew check`. Only then write
    the next branch
-10. After completing ALL check branches: write the fixer. For each `return null`, immediately write
-    the fixer unit test. For each `return new FixResult(...)`, immediately write the fixer unit
-    test.
+10. After completing ALL check branches: write the fixer (read
+    [testing/fixers.md](testing/fixers.md) first). For each `return null`, immediately write the
+    fixer unit test. For each `return new FixResult(...)`, immediately write the fixer unit test.
     For each fix type, immediately write the integration test. Run `./gradlew check` after each test
-11. Write direct AST unit tests for any token types identified in step 6
+11. Write direct AST unit tests for any token types identified in step 6 (see "Direct AST unit
+    tests" in [testing/audit.md](testing/audit.md))
 
 ### After all code is written (exhaustive audit - do not skip)
 
-12. Run the 6-step exhaustive audit (see "Exhaustive audit process" below). This is not optional. Do
-    not declare done, do not say "coverage is complete", do not move on until every step produces
-    zero gaps
+12. Run the 6-step exhaustive audit (see "Exhaustive audit process" in
+    [testing/audit.md](testing/audit.md)). This is not optional. Do not declare done, do not say
+    "coverage is complete", do not move on until every step produces zero gaps
 13. Trace every cell of the matrix from step 2 to a specific test method name. If any cell maps to
     "tested implicitly" or "same code path as X", that cell is NOT covered - add an explicit test
 14. Verify every violation test asserts all three: exact line number, severity level, AND message
 15. Run `./gradlew check` one final time
 
-### Permutation matrix (for checks with tiers, categories, or modes)
-
-When a check classifies inputs into categories (e.g., tiers, severity levels, format modes) and
-enforces a specific format per category, build an NxN permutation matrix: actual category vs.
-formatted-as category. Every cell must be tested.
-
-Example: `ControlFlowBracesCheck` has 2 do-while tiers (tier 2 = body on do line + while on next
-line, tier 3 = body on own line). The matrix is:
-
-| Actual \ Written as | Tier 2    | Tier 3    |
-|---------------------|-----------|-----------|
-| **Tier 2**          | Clean     | Violation |
-| **Tier 3**          | Violation | Clean     |
-
-The diagonal is clean (correct format). Every off-diagonal cell is a violation. **Every cell needs
-three layers of coverage:**
-
-1. **Check test**: clean file for diagonal, violation file for off-diagonal, with exact
-   line/severity/
-   message assertions
-2. **Fixer unit test**: for every off-diagonal cell, a unit test that inputs the wrong format and
-   asserts the fixer produces the correct format
-3. **Integration test**: for every off-diagonal cell, an end-to-end test running the full pipeline
-
-Do not declare coverage complete until every cell has all three layers. If a check has N categories,
-that is N^2 cells to fill (N clean + N^2 - N violation/fixer). Trace each cell to specific test
-method names.
-
-### Direct AST unit tests (for token types blocked by other checks)
-
-When a token type (e.g., `POST_INC`/`POST_DEC`) cannot appear in test resource files because
-another check (e.g., `PreferPrefixIncrementCheck`) would flag it, write direct AST unit tests
-instead. Parse a temp file with `JavaParser.parse()`, walk the AST to find the relevant node, and
-call the check's package-private methods directly.
-
-```java
-// example: test POST_INC directly via AST
-var source = "class T { void f(int x) { do x++; while (x > 0); } }";
-var tmp = File.createTempFile("test", ".java");
-Files.writeString(tmp.toPath(), source);
-var ast = JavaParser.parse(new FileContents(new FileText(tmp, StandardCharsets.UTF_8.name())));
-var doBody = findFirst(ast, TokenTypes.LITERAL_DO).getFirstChild();
-assertTrue(SomeCheck.isSimpleExpression(doBody));
-```
-
-This is the only way to achieve full token-type coverage when test resource checkstyle rules
-conflict. Use this for every token in a `switch` or `if` chain that shares a code path with other
-tokens but has a distinct AST type. Same code path does not mean same coverage: a future edit could
-accidentally drop one token from the case list.
-
-### Exhaustive audit process
-
-After all code and tests are written, run this audit before declaring done. Do not skip it.
-
-**Step 1: Branch trace.** For every `if`, `switch case`, `else`, and early `return` in the source,
-write down:
-
-- The condition
-- The test exercising the TRUE path (file:line or test method name)
-- The test exercising the FALSE path
-  Mark MISSING if either path lacks a test. Fix before proceeding.
-
-**Step 2: Token type trace.** For every token type in a `switch` or `if` chain, verify there is a
-dedicated test (either in test resources or direct AST unit test). Do not rely on shared case arms
-as proof of coverage.
-
-**Step 3: Permutation matrix trace.** If the check has categories (step 5 above), verify every cell
-has check test + fixer unit test + integration test.
-
-**Step 4: Boundary pair trace.** For every dimension that causes a category transition (e.g., "has
-chained call" flips tier 2 to tier 3), verify both sides of the boundary are tested: a clean case
-just inside the boundary and a violation/clean case just outside.
-
-**Step 5: Fixer return path trace.** For every `return null` and every `return new FixResult(...)`
-in the fixer, name the unit test that exercises it. Skip only paths that are provably unreachable
-(called from a context that already validated the precondition).
-
-**Step 6: Edge case trace.** For the specific AST token the check handles, list structural edge
-cases (empty body, nested constructs, construct inside other constructs, braced vs. unbraced
-variants). Verify each is in the clean or violation file.
-
-If any step reveals a gap, fix it immediately. Then re-run the full audit from step 1 (gaps often
-cascade). Only after a full clean pass through all 6 steps is coverage complete.
-
-### Context coverage (for checks that handle multiple AST contexts)
-
-When a check registers for multiple token types or handles multiple parent contexts (e.g. CLASS_DEF,
-METHOD_DEF, VARIABLE_DEF), every context must appear in all three test categories:
-
-1. **Clean file**: a correctly formatted example that produces zero violations
-2. **Violation file**: an incorrectly formatted example that produces the expected violation
-3. **Fixer test**: at least one integration test per fix type (not per context, since fixers are
-   text-based and context-agnostic)
-
-If a check has multiple violation types (e.g. same-line placement, blank lines, alphabetical order),
-each violation type needs its own set of clean + violation examples. Use separate violation files
-per
-violation type to keep them manageable.
-
-**Boundary contexts**: the clean file must also include examples of contexts the check should NOT
-fire on. For example, if a check handles VARIABLE_DEF but skips for-each variables, the clean file
-needs an annotated for-each variable to prove it is not flagged.
-
-### Cross-check testing (for related checks that partition contexts)
-
-When two or more checks divide responsibility over the same token types (e.g. one handles stacked
-annotations on declarations, another handles inline annotations on parameters), run every test
-resource file from each check against ALL related checks. Every file must produce zero violations
-from the other check. This catches context-detection bugs where one check fires in the other's
-territory.
-
-```java
-// AnnotationOwnLineCheck must not fire on any SameLine test files
-assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR +"Clean.java").
-
-isEmpty());
-
-assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR +"Violation.java").
-
-isEmpty());
-// ... and vice versa for every file
-```
-
-### Branch coverage
-
-Trace every `if`, `switch`, `while` condition, and early `return` in the code. Each branch must
-have a dedicated test. After writing code, re-read it and confirm every conditional has a test that
-exercises both the true and false paths.
-
-### Multi-item permutation coverage
-
-When a check processes multiple items in a group (e.g., multiple lambda params, multiple fields in
-a declaration, multiple annotations) and the check's behavior depends on the GROUP state (like
-"does any item have an annotation?"), test every permutation of per-item states. This is not the
-same as branch coverage -- the code paths are identical, but the data flows through different
-iterations.
-
-Example: `LambdaParameterTypeCheck` has `anyAnnotated` logic that inspects ALL params to decide
-whether to suggest `var` vs implicit. For a 2-param lambda, these cases are distinct:
-
-| First param   | Second param  | Expected          |
-|---------------|---------------|-------------------|
-| `@A String x` | `String y`    | Both MSG_VAR      |
-| `String x`    | `@A String y` | Both MSG_VAR      |
-| `@A String x` | `@B String y` | Both MSG_VAR      |
-| `String x`    | `String y`    | Both MSG_IMPLICIT |
-
-The first three share the same code path (anyAnnotated=true), but testing only case 1 missed a
-fixer bug where non-annotated params in an annotated context were stripped to implicit instead of
-getting `var`. Case 2 caught it because the fixer iterated params left-to-right and handled the
-non-annotated first param differently.
-
-**Rule**: when code loops over a group and sets a flag from any member, test the flag-setting member
-in every position (first, middle, last, all).
-
-### Boundary pairing
-
-For every value a function accepts, write a rejection test with a "nearby" invalid value. This
-catches over-matching.
-
-Examples from this project:
-
-- `ExplicitInitializationFixer` accepts `0.0f` (zero) → must reject `1.0f` (non-zero)
-- `ExplicitInitializationFixer` accepts `'\u0000'` → must reject `'\u0001'`
-- `DoubleBlankLineFixer` accepts 2 consecutive blanks → must reject 1 blank (the boundary)
-- `OverloadMethodOrderCheck` clean file shows `secondParam(int a, char b)` before
-  `secondParam(int a, int b)` → violation file shows the reverse
-
-### Expression form coverage
-
-When a check inspects initializers, arguments, or right-hand-side expressions, test every
-syntactic form that can appear in that position. Common forms:
-
-- Literal (numeric with all notations: decimal, hex, octal, binary, underscore-separated; also
-  char, boolean, string, null)
-- Method call (`Integer.parseInt(...)`, `list.size()`)
-- Constructor call (`new Foo(...)`)
-- Cast expression (`(Type) expr`), including cast-to-same-type vs cast-to-different-type
-- Binary/unary expression (`a + b`, `-x`, `a << b`)
-- Ternary (`flag ? a : b`)
-- Field/array access (`obj.field`, `arr[i]`)
-
-If the check behaves differently based on the expression form (e.g. literal vs non-literal), each
-form needs a test in the appropriate category (clean, violation, or warning).
-
-### Annotation placement coverage
-
-When a check inspects types, fields, parameters, or declarations, test every position where
-annotations can appear in the AST. Annotations are syntactically valid in many positions but land
-in different AST nodes depending on placement:
-
-- **Declaration annotations** (`@Nonnull String field`): on MODIFIERS, not TYPE. The TYPE node is
-  unchanged. Test that the check produces the same result with and without the annotation.
-- **Type-use annotations in generics** (`List<@Ann String>`): inside TYPE_ARGUMENTS > TYPE_ARGUMENT
-  > ANNOTATIONS. Test with annotations on some/all type arguments.
-- **Annotation asymmetry**: when comparing field types to parameter types, annotations on one side
-  but not the other should not affect type matching (annotations are on MODIFIERS, not TYPE).
-
-For any check that reads TYPE nodes, the annotation permutation matrix is:
-
-| Field annotation | Param annotation | Generic type-arg annotation |
-|------------------|------------------|-----------------------------|
-| None             | None             | None                        |
-| Yes              | Yes              | -                           |
-| Yes              | None             | -                           |
-| None             | Yes              | -                           |
-| -                | -                | Yes (on some args)          |
-| -                | -                | Yes (on all args)           |
-
-For declaration annotations (fields, parameters), use `@Deprecated` or `@SuppressWarnings("unused")`
-which are built-in and need no imports. For type-use positions (`List<@Ann String>`), these don't
-work since they lack `@Target(TYPE_USE)`. Define a `@interface Ann {}` only when you need type-use
-annotations. A plain `@interface` with no `@Target` can be used in any position.
-
-### Severity coverage
-
-When a check emits different severity levels on different code paths (e.g. error for safe cases,
-warning for uncertain cases), test each severity explicitly with `assertEquals(SeverityLevel.X,
-violation.getSeverityLevel())`. A test that only checks violation count and message will miss a
-path that fires at the wrong severity.
-
-### Guard regression
-
-When adding a guard or filter that exempts some inputs from a check, add explicit tests proving
-that non-exempted inputs still fire. For example, if a new guard skips `byte x = 5;` (unfixable),
-add a test for `int x = 5;` (same structure, should still fire) to prove the guard doesn't
-over-suppress. Cover every type/variant that should pass through the guard unchanged.
-
-### Axis coverage
-
-When code handles multiple independent dimensions (prefixes, suffixes, formats, label types),
-test each axis. Cross-axis tests are only needed when axes interact.
-
-Example: `ExplicitInitializationFixer.isNumericZero()` has axes for prefix (`0x`, `0b`, none),
-suffix (`L`, `f`, `d`, none), and format (decimal, exponent, underscore). Each is tested
-independently. The only cross-axis test is `0x0.0p0f` because hex prefix changes which exponent
-letter (`p` vs `e`) is valid.
-
-### Integration coverage
-
-Every entry in `FIXERS` and `MODULE_ID_FIXERS` must have an end-to-end integration test that runs
-the full pipeline (Checkstyle detection, column conversion, fixer application, output verification).
-Assert the exact full output string, not fragments via `contains()`. This catches unintended
-modifications to lines the test wasn't looking at.
-
-When a fixer handles mutually exclusive conventions (e.g. JUnit 4 message-first vs JUnit 5
-message-last), each convention needs its own integration test combining multiple patterns in a
-single
-file. This verifies that fixers for one convention don't silently mangle lines belonging to the
-other.
-A single-pattern test per convention is not enough because interference only surfaces when multiple
-fixer code paths run against the same file.
-
-### Fixer regex robustness
-
-When a fixer uses regex to match code patterns, test for these attack vectors:
-
-**False positives from partial matches.** `Matcher.find()` matches anywhere in the line. A regex
-for `a > b ? a : b` will also match inside `++a > b ? a : b`, producing `++Math.max(a, b)`.
-Test with prefix and suffix characters around the pattern. Use negative lookbehind to reject
-unwanted prefixes.
-
-**Nested expressions.** Regex character classes like `[^,]+` and `[^)]+` split at the FIRST
-delimiter, not at the correct nesting depth. `Math.max(a, Math.min(b, foo(c, d)))` breaks
-because `[^)]+` captures `foo(c, d` (stops at the inner `)` instead of the outer). Test with
-nested method calls, casts, and parenthesized expressions in every argument position. Use
-paren-balanced parsing instead of regex for nested structures.
-
-**ReDoS (catastrophic backtracking).** Verify that no regex has overlapping alternatives with
-nested quantifiers (e.g. `(a+)+`, `(a|a)+`). Test with long inputs (100+ character operands)
-to confirm linear-time matching. Character classes like `[\w.\[\]]+` are safe (single class,
-no alternation). Alternations like `>=?|<=?` are safe (no overlap, fail fast).
-
-**Multiline.** If the check can fire on expressions that span multiple lines, test that the
-fixer either handles it or returns null gracefully. Never produce a partial fix that corrupts
-the file.
-
-### Test resource consolidation
-
-Never create a violation file with only one violation. Group related violations into shared files by
-rule category (e.g. all stream simplifications in one file, all Collections factory replacements in
-one file). This keeps the test suite manageable and makes it obvious when a rule fires on the wrong
-input.
-
-When violations in the same file have different minSdk gates, the minSdk boundary tests must account
-for the ungated violations still firing. For example, a file with both `stream().count()` (no gate)
-and `stream().forEach()` (API 24+) should expect 2 violations at minSdk 23 (only forEach suppressed)
-and 3 at minSdk 24 (all fire).
-
-### Clean file coverage
-
-For check tests: the clean file is just as important as the violation file. It must cover every
-pattern that should NOT trigger the check. If a check has special handling for `default:` labels
-(not just `case:`), the clean file needs `default:` examples.
-
-### AST structure awareness
-
-See `docs/ast-structure.md` for the full reference on Checkstyle's AST quirks (ternary children
-order, INDEX_OP's hidden RBRACK, comparison operators as parent nodes, pre vs post increment
-semantics, `exprText` vs `displayText`, etc.).
-
-When a test unexpectedly produces zero violations, check the AST structure with Checkstyle's
-`-t` flag or by adding debug prints in the check's `visitToken()`.
-
-### Numeric literal permutations
-
-When a check or fixer handles numeric literals (zero detection, suffix removal, etc.), test ALL
-Java literal forms. Missing even one form is a bug. The full set:
-
-**Integer forms**: `0`, `0x0` (hex), `0X0` (hex uppercase prefix), `0b0` (binary), `0B0` (binary
-uppercase prefix), `0_0` (underscore separator)
-
-**Long forms**: every integer form with `L` suffix (e.g. `0L`, `0x0L`, `0b0L`)
-
-**Float forms**: `0.0f`, `0f` (no decimal), `0.f` (trailing dot)
-
-**Double forms**: `0.0`, `0.0d` (explicit suffix), `0.` (trailing dot), `.0` (leading dot),
-`0.0e0` (exponent), `0.0e+0` (exponent with plus), `0.0e-0` (exponent with minus)
-
-**Negative forms**: every form above prefixed with `-`. In the AST, `-0` is `UNARY_MINUS{NUM_INT}`
-(two nodes), not a single negative literal. Tests must verify both that `isZeroLiteral(UNARY_MINUS)`
-returns false and that `isZeroLiteral(child NUM token)` returns true.
-
-**Boundary pairs**: for every zero form, test a non-zero value with the same notation (e.g. `0x0`
-is zero, `0x1` is non-zero; `0.0e1` is zero (a zero mantissa stays zero for any exponent), `1.0e1`
-is non-zero).
-
-### Negation insertion in fixers
-
-When a fixer needs to negate a result (e.g. `.stream().findFirst().isPresent()` -> `!receiver
-.isEmpty()`), the fixer must scan backwards to find the receiver start and insert `!` before it.
-This uses `findReceiverStart()` which only handles simple receivers (identifiers and dotted names)
-and returns -1 for complex receivers (method calls, casts, array access).
-
-**Critical edge case**: if the expression is ALREADY negated (`!list.stream().findFirst()
-.isPresent()`), the fixer must detect the existing `!` at `receiverStart - 1` and REMOVE it
-instead of adding another. Otherwise the output is `!!list.isEmpty()` (double negation). Check
-the character before `receiverStart` before inserting `!`.
-
-This applies to any fixer that inserts `!`: trim length comparisons (`!= 0`, `> 0`), reversed
-negated forms (`0 != ...`), and `stream().findFirst().isPresent()`.
-
-### Three-layer fixer coverage
-
-Every fixable pattern needs three layers of tests:
-
-1. **Fixer unit test** (`PreferSpecificApiFixerTest`): test the `fix()` method directly with
-   crafted input lines. Cover success cases, return-null guards, boundary rejections, and edge
-   cases (nested parens, escaped quotes, complex receivers).
-2. **Integration test** (`CheckstyleFixIntegrationTest`): run the full pipeline (Checkstyle
-   detection -> column conversion -> fixer application -> output verification -> re-check).
-   Assert exact full output, `fixCount`, and `needsSecondPass`. Every fix-producing test
-   automatically re-checks the output via `verifyFixedOutputClean` (enforced by `@AfterEach`).
-   If the fix makes an import unused, add a separate `runFixMultiPass` test to verify the
-   unused import is cleaned up on the second pass.
-3. **Violation/clean test resources**: the check must have violation test cases for every pattern
-   the fixer handles, and clean cases for every pattern it should NOT handle.
-
-When adding a new fixer, also check existing integration tests. A new fixer may change the
-behavior of tests that previously relied on the pattern being unfixable (e.g. adding a
-`Collections.sort` fixer broke `testPreferSpecificApiCollectionsFactoryRetainsUsedImport` because
-the sort call was the reason the `Collections` import was retained).
-
-### Fragment-migration guard
-
-`fragments.in.java` snippets are the fallback fixture form: line fragments fed to a fixer's
-`fix()` at an explicit `// target:` position, used only when a case genuinely cannot be a
-`cases.{in,out}.java` slice. `FragmentMigrationGuardTest` (via `FragmentMigrationDetector`) keeps
-the corpus honest: it wraps each fragment body in a minimal compilation unit (a bare
-`class {...}`, a method body, a constructor body, or a class with an appended `int __x;` so a body
-ending in a bare annotation parses), runs the topic's check, and flags any case that behaves like a
-slice — the check fires and the fixer either reproduces `.out` as a fixed point (a fix-slice) or
-returns a `SkipResult` at the reported site (a `// skip-reason:` skip-slice). It also flags a
-`// target:` that is *redundant* (points at a position the check already reports): the directive is
-only justified for a synthetic position the check never reports.
-
-The migration is complete, so the guard simply fails on any flagged case: migrate it to a slice, or
-delete it if an existing slice already covers the behavior. (There is no whitelist; the ratchet
-reached zero and it was removed.)
-
-A case is legitimately fragment-only (and correctly NOT flagged) when it is:
-
-- **non-compilable** — a body no wrapper can parse (`@B(` at EOF, a bare `value = x;`);
-- **synthetic-target** — the `// target:` is an out-of-bounds/negative/past-end column or line the
-  check never reports, exercising the fixer's positional robustness at a site a slice (which
-  derives the position from the check) cannot reproduce;
-- **null-returning** — the fixer returns bare `null` rather than a `SkipResult`; `assertCaseSkip`
-  requires a `SkipResult` and `assertCaseFix` would leave the violation unfixed, so neither slice
-  form can express it;
-- **style-invariant** — the body trips a non-suppressible formatting invariant (`NoSpaceIndent`,
-  `NoTrailingWhitespace`) that a linted slice cannot carry and the migration policy refuses to
-  suppress.
-
-To migrate a flagged case: author the `cases.in.java`/`cases.out.java` slice (a `// skip-reason:`
-slice for a skip case, `.out == .in` minus markers), add a per-topic cross-check suppression if a
-non-topic check fires on it, then delete the fragment (both `.in` and `.out` entries), its whitelist
-line, and its dedicated fixer-test method. If the flagged case is already covered by an existing
-slice (the fragment is a leftover duplicate), delete it outright instead of creating a second copy.
-
-### Comparison operator coverage
-
-When a check detects comparisons (e.g. `.size() == 0`, `.trim().length() != 0`), there are 6
-comparison operators (EQUAL, GE, GT, LE, LT, NOT_EQUAL) and each has 2 operand orders
-(normal and reversed). That's 12 branches total. Test ALL of them, not just the common ones.
-
-The operator determines the semantics (positive vs negated), and the operand order determines
-which side has the method call vs the literal. Missing even one branch means that specific
-comparison form goes untested. Use a violation file that covers every branch with a dedicated
-method.
-
-For fixers handling these comparisons: group them into positive forms (simple replacement) and
-negated forms (needs `!` insertion). Test each group separately. For reversed forms (`0 != expr`
-vs `expr != 0`), the fixer logic differs (reversed forms extract the receiver from between the
-literal and the method suffix, while normal forms scan backwards from the method).
-
-### Single-arg vs multi-arg dispatch
-
-When a check/fixer handles method calls that can have different argument counts (e.g.
-`String.format(x)` vs `String.format("fmt", args)`), the behavior may differ by arg count:
-
-- Single-arg: strip the call entirely (`String.format(x)` -> `x`)
-- Multi-arg with literal first arg: rewrite (`String.format("fmt", a)` -> `"fmt".formatted(a)`)
-- Multi-arg with non-literal first arg: skip (can't safely rewrite)
-
-Test ALL combinations of arg count and arg type. For single-arg, test with literals, variables,
-method calls (`obj.toString()`), cast expressions (`(String) obj`), and other complex expressions
-to verify the paren-balanced parser handles nested structures correctly.
-
-### Cross-check impact of new checks
-
-When registering a new check or extending an existing one in `checkstyle.xml`, it immediately
-fires on ALL source files AND test resources via `checkstyleTestResources`. Before running
-`./gradlew check`:
-
-1. Search existing test resources for patterns your check would flag (e.g. `grep -r
-   "Arrays.asList"` for a new Arrays.asList check)
-2. Add cross-check suppressions in `suppressions-test-resources.xml` for test directories where
-   the pattern appears legitimately
-3. Check if your new detection overlaps with an existing detection on the same code pattern
-   (e.g. `Arrays.asList` inside `Collections.unmodifiableList` is caught by both the copyOf check
-   and the Arrays.asList check, need parent-chain exclusion to prevent double-firing)
-
-### File formatting in test resources
-
-New test resource files must comply with the project's formatting rules:
-
-- No trailing newline at end of file (use `perl -pi -e 'chomp if eof'` after creating)
-- Methods alphabetically ordered
-- TAB indentation, no spaces
-- LF line endings
-- No unused imports
-- Inner classes at top of class body (per ClassStructureOrderCheck)
-
 ## Common mistakes
 
 ### Hardcoded value sets instead of parsing
 
-The original `ExplicitInitializationFixer` used `Set.of("0", "0L", "0.0f", ...)` to match default
-values. This missed `0.000`, `0x0`, `0_0`, `0.0e0`, and many other valid zero representations. The
-fix was to parse the value (strip suffix, underscores, prefix, then verify all remaining chars are
-zero).
+A `Set.of("0", "0L", "0.0f", ...)` of default values misses `0.000`, `0x0`, `0_0`, `0.0e0`, and
+many other valid zero representations. Parse the value instead: strip suffix, underscores and
+prefix, then verify every remaining char is zero.
 
 When matching against a set of known values, ask: "is this set exhaustive, or should I parse the
 structure instead?"
 
 ### Missing lowercase `l` suffix
 
-`RedundantNumericSuffixFixer` originally checked `D/F/L/d/f` but not `l`. The boundary pairing
-audit caught it: adding a test for `100l` revealed the bug. This is why boundary pairing matters,
-it catches omissions that look correct at a glance.
+A suffix check covering `D/F/L/d/f` but not `l` looks correct at a glance. Boundary pairing is what
+catches that class of omission: a test for `100l` beside the `100L` one.
 
 ### Method ordering in test resource files
 
@@ -647,6 +236,32 @@ Never use shorthand, paraphrases, or descriptions. The comment IS the expected m
 Every test assertion on a violation MUST check all three: line number, severity level, AND message.
 Never assert just line + count. Never assert line without severity. Never skip message validation
 on "obvious" cases. Every single violation gets all three checks, no exceptions.
+
+## Parallel execution
+
+Test classes run concurrently in one JVM (`build.gradle` turns on JUnit's parallel mode); the methods
+of one class run in sequence, except the `@TestFactory` harnesses (`StandardCheckTests`,
+`FullPipelineRegressionTest`, `CheckstyleFixIntegrationCasesTest`), whose dynamic tests also run
+concurrently. A new test must not share mutable state across threads:
+
+- **Timing**: a class that measures its own code (`assertScalesLinearly`, `assertTimeoutPreemptively`
+  on real work) is `@Isolated`, so no other class competes for the CPU while it measures
+- **JVM-wide state**: a class that swaps `Locale`, `System.out`/`System.err`, or resets
+  `ReflectionUtil.classForNameCallCount` or its cache is `@Isolated`
+- **Gradle `ProjectBuilder`**: hold `@ResourceLock(CheckstylePluginTest.PROJECT_BUILDER)`
+- **Files**: write under `@TempDir` or `Files.createTempFile`, never a fixed path that another thread
+  could read while it is being written
+- **Caches**: per-thread (`ThreadLocal`, as `CheckerCache` and `FixerAst` do) or concurrent
+  (`ConcurrentHashMap`)
+
+### Scaling tests
+
+`ScalingAssertions.assertScalesLinearly` builds each size's input once, outside the timing, and
+repeats the timed run as often as the smallest size needs to take a measurable 20 ms, so every
+doubling is asserted (under 3x, a quadratic takes 4x). Keep sizes small: checkstyle's own parse grows
+quadratically in a long sibling list (`DetailAstImpl.addChild` walks to the last child), so a large
+input spends seconds in setup without making the ratio any more telling. Any cache the code under
+measure fills must be dropped at the start of each timed run, or later runs time the cache hit.
 
 ## Running tests
 

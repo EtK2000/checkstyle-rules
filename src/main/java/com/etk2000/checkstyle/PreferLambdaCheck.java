@@ -1,11 +1,10 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
-import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayDeque;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -16,30 +15,31 @@ import javax.annotation.Nonnull;
  * Only flags anonymous classes with a single method and no extra members
  * (fields, inner types, etc.).
  */
-public class PreferLambdaCheck extends AbstractAstCheck {
+public class PreferLambdaCheck extends AbstractResolvingCheck {
 	private static final String MSG = "prefer.lambda";
 
 	@CheckReturnValue
 	private static boolean containsThisOrSuperReference(@Nonnull DetailAST ast) {
-		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling()) {
-			switch (child.getType()) {
-				case TokenTypes.LITERAL_SUPER -> {
-					return true;
-				}
-
-				case TokenTypes.LITERAL_THIS -> {
-					// Qualified this (e.g. Outer.this) is fine in a lambda
-					final var parent = child.getParent();
-					if (parent.getType() != TokenTypes.DOT || parent.getFirstChild() == child)
+		// iterative: a deeply nested expression must not overflow the stack here, where the Error
+		// would abort the run rather than one file
+		final var pending = new ArrayDeque<DetailAST>();
+		pending.push(ast);
+		while (!pending.isEmpty()) {
+			final var node = pending.pop();
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
+				switch (child.getType()) {
+					case TokenTypes.LITERAL_SUPER -> {
 						return true;
-				}
-
-				// Don't recurse into nested anonymous classes, they have their own this/super
-				case TokenTypes.OBJBLOCK -> {}
-
-				default -> {
-					if (containsThisOrSuperReference(child))
-						return true;
+					}
+					case TokenTypes.LITERAL_THIS -> {
+						// Qualified this (e.g. Outer.this) is fine in a lambda
+						final var parent = child.getParent();
+						if (parent.getType() != TokenTypes.DOT || parent.getFirstChild() == child)
+							return true;
+					}
+					// a nested anonymous class has its own this/super
+					case TokenTypes.OBJBLOCK -> {}
+					default -> pending.push(child);
 				}
 			}
 		}
@@ -64,16 +64,6 @@ public class PreferLambdaCheck extends AbstractAstCheck {
 		return methodCount == 1;
 	}
 
-	private final Set<String> imports = new HashSet<>();
-
-	private String packageName;
-
-	@Override
-	public void beginTree(@Nonnull DetailAST rootAST) {
-		imports.clear();
-		packageName = null;
-	}
-
 	private void checkAnonymousClass(@Nonnull DetailAST literalNew) {
 		final var objBlock = literalNew.findFirstToken(TokenTypes.OBJBLOCK);
 		if (objBlock == null)
@@ -85,11 +75,11 @@ public class PreferLambdaCheck extends AbstractAstCheck {
 		if (containsThisOrSuperReference(objBlock))
 			return;
 
-		final var typeName = AstUtil.findNewClassName(literalNew);
+		final var typeName = AstText.findNewClassName(literalNew);
 		if (typeName == null)
 			return;
 
-		final var fqcn = ReflectionUtil.resolveClassName(typeName, packageName, imports);
+		final var fqcn = resolve(typeName);
 		if (fqcn == null)
 			return;
 
@@ -100,22 +90,12 @@ public class PreferLambdaCheck extends AbstractAstCheck {
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
-		return new int[]{
-				TokenTypes.IMPORT,
-				TokenTypes.LITERAL_NEW,
-				TokenTypes.PACKAGE_DEF
-		};
+		return new int[]{TokenTypes.LITERAL_NEW};
 	}
 
 	@Override
-	public void visitToken(@Nonnull DetailAST ast) {
-		switch (ast.getType()) {
-			case TokenTypes.IMPORT -> imports.add(FullIdent.createFullIdentBelow(ast).getText());
-			case TokenTypes.LITERAL_NEW -> checkAnonymousClass(ast);
-			case TokenTypes.PACKAGE_DEF -> {
-				final var ident = ast.getLastChild().getPreviousSibling();
-				packageName = FullIdent.createFullIdent(ident).getText();
-			}
-		}
+	protected void visitScopedToken(@Nonnull DetailAST ast) {
+		if (ast.getType() == TokenTypes.LITERAL_NEW)
+			checkAnonymousClass(ast);
 	}
 }

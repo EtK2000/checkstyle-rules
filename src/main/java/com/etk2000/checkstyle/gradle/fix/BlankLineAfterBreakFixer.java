@@ -9,6 +9,9 @@ import javax.annotation.Nullable;
  * Fixes missing blank lines after {@code break;} before the next
  * {@code case}/{@code default}. The violation line is the {@code break;} line.
  * The fixer inserts an empty line after it.
+ *
+ * <p>An insertion point that is text-block content is refused; see
+ * {@link TextBlockGuard}.
  */
 class BlankLineAfterBreakFixer implements CheckstyleFixer {
 	@Nullable
@@ -18,11 +21,12 @@ class BlankLineAfterBreakFixer implements CheckstyleFixer {
 		if (nextLine >= lines.size())
 			return null;
 
-		// if the next line is already blank, nothing to fix
 		if (lines.get(nextLine).isBlank())
 			return null;
 
-		// insert a blank line after the break line
+		if (TextBlockGuard.containsTextBlockContent(lines, lineIndex, nextLine))
+			return new SkipResult(SkipMessages.BLANK_LINE_SKIP_TEXT_BLOCK);
+
 		return new FixResult(nextLine, nextLine - 1, List.of(""));
 	}
 }

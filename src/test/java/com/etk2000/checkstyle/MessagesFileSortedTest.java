@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -19,13 +20,20 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.regex.Pattern;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class MessagesFileSortedTest {
 	private record MsgParseResult(int endIndex, @Nonnull String literal) {}
+
+	private static final Pattern SKIP_REASON = Pattern.compile("cannot [^:]+: \\S(?:.*[^.\\s])?");
 
 	@Nonnull
 	private static List<String> findMsgConstantLiterals(@Nonnull String source) {
@@ -99,6 +107,26 @@ public class MessagesFileSortedTest {
 		return -1;
 	}
 
+	private static boolean isSkipKey(@Nonnull String key) {
+		return key.startsWith("fix.") || key.contains(".skip");
+	}
+
+	private static boolean isStandardSkipReason(@Nonnull String reason) {
+		return SKIP_REASON.matcher(reason).matches();
+	}
+
+	@Nonnull
+	private static Properties loadMessages() throws IOException {
+		final var messages = new Properties();
+		try (var reader = new InputStreamReader(
+				MessagesFileSortedTest.class.getResourceAsStream("/com/etk2000/checkstyle/messages.properties"),
+				StandardCharsets.UTF_8
+		)) {
+			messages.load(reader);
+		}
+		return messages;
+	}
+
 	@Nonnull
 	private static List<String> readMessageKeys() throws IOException {
 		try (var reader = new BufferedReader(new InputStreamReader(
@@ -135,6 +163,34 @@ public class MessagesFileSortedTest {
 			keys.add(key);
 		}
 		return keys;
+	}
+
+	/** The text Checkstyle's MessageFormat renders from {@code messageFormat}, as a regex. */
+	@CheckReturnValue
+	@Nonnull
+	private static Pattern renderedMessagePattern(@Nonnull String messageFormat) {
+		final var regex = new StringBuilder();
+		var quoted = false;
+		for (var i = 0; i < messageFormat.length(); ++i) {
+			final var c = messageFormat.charAt(i);
+			if (c == '\'') {
+				if (i + 1 < messageFormat.length() && messageFormat.charAt(i + 1) == '\'') {
+					regex.append('\'');
+					++i;
+				}
+				else
+					quoted = !quoted;
+			}
+			else if (c == '{' && !quoted) {
+				i = messageFormat.indexOf('}', i);
+				if (i < 0)
+					throw new IllegalArgumentException("unclosed argument in message format: " + messageFormat);
+				regex.append(".+?");
+			}
+			else
+				regex.append(Pattern.quote(String.valueOf(c)));
+		}
+		return Pattern.compile(regex.toString());
 	}
 
 	private static int skipQuotedSequence(@Nonnull String source, int start, char quote) {
@@ -231,6 +287,34 @@ public class MessagesFileSortedTest {
 		);
 		if (!unresolved.isEmpty())
 			fail("MSG_* constants reference missing keys: " + unresolved);
+	}
+
+	@Test
+	public void testEverySkipReasonFollowsTheStandard() throws Exception {
+		final var messages = loadMessages();
+		final var offenders = new TreeMap<String, String>();
+		for (var key : messages.stringPropertyNames()) {
+			final var reason = messages.getProperty(key);
+			if (isSkipKey(key) && !isStandardSkipReason(reason))
+				offenders.put(key, reason);
+		}
+		assertEquals(Map.of(), offenders);
+	}
+
+	@Test
+	public void testEveryViolationMessageIsRenderedByATest() throws Exception {
+		final var corpus = new StringBuilder();
+		for (var root : List.of(Path.of("src/test/java"), Path.of("src/test/resources")))
+			JavaSourceUtil.walkJavaSources(root).forEach(source -> corpus.append(source).append('\n'));
+
+		final var messages = loadMessages();
+		final var unrendered = new TreeMap<String, String>();
+		for (var key : messages.stringPropertyNames()) {
+			final var messageFormat = messages.getProperty(key);
+			if (!isSkipKey(key) && !renderedMessagePattern(messageFormat).matcher(corpus).find())
+				unrendered.put(key, messageFormat);
+		}
+		assertEquals(Map.of(), unrendered);
 	}
 
 	@Test
@@ -393,6 +477,39 @@ public class MessagesFileSortedTest {
 		assertEquals(expected, findUnsortedKeyIndex(List.of(csvKeys.split(";"))));
 	}
 
+	@CsvSource({
+			"fix.bounds, true",
+			"prefer.var.skip, true",
+			"array.type.style.skip.text.block, true",
+			"switch.case.order, false",
+			"fixed.order, false",
+			"prefer.fix.order, false",
+			"skip.order, false"
+	})
+	@ParameterizedTest
+	public void testIsSkipKey(String key, boolean expected) {
+		assertEquals(expected, isSkipKey(key));
+	}
+
+	@CsvSource(delimiter = '|', quoteCharacter = '"', value = {
+			"cannot fix: the line is out of bounds|true",
+			"cannot use 'var': multi-variable declaration|true",
+			"cannot replace the alias: it clashes with a %s elsewhere (rename it manually)|true",
+			"cannot fix: x|true",
+			"Cannot fix: the line is out of bounds|false",
+			"cannot fix: the line is out of bounds.|false",
+			"\"cannot fix: the line is out of bounds \"|false",
+			"cannot fix the line|false",
+			"cannot fix:the line is out of bounds|false",
+			"\"cannot fix: \"|false",
+			"cannot: the line is out of bounds|false",
+			"multi-variable declaration|false"
+	})
+	@ParameterizedTest
+	public void testIsStandardSkipReason(String reason, boolean expected) {
+		assertEquals(expected, isStandardSkipReason(reason));
+	}
+
 	@Test
 	public void testMessagesAreSortedAlphabetically() throws Exception {
 		final var keys = readMessageKeys();
@@ -413,10 +530,7 @@ public class MessagesFileSortedTest {
 			"# a=1\n# b=2"
 	})
 	public void testReadMessageKeysIgnoresNonKeyLines(String input) throws Exception {
-		assertTrue(
-				readMessageKeys(new BufferedReader(new StringReader(input))).isEmpty(),
-				"expected no keys for: " + input
-		);
+		assertTrue(readMessageKeys(new BufferedReader(new StringReader(input))).isEmpty());
 	}
 
 	@Test
@@ -439,5 +553,34 @@ public class MessagesFileSortedTest {
 				IllegalStateException.class,
 				() -> readMessageKeys(new BufferedReader(new StringReader(input)))
 		);
+	}
+
+	@CsvSource(delimiter = '|', quoteCharacter = '"', value = {
+			"Put ''{0}'' after ''{1}''.|Put 'List' after 'ArrayList'.|true",
+			"Put ''{0}'' after ''{1}''.|Put List after ArrayList.|false",
+			"Put ''{0}'' after ''{1}''.|Put '' after 'ArrayList'.|false",
+			"Keep the body as '''{}''' here.|Keep the body as '{}' here.|true",
+			"Keep the body as '''{}''' here.|Keep the body as '' here.|false",
+			"Keep the body as '''{}''' here.|Keep the body as 'xy' here.|false",
+			"Write ''new T[]'{'...'}'''.|Write 'new T[]{...}'.|true",
+			"Write '{'{0}'}'.|Write {List}.|true",
+			"Write '{x}'|Write {x}|true",
+			"Drop the spare token.|Drop the spare token.|true",
+			"Drop the spare token.|Drop the spare token!|false",
+			"{0} ''{1}'' goes after ''{2}''.|Label 'b' goes after 'a'.|true"
+	})
+	@ParameterizedTest
+	public void testRenderedMessagePattern(String messageFormat, String rendered, boolean expected) {
+		assertEquals(expected, renderedMessagePattern(messageFormat).matcher(rendered).matches());
+	}
+
+	@Test
+	public void testRenderedMessagePatternArgumentStaysOnOneLine() {
+		assertFalse(renderedMessagePattern("Put ''{0}'' here.").matcher("Put 'a\nb' here.").find());
+	}
+
+	@Test
+	public void testRenderedMessagePatternRejectsUnclosedArgument() {
+		assertThrows(IllegalArgumentException.class, () -> renderedMessagePattern("Put ''{0'' here."));
 	}
 }

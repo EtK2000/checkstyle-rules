@@ -53,7 +53,7 @@ class InputFinalLocalSplitBlankLineBetweenViolation {
 // === end ===
 
 // === case: split_comment_between ===
-// skip-reason: no declaration type line precedes the variable name
+// skip-reason: cannot add 'final': no declaration type line precedes the variable name
 class InputFinalLocalSplitCommentBetweenViolation {
 	void m() {
 		Runnable
@@ -65,7 +65,7 @@ class InputFinalLocalSplitCommentBetweenViolation {
 // === end ===
 
 // === case: split_multi_var_continuation ===
-// skip-reason: multi-variable declaration
+// skip-reason: cannot add 'final': multi-variable declaration
 class InputFinalLocalSplitMultiVarContinuationViolation {
 	void m() {
 		Runnable s,
@@ -79,7 +79,7 @@ class InputFinalLocalSplitMultiVarContinuationViolation {
 // === end ===
 
 // === case: split_multi_var_trailing_comment ===
-// skip-reason: multi-variable declaration
+// skip-reason: cannot add 'final': multi-variable declaration
 class InputFinalLocalSplitMultiVarTrailingCommentViolation {
 	void m() {
 		Runnable s, // note

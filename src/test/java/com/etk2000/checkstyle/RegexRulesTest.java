@@ -1,9 +1,19 @@
 package com.etk2000.checkstyle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.Checker;
+import com.puppycrawl.tools.checkstyle.ConfigurationLoader;
+import com.puppycrawl.tools.checkstyle.DefaultConfiguration;
+
 import org.junit.jupiter.api.Test;
+import org.xml.sax.InputSource;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.util.TreeSet;
 
 /**
  * Tests for the regex-based checkstyle rules defined in checkstyle.xml
@@ -21,8 +31,6 @@ public class RegexRulesTest {
 	private static final String MULTI = "RegexpMultiline";
 	private static final String SINGLE = "RegexpSingleline";
 
-	// --- BlankLineAfterBreak ---
-
 	@Test
 	public void testBlankLineAfterBreakClean() throws Exception {
 		assertTrue(BaseCheckTest.runRegexCheck(MULTI, FMT_BLANK_LINE_AFTER_BREAK, DIR + "cases.blanklineafterbreak.clean.java").isEmpty());
@@ -33,8 +41,6 @@ public class RegexRulesTest {
 		final var violations = BaseCheckTest.runRegexCheck(MULTI, FMT_BLANK_LINE_AFTER_BREAK, DIR + "cases.blanklineafterbreak.in.java");
 		assertEquals(2, violations.size());
 	}
-
-	// --- NoBlankLineAfterClassBrace ---
 
 	@Test
 	public void testNoBlankLineAfterClassBraceClean() throws Exception {
@@ -47,8 +53,6 @@ public class RegexRulesTest {
 		assertEquals(4, violations.size());
 	}
 
-	// --- NoBlankLineBeforeClosingBrace ---
-
 	@Test
 	public void testNoBlankLineBeforeClosingBraceClean() throws Exception {
 		assertTrue(BaseCheckTest.runRegexCheck(MULTI, FMT_NO_BLANK_LINE_BEFORE_CLOSING_BRACE, DIR + "cases.noblanklinebeforeclosingbrace.clean.java").isEmpty());
@@ -59,8 +63,6 @@ public class RegexRulesTest {
 		final var violations = BaseCheckTest.runRegexCheck(MULTI, FMT_NO_BLANK_LINE_BEFORE_CLOSING_BRACE, DIR + "cases.noblanklinebeforeclosingbrace.in.java");
 		assertEquals(1, violations.size());
 	}
-
-	// --- NoDoubleBlankLines ---
 
 	@Test
 	public void testNoDoubleBlankLinesClean() throws Exception {
@@ -73,8 +75,6 @@ public class RegexRulesTest {
 		assertEquals(1, violations.size());
 	}
 
-	// --- NoSpaceIndent ---
-
 	@Test
 	public void testNoSpaceIndentClean() throws Exception {
 		assertTrue(BaseCheckTest.runRegexCheck(SINGLE, FMT_NO_SPACE_INDENT, DIR + "cases.nospaceindent.clean.java").isEmpty());
@@ -86,7 +86,7 @@ public class RegexRulesTest {
 		assertEquals(2, violations.size());
 	}
 
-	// --- NoTrailingNewline (inline strings — editors add trailing newlines) ---
+	// inline strings, since editors add trailing newlines to fixture files
 
 	@Test
 	public void testNoTrailingNewlineClean() throws Exception {
@@ -103,7 +103,7 @@ public class RegexRulesTest {
 		assertEquals(1, BaseCheckTest.runRegexCheckInline(MULTI, FMT_NO_TRAILING_NEWLINE, "class Foo {}\n\n").size());
 	}
 
-	// --- NoTrailingWhitespace (inline strings — editors strip trailing whitespace) ---
+	// inline strings, since editors strip trailing whitespace from fixture files
 
 	@Test
 	public void testNoTrailingWhitespaceClean() throws Exception {
@@ -118,5 +118,41 @@ public class RegexRulesTest {
 	@Test
 	public void testNoTrailingWhitespaceViolationTab() throws Exception {
 		assertEquals(1, BaseCheckTest.runRegexCheckInline(SINGLE, FMT_NO_TRAILING_WHITESPACE, "int x;\t").size());
+	}
+
+	// MessageFormat would eat a quote or brace in a configured message
+	@Test
+	public void testShippedMessagesRenderVerbatim() throws Exception {
+		final var shippedUrl = RegexRulesTest.class.getResource("/com/etk2000/checkstyle/checkstyle.xml");
+		assertNotNull(shippedUrl);
+		final var shipped = ConfigurationLoader.loadConfiguration(
+				new InputSource(shippedUrl.toExternalForm()),
+				name -> "",
+				ConfigurationLoader.IgnoredModulesOptions.EXECUTE
+		);
+		final var checkerConfig = new DefaultConfiguration("Checker");
+		final var configured = new TreeSet<String>();
+		for (var child : shipped.getChildren()) {
+			if (child.getName().startsWith("Regexp")) {
+				checkerConfig.addChild(child);
+				configured.add(child.getProperty("message"));
+			}
+		}
+
+		final var tempFile = File.createTempFile("checkstyle-regex-messages", ".java");
+		try {
+			Files.writeString(
+					tempFile.toPath(),
+					"class A {\n\n\tint x; \n   int y;\n\n\n\tvoid m(int k) {\n\t\tswitch (k) {\n\t\t\tcase 1:\n\t\t\t\tbreak;\n"
+							+ "\t\t\tcase 2:\n\t\t\t\tbreak;\n\t\t}\n\n\t}\n}\n"
+			);
+			final var rendered = new TreeSet<String>();
+			for (var event : CheckerCache.process(checkerConfig, Checker.class.getClassLoader(), tempFile))
+				rendered.add(event.getMessage());
+			assertEquals(configured, rendered);
+		}
+		finally {
+			tempFile.delete();
+		}
 	}
 }

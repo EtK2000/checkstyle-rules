@@ -11,6 +11,7 @@ import org.gradle.api.tasks.TaskAction;
 import org.gradle.work.DisableCachingByDefault;
 import org.gradle.workers.WorkerExecutor;
 
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
 
 /**
@@ -25,24 +26,15 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 	public void fix() {
 		getWorkerExecutor().classLoaderIsolation(spec ->
 				spec.getClasspath().from(getCheckstyleClasspath())
-		).submit(
-				CheckstyleFixAction.class,
-				params -> {
-					params.getMinSdk().set(getMinSdk());
-					params.getSource().set(getSource());
-					if (getDryRun().isPresent()) {
-						params.getDryRun().set(getDryRun());
-						params.getDryRunTaskName().set(getDryRunTaskName());
-						params.getDryRunTotal().set(getDryRunTotal());
-					}
-					if (getTestSource().isPresent())
-						params.getTestSource().set(getTestSource());
-				}
-		);
+		).submit(CheckstyleFixAction.class, this::populate);
 	}
 
 	@Classpath
 	public abstract ConfigurableFileCollection getCheckstyleClasspath();
+
+	/** Where the user's {@code suppressions.xml} lives, as the checkstyle tasks read it. */
+	@Internal
+	public abstract DirectoryProperty getConfigDirectory();
 
 	@Internal
 	public abstract Property<Boolean> getDryRun();
@@ -64,4 +56,19 @@ public abstract class CheckstyleFixTask extends DefaultTask {
 
 	@Inject
 	public abstract WorkerExecutor getWorkerExecutor();
+
+	/** Hands the worker this task's inputs, an optional one only when it is set. */
+	void populate(@Nonnull CheckstyleFixAction.Params params) {
+		if (getConfigDirectory().isPresent())
+			params.getConfigDirectory().set(getConfigDirectory());
+		params.getMinSdk().set(getMinSdk());
+		params.getSource().set(getSource());
+		if (getDryRun().isPresent()) {
+			params.getDryRun().set(getDryRun());
+			params.getDryRunTaskName().set(getDryRunTaskName());
+			params.getDryRunTotal().set(getDryRunTotal());
+		}
+		if (getTestSource().isPresent())
+			params.getTestSource().set(getTestSource());
+	}
 }

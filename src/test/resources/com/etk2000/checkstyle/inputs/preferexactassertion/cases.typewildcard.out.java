@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.inputs.preferexactassertion;
 
 // === case: typewildcard_comparison_fires_under_j5_static_import ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class TypewildcardComparisonFiresUnderJ5StaticImportSlice {
 	void m() {
@@ -21,7 +21,7 @@ class TypewildcardJ4DoesNotCountUnqualifiedFiresViaJ5StaticSlice {
 // === end ===
 
 // === case: typewildcard_qualified_assert_comparison_still_fires ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: org.junit.Assert
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class TypewildcardQualifiedAssertComparisonStillFiresSlice {

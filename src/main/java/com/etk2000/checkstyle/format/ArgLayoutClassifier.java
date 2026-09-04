@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle.format;
 
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -16,9 +17,9 @@ import javax.annotation.Nullable;
 
 /**
  * Classifies a call/definition argument by the layout rule it carries, shared by the multiline-call
- * check and the reformatting helpers (and reusable by any future formatting check/fixer). Holds the
- * single source of truth for the static special-inline method set ({@code List.of} etc.) and the
- * call-level "inline-block configuration" recognition. The context-dependent
+ * check and the reformatting helpers. Holds the single source of truth for the static
+ * special-inline method set ({@code List.of} etc.) and the call-level "inline-block configuration"
+ * recognition. The context-dependent
  * {@code getString}/{@code getQuantityString} recognition stays in the check (which primes the
  * {@code Context} receiver set) and is threaded in via a {@code contextSpecial} predicate.
  */
@@ -132,20 +133,20 @@ public final class ArgLayoutClassifier {
 		final var lambda = directBracedLambda(arg);
 		if (lambda != null)
 			return lambda;
-		final var node = arg.getType() == TokenTypes.EXPR ? arg.getFirstChild() : arg;
+		final var node = arg.getType() == TokenTypes.EXPR ? AstText.firstRealChild(arg) : arg;
 		return node != null && node.getType() == TokenTypes.LITERAL_NEW && node.findFirstToken(TokenTypes.OBJBLOCK) != null
 				? node : null;
 	}
 
 	@CheckReturnValue
 	private static boolean isAndroidResourceId(@Nonnull DetailAST ast) {
-		final var node = ast.getType() == TokenTypes.EXPR ? ast.getFirstChild() : ast;
+		final var node = ast.getType() == TokenTypes.EXPR ? AstText.firstRealChild(ast) : ast;
 		if (node == null || node.getType() != TokenTypes.DOT)
 			return false;
 
 		var leftmost = node;
-		while (leftmost.getType() == TokenTypes.DOT && leftmost.getFirstChild() != null)
-			leftmost = leftmost.getFirstChild();
+		while (leftmost.getType() == TokenTypes.DOT && AstText.firstRealChild(leftmost) != null)
+			leftmost = AstText.firstRealChild(leftmost);
 
 		if (leftmost.getType() != TokenTypes.IDENT)
 			return false;
@@ -154,7 +155,7 @@ public final class ArgLayoutClassifier {
 			return true;
 
 		if ("android".equals(leftmost.getText())) {
-			final var next = leftmost.getNextSibling();
+			final var next = AstText.nextRealSibling(leftmost);
 			return next != null && next.getType() == TokenTypes.IDENT && "R".equals(next.getText());
 		}
 		return false;
@@ -200,14 +201,18 @@ public final class ArgLayoutClassifier {
 	private static boolean isLiteralThis(@Nonnull DetailAST ast) {
 		if (ast.getType() == TokenTypes.LITERAL_THIS)
 			return true;
-		if (ast.getType() == TokenTypes.EXPR)
-			return ast.getFirstChild() != null && ast.getFirstChild().getType() == TokenTypes.LITERAL_THIS;
+		if (ast.getType() == TokenTypes.EXPR) {
+			final var value = AstText.firstRealChild(ast);
+			return value != null && value.getType() == TokenTypes.LITERAL_THIS;
+		}
 		return false;
 	}
 
 	@CheckReturnValue
 	public static boolean isMethodCallNamed(@Nonnull DetailAST methodCall, @Nonnull String name) {
-		final var firstChild = methodCall.getFirstChild();
+		// firstRealChild: a comment written before the call (`/*c*/ foo(1)`) is the METHOD_CALL's
+		// own first child, so a blind getFirstChild reads the comment as the callee
+		final var firstChild = AstText.firstRealChild(methodCall);
 		if (firstChild == null)
 			return false;
 
@@ -289,7 +294,7 @@ public final class ArgLayoutClassifier {
 	 */
 	@CheckReturnValue
 	public static boolean isStaticSpecialInlineMethodCall(@Nonnull DetailAST methodCall) {
-		final var firstChild = methodCall.getFirstChild();
+		final var firstChild = AstText.firstRealChild(methodCall);
 		if (firstChild == null)
 			return false;
 
@@ -299,7 +304,8 @@ public final class ArgLayoutClassifier {
 		}
 
 		if (firstChild.getType() == TokenTypes.DOT) {
-			final var receiver = firstChild.getFirstChild();
+			// firstRealChild: `/*c*/ List.of(1, 2)` puts the comment where the receiver belongs
+			final var receiver = AstText.firstRealChild(firstChild);
 			// getLastChild, not getNextSibling: an explicit type witness (Receiver.<T>method())
 			// inserts a TYPE_ARGUMENTS node between the receiver and the method name
 			final var methodName = firstChild.getLastChild();
@@ -313,10 +319,10 @@ public final class ArgLayoutClassifier {
 
 				// FQN, e.g. java.util.Arrays.asList(...): extract last segment
 				if (receiver.getType() == TokenTypes.DOT) {
-					var last = receiver.getFirstChild();
-					while (last.getNextSibling() != null)
-						last = last.getNextSibling();
-					if (last.getType() == TokenTypes.IDENT)
+					var last = AstText.firstRealChild(receiver);
+					for (var next = AstText.nextRealSibling(last); next != null; next = AstText.nextRealSibling(next))
+						last = next;
+					if (last != null && last.getType() == TokenTypes.IDENT)
 						return entry.contains(last.getText());
 				}
 			}
@@ -328,8 +334,10 @@ public final class ArgLayoutClassifier {
 	private static boolean isTernary(@Nonnull DetailAST ast) {
 		if (ast.getType() == TokenTypes.QUESTION)
 			return true;
-		if (ast.getType() == TokenTypes.EXPR)
-			return ast.getFirstChild() != null && ast.getFirstChild().getType() == TokenTypes.QUESTION;
+		if (ast.getType() == TokenTypes.EXPR) {
+			final var value = AstText.firstRealChild(ast);
+			return value != null && value.getType() == TokenTypes.QUESTION;
+		}
 		return false;
 	}
 
@@ -359,12 +367,16 @@ public final class ArgLayoutClassifier {
 	/**
 	 * The top-level arguments of {@code elist} (its non-{@code COMMA} children) in source order. A
 	 * shared helper for the arg-count/arg-shape classifiers so each does not re-walk the child list.
+	 *
+	 * <p>Comment children are excluded. A comment written before a comma is a direct {@code ELIST}
+	 * child, so counting it inflates {@code size()} and silently switches off every arg-count gate
+	 * below.
 	 */
 	@CheckReturnValue
 	@Nonnull
 	private static List<DetailAST> topLevelArgs(@Nonnull DetailAST elist) {
 		final var args = new ArrayList<DetailAST>();
-		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
+		for (var child = AstText.firstRealChild(elist); child != null; child = AstText.nextRealSibling(child)) {
 			if (child.getType() != TokenTypes.COMMA)
 				args.add(child);
 		}

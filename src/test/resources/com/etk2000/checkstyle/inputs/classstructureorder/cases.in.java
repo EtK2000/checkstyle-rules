@@ -4,7 +4,7 @@ package com.etk2000.checkstyle.inputs.classstructureorder;
 class InputClassStructureConstructorThenStaticViolation {
 	InputClassStructureConstructorThenStaticViolation() {}
 
-	static void staticMethod() {} // violation: 'staticMethod' (static method) must appear before constructor/instance initializer section.
+	static void staticMethod() {} // violation: 'staticMethod' (static method) must appear before the constructor/instance initializer section.
 }
 // === end ===
 
@@ -15,7 +15,7 @@ enum InputClassStructureEnumViolation {
 
 	void instanceMethod() {}
 
-	static void staticMethod() {} // violation: 'staticMethod' (static method) must appear before instance method section.
+	static void staticMethod() {} // violation: 'staticMethod' (static method) must appear before the instance method section.
 }
 // === end ===
 
@@ -23,7 +23,7 @@ enum InputClassStructureEnumViolation {
 class InputClassStructureFieldAfterMethodViolation {
 	void method() {}
 
-	int field; // violation: 'field' (instance field) must appear before instance method section.
+	int field; // violation: 'field' (instance field) must appear before the instance method section.
 }
 // === end ===
 
@@ -31,7 +31,7 @@ class InputClassStructureFieldAfterMethodViolation {
 class InputClassStructureInnerTypeAfterMethodViolation {
 	void method() {}
 
-	static class Inner {} // violation: 'Inner' (inner type) must appear before instance method section.
+	static class Inner {} // violation: 'Inner' (inner type) must appear before the instance method section.
 }
 // === end ===
 
@@ -39,7 +39,7 @@ class InputClassStructureInnerTypeAfterMethodViolation {
 class InputClassStructureInstanceInitAfterMethodViolation {
 	void method() {}
 
-	{ } // violation: '<instance init>' (constructor/instance initializer) must appear before instance method section.
+	{ } // violation: '<instance init>' (constructor/instance initializer) must appear before the instance method section.
 }
 // === end ===
 
@@ -47,11 +47,11 @@ class InputClassStructureInstanceInitAfterMethodViolation {
 class InputClassStructureMultipleViolationsViolation {
 	void instance1() {}
 
-	static void static1() {} // violation: 'static1' (static method) must appear before instance method section.
+	static void static1() {} // violation: 'static1' (static method) must appear before the instance method section.
 
 	void instance2() {}
 
-	static void static2() {} // violation: 'static2' (static method) must appear before instance method section.
+	static void static2() {} // violation: 'static2' (static method) must appear before the instance method section.
 }
 // === end ===
 
@@ -59,13 +59,13 @@ class InputClassStructureMultipleViolationsViolation {
 class InputClassStructureNestedScopesViolation {
 	void outerInstance() {}
 
-	static class Inner { // violation: 'Inner' (inner type) must appear before instance method section.
+	static class Inner { // violation: 'Inner' (inner type) must appear before the instance method section.
 		static void innerStatic() {}
 
 		void innerInstance() {}
 	}
 
-	static void outerStatic() {} // violation: 'outerStatic' (static method) must appear before instance method section.
+	static void outerStatic() {} // violation: 'outerStatic' (static method) must appear before the instance method section.
 }
 // === end ===
 
@@ -73,6 +73,6 @@ class InputClassStructureNestedScopesViolation {
 class InputClassStructureStaticAfterInstanceMethodViolation {
 	void instanceMethod() {}
 
-	static void staticMethod() {} // violation: 'staticMethod' (static method) must appear before instance method section.
+	static void staticMethod() {} // violation: 'staticMethod' (static method) must appear before the instance method section.
 }
 // === end ===

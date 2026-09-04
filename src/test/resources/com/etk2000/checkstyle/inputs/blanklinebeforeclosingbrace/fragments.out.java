@@ -36,3 +36,19 @@ content
 	int x;
 }
 // === end ===
+
+// === case: fix_blank_after_text_block_close ===
+class T {
+	String s = """
+		x
+		""";
+}
+// === end ===
+
+// === case: fix_blank_inside_block_comment ===
+class T {
+	/* note
+	}
+	*/
+}
+// === end ===

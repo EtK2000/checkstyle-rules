@@ -10,12 +10,42 @@ class InputPreferBulkOperationAddAllIndexedSliceViolation {
 }
 // === end ===
 
+// === case: add_all_indexed_both_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationAddAllIndexedBothTypeWitnessSliceViolation {
+	void m(List<String> target, List<String> source) {
+		for (var i = 0; i < source.size(); ++i) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+			target.<String>add(source.<String>get(i));
+	}
+}
+// === end ===
+
+// === case: add_all_indexed_get_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationAddAllIndexedGetTypeWitnessSliceViolation {
+	void m(List<String> target, List<String> source) {
+		for (var i = 0; i < source.size(); ++i) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+			target.add(source.<String>get(i));
+	}
+}
+// === end ===
+
 // === case: add_all_indexed_post_inc ===
 // imports: java.util.List
 class InputPreferBulkOperationAddAllIndexedPostIncSliceViolation {
 	void m(List<String> target, List<String> source) {
 		for (var i = 0; i < source.size(); i++) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
 			target.add(source.get(i));
+	}
+}
+// === end ===
+
+// === case: add_all_indexed_target_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationAddAllIndexedTargetTypeWitnessSliceViolation {
+	void m(List<String> target, List<String> source) {
+		for (var i = 0; i < source.size(); ++i) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+			target.<String>add(source.get(i));
 	}
 }
 // === end ===
@@ -221,6 +251,175 @@ class InputPreferBulkOperationArrayFillValueContainsUnaryPlusAndBracketSliceViol
 }
 // === end ===
 
+// === case: collections_add_all_import_present ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllImportPresentSliceViolation {
+	void m(List<String> target, String[] source) {
+		for (var item : source) // violation: Use 'Collections.addAll(target, source)' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_method_call_array_source ===
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllMethodCallArraySourceSliceViolation {
+	void m(List<String> target, String csv) {
+		for (var item : csv.split(",")) // violation: Use 'Collections.addAll(target, csv.split(","))' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_nested_loop_var_element ===
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllNestedLoopVarElementSliceViolation {
+	void m(List<String> target, String[][] grid) {
+		for (var row : grid) {
+			for (var cell : row) // violation: Use 'Collections.addAll(target, row)' instead of a loop that adds elements one at a time.
+				target.add(cell);
+		}
+	}
+}
+// === end ===
+
+// === case: collections_add_all_object_array ===
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllObjectArraySliceViolation {
+	void m(List<String> target, String[] source) {
+		for (var item : source) // violation: Use 'Collections.addAll(target, source)' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_paren_source ===
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllParenSourceSliceViolation {
+	void m(List<String> target, String[] source) {
+		for (var item : (source)) // violation: Use 'Collections.addAll(target, source)' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_pattern_variable_in_scope ===
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllPatternVariableInScopeSliceViolation {
+	void m(List<String> target, Object o) {
+		if (o instanceof String[] arr) {
+			for (var item : arr) // violation: Use 'Collections.addAll(target, arr)' instead of a loop that adds elements one at a time.
+				target.add(item);
+		}
+	}
+}
+// === end ===
+
+// === case: collections_add_all_two_dim_object_array ===
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllTwoDimObjectArraySliceViolation {
+	void m(List<String[]> target, String[][] source) {
+		for (var item : source) // violation: Use 'Collections.addAll(target, source)' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_var_local_from_dotted_call ===
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllVarLocalFromDottedCallSliceViolation {
+	void m(List<String> target, String csv) {
+		final var parts = csv.split(",");
+		for (var item : parts) // violation: Use 'Collections.addAll(target, parts)' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_varargs ===
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllVarargsSliceViolation {
+	void m(List<String> target, String... source) {
+		for (var item : source) // violation: Use 'Collections.addAll(target, source)' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_varargs_array_element ===
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllVarargsArrayElementSliceViolation {
+	void m(List<String[]> target, String[]... source) {
+		for (var item : source) // violation: Use 'Collections.addAll(target, source)' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_varargs_primitive_array_element ===
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllVarargsPrimitiveArrayElementSliceViolation {
+	void m(List<int[]> target, int[]... source) {
+		for (var item : source) // violation: Use 'Collections.addAll(target, source)' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_varargs_record_component ===
+// imports: java.util.List
+record InputPreferBulkOperationCollectionsAddAllVarargsRecordComponentSliceViolation(String... source) {
+	void m(List<String> target) {
+		for (var item : source) // violation: Use 'Collections.addAll(target, source)' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_varargs_record_component_array_element ===
+// imports: java.util.List
+record InputPreferBulkOperationCollectionsAddAllVarargsRecordComponentArrayElementSliceViolation(String[]... source) {
+	void m(List<String[]> target) {
+		for (var item : source) // violation: Use 'Collections.addAll(target, source)' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_annotated_type_witness ===
+// imports: java.lang.annotation.ElementType
+// imports: java.lang.annotation.Target
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllAnnotatedTypeWitnessSliceViolation {
+	@Target(ElementType.TYPE_USE)
+	@interface A {
+	}
+
+	void m(List<String> target, List<String> source) {
+		for (var item : source) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+			target.<@A String>add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_anon_inherited_target ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllAnonInheritedTargetSliceViolation {
+	static class Base {
+		final List<String> target = new ArrayList<>();
+	}
+
+	Base holder = new Base() {
+		void run(List<String> source) {
+			for (var item : source) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+				target.add(item);
+		}
+	};
+}
+// === end ===
+
 // === case: for_each_add_all_braced ===
 // imports: java.util.List
 class InputPreferBulkOperationForEachAddAllBracedSliceViolation {
@@ -252,6 +451,100 @@ class InputPreferBulkOperationForEachAddAllBracelessWithTrailingCommentSliceViol
 }
 // === end ===
 
+// === case: for_each_add_all_cast_target_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllCastTargetTypeWitnessSliceViolation {
+	void m(List<String> source, Object o) {
+		for (var item : source) // violation: Use '((List) o).addAll(source)' instead of a loop that adds elements one at a time.
+			((List) o).<String>add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_dotted_target_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllDottedTargetTypeWitnessSliceViolation {
+	List<String> target;
+
+	void m(List<String> source) {
+		for (var item : source) // violation: Use 'this.target.addAll(source)' instead of a loop that adds elements one at a time.
+			this.target.<String>add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_double_paren_source ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllDoubleParenSourceSliceViolation {
+	void m(List<String> target, List<String> source) {
+		for (var item : ((source))) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_enum_constant_super_method_target ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+enum InputPreferBulkOperationForEachAddAllEnumConstantSuperMethodTargetSliceViolation {
+	A {
+		@Override
+		void go(List<String> source) {
+			for (var item : source) // violation: Use 'super.target().addAll(source)' instead of a loop that adds elements one at a time.
+				super.target().add(item);
+		}
+	};
+
+	final List<String> items = new ArrayList<>();
+
+	void go(List<String> source) {
+	}
+
+	List<String> target() {
+		return items;
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_enum_constant_target ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+enum InputPreferBulkOperationForEachAddAllEnumConstantTargetSliceViolation {
+	A {
+		@Override
+		void go(List<String> source) {
+			for (var item : source) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+				target.add(item);
+		}
+	};
+
+	final List<String> target = new ArrayList<>();
+
+	void go(List<String> source) {
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_generic_call_source ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllGenericCallSourceSliceViolation {
+	void m(List<String> target, List<String> source) {
+		for (var item : List.<String>copyOf(source)) // violation: Use 'target.addAll(List.<String>copyOf(source))' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_generic_call_source_target_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllGenericCallSourceTargetTypeWitnessSliceViolation {
+	void m(List<String> target, List<String> source) {
+		for (var item : List.<String>copyOf(source)) // violation: Use 'target.addAll(List.<String>copyOf(source))' instead of a loop that adds elements one at a time.
+			target.<String>add(item);
+	}
+}
+// === end ===
+
 // === case: for_each_add_all_method_call_source ===
 // imports: java.util.List
 // imports: java.util.Map
@@ -277,6 +570,10 @@ class InputPreferBulkOperationForEachAddAllMultiLineDottedSourceSliceViolation {
 // === case: for_each_add_all_multi_line_paren_source ===
 // imports: java.util.List
 class InputPreferBulkOperationForEachAddAllMultiLineParenSourceSliceViolation {
+	List<String> getList(int a, int b) {
+		return List.of();
+	}
+
 	void m(List<String> target, int a, int b) {
 		for (var item : getList( // violation: Use 'target.addAll(getList(a, b))' instead of a loop that adds elements one at a time.
 				a,
@@ -287,12 +584,140 @@ class InputPreferBulkOperationForEachAddAllMultiLineParenSourceSliceViolation {
 }
 // === end ===
 
+// === case: for_each_add_all_multi_line_string_literal_mid_span ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllMultiLineStringLiteralMidSpanSliceViolation {
+	void m(List<String> target, List<String> src) {
+		for (var item : src.subList( // violation: Use 'target.addAll(src.subList("a".length(), 2))' instead of a loop that adds elements one at a time.
+				"a".length(),
+				2
+		))
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_multi_line_supplementary_end_line ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllMultiLineSupplementaryEndLineSliceViolation {
+	void m(List<String> target, List<String> src) {
+		for (var item : src // violation: Use 'target.addAll(src.subList(0, "𝐀".length()))' instead of a loop that adds elements one at a time.
+				.subList(0, "𝐀".length()))
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_nested_generic_type_witness ===
+// imports: java.util.List
+// imports: java.util.Map
+class InputPreferBulkOperationForEachAddAllNestedGenericTypeWitnessSliceViolation {
+	void m(List<Map<String, Integer>> target, List<Map<String, Integer>> source) {
+		for (var item : source) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+			target.<Map<String, Integer>>add(item);
+	}
+}
+// === end ===
+
 // === case: for_each_add_all_nested_paren_source ===
 // imports: java.util.List
 class InputPreferBulkOperationForEachAddAllNestedParenSourceSliceViolation {
+	List<String> getList(int a, int b) {
+		return List.of();
+	}
+
 	void m(List<String> target, int a, int b) {
 		for (var item : getList(a, b)) // violation: Use 'target.addAll(getList(a, b))' instead of a loop that adds elements one at a time.
 			target.add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_paren_source ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllParenSourceSliceViolation {
+	void m(List<String> target, List<String> source) {
+		for (var item : (source)) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_qualified_target_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllQualifiedTargetTypeWitnessSliceViolation {
+	static class Holder {
+		static List<String> list;
+	}
+
+	void m(List<String> source) {
+		for (var item : source) // violation: Use 'Holder.list.addAll(source)' instead of a loop that adds elements one at a time.
+			Holder.list.<String>add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_qualified_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllQualifiedTypeWitnessSliceViolation {
+	static class Box {
+		static class Item {
+		}
+	}
+
+	void m(List<Box.Item> target, List<Box.Item> source) {
+		for (var item : source) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+			target.<Box.Item>add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_spaced_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllSpacedTypeWitnessSliceViolation {
+	void m(List<String> target, List<String> source) {
+		for (var item : source) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+			target. <String> add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_supplementary_before_target ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllSupplementaryBeforeTargetSliceViolation {
+	void m(List<String> target𝐀, List<String> source) {
+		for (var item : source) // violation: Use 'target𝐀.addAll(source)' instead of a loop that adds elements one at a time.
+			target𝐀.add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_supplementary_inside_source ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllSupplementaryInsideSourceSliceViolation {
+	void m(List<String> target) {
+		for (var item : List.of("𝐀", "x")) // violation: Use 'target.addAll(List.of("𝐀", "x"))' instead of a loop that adds elements one at a time.
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_supplementary_trailing_only ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllSupplementaryTrailingOnlySliceViolation {
+	void m(List<String> target, List<String> source) {
+		for (var item : source) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+			target.add(item); // 𝐀
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_target_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllTargetTypeWitnessSliceViolation {
+	void m(List<String> target, List<String> source) {
+		for (var item : source) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+			target.<String>add(item);
 	}
 }
 // === end ===
@@ -313,6 +738,15 @@ class InputPreferBulkOperationForEachLambdaAddAllBlockBodyMultiLineSliceViolatio
 		list.forEach(item -> { // violation: Use 'other.addAll(list)' instead of a loop that adds elements one at a time.
 			other.add(item);
 		});
+	}
+}
+// === end ===
+
+// === case: for_each_lambda_add_all_both_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachLambdaAddAllBothTypeWitnessSliceViolation {
+	void m(List<String> list, List<String> other) {
+		list.<String>forEach(item -> other.<String>add(item)); // violation: Use 'other.addAll(list)' instead of a loop that adds elements one at a time.
 	}
 }
 // === end ===
@@ -369,6 +803,24 @@ class InputPreferBulkOperationForEachLambdaAddAllDottedTargetSliceViolation {
 class InputPreferBulkOperationForEachLambdaAddAllParenthesizedSliceViolation {
 	void m(List<String> list, List<String> other) {
 		list.forEach((item) -> other.add(item)); // violation: Use 'other.addAll(list)' instead of a loop that adds elements one at a time.
+	}
+}
+// === end ===
+
+// === case: for_each_lambda_add_all_source_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachLambdaAddAllSourceTypeWitnessSliceViolation {
+	void m(List<String> list, List<String> other) {
+		list.<String>forEach(item -> other.add(item)); // violation: Use 'other.addAll(list)' instead of a loop that adds elements one at a time.
+	}
+}
+// === end ===
+
+// === case: for_each_lambda_add_all_target_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachLambdaAddAllTargetTypeWitnessSliceViolation {
+	void m(List<String> list, List<String> other) {
+		list.forEach(item -> other.<String>add(item)); // violation: Use 'other.addAll(list)' instead of a loop that adds elements one at a time.
 	}
 }
 // === end ===
@@ -473,6 +925,22 @@ class InputPreferBulkOperationForEachLambdaNestedForEachInnerFixedSliceViolation
 }
 // === end ===
 
+// === case: for_each_lambda_nested_for_each_inner_fixed_on_a_qualified_generic_receiver ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+// imports: java.util.StringJoiner
+class InputPreferBulkOperationForEachLambdaNestedForEachInnerFixedOnAQualifiedGenericReceiverSliceViolation {
+	static class Outer<Q> {
+		class Inner<V> extends ArrayList<V> {
+		}
+	}
+
+	void m(Outer<StringJoiner>.Inner<List<String>> lists, List<String> target) {
+		lists.forEach(list -> list.forEach(item -> target.add(item))); // violation: Use 'target.addAll(list)' instead of a loop that adds elements one at a time.
+	}
+}
+// === end ===
+
 // === case: for_each_lambda_preserves_leading_if_statement ===
 // imports: java.util.Map
 class InputPreferBulkOperationForEachLambdaPreservesLeadingIfStatementSliceViolation {
@@ -487,6 +955,15 @@ class InputPreferBulkOperationForEachLambdaPreservesLeadingIfStatementSliceViola
 class InputPreferBulkOperationForEachLambdaPutAllSliceViolation {
 	void m(Map<String, String> source, Map<String, String> target) {
 		source.forEach((k, v) -> target.put(k, v)); // violation: Use 'target.putAll(source)' instead of a loop that puts entries one at a time.
+	}
+}
+// === end ===
+
+// === case: for_each_lambda_put_all_both_type_witness ===
+// imports: java.util.Map
+class InputPreferBulkOperationForEachLambdaPutAllBothTypeWitnessSliceViolation {
+	void m(Map<String, String> source, Map<String, String> target) {
+		source.<String>forEach((k, v) -> target.<String, String>put(k, v)); // violation: Use 'target.putAll(source)' instead of a loop that puts entries one at a time.
 	}
 }
 // === end ===
@@ -520,6 +997,24 @@ class InputPreferBulkOperationForEachLambdaPutAllPreservesTrailingContentSliceVi
 }
 // === end ===
 
+// === case: for_each_lambda_put_all_source_type_witness ===
+// imports: java.util.Map
+class InputPreferBulkOperationForEachLambdaPutAllSourceTypeWitnessSliceViolation {
+	void m(Map<String, String> source, Map<String, String> target) {
+		source.<String>forEach((k, v) -> target.put(k, v)); // violation: Use 'target.putAll(source)' instead of a loop that puts entries one at a time.
+	}
+}
+// === end ===
+
+// === case: for_each_lambda_put_all_target_type_witness ===
+// imports: java.util.Map
+class InputPreferBulkOperationForEachLambdaPutAllTargetTypeWitnessSliceViolation {
+	void m(Map<String, String> source, Map<String, String> target) {
+		source.forEach((k, v) -> target.<String, String>put(k, v)); // violation: Use 'target.putAll(source)' instead of a loop that puts entries one at a time.
+	}
+}
+// === end ===
+
 // === case: for_each_lambda_single_line_block_body_put_all ===
 // imports: java.util.Map
 class InputPreferBulkOperationForEachLambdaSingleLineBlockBodyPutAllSliceViolation {
@@ -534,6 +1029,15 @@ class InputPreferBulkOperationForEachLambdaSingleLineBlockBodyPutAllSliceViolati
 class InputPreferBulkOperationForEachMethodRefAddSliceViolation {
 	void m(List<String> list, List<String> other) {
 		list.forEach(other::add); // violation: Use 'other.addAll(list)' instead of a loop that adds elements one at a time.
+	}
+}
+// === end ===
+
+// === case: for_each_method_ref_add_both_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachMethodRefAddBothTypeWitnessSliceViolation {
+	void m(List<String> list, List<String> other) {
+		list.<String>forEach(other::<String>add); // violation: Use 'other.addAll(list)' instead of a loop that adds elements one at a time.
 	}
 }
 // === end ===
@@ -554,6 +1058,24 @@ class InputPreferBulkOperationForEachMethodRefAddDottedReceiverSliceViolation {
 class InputPreferBulkOperationForEachMethodRefAddParenthesizedQualifierSliceViolation {
 	void m(List<String> list, List<String> a, List<String> b, boolean cond) {
 		list.forEach((cond ? a : b)::add); // violation: Use '(cond ? a : b).addAll(list)' instead of a loop that adds elements one at a time.
+	}
+}
+// === end ===
+
+// === case: for_each_method_ref_add_source_type_witness ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachMethodRefAddSourceTypeWitnessSliceViolation {
+	void m(List<String> list, List<String> other) {
+		list.<String>forEach(other::add); // violation: Use 'other.addAll(list)' instead of a loop that adds elements one at a time.
+	}
+}
+// === end ===
+
+// === case: for_each_method_ref_add_supplementary_qualifier ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachMethodRefAddSupplementaryQualifierSliceViolation {
+	void m(List<String> list, List<String> other𝐀) {
+		list.forEach(other𝐀::add); // violation: Use 'other𝐀.addAll(list)' instead of a loop that adds elements one at a time.
 	}
 }
 // === end ===
@@ -624,11 +1146,38 @@ class InputPreferBulkOperationForEachMethodRefPutMultiLineReceiverSliceViolation
 }
 // === end ===
 
+// === case: for_each_method_ref_put_source_type_witness ===
+// imports: java.util.Map
+class InputPreferBulkOperationForEachMethodRefPutSourceTypeWitnessSliceViolation {
+	void m(Map<String, String> source, Map<String, String> target) {
+		source.<String>forEach(target::put); // violation: Use 'target.putAll(source)' instead of a loop that puts entries one at a time.
+	}
+}
+// === end ===
+
+// === case: for_each_method_ref_put_supplementary_before_call ===
+// imports: java.util.Map
+class InputPreferBulkOperationForEachMethodRefPutSupplementaryBeforeCallSliceViolation {
+	void m(Map<String, String> source, Map<String, String> target, Object lock𝐀) {
+		synchronized (lock𝐀) { source.forEach(target::put); } // violation: Use 'target.putAll(source)' instead of a loop that puts entries one at a time.
+	}
+}
+// === end ===
+
 // === case: for_each_method_ref_put_ternary_source ===
 // imports: java.util.Map
 class InputPreferBulkOperationForEachMethodRefPutTernarySourceSliceViolation {
 	void m(Map<String, String> a, Map<String, String> b, boolean cond, Map<String, String> target) {
 		(cond ? a : b).forEach(target::put); // violation: Use 'target.putAll((cond ? a : b))' instead of a loop that puts entries one at a time.
+	}
+}
+// === end ===
+
+// === case: for_each_method_ref_put_type_witness ===
+// imports: java.util.Map
+class InputPreferBulkOperationForEachMethodRefPutTypeWitnessSliceViolation {
+	void m(Map<String, String> source, Map<String, String> target) {
+		source.forEach(target::<String, String>put); // violation: Use 'target.putAll(source)' instead of a loop that puts entries one at a time.
 	}
 }
 // === end ===
@@ -640,6 +1189,16 @@ class InputPreferBulkOperationIndexedAddAllBracedSliceViolation {
 		for (var i = 0; i < source.size(); ++i) { // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
 			target.add(source.get(i));
 		}
+	}
+}
+// === end ===
+
+// === case: indexed_add_all_paren_source ===
+// imports: java.util.List
+class InputPreferBulkOperationIndexedAddAllParenSourceSliceViolation {
+	void m(List<String> target, List<String> source) {
+		for (var i = 0; i < (source).size(); ++i) // violation: Use 'target.addAll(source)' instead of a loop that adds elements one at a time.
+			target.add((source).get(i));
 	}
 }
 // === end ===
@@ -667,6 +1226,16 @@ class InputPreferBulkOperationPutAllEntrySetBlockCommentWithFakeBraceSliceViolat
 }
 // === end ===
 
+// === case: put_all_entry_set_both_type_witness ===
+// imports: java.util.Map
+class InputPreferBulkOperationPutAllEntrySetBothTypeWitnessSliceViolation {
+	void m(Map<String, String> target, Map<String, String> source) {
+		for (var entry : source.<String>entrySet()) // violation: Use 'target.putAll(source)' instead of a loop that puts entries one at a time.
+			target.<String, String>put(entry.getKey(), entry.getValue());
+	}
+}
+// === end ===
+
 // === case: put_all_entry_set_braced ===
 // imports: java.util.Map
 class InputPreferBulkOperationPutAllEntrySetBracedSliceViolation {
@@ -674,6 +1243,46 @@ class InputPreferBulkOperationPutAllEntrySetBracedSliceViolation {
 		for (var entry : source.entrySet()) { // violation: Use 'target.putAll(source)' instead of a loop that puts entries one at a time.
 			target.put(entry.getKey(), entry.getValue());
 		}
+	}
+}
+// === end ===
+
+// === case: put_all_entry_set_paren_source ===
+// imports: java.util.Map
+class InputPreferBulkOperationPutAllEntrySetParenSourceSliceViolation {
+	void m(Map<String, String> target, Map<String, String> source) {
+		for (var entry : (source).entrySet()) // violation: Use 'target.putAll(source)' instead of a loop that puts entries one at a time.
+			target.put(entry.getKey(), entry.getValue());
+	}
+}
+// === end ===
+
+// === case: put_all_entry_set_paren_whole_call ===
+// imports: java.util.Map
+class InputPreferBulkOperationPutAllEntrySetParenWholeCallSliceViolation {
+	void m(Map<String, String> target, Map<String, String> source) {
+		for (var entry : (source.entrySet())) // violation: Use 'target.putAll(source)' instead of a loop that puts entries one at a time.
+			target.put(entry.getKey(), entry.getValue());
+	}
+}
+// === end ===
+
+// === case: put_all_entry_set_source_type_witness ===
+// imports: java.util.Map
+class InputPreferBulkOperationPutAllEntrySetSourceTypeWitnessSliceViolation {
+	void m(Map<String, String> target, Map<String, String> source) {
+		for (var entry : source.<String>entrySet()) // violation: Use 'target.putAll(source)' instead of a loop that puts entries one at a time.
+			target.put(entry.getKey(), entry.getValue());
+	}
+}
+// === end ===
+
+// === case: put_all_entry_set_target_type_witness ===
+// imports: java.util.Map
+class InputPreferBulkOperationPutAllEntrySetTargetTypeWitnessSliceViolation {
+	void m(Map<String, String> target, Map<String, String> source) {
+		for (var entry : source.entrySet()) // violation: Use 'target.putAll(source)' instead of a loop that puts entries one at a time.
+			target.<String, String>put(entry.getKey(), entry.getValue());
 	}
 }
 // === end ===

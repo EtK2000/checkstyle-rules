@@ -10,7 +10,7 @@ public class AnnotationSameLineFixerTest {
 	private final CheckstyleFixer fixer = new AnnotationSameLineFixer();
 
 	@Test
-	public void testAnnotationUnterminatedParenSkipsJoin() throws Exception {
-		assertSkip(fixer, TOPIC, "annotation_unterminated_paren_skips_join");
+	public void testUnparseableBuffer() throws Exception {
+		assertSkip(fixer, TOPIC, "unparseable_buffer");
 	}
 }

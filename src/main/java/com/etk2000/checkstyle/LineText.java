@@ -26,6 +26,16 @@ public final class LineText {
 	}
 
 	/**
+	 * The inverse of {@link #charIndexOfColumn}: the zero-based code-point column of the char
+	 * index {@code charIndex} of {@code line}, clamped to the line, for comparing a char index
+	 * against an AST position.
+	 */
+	@CheckReturnValue
+	public static int columnOfCharIndex(@Nonnull String line, int charIndex) {
+		return line.codePointCount(0, Math.clamp(charIndex, 0, line.length()));
+	}
+
+	/**
 	 * Returns the leading indentation (the run of tabs and spaces at the start)
 	 * of {@code line}. This codebase indents with tabs/spaces only, so other
 	 * whitespace forms are deliberately not treated as indentation.
@@ -107,6 +117,34 @@ public final class LineText {
 		for (var i = Math.min(pos, line.length()) - 1; i >= 0 && line.charAt(i) == '\\'; --i)
 			++backslashes;
 		return backslashes % 2 != 0;
+	}
+
+	/**
+	 * {@link Character#isJavaIdentifierPart(char)} for one char of code outside literals and
+	 * comments, where a surrogate can only be half of a supplementary identifier letter, which
+	 * the char-wise test rejects.
+	 */
+	@CheckReturnValue
+	public static boolean isIdentifierPart(char c) {
+		return Character.isJavaIdentifierPart(c) || Character.isSurrogate(c);
+	}
+
+	/** {@link Character#isJavaIdentifierPart(int)}, so a call site can pass a code point or a char alike. */
+	@CheckReturnValue
+	public static boolean isIdentifierPart(int codePoint) {
+		return Character.isJavaIdentifierPart(codePoint);
+	}
+
+	/** {@link #isIdentifierPart(char)} for the first char of an identifier. */
+	@CheckReturnValue
+	public static boolean isIdentifierStart(char c) {
+		return Character.isJavaIdentifierStart(c) || Character.isSurrogate(c);
+	}
+
+	/** {@link Character#isJavaIdentifierStart(int)}, so a call site can pass a code point or a char alike. */
+	@CheckReturnValue
+	public static boolean isIdentifierStart(int codePoint) {
+		return Character.isJavaIdentifierStart(codePoint);
 	}
 
 	/**

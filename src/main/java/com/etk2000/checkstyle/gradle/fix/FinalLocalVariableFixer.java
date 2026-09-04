@@ -37,9 +37,7 @@ class FinalLocalVariableFixer implements CheckstyleFixer {
 	 * inside a literal or trailing comment isn't mistaken for a statement separator.
 	 * This is what lets a declaration that shares a line with a preceding statement
 	 * ({@code X = Foo.X; int y = 0;}) take its {@code final} before its own type
-	 * rather than at the start of the line. {@code charColumn} is a char index (the
-	 * caller has already converted the pipeline's code-point column), so it maps
-	 * directly onto the mask.
+	 * rather than at the start of the line.
 	 */
 	@CheckReturnValue
 	private static int declStart(@Nonnull String line, int charColumn) {
@@ -92,16 +90,11 @@ class FinalLocalVariableFixer implements CheckstyleFixer {
 
 	@Nonnull
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
 		final var line = lines.get(lineIndex);
-		// column is a code-point column from the pipeline; convert to a char index
-		// once here so declStart's mask scan and the blank-prefix test both index
-		// correctly on supplementary-char lines. A negative, past-end, or at-end
-		// column can only be a synthetic position the check never reports (a real
-		// variable name always has a `;`/`=`/`,` after it, so its start is strictly
-		// inside the line), so refuse it rather than fabricating a fix at an
-		// arbitrary spot
-		final var charColumn = LineText.charIndexOfColumn(line, column);
+		// a negative, past-end, or at-end column can only be a synthetic position the check never
+		// reports (a real variable name always has a `;`/`=`/`,` after it, so its start is strictly
+		// inside the line), so refuse it rather than fabricating a fix at an arbitrary spot
 		if (charColumn < 0 || charColumn >= line.length())
 			return new SkipResult(SkipMessages.FINAL_LOCAL_NO_TYPE_LINE);
 

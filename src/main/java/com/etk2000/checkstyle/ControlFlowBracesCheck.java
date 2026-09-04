@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -15,6 +16,8 @@ import javax.annotation.Nullable;
  *     <li>No one-liners: body must be on its own line</li>
  *     <li>No unnecessary braces: single-line body must not be wrapped in braces</li>
  *     <li>Missing braces: braceless body spanning multiple lines must have braces</li>
+ *     <li>Split else-if: an {@code else} whose body is an {@code if} on a later line must be
+ *     written {@code else if}</li>
  * </ul>
  * Do-while has tier-based formatting:
  * <ul>
@@ -95,6 +98,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 
 	private static final String MSG_DO_WHILE_BODY_ON_DO_LINE = "control.flow.do.while.body.on.do.line";
 	private static final String MSG_DO_WHILE_WHILE_NEXT_LINE = "control.flow.do.while.while.next.line";
+	private static final String MSG_ELSE_IF_SPLIT = "control.flow.else.if.split";
 	private static final String MSG_MISSING_BRACES = "control.flow.missing.braces";
 	private static final String MSG_ONE_LINER = "control.flow.one.liner";
 	private static final String MSG_UNNECESSARY_BRACES = "control.flow.unnecessary.braces";
@@ -108,20 +112,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 	@Nullable
 	public static ControlBody bodyAt(@Nonnull DetailAST root, int line, int column) {
 		final var keyword = bodyKeywordAt(root, line, column);
-		if (keyword == null)
-			return null;
-		final var body = getBody(keyword);
-		final var closeParen = keyword.findFirstToken(TokenTypes.RPAREN);
-		final var end = bodyEnd(keyword, body);
-		return new ControlBody(
-				body.getType() == TokenTypes.SLIST,
-				AstUtil.firstLine(body) - 1,
-				AstUtil.firstColumn(body),
-				(closeParen == null ? keyword.getLineNo() : closeParen.getLineNo()) - 1,
-				end.endLine(),
-				end.endColumn(),
-				end.lastLine()
-		);
+		return keyword == null ? null : bodyOf(keyword);
 	}
 
 	@CheckReturnValue
@@ -135,12 +126,19 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 
 	@CheckReturnValue
 	@Nullable
-	private static DetailAST bodyKeywordAt(@Nonnull DetailAST root, int line, int column) {
-		final var keyword = AstUtil.findNodeAt(root, line, column, ControlFlowBracesCheck::isControlFlowKeyword);
-		if (keyword == null)
+	private static DetailAST bodyKeyword(@Nullable DetailAST keyword) {
+		if (keyword == null || !isControlFlowKeyword(keyword))
 			return null;
 		final var body = getBody(keyword);
-		return body == null || body.getType() == TokenTypes.EMPTY_STAT ? null : keyword;
+		// an `else` whose body is an `if` is the chain's next link, not a body
+		final var elseIf = keyword.getType() == TokenTypes.LITERAL_ELSE && body != null && body.getType() == TokenTypes.LITERAL_IF;
+		return body == null || body.getType() == TokenTypes.EMPTY_STAT || elseIf ? null : keyword;
+	}
+
+	@CheckReturnValue
+	@Nullable
+	private static DetailAST bodyKeywordAt(@Nonnull DetailAST root, int line, int column) {
+		return bodyKeyword(AstQuery.findNodeAt(root, line, column, ControlFlowBracesCheck::isControlFlowKeyword));
 	}
 
 	/**
@@ -151,7 +149,29 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 	 */
 	@CheckReturnValue
 	private static int bodyLineCount(@Nonnull DetailAST body) {
-		return statementLastLine(body) - AstUtil.firstLine(body) + 1;
+		return statementLastLine(body) - AstQuery.firstLine(body) + 1;
+	}
+
+	/**
+	 * {@link #bodyAt} for a keyword already in hand, which saves walking the tree for it.
+	 */
+	@CheckReturnValue
+	@Nullable
+	public static ControlBody bodyOf(@Nonnull DetailAST keyword) {
+		if (bodyKeyword(keyword) == null)
+			return null;
+		final var body = getBody(keyword);
+		final var closeParen = keyword.findFirstToken(TokenTypes.RPAREN);
+		final var end = bodyEnd(keyword, body);
+		return new ControlBody(
+				body.getType() == TokenTypes.SLIST,
+				AstQuery.firstLine(body) - 1,
+				AstQuery.firstColumn(body),
+				(closeParen == null ? keyword.getLineNo() : closeParen.getLineNo()) - 1,
+				end.endLine(),
+				end.endColumn(),
+				end.lastLine()
+		);
 	}
 
 	@CheckReturnValue
@@ -195,6 +215,16 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 	}
 
 	/**
+	 * Locates the {@code else} reported at {@code (line, column)} as split from the {@code if} that
+	 * is its body, or returns {@code null} when the position holds no such {@code else}.
+	 */
+	@CheckReturnValue
+	@Nullable
+	public static DetailAST elseIfSplitAt(@Nonnull DetailAST root, int line, int column) {
+		return AstQuery.findNodeAt(root, line, column, n -> n.getType() == TokenTypes.LITERAL_ELSE && isElseIfSplit(n));
+	}
+
+	/**
 	 * The statement's own {@code else}, which continues it rather than following
 	 * it. Only an {@code if} has one.
 	 */
@@ -208,7 +238,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 	private static int endColumnOf(@Nullable DetailAST semi, @Nullable DetailAST trailer) {
 		if (semi != null)
 			return semi.getColumnNo() + 1;
-		return trailer == null ? -1 : AstUtil.firstColumn(trailer);
+		return trailer == null ? -1 : AstQuery.firstColumn(trailer);
 	}
 
 	@CheckReturnValue
@@ -261,7 +291,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 	 * would make {@code &#123;\n\tstmt; &#125;} look unwrappable-in-place to the fixer.
 	 */
 	@CheckReturnValue
-	private static boolean hasUnnecessaryBraces(@Nonnull DetailAST slist) {
+	public static boolean hasUnnecessaryBraces(@Nonnull DetailAST slist) {
 		final var close = slist.findFirstToken(TokenTypes.RCURLY);
 		final var first = slist.getFirstChild();
 		// a `case` group's SLIST carries no RCURLY; without a close brace there is
@@ -276,7 +306,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 			return false;
 
 		var lines = close.getLineNo() - slist.getLineNo() - 1;
-		if (close.getLineNo() > slist.getLineNo() && AstUtil.firstLine(first) == slist.getLineNo())
+		if (close.getLineNo() > slist.getLineNo() && AstQuery.firstLine(first) == slist.getLineNo())
 			++lines;
 		return lines == 1 && statementCount(slist) == 1;
 	}
@@ -342,9 +372,19 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 		return !hasComplexRhs(expr);
 	}
 
+	/**
+	 * Whether {@code elseKeyword}'s body is an {@code if} that starts on a later line, which reads
+	 * as a nested statement but is the next link of an {@code else if} chain.
+	 */
+	@CheckReturnValue
+	public static boolean isElseIfSplit(@Nonnull DetailAST elseKeyword) {
+		final var body = elseKeyword.getFirstChild();
+		return body != null && body.getType() == TokenTypes.LITERAL_IF && body.getLineNo() > elseKeyword.getLineNo();
+	}
+
 	@CheckReturnValue
 	private static boolean isOneLiner(@Nonnull DetailAST keyword, @Nonnull DetailAST body) {
-		return body.getType() != TokenTypes.SLIST && AstUtil.firstLine(body) == keyword.getLineNo();
+		return body.getType() != TokenTypes.SLIST && AstQuery.firstLine(body) == keyword.getLineNo();
 	}
 
 	/**
@@ -381,20 +421,26 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 	@Nullable
 	public static OneLinerBody oneLinerBodyAt(@Nonnull DetailAST root, int line, int column) {
 		final var keyword = bodyKeywordAt(root, line, column);
-		if (keyword == null)
+		return keyword == null ? null : oneLinerBodyOf(keyword);
+	}
+
+	/**
+	 * {@link #oneLinerBodyAt} for a keyword already in hand, which saves walking the tree for it.
+	 */
+	@CheckReturnValue
+	@Nullable
+	public static OneLinerBody oneLinerBodyOf(@Nonnull DetailAST keyword) {
+		if (bodyKeyword(keyword) == null)
 			return null;
 
 		final var body = getBody(keyword);
 		if (!isOneLiner(keyword, body))
 			return null;
 
-		if (keyword.getType() == TokenTypes.LITERAL_ELSE && body.getType() == TokenTypes.LITERAL_IF)
-			return null;
-
 		final var elseKeyword = elseOf(keyword);
 		final var end = bodyEnd(keyword, body);
 		return new OneLinerBody(
-				AstUtil.firstColumn(body),
+				AstQuery.firstColumn(body),
 				end.endLine(),
 				end.endColumn(),
 				elseKeyword != null && elseKeyword.getLineNo() == keyword.getLineNo()
@@ -414,8 +460,17 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	@Nullable
 	public static DoWhileShape shapeAt(@Nonnull DetailAST root, int line, int column) {
-		final var doNode = AstUtil.findNodeAt(root, line, column, n -> n.getType() == TokenTypes.LITERAL_DO);
-		if (doNode == null)
+		final var doNode = AstQuery.findNodeAt(root, line, column, n -> n.getType() == TokenTypes.LITERAL_DO);
+		return doNode == null ? null : shapeOf(doNode);
+	}
+
+	/**
+	 * {@link #shapeAt} for a {@code do} already in hand, which saves walking the tree for it.
+	 */
+	@CheckReturnValue
+	@Nullable
+	public static DoWhileShape shapeOf(@Nonnull DetailAST doNode) {
+		if (doNode.getType() != TokenTypes.LITERAL_DO)
 			return null;
 		final var body = doNode.getFirstChild();
 		final var whileAst = doNode.findFirstToken(TokenTypes.DO_WHILE);
@@ -451,7 +506,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	private static int statementLastLine(@Nonnull DetailAST body) {
 		final var semi = terminatingSemi(body);
-		return semi == null ? AstUtil.lastLine(body) : Math.max(AstUtil.lastLine(body), semi.getLineNo());
+		return semi == null ? AstQuery.lastLine(body) : Math.max(AstQuery.lastLine(body), semi.getLineNo());
 	}
 
 	/**
@@ -487,9 +542,37 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 		final var statement = keyword.getType() == TokenTypes.LITERAL_ELSE ? keyword.getParent() : keyword;
 		final var trailer = elseKeyword != null ? elseKeyword : statement.getNextSibling();
 		// the enclosing block's own `}` is not something that resumes after the body
-		return trailer != null && trailer.getType() != TokenTypes.RCURLY && AstUtil.firstLine(trailer) == lastLine
+		return trailer != null && trailer.getType() != TokenTypes.RCURLY && AstQuery.firstLine(trailer) == lastLine
 				? trailer
 				: null;
+	}
+
+	/**
+	 * Whether dropping the braces around {@code keyword}'s body would let an {@code else} that
+	 * currently binds further out attach to an {@code if} inside the block instead.
+	 */
+	@CheckReturnValue
+	public static boolean unwrapRebindsElse(@Nonnull DetailAST keyword) {
+		if (bodyKeyword(keyword) == null)
+			return false;
+
+		final var body = getBody(keyword);
+		if (body == null || body.getType() != TokenTypes.SLIST)
+			return false;
+
+		final var statement = AstQuery.unwrapSingleStatementBlock(body);
+		return statement != null
+				&& AstQuery.endsWithDanglingIf(statement)
+				&& AstQuery.rebindsAFollowingElse(body);
+	}
+
+	/**
+	 * {@link #unwrapRebindsElse(DetailAST)} for the body reported at {@code (line, column)}.
+	 */
+	@CheckReturnValue
+	public static boolean unwrapRebindsElse(@Nonnull DetailAST root, int line, int column) {
+		final var keyword = bodyKeywordAt(root, line, column);
+		return keyword != null && unwrapRebindsElse(keyword);
 	}
 
 	@CheckReturnValue
@@ -583,8 +666,11 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 		if (elseBody == null)
 			return;
 
-		if (elseBody.getType() == TokenTypes.LITERAL_IF)
+		if (elseBody.getType() == TokenTypes.LITERAL_IF) {
+			if (isElseIfSplit(elseKeyword))
+				log(elseKeyword, MSG_ELSE_IF_SPLIT);
 			return;
+		}
 
 		checkBody(elseKeyword, elseBody);
 	}

@@ -30,6 +30,18 @@ class InterfaceShadowHost {
 	}
 }
 
+class LocalClassShadowHost {
+	boolean f(Object a, Object b) {
+		class Predicate {
+			static boolean not(Object v) {
+				return v == null;
+			}
+		}
+
+		return Predicate.not(a) || Predicate.not(b);
+	}
+}
+
 class RecordShadowHost {
 	record Predicate() {}
 

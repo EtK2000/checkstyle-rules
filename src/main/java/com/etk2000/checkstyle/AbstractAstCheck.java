@@ -4,6 +4,11 @@ import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 
 abstract class AbstractAstCheck extends AbstractCheck {
@@ -34,6 +39,28 @@ abstract class AbstractAstCheck extends AbstractCheck {
 		}
 		finally {
 			setSeverity(savedSeverity);
+		}
+	}
+
+	/**
+	 * Whether a source file for a type named {@code simpleName} sits next to the checked file, so a
+	 * same-package class the checkstyle classpath cannot load may declare that name.
+	 */
+	@CheckReturnValue
+	protected boolean siblingSourceFileExists(@Nonnull String simpleName) {
+		// a same-package sibling names a type, whose source file starts uppercase
+		// by convention; skip the filesystem probe for lowercase package roots
+		if (simpleName.isEmpty() || !Character.isUpperCase(simpleName.charAt(0)))
+			return false;
+		final var filePath = getFilePath();
+		if (filePath == null)
+			return false;
+		try {
+			final var parent = Path.of(filePath).getParent();
+			return parent != null && Files.exists(parent.resolve(simpleName + ".java"));
+		}
+		catch (InvalidPathException | SecurityException ignored) {
+			return false;
 		}
 	}
 }

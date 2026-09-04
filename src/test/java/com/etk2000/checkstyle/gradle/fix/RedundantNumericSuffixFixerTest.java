@@ -10,7 +10,7 @@ public class RedundantNumericSuffixFixerTest {
 	private final CheckstyleFixer fixer = new RedundantNumericSuffixFixer();
 
 	@Test
-	public void testColumnAtNonLiteralChar() throws Exception {
-		assertSkip(fixer, TOPIC, "column_at_non_literal_char");
+	public void testUnparseableBufferProducesNoFix() throws Exception {
+		assertSkip(fixer, TOPIC, "unparseable_buffer");
 	}
 }

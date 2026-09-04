@@ -9,12 +9,35 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.Formatter;
+import java.util.Locale;
+import java.util.Properties;
 import java.util.Scanner;
 
 class InputStandardCharsetsClean {
+	static class Base {
+		final String baseName = "UTF-8";
+	}
+
+	static class Derived extends Base {
+		byte[] fromSuper() throws Exception {
+			return "x".getBytes(super.baseName);
+		}
+	}
+
+	static class Holder {
+		static final String NAME = "UTF-8";
+	}
+
 	static final Charset CHARSET_FIELD = StandardCharsets.UTF_8;
+
+	final String charsetName = "UTF-8";
 
 	void charsetField(byte[] data, File file) throws Exception {
 		final var a = "hello".getBytes(CHARSET_FIELD);
@@ -68,6 +91,29 @@ class InputStandardCharsetsClean {
 		final var c = "US-ASCII";
 	}
 
+	void forNameArgumentsThatAreNotCharsetLiterals(String name) {
+		final var a = Charset.forName("windows-1252");
+		final var b = Charset.forName("");
+		final var c = Charset.forName(name);
+		final var d = Charset.forName(("UTF-8"));
+		final var e = Charset.forName("UTF" + "-8");
+		final var f = Charset.forName(name.isEmpty() ? "UTF-8" : name);
+		final var g = Charset.forName(" UTF-8");
+		final var h = Charset.forName(StandardCharsets.UTF_8.name());
+		final var i = "UTF-8".equals(name);
+		final var j = Charset.isSupported(name);
+	}
+
+	void newCharsetOverloadsWithConstants(ReadableByteChannel in, WritableByteChannel out, File file, Path path, Properties props) throws Exception {
+		final var a = new PrintStream("out.txt", StandardCharsets.UTF_8);
+		final var b = new PrintWriter("out.txt", StandardCharsets.UTF_8);
+		final var c = Channels.newReader(in, StandardCharsets.UTF_8);
+		final var d = Channels.newWriter(out, StandardCharsets.UTF_8);
+		final var e = new Formatter(file, StandardCharsets.UTF_8, Locale.ROOT);
+		final var f = new Scanner(path, StandardCharsets.UTF_8);
+		props.storeToXML(new ByteArrayOutputStream(), null, StandardCharsets.UTF_8);
+	}
+
 	void nonCharsetStringArguments() throws Exception {
 		final var a = "hello".getBytes("not-a-charset-name");
 		final var b = URLEncoder.encode("hello", "not-a-charset-name");
@@ -84,6 +130,11 @@ class InputStandardCharsetsClean {
 	void nonStringReceivers(Object obj, java.lang.Object qObj) {
 		obj.toString();
 		qObj.toString();
+	}
+
+	void qualifiedCharsetNameArguments(Object charsetName) throws Exception {
+		final var a = "x".getBytes(this.charsetName);
+		final var b = "x".getBytes(Holder.NAME);
 	}
 
 	void standardCharsetsConstants(byte[] data, File file) throws Exception {
@@ -124,5 +175,17 @@ class InputStandardCharsetsClean {
 		final var h = "UTF-16BE big-endian";
 		final var i = "UTF-16LE little-endian";
 		final var j = "UTF8 without hyphen";
+	}
+
+	void textBlockAndArrayArguments() throws Exception {
+		final var a = "hello".getBytes(
+				"""
+				UTF-8"""
+		);
+		final var b = Charset.forName(
+				"""
+				UTF-8"""
+		);
+		final var c = new String[]{"UTF-8"};
 	}
 }

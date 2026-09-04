@@ -3,6 +3,7 @@ package com.etk2000.checkstyle.gradle.fix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import com.puppycrawl.tools.checkstyle.api.Violation;
 
 import org.junit.jupiter.api.AfterEach;
@@ -37,16 +38,12 @@ public class FixContextTest {
 		FixContext.clearViolation();
 		assertNull(FixContext.getViolationKey());
 		assertNull(FixContext.getViolationMessage());
+		assertNull(FixContext.getViolationSeverity());
 	}
 
 	@Test
 	public void testClearWhenNothingSetIsNoOp() {
 		FixContext.clearFilePath();
-		assertNull(FixContext.getFilePath());
-	}
-
-	@Test
-	public void testGetFilePathReturnsNullByDefault() {
 		assertNull(FixContext.getFilePath());
 	}
 
@@ -58,6 +55,11 @@ public class FixContextTest {
 	@Test
 	public void testGetViolationMessageReturnsNullByDefault() {
 		assertNull(FixContext.getViolationMessage());
+	}
+
+	@Test
+	public void testGetViolationSeverityReturnsNullByDefault() {
+		assertNull(FixContext.getViolationSeverity());
 	}
 
 	@Test
@@ -78,6 +80,12 @@ public class FixContextTest {
 		FixContext.setViolation(violation("field.sort.anon.class", "Field a must appear before b."));
 		assertEquals("field.sort.anon.class", FixContext.getViolationKey());
 		assertEquals("Field a must appear before b.", FixContext.getViolationMessage());
+	}
+
+	@Test
+	public void testSetViolationExposesSeverity() {
+		FixContext.setViolation(new Violation(1, 0, "bundle", "k", new Object[0], SeverityLevel.WARNING, null, FixContextTest.class, "m"));
+		assertEquals(SeverityLevel.WARNING, FixContext.getViolationSeverity());
 	}
 
 	@Test

@@ -7,6 +7,10 @@ splitting non-empty single-line bodies onto multiple lines. Component layout: re
 record header to single-line form when components fit in 120 columns, or to multi-line form
 (each component on its own line) when they don't.
 
+A comment between the braces is body content: a comment-only body is non-empty and splits like any
+other, and the empty-body collapse never applies to it. A comment outside the braces is not body
+content, so `record R(int a) /* c */ {}` stays an empty body.
+
 ## Supported (auto-fixable)
 
 | Pattern | Replacement | Notes |
@@ -17,11 +21,13 @@ record header to single-line form when components fit in 120 columns, or to mult
 | `record R(...)\n{}` (newline) | `record R(...) {}` | Brace not on the anchor line |
 | `record R(...) {\n}` (empty split) | `record R(...) {}` | Empty body split across lines |
 | `record R(...) { body; }` | `record R(...) {\n\tbody;\n}` | Non-empty body inline; split onto its own lines |
+| `record R(...) { /* note */ }` (comment-only body) | `record R(...) {\n\t/* note */\n}` | A comment between the braces is body content, so the inline form splits like any other body. Only a block comment can reach this shape; a `//` body cannot share the line with the `}` |
+| `record R(...) /* c */{}` (comment then zero space) | `record R(...) /* c */ {}` | A comment before the `{` does not change the spacing rule |
 | `record R(...) implements Foo{}` | `record R(...) implements Foo {}` | No space before brace (implements anchor) |
 | `record R(...) implements Foo\n{}` | `record R(...) implements Foo {}` | Brace not on anchor line (implements anchor) |
 | `record R(...) implements\n\tFoo\n{}` | `record R(...) implements\n\tFoo {}` | Brace not on anchor line (multi-line implements) |
-| `record R(a,\n\tb) {}` (mixed, fits) | `record R(a, b) {}` | Component-layout: collapses to style A if combined line ≤120 chars |
-| `record R(<too long for one line>) {}` | `record R(\n\t\ta,\n\t\tb,\n\t\t...\n) {}` | Component-layout: expands to style B if combined would exceed 120 chars |
+| `record R(a,\n\tb) {}` (mixed, fits) | `record R(a, b) {}` | Component-layout: collapses to single-line form if the combined line is at most 120 chars |
+| `record R(<too long for one line>) {}` | `record R(\n\t\ta,\n\t\tb,\n\t\t...\n) {}` | Component-layout: expands to multi-line form if the combined line would exceed 120 chars |
 | `record R(\n\ta, b\n) {}` (multi-per-line, fits) | `record R(a, b) {}` | Component-layout: collapses a multi-per-line header to single line if it fits |
 
 ## Not supported
@@ -29,9 +35,9 @@ record header to single-line form when components fit in 120 columns, or to mult
 | Pattern | Reason |
 | --- | --- |
 | `{` on a line whose anchor ends in a `//` comment, unterminated `/*`, or unterminated literal | Joining the line would swallow the `{` into the comment or literal; bail to avoid invalid source |
-| `}` on its own line preceded by lines containing non-whitespace, non-`{` content | Cannot safely collapse to empty-body form without losing content |
+| `}` whose own line carries other content before or after it (e.g. `} // note`), or which is preceded by lines holding non-whitespace, non-`{` content | Cannot collapse to empty-body form without losing that content |
 | Multi-line record header where any line contains a `//` line comment | Collapsing would either swallow code into the comment or silently drop the comment |
-| Multi-line record header where a block comment or text block spans lines (opens on one line, closes on a later one) | Cross-line comment/text-block state cannot be tracked when matching the closing paren, so the header cannot be collapsed safely; bail to avoid corrupting it |
-| Record header already in canonical single-line or multi-line form (no-op) | The fixer detects when its output would equal the input and returns null instead of looping |
+| Multi-line record header where a block comment or text block spans lines (opens on one line, closes on a later one) | The header cannot be collapsed safely |
+| Record header already in canonical single-line or multi-line form (no-op) | Nothing to change |
 
 Part of [auto-fix coverage](../auto-fix-coverage.md).
