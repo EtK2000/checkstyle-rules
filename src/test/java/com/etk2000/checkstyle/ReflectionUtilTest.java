@@ -12,16 +12,15 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.AbstractCollection;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
 
 public class ReflectionUtilTest {
-	/**
-	 * accessed via reflection from {@link #testGetVarArgsComponentTypeConflictingVarargsReturnsNull()}
-	 */
-	@SuppressWarnings("unused")
 	public static class ConflictingVarargs {
 		public int m(int... values) {
 			return values.length;
@@ -32,10 +31,6 @@ public class ReflectionUtilTest {
 		}
 	}
 
-	/**
-	 * accessed via reflection from {@link #testHasGenericReturnTypeVarargsArityBounds()}
-	 */
-	@SuppressWarnings("unused")
 	public static class VarargsArity {
 		public <T> T pick() {
 			return null;
@@ -43,6 +38,42 @@ public class ReflectionUtilTest {
 
 		public <T> T pick(T seed, Object... rest) {
 			return seed;
+		}
+	}
+
+	public static class PrivateMethodHolder {
+		private int hidden(String value) {
+			return value.length();
+		}
+
+		public int size(String value) {
+			return hidden(value);
+		}
+	}
+
+	public interface InheritedVarargs {
+		default int join(String... parts) {
+			return parts.length;
+		}
+	}
+
+	public static class InheritedVarargsUser implements InheritedVarargs {}
+
+	public static class ProtectedVarargsHolder {
+		protected int gather(String first, Object... rest) {
+			return rest.length;
+		}
+	}
+
+	public static class StringBag extends AbstractCollection<String> {
+		@Override
+		public Iterator<String> iterator() {
+			return null;
+		}
+
+		@Override
+		public int size() {
+			return 0;
 		}
 	}
 
@@ -88,6 +119,22 @@ public class ReflectionUtilTest {
 		);
 	}
 
+	static Stream<Arguments> collectionInterfaceFqcnTypes() {
+		return Stream.of(
+				Arguments.of("java.util.List", "java.util.List"),
+				Arguments.of("java.util.Map", "java.util.Map"),
+				Arguments.of("java.util.ArrayDeque", "java.util.Deque"),
+				Arguments.of("java.util.ArrayList", "java.util.List"),
+				Arguments.of("java.util.HashMap", "java.util.Map"),
+				Arguments.of("java.util.HashSet", "java.util.Set"),
+				Arguments.of("java.util.PriorityQueue", "java.util.Queue"),
+				Arguments.of("java.util.TreeMap", "java.util.Map"),
+				Arguments.of("java.lang.String", null),
+				Arguments.of("com.nonexistent.FakeClass", null),
+				Arguments.of("com.etk2000.checkstyle.ReflectionUtilTest$StringBag", "java.util.Collection")
+		);
+	}
+
 	static Stream<Arguments> findCollectionInterfaceConcreteTypes() {
 		return Stream.of(
 				Arguments.of("java.util.ArrayDeque", "Deque"),
@@ -118,14 +165,42 @@ public class ReflectionUtilTest {
 				Arguments.of("java.util.concurrent.LinkedTransferQueue", "Queue"),
 				Arguments.of("java.util.concurrent.PriorityBlockingQueue", "Queue"),
 				Arguments.of("java.util.concurrent.SynchronousQueue", "Queue"),
-				Arguments.of("java.util.EnumMap", "Map")
+				Arguments.of("java.util.EnumMap", "Map"),
+				Arguments.of("com.etk2000.checkstyle.ReflectionUtilTest$StringBag", "Collection")
 		);
+	}
+
+	@Test
+	public void testAcceptsValueOfType() {
+		assertTrue(ReflectionUtil.acceptsValueOfType("java.util.List", "java.util.ArrayList"));
+		assertTrue(ReflectionUtil.acceptsValueOfType("java.lang.Object", "java.util.List"));
+		assertTrue(ReflectionUtil.acceptsValueOfType("java.util.List", "java.util.List"));
+		assertFalse(ReflectionUtil.acceptsValueOfType("java.util.ArrayList", "java.util.List"));
+		assertFalse(ReflectionUtil.acceptsValueOfType("java.util.List", "java.util.Set"));
+	}
+
+	@Test
+	public void testAcceptsValueOfTypeUnknownClass() {
+		assertFalse(ReflectionUtil.acceptsValueOfType("does.not.Exist", "java.util.List"));
+		assertFalse(ReflectionUtil.acceptsValueOfType("java.util.List", "does.not.Exist"));
 	}
 
 	@MethodSource("applyJavaNamingHeuristicProvider")
 	@ParameterizedTest
 	public void testApplyJavaNamingHeuristic(@Nonnull String input, @Nonnull String expected) {
 		assertEquals(expected, ReflectionUtil.applyJavaNamingHeuristic(input));
+	}
+
+	@Test
+	public void testBinaryName() {
+		assertEquals("java.util.List", ReflectionUtil.binaryName("java.util.List"));
+		assertEquals("java.util.Map$Entry", ReflectionUtil.binaryName("java.util.Map.Entry"));
+		assertEquals("java.util.Map$Entry", ReflectionUtil.binaryName("java.util.Map$Entry"));
+	}
+
+	@Test
+	public void testBinaryNameUnknownClass() {
+		assertNull(ReflectionUtil.binaryName("does.not.Exist"));
 	}
 
 	@Test
@@ -137,6 +212,183 @@ public class ReflectionUtilTest {
 		assertNotEquals(0, afterCall);
 		ReflectionUtil.clearCache();
 		assertEquals(afterCall, ReflectionUtil.classForNameCallCount.get());
+	}
+
+	@MethodSource("collectionInterfaceFqcnTypes")
+	@ParameterizedTest
+	public void testCollectionInterfaceFqcn(String fqcn, String expected) {
+		assertEquals(expected, ReflectionUtil.collectionInterfaceFqcn(fqcn));
+	}
+
+	@Test
+	public void testDeclaredTypeParameterCount() {
+		assertEquals(1, ReflectionUtil.declaredTypeParameterCount("java.util.List"));
+		assertEquals(2, ReflectionUtil.declaredTypeParameterCount("java.util.Map"));
+		assertEquals(0, ReflectionUtil.declaredTypeParameterCount("java.lang.String"));
+	}
+
+	@Test
+	public void testDeclaredTypeParameterCountUnknownClass() {
+		assertEquals(-1, ReflectionUtil.declaredTypeParameterCount("does.not.Exist"));
+	}
+
+	@Test
+	public void testDeclaresMethodErasureArityMismatch() {
+		assertFalse(ReflectionUtil.declaresMethodErasure("java.util.AbstractMap", "putAll", List.of()));
+	}
+
+	@Test
+	public void testDeclaresMethodErasureArrayParameterType() {
+		assertTrue(ReflectionUtil.declaresMethodErasure("java.lang.String", "valueOf", List.of("char[]")));
+	}
+
+	@Test
+	public void testDeclaresMethodErasureBridgeMethodExcluded() {
+		assertFalse(ReflectionUtil.declaresMethodErasure("java.lang.String", "compareTo", List.of("java.lang.Object")));
+		assertTrue(ReflectionUtil.declaresMethodErasure("java.lang.String", "compareTo", List.of("java.lang.String")));
+	}
+
+	@Test
+	public void testDeclaresMethodErasureInheritedFromSupertype() {
+		assertTrue(ReflectionUtil.declaresMethodErasure("java.util.EnumMap", "putAll", List.of("java.util.Map")));
+	}
+
+	@Test
+	public void testDeclaresMethodErasureMatchesMultipleParameters() {
+		assertTrue(ReflectionUtil.declaresMethodErasure(
+				"java.lang.String", "regionMatches", List.of("int", "java.lang.String", "int", "int")
+		));
+		assertFalse(ReflectionUtil.declaresMethodErasure(
+				"java.lang.String", "regionMatches", List.of("java.lang.String", "int", "int", "int")
+		));
+	}
+
+	@Test
+	public void testDeclaresMethodErasureMatchesParameterType() {
+		assertTrue(ReflectionUtil.declaresMethodErasure("java.util.AbstractMap", "putAll", List.of("java.util.Map")));
+	}
+
+	@Test
+	public void testDeclaresMethodErasurePrivateMethodExcluded() {
+		final var fqcn = "com.etk2000.checkstyle.ReflectionUtilTest$PrivateMethodHolder";
+		assertFalse(ReflectionUtil.declaresMethodErasure(fqcn, "hidden", List.of("java.lang.String")));
+		assertTrue(ReflectionUtil.declaresMethodErasure(fqcn, "size", List.of("java.lang.String")));
+	}
+
+	@Test
+	public void testDeclaresMethodErasureProtectedOnTheDeclaringClass() {
+		assertTrue(ReflectionUtil.declaresMethodErasure("java.util.AbstractList", "removeRange", List.of("int", "int")));
+	}
+
+	@Test
+	public void testDeclaresMethodErasureStaticInterfaceMethodExcluded() {
+		assertFalse(ReflectionUtil.declaresMethodErasure("java.util.List", "of", List.of()));
+		assertTrue(ReflectionUtil.declaresMethodErasure("java.util.List", "clear", List.of()));
+	}
+
+	@Test
+	public void testDeclaresMethodErasureUnknownClass() {
+		assertFalse(ReflectionUtil.declaresMethodErasure("com.nonexistent.FakeClass", "putAll", List.of("java.util.Map")));
+	}
+
+	@Test
+	public void testDeclaresMethodErasureUnknownMethodName() {
+		assertFalse(ReflectionUtil.declaresMethodErasure("java.util.AbstractMap", "storeAll", List.of("java.util.Map")));
+	}
+
+	@Test
+	public void testDeclaresMethodErasureWrongParameterType() {
+		assertFalse(ReflectionUtil.declaresMethodErasure("java.util.AbstractMap", "putAll", List.of("java.util.List")));
+	}
+
+	@Test
+	public void testDeclaresOverloadAtChainCrossPackagePackagePrivateExcluded() {
+		assertFalse(ReflectionUtil.declaresOverloadAt("java.io.IOException", "setCause", 1));
+		assertTrue(ReflectionUtil.declaresOverloadAt("java.lang.Exception", "setCause", 1));
+	}
+
+	@Test
+	public void testDeclaresOverloadAtChainPrivateExcluded() {
+		final var fqcn = "com.etk2000.checkstyle.ReflectionUtilTest$PrivateMethodHolder";
+		assertFalse(ReflectionUtil.declaresOverloadAt(fqcn, "hidden", 1));
+		assertTrue(ReflectionUtil.declaresOverloadAt(fqcn, "size", 1));
+	}
+
+	@Test
+	public void testDeclaresOverloadAtChainProtectedSupertypeMethod() {
+		assertTrue(ReflectionUtil.declaresOverloadAt("java.util.Stack", "removeRange", 2));
+		assertFalse(ReflectionUtil.declaresOverloadAt("java.util.Stack", "removeRange", 1));
+	}
+
+	@Test
+	public void testDeclaresOverloadAtChainVarargs() {
+		final var fqcn = "com.etk2000.checkstyle.ReflectionUtilTest$ProtectedVarargsHolder";
+		assertTrue(ReflectionUtil.declaresOverloadAt(fqcn, "gather", 1));
+		assertTrue(ReflectionUtil.declaresOverloadAt(fqcn, "gather", 5));
+		assertFalse(ReflectionUtil.declaresOverloadAt(fqcn, "gather", 0));
+	}
+
+	@Test
+	public void testDeclaresOverloadAtExactArity() {
+		assertTrue(ReflectionUtil.declaresOverloadAt("java.lang.String", "substring", 1));
+		assertTrue(ReflectionUtil.declaresOverloadAt("java.lang.String", "substring", 2));
+	}
+
+	@Test
+	public void testDeclaresOverloadAtInheritedInterfaceDefault() {
+		assertTrue(ReflectionUtil.declaresOverloadAt("java.util.ArrayList", "stream", 0));
+	}
+
+	@Test
+	public void testDeclaresOverloadAtInheritedInterfaceVarargs() {
+		final var fqcn = "com.etk2000.checkstyle.ReflectionUtilTest$InheritedVarargsUser";
+		assertTrue(ReflectionUtil.declaresOverloadAt(fqcn, "join", 0));
+		assertTrue(ReflectionUtil.declaresOverloadAt(fqcn, "join", 3));
+	}
+
+	@Test
+	public void testDeclaresOverloadAtNoSuchArity() {
+		assertFalse(ReflectionUtil.declaresOverloadAt("java.lang.String", "substring", 0));
+		assertFalse(ReflectionUtil.declaresOverloadAt("java.lang.String", "substring", 3));
+	}
+
+	@Test
+	public void testDeclaresOverloadAtStaticInterfaceMethodExcluded() {
+		assertFalse(ReflectionUtil.declaresOverloadAt("java.util.Comparator", "comparing", 1));
+		assertTrue(ReflectionUtil.declaresOverloadAt("java.util.Comparator", "compare", 2));
+	}
+
+	@Test
+	public void testDeclaresOverloadAtUnknownClass() {
+		assertFalse(ReflectionUtil.declaresOverloadAt("com.nonexistent.FakeClass", "size", 0));
+	}
+
+	@Test
+	public void testDeclaresOverloadAtUnknownMethodName() {
+		assertFalse(ReflectionUtil.declaresOverloadAt("java.lang.String", "storeAll", 1));
+	}
+
+	@Test
+	public void testDeclaresOverloadAtVarargs() {
+		assertTrue(ReflectionUtil.declaresOverloadAt("java.util.Arrays", "asList", 0));
+		assertTrue(ReflectionUtil.declaresOverloadAt("java.util.Arrays", "asList", 1));
+		assertTrue(ReflectionUtil.declaresOverloadAt("java.util.Arrays", "asList", 12));
+	}
+
+	@Test
+	public void testFieldTypeName() {
+		assertEquals("java.io.PrintStream", ReflectionUtil.fieldTypeName("java.lang.System", "out"));
+		assertEquals("int", ReflectionUtil.fieldTypeName("java.lang.Integer", "MAX_VALUE"));
+	}
+
+	@Test
+	public void testFieldTypeNameNoSuchField() {
+		assertNull(ReflectionUtil.fieldTypeName("java.lang.System", "notAField"));
+	}
+
+	@Test
+	public void testFieldTypeNameUnknownClass() {
+		assertNull(ReflectionUtil.fieldTypeName("does.not.Exist", "out"));
 	}
 
 	@Test
@@ -286,8 +538,6 @@ public class ReflectionUtilTest {
 		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.Map", "of", 2));
 		assertTrue(ReflectionUtil.hasGenericReturnType("java.util.Set", "of", 0));
 		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.Set", "of", 1));
-		// above every fixed-arity overload only the varargs one matches, and it infers
-		// from its elements just as the fixed forms do
 		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.List", "of", 11));
 		assertFalse(ReflectionUtil.hasGenericReturnType("java.util.Arrays", "asList", 2));
 	}
@@ -336,8 +586,6 @@ public class ReflectionUtilTest {
 
 	@Test
 	public void testHasGenericReturnTypeVarargsArityBounds() {
-		// only the no-arg overload accepts arity 0; above that the varargs one takes over and
-		// infers from its own arguments
 		final var fqcn = "com.etk2000.checkstyle.ReflectionUtilTest$VarargsArity";
 		assertTrue(ReflectionUtil.hasGenericReturnType(fqcn, "pick", 0));
 		assertFalse(ReflectionUtil.hasGenericReturnType(fqcn, "pick", 1));
@@ -496,6 +744,17 @@ public class ReflectionUtilTest {
 			assertFalse(ReflectionUtil.hasMethod("com.nonexistent.RepeatedFake", "method"));
 	}
 
+	@Test
+	public void testHasUnreadableMembers() {
+		assertFalse(ReflectionUtil.hasUnreadableMembers("java.util.List"));
+		assertFalse(ReflectionUtil.hasUnreadableMembers("java.lang.String"));
+	}
+
+	@Test
+	public void testHasUnreadableMembersUnknownClass() {
+		assertFalse(ReflectionUtil.hasUnreadableMembers("does.not.Exist"));
+	}
+
 	@ParameterizedTest
 	@ValueSource(strings = {
 			"java.lang.String",
@@ -559,6 +818,93 @@ public class ReflectionUtilTest {
 	public void testIsResolvableClassUnresolvable() {
 		assertFalse(ReflectionUtil.isResolvableClass("com.etk2000.checkstyle.NoSuchClass"));
 		assertFalse(ReflectionUtil.isResolvableClass("totally.bogus.Type"));
+	}
+
+	@Test
+	public void testParameterAcceptsTypeCandidateRejects() {
+		assertTrue(ReflectionUtil.parameterAcceptsType(
+				"java.io.PrintStream", "println", 1, 0, "java.util.ArrayList", "java.util.List"
+		));
+	}
+
+	@Test
+	public void testParameterAcceptsTypeConstructor() {
+		assertTrue(ReflectionUtil.parameterAcceptsType(
+				"java.util.ArrayList", "new", 1, 0, "java.util.ArrayList", "java.util.List"
+		));
+	}
+
+	@Test
+	public void testParameterAcceptsTypeIndexPastArity() {
+		assertFalse(ReflectionUtil.parameterAcceptsType(
+				"java.io.PrintStream", "println", 1, 3, "java.util.ArrayList", "java.util.List"
+		));
+	}
+
+	@Test
+	public void testParameterAcceptsTypeNoCandidate() {
+		assertFalse(ReflectionUtil.parameterAcceptsType(
+				"java.io.PrintStream", "notAMethod", 1, 0, "java.util.ArrayList", "java.util.List"
+		));
+	}
+
+	@Test
+	public void testParameterAcceptsTypeUnknownClass() {
+		assertFalse(ReflectionUtil.parameterAcceptsType(
+				"does.not.Exist", "println", 1, 0, "java.util.ArrayList", "java.util.List"
+		));
+		assertFalse(ReflectionUtil.parameterAcceptsType(
+				"java.io.PrintStream", "println", 1, 0, "does.not.Exist", "java.util.List"
+		));
+	}
+
+	@Test
+	public void testParameterAcceptsTypeWidenedRejected() {
+		assertFalse(ReflectionUtil.parameterAcceptsType(
+				"java.util.Collections", "unmodifiableSortedSet", 1, 0, "java.util.TreeSet", "java.util.Set"
+		));
+	}
+
+	@Test
+	public void testParameterSelectsOnlyTheConstructedTypeAcceptsBoth() {
+		assertFalse(ReflectionUtil.parameterSelectsOnlyTheConstructedType(
+				"java.util.List", "java.util.List", "java.util.ArrayList"
+		));
+	}
+
+	@Test
+	public void testParameterSelectsOnlyTheConstructedTypeAcceptsNeither() {
+		assertFalse(ReflectionUtil.parameterSelectsOnlyTheConstructedType(
+				"java.lang.String", "java.util.List", "java.util.ArrayList"
+		));
+	}
+
+	@Test
+	public void testParameterSelectsOnlyTheConstructedTypeConstructedUnresolvable() {
+		assertFalse(ReflectionUtil.parameterSelectsOnlyTheConstructedType(
+				"java.util.ArrayList", "java.util.List", "totally.bogus.Type"
+		));
+	}
+
+	@Test
+	public void testParameterSelectsOnlyTheConstructedTypeDeclaredUnresolvable() {
+		assertFalse(ReflectionUtil.parameterSelectsOnlyTheConstructedType(
+				"java.util.ArrayList", "totally.bogus.Type", "java.util.ArrayList"
+		));
+	}
+
+	@Test
+	public void testParameterSelectsOnlyTheConstructedTypeNarrows() {
+		assertTrue(ReflectionUtil.parameterSelectsOnlyTheConstructedType(
+				"java.util.ArrayList", "java.util.List", "java.util.ArrayList"
+		));
+	}
+
+	@Test
+	public void testParameterSelectsOnlyTheConstructedTypeParameterUnresolvable() {
+		assertFalse(ReflectionUtil.parameterSelectsOnlyTheConstructedType(
+				"totally.bogus.Type", "java.util.List", "java.util.ArrayList"
+		));
 	}
 
 	@Test
@@ -628,5 +974,45 @@ public class ReflectionUtilTest {
 				"java.lang.String",
 				ReflectionUtil.resolveClassName("String", null, Set.of("com.bogus.*"))
 		);
+	}
+
+	@Test
+	public void testReturnsTheSameTypeAbsentOnTheInterface() {
+		assertFalse(ReflectionUtil.returnsTheSameType(
+				"java.util.Vector", "java.util.List", "indexOf", 2
+		));
+	}
+
+	@Test
+	public void testReturnsTheSameTypeCovariantReturnDiffers() {
+		assertFalse(ReflectionUtil.returnsTheSameType(
+				"java.util.concurrent.ConcurrentHashMap", "java.util.Map", "keySet", 0
+		));
+	}
+
+	@Test
+	public void testReturnsTheSameTypeMatchesPerOverload() {
+		assertTrue(ReflectionUtil.returnsTheSameType(
+				"java.util.ArrayList", "java.util.List", "remove", 1
+		));
+	}
+
+	@Test
+	public void testReturnsTheSameTypeNoSuchMethod() {
+		assertFalse(ReflectionUtil.returnsTheSameType(
+				"java.util.ArrayList", "java.util.List", "ensureCapacity", 1
+		));
+	}
+
+	@Test
+	public void testReturnsTheSameTypeSimpleMatch() {
+		assertTrue(ReflectionUtil.returnsTheSameType("java.util.ArrayList", "java.util.List", "add", 1));
+		assertTrue(ReflectionUtil.returnsTheSameType("java.util.ArrayList", "java.util.List", "size", 0));
+	}
+
+	@Test
+	public void testReturnsTheSameTypeUnknownClass() {
+		assertFalse(ReflectionUtil.returnsTheSameType("does.not.Exist", "java.util.List", "add", 1));
+		assertFalse(ReflectionUtil.returnsTheSameType("java.util.ArrayList", "does.not.Exist", "add", 1));
 	}
 }

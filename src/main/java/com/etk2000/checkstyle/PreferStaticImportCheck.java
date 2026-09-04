@@ -61,7 +61,7 @@ import javax.annotation.Nullable;
  *       packages) are not detected.</li>
  * </ul>
  */
-public class PreferStaticImportCheck extends AbstractAstCheck {
+public class PreferStaticImportCheck extends AbstractMinSdkCheck {
 	private static final int DEFAULT_MIN_OCCURRENCES = 2;
 	private static final int MIN_SDK_COLLECTORS = 24;
 	private static final int MIN_SDK_OBJECTS = 19;
@@ -132,7 +132,6 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 	private final Set<String> shadowedClasses = new HashSet<>();
 
 	private int minOccurrences = DEFAULT_MIN_OCCURRENCES;
-	private int minSdk = Integer.MAX_VALUE;
 
 	@Override
 	public void beginTree(@Nullable DetailAST rootAST) {
@@ -269,16 +268,6 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 		this.minOccurrences = minOccurrences;
 	}
 
-	/**
-	 * Sets the minimum SDK version for the target platform. Methods unavailable
-	 * on older platforms are not flagged.
-	 * <p>Called by Checkstyle via reflection when {@code minSdk} is set in the config.</p>
-	 */
-	@SuppressWarnings("unused")
-	public void setMinSdk(int minSdk) {
-		this.minSdk = minSdk;
-	}
-
 	@Override
 	public void visitToken(@Nonnull DetailAST ast) {
 		final var dot = ast.getFirstChild();
@@ -302,7 +291,7 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 		final var minSdkForMethod = CANDIDATES_BY_FQCN.get(fqcn).get(simpleMethod);
 		if (minSdkForMethod == null)
 			return;
-		if (minSdk < minSdkForMethod)
+		if (!minSdkAtLeast(minSdkForMethod))
 			return;
 
 		// receiver class must be reachable. Either via an explicit import, or via a wildcard

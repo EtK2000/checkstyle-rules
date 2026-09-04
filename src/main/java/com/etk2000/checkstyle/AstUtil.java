@@ -24,7 +24,6 @@ public final class AstUtil {
 		if (ident != null)
 			return ident.getText();
 
-		// qualified name like @androidx.annotation.NonNull, use last segment
 		final var dot = annotation.findFirstToken(TokenTypes.DOT);
 		if (dot != null) {
 			var last = dot.getFirstChild();
@@ -306,6 +305,26 @@ public final class AstUtil {
 		return count;
 	}
 
+	/** The body of a type {@code name} names by being declared in an enclosing scope of {@code scope}. */
+	@CheckReturnValue
+	@Nullable
+	private static DetailAST declaredTypeBody(@Nonnull DetailAST scope, @Nonnull String name) {
+		for (var frame = scope; frame != null; frame = frame.getParent()) {
+			for (var child = frame.getFirstChild(); child != null; child = child.getNextSibling()) {
+				final var type = child.getType();
+				final var isTypeDef = type == TokenTypes.CLASS_DEF || type == TokenTypes.ENUM_DEF
+						|| type == TokenTypes.INTERFACE_DEF || type == TokenTypes.RECORD_DEF
+						|| type == TokenTypes.ANNOTATION_DEF;
+				final var ident = isTypeDef ? child.findFirstToken(TokenTypes.IDENT) : null;
+				if (ident != null && name.equals(ident.getText()))
+					return child.findFirstToken(TokenTypes.OBJBLOCK);
+			}
+		}
+
+		final var def = sameFileClassDef(scope, name);
+		return def == null ? null : def.findFirstToken(TokenTypes.OBJBLOCK);
+	}
+
 	/**
 	 * Builds human-readable text for an expression AST.
 	 * Unlike {@link #exprText} which is designed for equality comparison,
@@ -539,7 +558,6 @@ public final class AstUtil {
 			current = first;
 		}
 		segments.add(current.getText());
-		// Segments were collected right-to-left; reverse for dotted order.
 		final var sb = new StringBuilder(segments.getLast());
 		for (var i = segments.size() - 2; i >= 0; --i)
 			sb.append('.').append(segments.get(i));
@@ -565,7 +583,6 @@ public final class AstUtil {
 				sb.append(node.getText());
 				continue;
 			}
-			// Collect children, then push in reverse so left-to-right order is preserved.
 			final var children = new ArrayList<DetailAST>();
 			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
 				children.add(child);
@@ -641,8 +658,7 @@ public final class AstUtil {
 	 * Extracts the class name from a LITERAL_NEW node, handling both
 	 * simple names ({@code new Foo()}) and qualified names
 	 * ({@code new pkg.Foo()}). Constructor-level type arguments
-	 * ({@code new <T>Foo()}) are correctly skipped by iterating direct
-	 * children until the first IDENT or DOT is found.
+	 * ({@code new <T>Foo()}) are skipped.
 	 *
 	 * @return the class name, or {@code null} for primitive arrays
 	 */
@@ -727,11 +743,6 @@ public final class AstUtil {
 	@CheckReturnValue
 	@Nullable
 	private static DetailAST findSameFileClassDef(@Nonnull DetailAST node, @Nonnull String className) {
-		// Mirror Java name resolution: walk outward from `node` through enclosing
-		// CLASS_DEF / INTERFACE_DEF / ENUM_DEF / RECORD_DEF, and at each level look
-		// for a sibling/inner type with the matching simple name. Falls back to
-		// top-level types in the compilation unit only if no enclosing scope
-		// declares the name.
 		for (var enclosing = findEnclosingClassDef(node); enclosing != null; enclosing = findEnclosingClassDef(enclosing)) {
 			final var found = findInnerClassDef(enclosing, className);
 			if (found != null)
@@ -960,6 +971,12 @@ public final class AstUtil {
 	}
 
 	@CheckReturnValue
+	public static boolean hasModifier(@Nonnull DetailAST ast, int modifierType) {
+		final var modifiers = ast.findFirstToken(TokenTypes.MODIFIERS);
+		return modifiers != null && modifiers.findFirstToken(modifierType) != null;
+	}
+
+	@CheckReturnValue
 	static boolean hasSuppressWarnings(@Nonnull DetailAST modifiers, @Nonnull String key) {
 		for (var child = modifiers.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() != TokenTypes.ANNOTATION)
@@ -995,6 +1012,48 @@ public final class AstUtil {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * The body of a member type named {@code name} that {@code objBlock} inherits. Supertype names
+	 * are resolved with {@link #declaredTypeBody} rather than {@link #supertypeBodies}, because the
+	 * latter resolves through {@link #sameFileTypeBody} and would re-enter this walk with a fresh
+	 * visited set, which a same-file inheritance cycle turns into unbounded recursion.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static DetailAST inheritedMemberType(
+			@Nonnull DetailAST objBlock,
+			@Nonnull String name,
+			@Nonnull Set<DetailAST> visited
+	) {
+		final var typeDef = objBlock.getParent();
+		for (var clause = typeDef == null ? null : typeDef.getFirstChild();
+				clause != null; clause = clause.getNextSibling()) {
+			if (clause.getType() != TokenTypes.EXTENDS_CLAUSE && clause.getType() != TokenTypes.IMPLEMENTS_CLAUSE)
+				continue;
+
+			for (var superName = clause.getFirstChild(); superName != null; superName = superName.getNextSibling()) {
+				final var written = typeName(superName);
+				final var superBody = written == null ? null : declaredTypeBody(typeDef, written);
+				if (superBody == null || !visited.add(superBody))
+					continue;
+
+				for (var member = superBody.getFirstChild(); member != null; member = member.getNextSibling()) {
+					final var ident = member.findFirstToken(TokenTypes.IDENT);
+					if (ident != null && name.equals(ident.getText())) {
+						final var body = member.findFirstToken(TokenTypes.OBJBLOCK);
+						if (body != null)
+							return body;
+					}
+				}
+
+				final var deeper = inheritedMemberType(superBody, name, visited);
+				if (deeper != null)
+					return deeper;
+			}
+		}
+		return null;
 	}
 
 	@CheckReturnValue
@@ -1037,7 +1096,6 @@ public final class AstUtil {
 				|| s.startsWith("0b") || s.startsWith("0B"))
 			s = s.substring(2);
 
-		// all remaining chars must be zeros, dots, and exponent parts that evaluate to zero
 		var hasDigit = false;
 		for (var i = 0; i < s.length(); ++i) {
 			final var c = s.charAt(i);
@@ -1285,6 +1343,35 @@ public final class AstUtil {
 		return classDef;
 	}
 
+	/**
+	 * The body of the same-file type {@code name} names from {@code scope}, resolved the way Java
+	 * scoping does: the innermost enclosing scope that declares the name wins, so a local class
+	 * shadows a same-named type declared further out. A name no enclosing scope declares may still
+	 * be a member type inherited from a supertype, which is in scope without appearing in any frame.
+	 *
+	 * <p>This is the single answer to "does this file declare that type", so a caller deciding
+	 * whether to fall back to the classpath cannot disagree with one walking the inheritance graph.
+	 */
+	@CheckReturnValue
+	@Nullable
+	static DetailAST sameFileTypeBody(@Nonnull DetailAST scope, @Nullable String name) {
+		if (name == null)
+			return null;
+
+		final var declared = declaredTypeBody(scope, name);
+		if (declared != null)
+			return declared;
+
+		for (var frame = scope; frame != null; frame = frame.getParent()) {
+			final var inherited = frame.getType() == TokenTypes.OBJBLOCK
+					? inheritedMemberType(frame, name, new HashSet<>())
+					: null;
+			if (inherited != null)
+				return inherited;
+		}
+		return null;
+	}
+
 	@CheckReturnValue
 	@Nonnull
 	public static String simpleName(@Nonnull String fqcn) {
@@ -1302,6 +1389,42 @@ public final class AstUtil {
 	public static DetailAST singleExpressionStatementBody(@Nonnull DetailAST body) {
 		final var single = unwrapSingleStatementBlock(body);
 		return single != null && single.getType() == TokenTypes.EXPR ? single : null;
+	}
+
+	/**
+	 * The bodies of {@code objBlock}'s direct supertypes that are declared in the same file.
+	 * Supertypes resolved from the classpath have no AST here and are skipped.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static List<DetailAST> supertypeBodies(@Nonnull DetailAST objBlock) {
+		final var typeDef = objBlock.getParent();
+		if (typeDef == null)
+			return List.of();
+
+		final var bodies = new ArrayList<DetailAST>();
+		for (var clause = typeDef.getFirstChild(); clause != null; clause = clause.getNextSibling()) {
+			if (clause.getType() != TokenTypes.EXTENDS_CLAUSE && clause.getType() != TokenTypes.IMPLEMENTS_CLAUSE)
+				continue;
+
+			for (var name = clause.getFirstChild(); name != null; name = name.getNextSibling()) {
+				final var superBlock = sameFileTypeBody(typeDef, typeName(name));
+				if (superBlock != null)
+					bodies.add(superBlock);
+			}
+		}
+		return bodies;
+	}
+
+	/** The name written at {@code nameNode}, or null when it is neither an identifier nor a dotted name. */
+	@CheckReturnValue
+	@Nullable
+	static String typeName(@Nullable DetailAST nameNode) {
+		if (nameNode == null)
+			return null;
+		if (nameNode.getType() == TokenTypes.IDENT)
+			return nameNode.getText();
+		return nameNode.getType() == TokenTypes.DOT ? dottedName(nameNode) : null;
 	}
 
 	@CheckReturnValue

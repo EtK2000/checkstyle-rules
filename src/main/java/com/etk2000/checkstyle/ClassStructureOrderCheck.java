@@ -39,21 +39,30 @@ public class ClassStructureOrderCheck extends AbstractAstCheck {
 		};
 	}
 
+	/**
+	 * Whether {@code ast} is declared in an interface or annotation type, where a field is
+	 * implicitly {@code public static final} and so carries no {@code static} modifier of its own.
+	 * The project's own rules require omitting that redundant modifier, so reading the AST alone
+	 * would file every interface constant under instance fields.
+	 */
 	@CheckReturnValue
-	private static boolean hasModifier(@Nonnull DetailAST ast, int modifierType) {
-		final var modifiers = ast.findFirstToken(TokenTypes.MODIFIERS);
-		return modifiers != null && modifiers.findFirstToken(modifierType) != null;
+	private static boolean isImplicitlyStaticMember(@Nonnull DetailAST ast) {
+		final var objBlock = ast.getParent();
+		final var owner = objBlock == null ? null : objBlock.getParent();
+		return owner != null && (owner.getType() == TokenTypes.ANNOTATION_DEF
+				|| owner.getType() == TokenTypes.INTERFACE_DEF);
 	}
 
 	@CheckReturnValue
 	private static int sectionOf(@Nonnull DetailAST ast) {
 		return switch (ast.getType()) {
-			case TokenTypes.CLASS_DEF, TokenTypes.ENUM_DEF, TokenTypes.INTERFACE_DEF,
-			     TokenTypes.RECORD_DEF -> 1;
+			case TokenTypes.ANNOTATION_DEF, TokenTypes.CLASS_DEF, TokenTypes.ENUM_DEF,
+			     TokenTypes.INTERFACE_DEF, TokenTypes.RECORD_DEF -> 1;
 			case TokenTypes.COMPACT_CTOR_DEF, TokenTypes.CTOR_DEF, TokenTypes.INSTANCE_INIT -> 6;
-			case TokenTypes.METHOD_DEF -> hasModifier(ast, TokenTypes.LITERAL_STATIC) ? 4 : 7;
+			case TokenTypes.METHOD_DEF -> AstUtil.hasModifier(ast, TokenTypes.LITERAL_STATIC) ? 4 : 7;
 			case TokenTypes.STATIC_INIT -> 3;
-			case TokenTypes.VARIABLE_DEF -> hasModifier(ast, TokenTypes.LITERAL_STATIC) ? 2 : 5;
+			case TokenTypes.VARIABLE_DEF ->
+					AstUtil.hasModifier(ast, TokenTypes.LITERAL_STATIC) || isImplicitlyStaticMember(ast) ? 2 : 5;
 			default -> 0;
 		};
 	}

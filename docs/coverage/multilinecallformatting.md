@@ -52,4 +52,10 @@ messages this check emits have a fixer. See the per-message table below.
 | `multiline.ternary.*.wrong.line` | A branch spans a text block or multi-line block comment | Yes | Re-emits the ternary to its canonical shape; a branch that spans a text block or block comment is emitted verbatim (never collapsed) so its significant whitespace is preserved, while a plain branch still collapses onto its `?`/`:` line |
 | `multiline.ternary.*.wrong.line` | A long branch pushes the canonical `? <branch>` / `: <branch>` line past 120 columns | Yes | Still fixed: the correct multi-line shape beats the pre-existing broken layout, and no fixer in the pipeline re-wraps an over-long branch |
 
+## Known unsound
+
+| Pattern | Reason |
+| --- | --- |
+| Reformatted line containing a supplementary character before the anchor token | `SpanReformat.pointsAt` indexes with `charAt(col)` where `col` is a CODE-POINT column, so a non-BMP character earlier on the line shifts the read. `JavaTernaryReformatter`, `JavaPostDelayedReformatter` and `JavaArgListReformatter` all gate on it, and because it is a VALIDATING guard the shifted read normally fails to match the expected `?`/`:`/`)`/`{`/`}` and the caller returns `CannotReformat(Reason.STALE)`, which is a safe refusal. The residual risk is a coincidental match, where the shifted index happens to land on an identical character and the reformat proceeds against the wrong token. Fix is `LineText.charIndexOfColumn` inside `pointsAt`, which also removes the refusals |
+
 Part of [auto-fix coverage](../auto-fix-coverage.md).

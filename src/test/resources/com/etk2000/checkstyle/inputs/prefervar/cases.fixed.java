@@ -409,6 +409,27 @@ class InputPreferVarNestedGenericSliceViolation {
 }
 // === end ===
 
+// === case: overload_selection_changes_from_an_enclosing_class ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionChangesFromAnEnclosingClassSliceViolation {
+	static class Inner {
+		void m() {
+			final List<String> items = new ArrayList<>();
+			take(items);
+		}
+	}
+
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+}
+// === end ===
+
 // === case: overload_selection_changes_on_a_constructor_argument ===
 // imports: java.util.ArrayList
 // imports: java.util.List
@@ -468,6 +489,44 @@ class InputPreferVarOverloadSelectionChangesUnderVarSliceViolation {
 }
 // === end ===
 
+// === case: overload_selection_changes_via_an_inherited_overload ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadInheritedBase {
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+}
+
+class InputPreferVarOverloadSelectionChangesViaAnInheritedOverloadSliceViolation extends InputPreferVarOverloadInheritedBase {
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m() {
+		final List<String> items = new ArrayList<>();
+		take(items);
+	}
+}
+// === end ===
+
+// === case: overload_selection_changes_with_qualified_types ===
+class InputPreferVarOverloadSelectionChangesWithQualifiedTypesSliceViolation {
+	static void take(java.util.ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(java.util.List<String> values) {
+		System.out.println(values);
+	}
+
+	void m() {
+		final java.util.List<String> items = new java.util.ArrayList<>();
+		take(items);
+	}
+}
+// === end ===
+
 // === case: overload_selection_differs_at_a_later_argument ===
 // imports: java.util.ArrayList
 // imports: java.util.List
@@ -506,6 +565,71 @@ class InputPreferVarOverloadSelectionIgnoresADifferentAritySliceViolation {
 }
 // === end ===
 
+// === case: overload_selection_ignores_a_varargs_overload ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionIgnoresAVarargsOverloadSliceViolation {
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values, Object... rest) {
+		System.out.println(values.size() + rest.length);
+	}
+
+	void m() {
+		final var items = new ArrayList<String>();
+		take(items);
+	}
+}
+// === end ===
+
+// === case: overload_selection_sees_a_captured_use ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionSeesACapturedUseSliceViolation {
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m() {
+		final List<String> items = new ArrayList<>();
+		final Runnable task = new Runnable() {
+			@Override
+			public void run() {
+				take(items);
+			}
+		};
+		System.out.println(task);
+	}
+}
+// === end ===
+
+// === case: overload_selection_survives_cyclic_inheritance ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarCyclicInheritanceSliceViolation extends InputPreferVarCyclicInheritancePartner {
+	void m() {
+		final List<String> items = new ArrayList<>();
+		take(items);
+	}
+
+	void take(List<String> values) {
+		System.out.println(values);
+	}
+}
+
+class InputPreferVarCyclicInheritancePartner extends InputPreferVarCyclicInheritanceSliceViolation {
+	void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+}
+// === end ===
+
 // === case: qualified_constructor_name ===
 // imports: java.util.ArrayList
 class InputPreferVarDiamondQualifiedConstructorNameSliceViolation {
@@ -531,6 +655,28 @@ class InputPreferVarQualifiedNewMatchingSimpleNameSliceViolation {
 class InputPreferVarQualifiedTypeSliceViolation {
 	void m(List<String> x) {
 		final var l = x;
+	}
+}
+// === end ===
+
+// === case: reassigned_and_overload_selection_changes ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+// imports: java.util.LinkedList
+class InputPreferVarReassignedAndOverloadSelectionChangesSliceViolation {
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m(boolean flag) {
+		List<String> items = new ArrayList<>();
+		if (flag)
+			items = new LinkedList<>();
+		take(items);
 	}
 }
 // === end ===

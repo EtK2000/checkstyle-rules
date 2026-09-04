@@ -1,5 +1,71 @@
 package com.etk2000.checkstyle.inputs.prefervar;
 
+// === case: all_object_arguments_drop_across_a_block_comment ===
+// imports: java.util.ArrayList
+class InputPreferVarAllObjectDropAcrossBlockCommentSliceViolation {
+	void m() {
+		final ArrayList<Object> items = new ArrayList<> /* keep // violation: Local variable must use 'var' instead of an explicit type.
+				*/ ();
+		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: all_object_arguments_drop_across_a_comment_inside_the_parens ===
+// imports: java.util.ArrayList
+class InputPreferVarCommentInsideParensSliceViolation {
+	void m() {
+		final ArrayList<Object> items = new ArrayList<>( /* keep */ ); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: all_object_arguments_drop_across_a_line_break ===
+// imports: java.util.ArrayList
+class InputPreferVarAllObjectDropAcrossLineBreakSliceViolation {
+	void m() {
+		final ArrayList<Object> items = new ArrayList<> // violation: Local variable must use 'var' instead of an explicit type.
+				();
+		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: all_object_arguments_drop_across_a_line_comment ===
+// imports: java.util.ArrayList
+class InputPreferVarAllObjectDropAcrossLineCommentSliceViolation {
+	void m() {
+		final ArrayList<Object> items = new ArrayList<> // keep // violation: Local variable must use 'var' instead of an explicit type.
+				();
+		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: all_object_arguments_drop_across_a_paren_line_break ===
+// imports: java.util.ArrayList
+class InputPreferVarParenLineBreakSliceViolation {
+	void m() {
+		final ArrayList<Object> items = new ArrayList<> // violation: Local variable must use 'var' instead of an explicit type.
+				(
+				);
+		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: all_object_arguments_survive_an_argument_on_the_next_line ===
+// imports: java.util.ArrayList
+class InputPreferVarAllObjectArgumentOnNextLineSliceViolation {
+	void m() {
+		final ArrayList<Object> items = new ArrayList<> // violation: Local variable must use 'var' instead of an explicit type.
+				(4);
+		System.out.println(items);
+	}
+}
+// === end ===
+
 // === case: all_primitive_same_type_literals ===
 class InputPreferVarLiteralMismatchAllPrimitiveSameTypeLiteralsSliceViolation {
 	void m() {
@@ -96,6 +162,22 @@ class InputPreferVarGenericReturnAutoDetectedGenericVarSliceViolation {
 
 	void m() {
 		final var s = cast("hello"); // violation (warning): Using 'var' with 'cast' loses generic type information, consider using an explicit type.
+	}
+}
+// === end ===
+
+// === case: bare_call_resolution_survives_cyclic_inheritance ===
+// imports: java.util.List
+class InputPreferVarCycleBareCallSliceViolation extends InputPreferVarCycleBareCallPartner {
+	void m() {
+		final List<String> items = build(); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(items);
+	}
+}
+
+class InputPreferVarCycleBareCallPartner extends InputPreferVarCycleBareCallSliceViolation {
+	List<String> build() {
+		return List.of();
 	}
 }
 // === end ===
@@ -1673,6 +1755,27 @@ class InputPreferVarGenericReturnNonGenericMethodSliceViolation {
 }
 // === end ===
 
+// === case: overload_selection_changes_from_an_enclosing_class ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionChangesFromAnEnclosingClassSliceViolation {
+	static class Inner {
+		void m() {
+			final List<String> items = new ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+			take(items);
+		}
+	}
+
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+}
+// === end ===
+
 // === case: overload_selection_changes_on_a_constructor_argument ===
 // imports: java.util.ArrayList
 // imports: java.util.List
@@ -1732,6 +1835,44 @@ class InputPreferVarOverloadSelectionChangesUnderVarSliceViolation {
 }
 // === end ===
 
+// === case: overload_selection_changes_via_an_inherited_overload ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadInheritedBase {
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+}
+
+class InputPreferVarOverloadSelectionChangesViaAnInheritedOverloadSliceViolation extends InputPreferVarOverloadInheritedBase {
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m() {
+		final List<String> items = new ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		take(items);
+	}
+}
+// === end ===
+
+// === case: overload_selection_changes_with_qualified_types ===
+class InputPreferVarOverloadSelectionChangesWithQualifiedTypesSliceViolation {
+	static void take(java.util.ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(java.util.List<String> values) {
+		System.out.println(values);
+	}
+
+	void m() {
+		final java.util.List<String> items = new java.util.ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		take(items);
+	}
+}
+// === end ===
+
 // === case: overload_selection_differs_at_a_later_argument ===
 // imports: java.util.ArrayList
 // imports: java.util.List
@@ -1786,6 +1927,141 @@ class InputPreferVarOverloadSelectionIgnoresAForeignReceiverSliceViolation {
 	void m(Map<String, String> other) {
 		final List<String> items = new ArrayList<>(); // violation: Local variable must use 'var' instead of an explicit type.
 		System.out.println(other.getOrDefault("k", "v") + items.size());
+	}
+}
+// === end ===
+
+// === case: overload_selection_ignores_a_nested_parameter_of_the_same_name ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarNestedParameterShadowSliceViolation {
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m() {
+		final List<String> items = new ArrayList<>(); // violation: Local variable must use 'var' instead of an explicit type.
+		final Object nested = new Object() {
+			void consume(List<String> items) {
+				take(items);
+			}
+		};
+		System.out.println(items);
+		System.out.println(nested);
+	}
+}
+// === end ===
+
+// === case: overload_selection_ignores_a_sibling_block_use ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionIgnoresASiblingBlockUseSliceViolation {
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m(boolean flag) {
+		if (flag) {
+			final List<String> items = new ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+			take(items);
+		}
+		final List<String> items = new ArrayList<>(); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: overload_selection_ignores_a_varargs_overload ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionIgnoresAVarargsOverloadSliceViolation {
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(ArrayList<String> values, Object... rest) {
+		System.out.println(values.size() + rest.length);
+	}
+
+	void m() {
+		final List<String> items = new ArrayList<>(); // violation: Local variable must use 'var' instead of an explicit type.
+		take(items);
+	}
+}
+// === end ===
+
+// === case: overload_selection_sees_a_captured_use ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionSeesACapturedUseSliceViolation {
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m() {
+		final List<String> items = new ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final Runnable task = new Runnable() {
+			@Override
+			public void run() {
+				take(items);
+			}
+		};
+		System.out.println(task);
+	}
+}
+// === end ===
+
+// === case: overload_selection_skips_an_unresolvable_parameter_type ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionSkipsAnUnresolvableParameterTypeSliceViolation {
+	static class Bag {
+	}
+
+	static void take(Bag values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m() {
+		final List<String> items = new ArrayList<>(); // violation: Local variable must use 'var' instead of an explicit type.
+		take(items);
+	}
+}
+// === end ===
+
+// === case: overload_selection_survives_cyclic_inheritance ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarCyclicInheritanceSliceViolation extends InputPreferVarCyclicInheritancePartner {
+	void m() {
+		final List<String> items = new ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		take(items);
+	}
+
+	void take(List<String> values) {
+		System.out.println(values);
+	}
+}
+
+class InputPreferVarCyclicInheritancePartner extends InputPreferVarCyclicInheritanceSliceViolation {
+	void take(ArrayList<String> values) {
+		System.out.println(values);
 	}
 }
 // === end ===
@@ -2040,6 +2316,28 @@ class InputPreferVarQualifiedTypeArgumentNotWideningSliceViolation {
 class InputPreferVarQualifiedTypeFinalSliceViolation {
 	void m(List<String> x) {
 		final java.util.List<String> l = x; // violation: Local variable must use 'var' instead of an explicit type.
+	}
+}
+// === end ===
+
+// === case: reassigned_and_overload_selection_changes ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+// imports: java.util.LinkedList
+class InputPreferVarReassignedAndOverloadSelectionChangesSliceViolation {
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m(boolean flag) {
+		List<String> items = new ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		if (flag)
+			items = new LinkedList<>();
+		take(items);
 	}
 }
 // === end ===

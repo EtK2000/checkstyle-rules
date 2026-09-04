@@ -15,6 +15,7 @@ final class SkipMessages {
 	static final String ANNOTATION_SYNTAX_SKIP = get("annotation.syntax.skip");
 	static final String AVOID_SUPER_SKIP = get("avoid.super.skip");
 	static final String COLLECTION_INTERFACE_SKIP = get("prefer.collection.interface.skip");
+	static final String COLLECTION_INTERFACE_STALE = get("prefer.collection.interface.skip.stale");
 	static final String CONSTRUCTOR_ASSIGN_SKIP_COMMENT = get("constructor.assign.skip.comment");
 	static final String CONSTRUCTOR_ASSIGN_SKIP_CYCLE = get("constructor.assign.skip.cycle");
 	static final String CONSTRUCTOR_ASSIGN_SKIP_DUPLICATE_FIELD = get("constructor.assign.skip.duplicate.field");
@@ -93,6 +94,8 @@ final class SkipMessages {
 	static final String PREFER_VAR_SKIP_UNREACHABLE_DIAMOND = get("prefer.var.skip.unreachable.diamond");
 	static final String PREFER_VAR_SKIP_UNRECOGNIZED = get("prefer.var.skip.unrecognized");
 	static final String PREFER_VAR_SKIP_WRAPPED_TYPE_ARGUMENTS = get("prefer.var.skip.wrapped.type.arguments");
+	static final String RECORD_PAIR_DEFERRED = get("prefer.collection.interface.skip.record.pair");
+	static final String RECORD_PAIR_HALF = get("prefer.collection.interface.skip.record.half");
 	static final String REDUNDANT_EQUALITY_SKIP_COMMENT = get("redundant.equality.skip.comment");
 	static final String REDUNDANT_MODIFIER_STALE_COLUMN = get("redundant.modifier.skip.stale.column");
 	static final String UNUSED_IMPORTS_MALFORMED = get("unused.imports.skip.malformed");

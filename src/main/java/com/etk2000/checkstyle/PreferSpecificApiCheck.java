@@ -1,13 +1,10 @@
 package com.etk2000.checkstyle;
 
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
-import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -63,7 +60,8 @@ import javax.annotation.Nullable;
  * Uses reflection to verify the receiver type actually has
  * the suggested method before flagging.
  */
-public class PreferSpecificApiCheck extends AbstractAstCheck {
+public class PreferSpecificApiCheck extends AbstractResolvingCheck {
+	private static final int MIN_SDK_CHAR_SEQUENCE_IS_EMPTY = 35;
 	private static final int MIN_SDK_COLLECTION_FACTORY = 30;
 	private static final int MIN_SDK_COPY_OF = 31;
 	private static final int MIN_SDK_FOR_EACH = 24;
@@ -1169,17 +1167,6 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 		return last.getText();
 	}
 
-	private final Set<String> imports = new HashSet<>();
-
-	private int minSdk = Integer.MAX_VALUE;
-	private String packageName;
-
-	@Override
-	public void beginTree(@Nonnull DetailAST rootAST) {
-		imports.clear();
-		packageName = null;
-	}
-
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
@@ -1202,11 +1189,11 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 	 */
 	@CheckReturnValue
 	private boolean receiverHasMethod(@Nonnull DetailAST methodCall, @Nonnull String methodName) {
-		final var receiverTypeName = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
+		final var receiverTypeName = receiverTypeName(methodCall);
 		if (receiverTypeName == null)
 			return true;
 
-		final var fqcn = ReflectionUtil.resolveClassName(receiverTypeName, packageName, imports);
+		final var fqcn = resolve(receiverTypeName);
 		return fqcn == null || ReflectionUtil.hasMethod(fqcn, methodName);
 	}
 
@@ -1218,11 +1205,11 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 	 */
 	@CheckReturnValue
 	private boolean receiverHasMethodStrict(@Nonnull DetailAST methodCall, @Nonnull String methodName) {
-		final var receiverTypeName = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
+		final var receiverTypeName = receiverTypeName(methodCall);
 		if (receiverTypeName == null)
 			return false;
 
-		final var fqcn = ReflectionUtil.resolveClassName(receiverTypeName, packageName, imports);
+		final var fqcn = resolve(receiverTypeName);
 		return fqcn != null && ReflectionUtil.hasMethod(fqcn, methodName);
 	}
 
@@ -1233,22 +1220,11 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 	 */
 	@CheckReturnValue
 	private boolean receiverIsCharSequenceNotString(@Nonnull DetailAST methodCall) {
-		final var typeName = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
+		final var typeName = receiverTypeName(methodCall);
 		if (typeName == null)
 			return false;
-		final var fqcn = ReflectionUtil.resolveClassName(typeName, packageName, imports);
+		final var fqcn = resolve(typeName);
 		return fqcn != null && ReflectionUtil.isCharSequenceNotString(fqcn);
-	}
-
-	/**
-	 * Sets the minimum SDK version for the target platform.
-	 * APIs not available below this SDK level will not be suggested.
-	 * For example, {@code .getFirst()}/{@code .getLast()} require Android API 35+.
-	 * <p>Called by Checkstyle via reflection when {@code minSdk} is set in the config.</p>
-	 */
-	@SuppressWarnings("unused")
-	public void setMinSdk(int minSdk) {
-		this.minSdk = minSdk;
 	}
 
 	private void visitArraysAsList(@Nonnull DetailAST ast) {
@@ -1315,7 +1291,7 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 		for (var call : calls) {
 			if (!receiverHasMethodStrict(call, "isEmpty"))
 				continue;
-			if (minSdk < 35 && receiverIsCharSequenceNotString(call))
+			if (!minSdkAtLeast(MIN_SDK_CHAR_SEQUENCE_IS_EMPTY) && receiverIsCharSequenceNotString(call))
 				continue;
 			log(call, MSG_METHOD, ".isEmpty()", ".equals(\"\")");
 		}
@@ -1396,29 +1372,29 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 		visitStreamCount(ast);
 		visitStreamFindFirstIsPresent(ast);
 
-		if (minSdk >= MIN_SDK_FOR_EACH) {
+		if (minSdkAtLeast(MIN_SDK_FOR_EACH)) {
 			visitCollectionsSort(ast);
 			visitStreamForEach(ast);
 		}
 
-		if (minSdk >= MIN_SDK_COLLECTION_FACTORY) {
+		if (minSdkAtLeast(MIN_SDK_COLLECTION_FACTORY)) {
 			visitArraysAsList(ast);
 			visitCollectionsFactory(ast);
 		}
 
-		if (minSdk >= MIN_SDK_COPY_OF)
+		if (minSdkAtLeast(MIN_SDK_COPY_OF))
 			visitCollectionsCopyOf(ast);
 
-		if (minSdk >= MIN_SDK_IS_BLANK)
+		if (minSdkAtLeast(MIN_SDK_IS_BLANK))
 			visitTrimIsBlank(ast);
 
-		if (minSdk >= MIN_SDK_TO_ARRAY_GENERATOR)
+		if (minSdkAtLeast(MIN_SDK_TO_ARRAY_GENERATOR))
 			visitToArrayNewZero(ast);
 
-		if (minSdk >= MIN_SDK_FORMATTED)
+		if (minSdkAtLeast(MIN_SDK_FORMATTED))
 			visitStringFormat(ast);
 
-		if (minSdk < MIN_SDK_GET_FIRST_LAST)
+		if (!minSdkAtLeast(MIN_SDK_GET_FIRST_LAST))
 			return;
 
 		final var getCalls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isGetCall(n));
@@ -1511,6 +1487,11 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 			log(call, MSG_METHOD, ".replace(...)", ".replaceAll(...)");
 	}
 
+	@Override
+	protected void visitScopedToken(@Nonnull DetailAST ast) {
+		visitMethodScope(ast);
+	}
+
 	private void visitSizeEqualsZero(@Nonnull DetailAST ast) {
 		final var comparisons = AstUtil.collectMatching(ast, n -> isEmptyReplacement(n) != null);
 		for (var comparison : comparisons) {
@@ -1518,7 +1499,7 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 			if (sizeCall == null || !receiverHasMethodStrict(sizeCall, "isEmpty"))
 				continue;
 
-			if (minSdk < 35 && receiverIsCharSequenceNotString(sizeCall))
+			if (!minSdkAtLeast(MIN_SDK_CHAR_SEQUENCE_IS_EMPTY) && receiverIsCharSequenceNotString(sizeCall))
 				continue;
 
 			final var replacement = isEmptyReplacement(comparison);
@@ -1588,18 +1569,6 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 		for (var call : calls) {
 			final var typeName = toArrayNewZeroType(call);
 			log(call, MSG_METHOD, typeName + "[]::new", "new " + typeName + "[0]");
-		}
-	}
-
-	@Override
-	public void visitToken(@Nonnull DetailAST ast) {
-		switch (ast.getType()) {
-			case TokenTypes.IMPORT -> imports.add(FullIdent.createFullIdentBelow(ast).getText());
-			case TokenTypes.PACKAGE_DEF -> {
-				final var ident = ast.getLastChild().getPreviousSibling();
-				packageName = FullIdent.createFullIdent(ident).getText();
-			}
-			default -> visitMethodScope(ast);
 		}
 	}
 

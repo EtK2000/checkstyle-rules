@@ -135,6 +135,13 @@ public class PreferVarCheckTest {
 	}
 
 	@Test
+	public void testDeclaredArgumentsMoveToDiamondAtSwitchWithNonNewArm() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "switched")));
+		assertFalse(PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, at[0], at[1]));
+	}
+
+	@Test
 	public void testDeclaredArgumentsMoveToDiamondAtTryResource() throws Exception {
 		final var root = parseFixture();
 		final var at = typePosition(locate(root, node -> node.getType() == TokenTypes.RESOURCE));

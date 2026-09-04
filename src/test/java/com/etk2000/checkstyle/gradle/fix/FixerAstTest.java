@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.etk2000.checkstyle.gradle.fix.FixerAst.AstFunction;
 import com.etk2000.checkstyle.gradle.fix.FixerAst.ThrowingParser;
@@ -146,6 +147,44 @@ public class FixerAstTest {
 		assertNull(FixerAst.parseOrNull(List.copyOf(UNPARSEABLE), counting));
 		assertNull(FixerAst.parseOrNull(List.copyOf(UNPARSEABLE), counting));
 		assertEquals(1, calls.get());
+	}
+
+	@Test
+	public void testMaskCachedForUnchangedBuffer() {
+		final var lines = new ArrayList<>(VALID);
+		final var first = FixerAst.maskAll(lines);
+		assertSame(first, FixerAst.maskAll(lines));
+	}
+
+	@Test
+	public void testMaskClearedByClearCache() {
+		final var first = FixerAst.maskAll(VALID);
+		FixerAst.clearCache();
+		assertNotSame(first, FixerAst.maskAll(VALID));
+	}
+
+	@Test
+	public void testMaskIsImmutable() {
+		assertThrows(UnsupportedOperationException.class, () -> FixerAst.maskAll(VALID).set(0, "x"));
+	}
+
+	@Test
+	public void testMaskIsThreadConfined() throws Exception {
+		final var mine = FixerAst.maskAll(VALID);
+		final var theirs = new AtomicReference<List<String>>();
+		final var thread = new Thread(() -> theirs.set(FixerAst.maskAll(VALID)));
+		thread.start();
+		thread.join();
+		assertNotNull(theirs.get());
+		assertNotSame(mine, theirs.get());
+	}
+
+	@Test
+	public void testMaskNotReusedAfterInPlaceEdit() {
+		final var lines = new ArrayList<>(List.of("var s = \"ab\";"));
+		assertEquals(List.of("var s = \"  \";"), FixerAst.maskAll(lines));
+		lines.set(0, "var s = \"abcd\";");
+		assertEquals(List.of("var s = \"    \";"), FixerAst.maskAll(lines));
 	}
 
 	@Test

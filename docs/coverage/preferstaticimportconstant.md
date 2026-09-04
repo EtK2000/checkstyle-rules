@@ -80,4 +80,12 @@ not fixed).
 | Same field assigned twice (in one or across static blocks) | More than one matching top-level assignment makes which value "wins" non-obvious; the check skips both |
 | Cinit RHS is a literal, method call, or non-dotted expression | RHS shape is checked the same way as inline init; non-dotted shapes never fire |
 
+## Known unsound
+
+Unlike the rows above, these are not skips: the check flags and the fixer rewrites, and the result may not compile.
+
+| Pattern | Reason |
+| --- | --- |
+| Single-line blank `static final` plus same-line `static { }` initializer, with a supplementary code point between the field name and the block's closing brace (`private static final String X /* U+1F389 */; static { X = Foo.BAR; }`) | `fixCinit`'s single-line branch mixes two index systems in one splice. `endCol` and `rhsSemiPos` are CHAR indices, from `findStatementEnd` scanning `JavaLineScanner.stripCommentsAndStrings` and combined with `.length()` arithmetic; `fieldDeclStart`, `spliceMidEndCol` and `spliceTailStartCol` are raw `getColumnNo()`, i.e. CODE-POINT columns. They are concatenated in a single `substring` expression whose guard tests only ordering and bounds, never character identity, so a supplementary code point earlier on the line shifts three of the five indices and the splice emits a stray `}` that closes the enclosing class early. `CheckstyleFixAction` bounds-checks only the line range and never re-parses, so the broken output is written. Narrow to trigger and unrecoverable when it fires. The fix is a per-site `LineText.charIndexOfColumn` conversion at the three column sites, converting before the `+ 1` on the tail start and leaving `endCol`/`rhsSemiPos` alone, since a blanket wrap would double-convert. This is the only one of the four column-touching fixers that never calls `charIndexOfColumn`; `ControlFlowBracesFixer`, `PreferVarFixer` and `FieldSortingFixer` all do |
+
 Part of [auto-fix coverage](../auto-fix-coverage.md).

@@ -21,7 +21,7 @@ import javax.annotation.Nullable;
  * in for-each loops, try-with-resources, and local variable declarations
  * (where the type is inferrable from the initializer).
  */
-public class PreferVarCheck extends AbstractAstCheck {
+public class PreferVarCheck extends AbstractResolvingCheck {
 	enum PrimitiveVarAction {
 		ERROR,
 		SKIP,
@@ -47,10 +47,6 @@ public class PreferVarCheck extends AbstractAstCheck {
 	private static final String MSG_VAR_GENERIC = "prefer.var.generic.return";
 	private static final String NO_NAMEABLE_TYPE = "";
 
-	/**
-	 * Whether {@code objBlock} or a same-file supertype declares a method named {@code methodName}.
-	 * An inherited method is as resolvable as a declared one, so the supertype chain is followed.
-	 */
 	private static void addParameterTypeAt(@Nonnull DetailAST defNode, int arity, int index, @Nonnull List<String> found) {
 		final var params = defNode.findFirstToken(TokenTypes.PARAMETERS);
 		if (params == null)
@@ -93,7 +89,7 @@ public class PreferVarCheck extends AbstractAstCheck {
 			if (ident != null && methodName.equals(ident.getText()))
 				return true;
 		}
-		for (var body : supertypeBodies(objBlock)) {
+		for (var body : AstUtil.supertypeBodies(objBlock)) {
 			if (bodyDeclaresMethod(body, methodName, visited))
 				return true;
 		}
@@ -146,8 +142,50 @@ public class PreferVarCheck extends AbstractAstCheck {
 			if (ident != null && methodName.equals(ident.getText()))
 				addParameterTypeAt(child, arity, index, found);
 		}
-		for (var body : supertypeBodies(objBlock))
+		for (var body : AstUtil.supertypeBodies(objBlock))
 			collectParameterTypes(body, methodName, arity, index, visited, found);
+	}
+
+	/**
+	 * Adds {@code scope}'s uses to {@code uses}, ignoring names in {@code shadowed}. A nested body's
+	 * own members shadow the enclosing local, but a name it does not declare is the captured local
+	 * itself, so the body is descended into rather than skipped whole.
+	 */
+	private static void collectUses(
+			@Nonnull DetailAST scope,
+			@Nonnull Set<String> shadowed,
+			@Nonnull Map<String, List<DetailAST>> uses
+	) {
+		final var pending = new ArrayDeque<DetailAST>();
+		pending.push(scope);
+		while (!pending.isEmpty()) {
+			final var node = pending.pop();
+			if (node != scope && node.getType() == TokenTypes.OBJBLOCK) {
+				collectUses(node, union(shadowed, declaredMemberNames(node)), uses);
+				continue;
+			}
+
+			// a nested body's parameters shadow an enclosing local for that whole body, so an
+			// identifier inside it names the parameter rather than the declaration being weighed.
+			// Only parameters: a nested local's scope starts at its own declarator, so treating one
+			// as shadowing would hide a genuine use written above it
+			if (node != scope
+					&& (node.getType() == TokenTypes.METHOD_DEF || node.getType() == TokenTypes.CTOR_DEF)) {
+				collectUses(node, union(shadowed, AstUtil.collectParameterNames(node)), uses);
+				continue;
+			}
+
+			if (node.getType() == TokenTypes.IDENT && !shadowed.contains(node.getText()))
+				uses.computeIfAbsent(node.getText(), name -> new ArrayList<>()).add(node);
+
+			// pushed in reverse so siblings pop in document order, which is what lets a caller take
+			// the uses after a declarator by position in the list
+			final var children = new ArrayList<DetailAST>();
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+				children.add(child);
+			for (var i = children.size() - 1; i >= 0; --i)
+				pending.push(children.get(i));
+		}
 	}
 
 	/**
@@ -253,7 +291,7 @@ public class PreferVarCheck extends AbstractAstCheck {
 				// a DOT's children are the name's own segments, so descending would match
 				// `com.example.Number` on its trailing `Number`; only its arguments are types
 				if (child.getType() == TokenTypes.DOT) {
-					final var qualifiedName = typeName(child);
+					final var qualifiedName = AstUtil.typeName(child);
 					if (qualifiedName != null && WIDENING_SUPERTYPE_FQCNS.contains(qualifiedName))
 						return true;
 					// an earlier segment's own arguments hang off the inner DOT it closed
@@ -328,6 +366,20 @@ public class PreferVarCheck extends AbstractAstCheck {
 			return conditional && conditionalNewArms(value) != null;
 		}
 		return false;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static Set<String> declaredMemberNames(@Nonnull DetailAST objBlock) {
+		final var names = new HashSet<String>();
+		for (var child = objBlock.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() != TokenTypes.VARIABLE_DEF)
+				continue;
+			final var ident = child.findFirstToken(TokenTypes.IDENT);
+			if (ident != null)
+				names.add(ident.getText());
+		}
+		return names;
 	}
 
 	/**
@@ -421,7 +473,7 @@ public class PreferVarCheck extends AbstractAstCheck {
 			}
 		}
 
-		for (var body : supertypeBodies(objBlock)) {
+		for (var body : AstUtil.supertypeBodies(objBlock)) {
 			if (declaresTargetTypedMethod(body, methodName, visited))
 				return true;
 		}
@@ -469,6 +521,17 @@ public class PreferVarCheck extends AbstractAstCheck {
 		// a reference array still widens: `Object[]` over a `String[]` element rebinds to `String[]`
 		final var loopTypeName = simpleTypeName(loopType.getFirstChild());
 		return loopTypeName != null && WIDENING_SUPERTYPES.contains(loopTypeName);
+	}
+
+	/**
+	 * The block a local's uses live in: its own, except for a {@code for}-init declarator, whose
+	 * condition, update and body hang off the enclosing {@code for} rather than off {@code FOR_INIT}.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static DetailAST enclosingScopeOf(@Nonnull DetailAST varDef) {
+		final var parent = varDef.getParent();
+		return parent != null && parent.getType() == TokenTypes.FOR_INIT ? parent.getParent() : parent;
 	}
 
 	@CheckReturnValue
@@ -596,6 +659,19 @@ public class PreferVarCheck extends AbstractAstCheck {
 			return false;
 
 		return firstChild.getType() == TokenTypes.DOT && firstChild.findFirstToken(TokenTypes.TYPE_ARGUMENTS) != null;
+	}
+
+	/**
+	 * Every {@code IDENT} in {@code scope}, in document order, grouped by name, minus the names
+	 * {@link #collectUses} treats as shadowed. Built once per scope because a block declaring many
+	 * locals would otherwise be rescanned for each of them, which is quadratic in the block's size.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static Map<String, List<DetailAST>> indexUses(@Nonnull DetailAST scope) {
+		final var uses = new HashMap<String, List<DetailAST>>();
+		collectUses(scope, Set.of(), uses);
+		return uses;
 	}
 
 	@CheckReturnValue
@@ -991,45 +1067,8 @@ public class PreferVarCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	@Nullable
 	private static String simpleTypeName(@Nullable DetailAST nameNode) {
-		final var name = typeName(nameNode);
+		final var name = AstUtil.typeName(nameNode);
 		return name == null ? null : name.substring(name.lastIndexOf('.') + 1);
-	}
-
-	/**
-	 * The {@code OBJBLOCK} of every same-file supertype {@code objBlock}'s type extends or
-	 * implements.
-	 */
-	@CheckReturnValue
-	@Nonnull
-	private static List<DetailAST> supertypeBodies(@Nonnull DetailAST objBlock) {
-		final var typeDef = objBlock.getParent();
-		if (typeDef == null)
-			return List.of();
-
-		final var bodies = new ArrayList<DetailAST>();
-		for (var clause = typeDef.getFirstChild(); clause != null; clause = clause.getNextSibling()) {
-			if (clause.getType() != TokenTypes.EXTENDS_CLAUSE && clause.getType() != TokenTypes.IMPLEMENTS_CLAUSE)
-				continue;
-
-			for (var name = clause.getFirstChild(); name != null; name = name.getNextSibling()) {
-				final var superName = typeName(name);
-				final var superDef = superName == null ? null : AstUtil.sameFileClassDef(typeDef, superName);
-				final var superBlock = superDef == null ? null : superDef.findFirstToken(TokenTypes.OBJBLOCK);
-				if (superBlock != null)
-					bodies.add(superBlock);
-			}
-		}
-		return bodies;
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static String typeName(@Nullable DetailAST nameNode) {
-		if (nameNode == null)
-			return null;
-		if (nameNode.getType() == TokenTypes.IDENT)
-			return nameNode.getText();
-		return nameNode.getType() == TokenTypes.DOT ? AstUtil.dottedName(nameNode) : null;
 	}
 
 	/**
@@ -1049,6 +1088,17 @@ public class PreferVarCheck extends AbstractAstCheck {
 	}
 
 	@CheckReturnValue
+	@Nonnull
+	private static Set<String> union(@Nonnull Set<String> first, @Nonnull Set<String> second) {
+		if (second.isEmpty())
+			return first;
+
+		final var merged = new HashSet<>(first);
+		merged.addAll(second);
+		return merged;
+	}
+
+	@CheckReturnValue
 	@Nullable
 	private static DetailAST unwrapInitializerValue(@Nonnull DetailAST assign) {
 		var value = AstUtil.unwrapParensAndExpr(assign.getFirstChild());
@@ -1058,11 +1108,10 @@ public class PreferVarCheck extends AbstractAstCheck {
 		return value;
 	}
 
+	private final Map<DetailAST, Map<String, List<DetailAST>>> scopeUses = new HashMap<>();
 	private final Map<String, String> staticImportOwners = new HashMap<>();
-	private final Set<String> imports = new HashSet<>();
 
 	private Set<String> allowedMethods = Set.of();
-	private String packageName;
 
 	/**
 	 * Whether {@code use}, read as a call argument, would bind to a different parameter once its
@@ -1104,10 +1153,9 @@ public class PreferVarCheck extends AbstractAstCheck {
 	}
 
 	@Override
-	public void beginTree(@Nonnull DetailAST rootAST) {
-		imports.clear();
+	protected void beginFile(@Nullable DetailAST rootAST) {
+		scopeUses.clear();
 		staticImportOwners.clear();
-		packageName = null;
 	}
 
 	/**
@@ -1124,8 +1172,8 @@ public class PreferVarCheck extends AbstractAstCheck {
 		if (staticImportOwners.containsKey(methodName) || sameFileDeclaresMethod(methodCall, methodName))
 			return true;
 
-		final var receiver = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
-		if (receiver != null && ReflectionUtil.resolveClassName(receiver, packageName, imports) != null)
+		final var receiver = receiverTypeName(methodCall);
+		if (receiver != null && resolve(receiver) != null)
 			return true;
 
 		final var qualified = qualifiedReceiverName(methodCall);
@@ -1153,7 +1201,7 @@ public class PreferVarCheck extends AbstractAstCheck {
 		if (declared < 0) {
 			// off the classpath, so the arity cannot be checked: only constructing the declared
 			// type itself is safe, since anything else may declare a different arity
-			final var declaredName = typeName(type.getFirstChild());
+			final var declaredName = AstUtil.typeName(type.getFirstChild());
 			if (declaredName == null)
 				return true;
 			if (declaredName.equals(createdName))
@@ -1178,6 +1226,15 @@ public class PreferVarCheck extends AbstractAstCheck {
 		return countTypeArguments(declaredArgs) != declared;
 	}
 
+	/**
+	 * Releases the per-scope use index. Checkstyle reuses one check instance across files, so a map
+	 * left populated pins the finished file's whole AST through its identifiers' parent pointers.
+	 */
+	@Override
+	public void finishTree(@Nonnull DetailAST rootAST) {
+		scopeUses.clear();
+	}
+
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
@@ -1197,22 +1254,14 @@ public class PreferVarCheck extends AbstractAstCheck {
 		if (methodName == null)
 			return false;
 
-		final var receiverTypeName = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
+		final var receiverTypeName = receiverTypeName(methodCall);
 		var fqcn = receiverTypeName == null
 				? qualifiedReceiverName(methodCall)
-				: ReflectionUtil.resolveClassName(receiverTypeName, packageName, imports);
+				: resolve(receiverTypeName);
 		if (fqcn == null)
 			fqcn = staticImportOwners.get(methodName);
-		// a lambda argument is a bare ELIST child rather than an EXPR, so counting EXPR alone
-		// undercounts and the arity filter would then select the wrong overload
 		final var args = methodCall.findFirstToken(TokenTypes.ELIST);
-		var argCount = 0;
-		if (args != null) {
-			for (var arg = args.getFirstChild(); arg != null; arg = arg.getNextSibling()) {
-				if (arg.getType() != TokenTypes.COMMA)
-					++argCount;
-			}
-		}
+		final var argCount = args == null ? 0 : AstUtil.countArguments(args);
 		return fqcn != null && ReflectionUtil.hasGenericReturnType(fqcn, methodName, argCount);
 	}
 
@@ -1306,43 +1355,20 @@ public class PreferVarCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	private boolean overloadSelectionChanges(@Nonnull DetailAST varDef, @Nonnull DetailAST type, @Nonnull String constructedName) {
 		final var nameNode = varDef.findFirstToken(TokenTypes.IDENT);
-		final var declaredName = typeName(type.getFirstChild());
+		final var declaredName = AstUtil.typeName(type.getFirstChild());
 		if (nameNode == null || declaredName == null)
 			return false;
 
 		final var declaredFqcn = resolvedClassName(declaredName);
 		final var constructedFqcn = resolvedClassName(constructedName);
 		// an unresolvable pair says nothing either way, and refusing on it would silence every
-		// declaration whose classes are off the classpath
+		// declaration whose classes are off the classpath. An identical pair short-circuits the
+		// use walk rather than guarding a distinct answer: no parameter accepts one of the two
+		// and not the other, so the walk below would reject it one reflection call later
 		if (declaredFqcn == null || constructedFqcn == null || declaredFqcn.equals(constructedFqcn))
 			return false;
 
-		var scope = varDef.getParent();
-		if (scope == null)
-			return false;
-
-		// a for-init declarator's scope is the whole `for`, so scanning FOR_INIT alone never reaches
-		// the condition, update or body where the variable is actually used
-		if (scope.getType() == TokenTypes.FOR_INIT && scope.getParent() != null)
-			scope = scope.getParent();
-
-		final var name = nameNode.getText();
-		final var pending = new ArrayDeque<DetailAST>();
-		pending.push(scope);
-		while (!pending.isEmpty()) {
-			final var node = pending.pop();
-
-			// a nested or anonymous body declares its own members, so a same-named one there shadows
-			// this local rather than using it
-			if (node.getType() == TokenTypes.OBJBLOCK)
-				continue;
-
-			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
-				pending.push(child);
-
-			if (node.getType() != TokenTypes.IDENT || node == nameNode || !name.equals(node.getText()))
-				continue;
-
+		for (var node : usesAfter(varDef, nameNode)) {
 			if (argumentReselectsAnOverload(node, declaredFqcn, constructedFqcn))
 				return true;
 		}
@@ -1409,30 +1435,9 @@ public class PreferVarCheck extends AbstractAstCheck {
 		if (modifiers != null && modifiers.findFirstToken(TokenTypes.FINAL) != null)
 			return false;
 
-		// the scan starts at the declarator and stays inside its own block: every legal
-		// reassignment lies there, while one above it or in a sibling block reaches a field, a
-		// parameter, or another variable that happens to share the name
-		var start = varDef;
-		if (varDef.getParent() != null && varDef.getParent().getType() == TokenTypes.FOR_INIT)
-			start = varDef.getParent();
-
-		final var name = nameNode.getText();
-		final var pending = new ArrayDeque<DetailAST>();
-		for (var sibling = start.getNextSibling(); sibling != null; sibling = sibling.getNextSibling())
-			pending.push(sibling);
-		while (!pending.isEmpty()) {
-			final var node = pending.pop();
-
-			// a nested or anonymous class body can only assign its own member of that name: a
-			// captured local has to be effectively final, so assigning one there is illegal
-			if (node.getType() == TokenTypes.OBJBLOCK)
-				continue;
-
-			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
-				pending.push(child);
-			if (node.getType() != TokenTypes.IDENT || node == nameNode || !name.equals(node.getText()))
-				continue;
-
+		// only the uses after the declarator are this variable's: one above it or in a sibling block
+		// reaches a field, a parameter, or another variable that happens to share the name
+		for (var node : usesAfter(varDef, nameNode)) {
 			final var parent = node.getParent();
 			if (parent == null)
 				continue;
@@ -1529,7 +1534,7 @@ public class PreferVarCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	@Nullable
 	private String resolvedClassName(@Nonnull String name) {
-		return name.indexOf('.') >= 0 ? name : ReflectionUtil.resolveClassName(name, packageName, imports);
+		return name.indexOf('.') >= 0 ? name : resolve(name);
 	}
 
 	/**
@@ -1543,8 +1548,22 @@ public class PreferVarCheck extends AbstractAstCheck {
 		allowedMethods = Set.copyOf(List.of(methods));
 	}
 
+	@CheckReturnValue
+	@Nonnull
+	private List<DetailAST> usesAfter(@Nonnull DetailAST varDef, @Nonnull DetailAST nameNode) {
+		final var scope = enclosingScopeOf(varDef);
+		if (scope == null)
+			return List.of();
+
+		final var all = scopeUses
+				.computeIfAbsent(scope, PreferVarCheck::indexUses)
+				.getOrDefault(nameNode.getText(), List.of());
+		final var declarator = all.indexOf(nameNode);
+		return declarator < 0 ? List.of() : all.subList(declarator + 1, all.size());
+	}
+
 	@Override
-	public void visitToken(@Nonnull DetailAST ast) {
+	protected void visitScopedToken(@Nonnull DetailAST ast) {
 		switch (ast.getType()) {
 			case TokenTypes.FOR_EACH_CLAUSE -> {
 				final var varDef = ast.findFirstToken(TokenTypes.VARIABLE_DEF);
@@ -1556,11 +1575,6 @@ public class PreferVarCheck extends AbstractAstCheck {
 					return;
 
 				log(loopType, MSG_FOREACH);
-			}
-			case TokenTypes.IMPORT -> imports.add(FullIdent.createFullIdentBelow(ast).getText());
-			case TokenTypes.PACKAGE_DEF -> {
-				final var ident = ast.getLastChild().getPreviousSibling();
-				packageName = FullIdent.createFullIdent(ident).getText();
 			}
 			case TokenTypes.RESOURCE -> {
 				// Java 9+ "try (existingVar) {}" reference form has no TYPE child;

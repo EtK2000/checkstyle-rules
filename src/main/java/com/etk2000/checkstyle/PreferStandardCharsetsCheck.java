@@ -1,16 +1,14 @@
 package com.etk2000.checkstyle;
 
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
-import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.lang.reflect.Modifier;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -30,7 +28,7 @@ import javax.annotation.Nullable;
  * <p>Respects {@code minSdk}: {@code StandardCharsets} requires Android
  * API 19+, so the check is suppressed when {@code minSdk < 19}.</p>
  */
-public class PreferStandardCharsetsCheck extends AbstractAstCheck {
+public class PreferStandardCharsetsCheck extends AbstractResolvingCheck {
 	private static final int MIN_SDK_STANDARD_CHARSETS = 19;
 	private static final Map<String, String> CHARSET_MAP = buildCharsetMap();
 	private static final String MSG_GENERIC = "prefer.standard.charsets.string";
@@ -44,9 +42,9 @@ public class PreferStandardCharsetsCheck extends AbstractAstCheck {
 				try {
 					final var charset = (Charset) field.get(null);
 					final var fieldName = field.getName();
-					map.put(charset.name().toLowerCase(), fieldName);
+					map.put(charset.name().toLowerCase(Locale.ROOT), fieldName);
 					for (var alias : charset.aliases())
-						map.put(alias.toLowerCase(), fieldName);
+						map.put(alias.toLowerCase(Locale.ROOT), fieldName);
 				}
 				catch (IllegalAccessException ignored) {
 				}
@@ -103,18 +101,25 @@ public class PreferStandardCharsetsCheck extends AbstractAstCheck {
 		if (expr.getType() != TokenTypes.STRING_LITERAL)
 			return null;
 		final var text = expr.getText();
-		return CHARSET_MAP.get(text.substring(1, text.length() - 1).toLowerCase());
+		return standardCharsetConstant(text.substring(1, text.length() - 1));
 	}
 
-	private final Set<String> imports = new HashSet<>();
-
-	private int minSdk = Integer.MAX_VALUE;
-	private String packageName;
-
-	@Override
-	public void beginTree(@Nonnull DetailAST rootAST) {
-		imports.clear();
-		packageName = null;
+	/**
+	 * Maps a charset name or alias to the matching {@code StandardCharsets} field name, or null
+	 * when no constant covers it. Matching is case-insensitive under {@link Locale#ROOT}, since
+	 * charset names are ASCII protocol identifiers: a locale-sensitive lowercase would map the
+	 * {@code I} in {@code ISO-8859-1} and {@code US-ASCII} to a dotless {@code \u0131} under a
+	 * Turkish default locale and stop matching them.
+	 *
+	 * <p>This is the single source of truth for the mapping; {@code PreferStandardCharsetsFixer}
+	 * calls it rather than deriving its own.</p>
+	 *
+	 * @param charsetName the unquoted charset name
+	 */
+	@CheckReturnValue
+	@Nullable
+	public static String standardCharsetConstant(@Nonnull String charsetName) {
+		return CHARSET_MAP.get(charsetName.toLowerCase(Locale.ROOT));
 	}
 
 	/**
@@ -127,7 +132,7 @@ public class PreferStandardCharsetsCheck extends AbstractAstCheck {
 		if (className == null)
 			return -1;
 
-		final var fqcn = ReflectionUtil.resolveClassName(className, packageName, imports);
+		final var fqcn = resolve(className);
 		if (fqcn == null)
 			return -1;
 
@@ -155,7 +160,7 @@ public class PreferStandardCharsetsCheck extends AbstractAstCheck {
 			else if (receiver != null && receiver.getType() == TokenTypes.LITERAL_NEW)
 				receiverTypeName = AstUtil.findNewClassName(receiver);
 			else
-				receiverTypeName = AstUtil.getReceiverTypeName(ast, packageName, imports);
+				receiverTypeName = receiverTypeName(ast);
 		}
 		else if (firstChild.getType() == TokenTypes.IDENT)
 			methodName = firstChild.getText();
@@ -165,7 +170,7 @@ public class PreferStandardCharsetsCheck extends AbstractAstCheck {
 		if (receiverTypeName == null)
 			return -1;
 
-		final var fqcn = ReflectionUtil.resolveClassName(receiverTypeName, packageName, imports);
+		final var fqcn = resolve(receiverTypeName);
 		if (fqcn == null)
 			return -1;
 
@@ -176,16 +181,6 @@ public class PreferStandardCharsetsCheck extends AbstractAstCheck {
 	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.IMPORT, TokenTypes.LITERAL_NEW, TokenTypes.METHOD_CALL, TokenTypes.PACKAGE_DEF};
-	}
-
-	/**
-	 * Sets the minimum SDK version for the target platform.
-	 * {@code StandardCharsets} requires Android API 19+.
-	 * <p>Called by Checkstyle via reflection when {@code minSdk} is set in the config.</p>
-	 */
-	@SuppressWarnings("unused")
-	public void setMinSdk(int minSdk) {
-		this.minSdk = minSdk;
 	}
 
 	private void visitCall(@Nonnull DetailAST ast) {
@@ -226,19 +221,8 @@ public class PreferStandardCharsetsCheck extends AbstractAstCheck {
 	}
 
 	@Override
-	public void visitToken(@Nonnull DetailAST ast) {
-		switch (ast.getType()) {
-			case TokenTypes.IMPORT -> imports.add(FullIdent.createFullIdentBelow(ast).getText());
-
-			case TokenTypes.LITERAL_NEW, TokenTypes.METHOD_CALL -> {
-				if (minSdk >= MIN_SDK_STANDARD_CHARSETS)
-					visitCall(ast);
-			}
-
-			case TokenTypes.PACKAGE_DEF -> {
-				final var ident = ast.getLastChild().getPreviousSibling();
-				packageName = FullIdent.createFullIdent(ident).getText();
-			}
-		}
+	protected void visitScopedToken(@Nonnull DetailAST ast) {
+		if (minSdkAtLeast(MIN_SDK_STANDARD_CHARSETS))
+			visitCall(ast);
 	}
 }

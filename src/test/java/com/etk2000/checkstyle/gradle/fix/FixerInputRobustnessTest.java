@@ -65,6 +65,24 @@ public class FixerInputRobustnessTest {
 	}
 
 	@Test
+	public void collectionInterfaceNonIdentifierColumnProducesNoFix() throws IOException {
+		// the shared probe drives only out-of-range columns, which bail at the bounds guard; the
+		// identifier guard is reachable only from a stale column landing inside the line
+		final var lines = List.of("\tvoid f(List<String> items) {}");
+		for (var column : new int[]{0, 5, 7, 12, 19})
+			assertNull(invoke(new PreferCollectionInterfaceFixer(), new ArrayList<>(lines), 0, column));
+	}
+
+	@Test
+	public void collectionInterfaceOutOfRangeColumnReturnsNull() throws IOException {
+		// the shared probe only asserts "not a FixResult"; this fixer's bounds guard returns a bare
+		// null, which the pipeline reports differently from a SkipResult
+		final var line = "\tvoid f(List<String> items) {}";
+		for (var column : new int[]{-1, -100, line.length(), line.length() + 1, 10_000})
+			assertNull(invoke(new PreferCollectionInterfaceFixer(), new ArrayList<>(List.of(line)), 0, column));
+	}
+
+	@Test
 	public void fieldConsolidationInvalidColumnProducesNoFix() throws IOException {
 		// the shared probe drives lineIndex 0, which this fixer rejects outright (a merge
 		// needs a preceding field line), so the parameterized case never reaches its

@@ -112,7 +112,10 @@ full import line (it begins with `import ` or with a leading block comment
 `/*`) is emitted verbatim rather than wrapped, so a slice can carry an import
 line bearing a comment (`// imports: import foo.Foo; // note`,
 `// imports: /* legacy */ import foo.Foo;`) that a real import line in the
-linted `cases.*.java` file could not. When a slice needs its own package
+linted `cases.*.java` file could not. That full-import form is the *only* way
+to attach a comment: a bare FQCN carrying one
+(`// imports: java.util.List // note`) is rejected, because the wrapping
+appends a `;` that the comment would swallow. When a slice needs its own package
 context (a check that only fires on a package-qualified reference, e.g. a
 `pkg.Type.FIELD` cinit LHS), declare it with a `// package: <name>` directive
 at the top of the slice: it stays a comment in the physical file (which keeps
@@ -125,6 +128,19 @@ matching predicate (`// violation [minSdk>=N]: ...`) to every marker in
 in `docs/testing.md`. The gated-off variant's `cases.out.<variant>.java`
 must NOT carry `// imports:` directives the input doesn't already have;
 the auto-emitted `imports-unchanged` dynamic test enforces this.
+
+Both directives are expanded twice, by two implementations with deliberately
+different rules, so a case that works one way may not work the other. Loading a
+slice (`TestResources.loadCaseSlice`, which every `assertCaseFix` and auto-
+pipeline test goes through) substitutes each directive line in place, keeping
+line numbers stable, and classifies purely by text. Running a check over the
+whole physical `cases.*.java` file (`BaseCheckTest.runCheck` and the path form
+of `assertCheckMatchesMarkers`) instead packs the imports onto the `package`
+line, because a real `import` between two class declarations would not parse;
+it consults a lexer, so a directive-shaped line that is only text-block or
+block-comment content is not treated as a directive there; and it rejects any
+comment-carrying value outright. So a slice that needs the full-import form can
+only be asserted per-slice, never through a whole-file run.
 
 **Fragment / skip / boundary tests** (no compiled Java context, deliberately
 out-of-bounds inputs, or `SkipResult` reason assertions): add them to
@@ -198,6 +214,9 @@ entry, so this no-op guard covers it.
 ### 6. Update README
 
 Add the check to the fixable checks table in `README.md`.
+
+If you also added a doc under `docs/`, add a hook line for it to [docs/README.md](README.md) in the
+same commit. That index is the only cheap way to find prior art across 150+ docs.
 
 ### 7. Verify
 

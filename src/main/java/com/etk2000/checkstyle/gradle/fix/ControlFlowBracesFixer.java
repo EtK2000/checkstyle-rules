@@ -237,7 +237,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	) {
 		// searched on a masked buffer so a `}` inside a string, comment, or text block
 		// is not mistaken for the block's own brace
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		var closeBraceLine = -1;
 		for (var i = braceLine + 1; i < lines.size(); ++i) {
 			if (masked.get(i).stripLeading().startsWith("}")) {
@@ -384,7 +384,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		if (braceLine < 0 || braceLine >= lines.size())
 			return null;
 
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		final var bodyLine = JavaLineScanner.nextCodeLine(masked, braceLine + 1);
 		if (bodyLine < 0)
 			return null;
@@ -555,7 +555,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 				? line.substring(0, braceIdx).stripTrailing() + " " + line.substring(commentIdx).stripTrailing()
 				: line.substring(0, braceIdx).stripTrailing();
 
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		final var bodyLine = JavaLineScanner.nextCodeLine(masked, lineIndex + 1);
 		if (bodyLine < 0)
 			return null;
@@ -681,7 +681,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 
 		// a comment between the `do` and its own-line `{` still leaves a braced body:
 		// treating the comment as the body would brace the existing block a second time
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		final var braceLine = JavaLineScanner.nextCodeLine(masked, bodyStart);
 		if (braceLine >= 0 && masked.get(braceLine).stripLeading().startsWith("{")) {
 			// the `{` shares its line with a comment ahead of it, so every index below

@@ -50,6 +50,37 @@ full output. Integration tests are split across three classes:
 - **`CheckstyleFixUtilTest`**: pure utility tests (hint message formatting, tab-column conversion,
   skip reason tracking) with no file I/O
 
+## Reading fixtures
+
+Fixture files are large (`jitinefficiency/cases.in.java` holds 344 cases in 4,576 lines), but
+every case is delimited:
+
+```java
+// === case: <name> ===
+...
+// === end ===
+```
+
+`tools/slice` reads one case instead of the whole file. Reach for it before any Read of a fixture.
+
+| Command | What it gives |
+| ------- | ------------- |
+| `tools/slice list` | every topic and its case count |
+| `tools/slice list <topic>` | case names + line numbers in the topic's canonical input |
+| `tools/slice list <topic> --all` | same, for every sliced file in the topic |
+| `tools/slice show <topic> <name>` | the case from each sliced file, with line ranges |
+| `tools/slice find <pattern>` | case names matching a regex, across all topics |
+
+`show` is the one to use when changing a case: it prints the `in`, `out` and `fixed` versions
+together, so a `.out` vs `.fixed` divergence is visible in one call rather than three file reads.
+Both a topic name and a direct file path work as the first argument.
+
+`find` answers "does a case for this exist already" without reading any fixture. Case names are
+descriptive, so a pattern search over names usually locates prior coverage on its own.
+
+`cases.clean.java` files carry no case markers, so `list` and `show` skip them; clean files are
+whole-file fixtures by design.
+
 ## Tab-expanded columns
 
 Checkstyle reports column numbers with tabs expanded to the configured `tabWidth`. This project

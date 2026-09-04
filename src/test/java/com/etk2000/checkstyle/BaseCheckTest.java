@@ -60,9 +60,6 @@ public class BaseCheckTest {
 			@Nonnull String... properties
 	) throws Exception {
 		final var expected = parseViolationMarkers(lines, PropertiesUtil.arrayToMap(properties));
-		// A trailing '// violation:' comment can otherwise change the check's own
-		// input (e.g. it makes a blank line non-blank, hiding an internal-blank
-		// violation).
 		final var violations = runCheckInline(checkClass, stripViolationMarkers(String.join("\n", lines)), properties);
 		assertExpectedViolationsMatch(expected, violations, context);
 	}
@@ -184,41 +181,93 @@ public class BaseCheckTest {
 		};
 	}
 
+	/**
+	 * Turns the {@code // imports:} directives of a whole fixture file into real
+	 * imports, packed onto the {@code package} line so that every other line keeps
+	 * its index. That stability is what lets {@code // violation:} markers parsed
+	 * from the raw file be compared against the lines the check reports.
+	 *
+	 * <p>Only a bare FQCN is supported here. A full import line, or any value carrying
+	 * a comment, is rejected: such a case can only be asserted per-slice.
+	 */
 	@CheckReturnValue
 	@Nonnull
-	static List<String> hoistImportsDirectives(@Nonnull List<String> rawLines) {
+	static List<String> inlineImportsDirectives(@Nonnull List<String> rawLines) {
 		final var prefix = "// imports:";
+		final var states = lineStartStates(rawLines);
 		final var collected = new LinkedHashSet<String>();
-		for (var line : rawLines) {
+		for (var i = 0; i < rawLines.size(); ++i) {
+			if (states.get(i).inMultilineLiteral())
+				continue;
+			final var line = rawLines.get(i);
 			final var trimmed = line.strip();
 			if (!trimmed.startsWith(prefix))
 				continue;
-			final var fqn = trimmed.substring(prefix.length()).strip();
-			if (!fqn.isEmpty())
-				collected.add("import " + fqn + ";");
+			final var raw = trimmed.substring(prefix.length());
+			if (!raw.isBlank() && !raw.startsWith(" ")) {
+				throw new IllegalStateException(
+						"malformed '// imports:' directive (expected '// imports: <fqcn>'): '" + line + "'"
+				);
+			}
+			final var value = raw.strip();
+			if (value.isEmpty())
+				throw new IllegalStateException("'// imports:' directive with empty FQCN: '" + line + "'");
+			if (value.startsWith("import ") || value.contains("//") || value.contains("/*")) {
+				throw new IllegalStateException(
+						"'// imports:' value is not a bare FQCN (it is a full import line, or carries a"
+								+ " comment that would swallow what follows it on the packed package line)"
+								+ " and cannot be inlined for a whole-file run; assert this case per-slice"
+								+ " via TestResources.loadCaseSlice: '" + line + "'"
+				);
+			}
+			collected.add("import " + value + ";");
 		}
 		if (collected.isEmpty())
 			return rawLines;
 		var packageLineIdx = -1;
 		for (var i = 0; i < rawLines.size(); ++i) {
-			if (rawLines.get(i).strip().startsWith("package ")) {
+			if (!states.get(i).inMultilineLiteral() && rawLines.get(i).strip().startsWith("package ")) {
 				packageLineIdx = i;
 				break;
 			}
 		}
-		final var out = new ArrayList<String>(rawLines.size() + collected.size() + 1);
-		if (packageLineIdx < 0) {
-			out.addAll(collected);
-			out.add("");
-			out.addAll(rawLines);
-		}
+		final var anchorIdx = Math.max(packageLineIdx, 0);
+		final var anchor = rawLines.get(anchorIdx);
+		// a textual indexOf("//") would split inside a '/* see http://x */' and append into
+		// an unterminated '/* ...', either way burying the imports in a comment
+		// the anchor is always code-level (a selected package line, else line 0), so NONE is exact
+		final var commentIdx = JavaLineScanner.firstCommentMarker(anchor, JavaLineScanner.LexerState.NONE);
+		final var anchorCode = commentIdx < 0 ? anchor : anchor.substring(0, commentIdx);
+		// an import already packed onto the anchor means this ran before; re-adding
+		// it would grow the line on every pass
+		collected.removeIf(anchorCode::contains);
+		if (collected.isEmpty())
+			return rawLines;
+		final var joined = String.join(" ", collected);
+		final var out = new ArrayList<>(rawLines);
+		if (packageLineIdx < 0)
+			out.set(anchorIdx, joined + ' ' + anchor);
 		else {
-			out.addAll(rawLines.subList(0, packageLineIdx + 1));
-			out.add("");
-			out.addAll(collected);
-			out.addAll(rawLines.subList(packageLineIdx + 1, rawLines.size()));
+			out.set(
+					anchorIdx,
+					commentIdx < 0
+							? anchor + ' ' + joined
+							: anchorCode + joined + ' ' + anchor.substring(commentIdx)
+			);
 		}
 		return out;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static List<JavaLineScanner.LexerState> lineStartStates(@Nonnull List<String> lines) {
+		final var states = new ArrayList<JavaLineScanner.LexerState>(lines.size());
+		var state = JavaLineScanner.LexerState.NONE;
+		for (var line : lines) {
+			states.add(state);
+			state = JavaLineScanner.stateAfter(line, state);
+		}
+		return states;
 	}
 
 	@CheckReturnValue
@@ -336,12 +385,11 @@ public class BaseCheckTest {
 		final var translated = new ArrayList<File>(files.size());
 		for (var file : files) {
 			final var rawLines = Files.readAllLines(file.toPath());
-			final var hasDirective = rawLines.stream().anyMatch(l -> l.strip().startsWith("// imports:"));
-			if (!hasDirective) {
+			final var translatedLines = inlineImportsDirectives(rawLines);
+			if (translatedLines.equals(rawLines)) {
 				translated.add(file);
 				continue;
 			}
-			final var translatedLines = hoistImportsDirectives(rawLines);
 			final var tempDir = Path.of(System.getProperty("java.io.tmpdir"), "checkstyle-translated");
 			Files.createDirectories(tempDir);
 			final var sourceKey = Integer.toHexString(file.getAbsolutePath().hashCode());
@@ -397,7 +445,7 @@ public class BaseCheckTest {
 
 	/**
 	 * Removes trailing {@code // violation:} markers (and the whitespace before
-	 * them) so the check runs on the same source production and the fixer see.
+	 * them) so the check runs on the same source that production and the fixer see.
 	 * Line count is preserved, so reported line numbers still line up with the
 	 * markers parsed from the original content.
 	 */
@@ -422,8 +470,7 @@ public class BaseCheckTest {
 	 * itself when it does not begin inside a text block. Resolves a {@code // violation@opener:}
 	 * marker (placed on a text block's closing line, after the closing {@code """}) back to the
 	 * opener line the check reports on. The opener line itself cannot carry a trailing comment
-	 * because only whitespace may follow a text-block-opening {@code """}. Plain {@code // violation:}
-	 * markers are unaffected and stay on their own line.
+	 * because only whitespace may follow a text-block-opening {@code """}.
 	 */
 	@CheckReturnValue
 	@Nonnull

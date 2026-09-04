@@ -138,9 +138,9 @@ Skip dimensions that don't apply. Do not pad. But also do not omit a dimension j
 
 ### Step 7: Syntax-variant coverage
 
-For each language construct the check touches, `Read` `docs/syntax-permutation-catalogue.md` and walk through the relevant subsections (Imports, Annotations, Generics, Method/constructor chains, Lambdas/method refs, Anonymous classes, Switches, Pattern matching, Try, Records/sealed, Enums, Inner/nested types, Modifiers, Strings/text blocks, Numeric literals, Numeric semantics edge values, Comments/Javadoc, Varargs/arrays, Whitespace/encoding, Receiver params/unusual decls).
+For each language construct the check touches, `Read` `docs/syntax-permutation-catalogue.md` and walk the subsections whose `Apply if` trigger matches this check. The file is the roster; do not work from a remembered list of subsection names.
 
-For each subsection that **applies** to this check (same trigger criteria the auditor uses), enumerate every variant the matrix needs. Skip subsections that don't apply, but list them as skipped with a one-line rationale ("Imports: skipped — check doesn't inspect IMPORT").
+For each subsection that **applies** to this check (its "Apply if..." line in the catalogue is the trigger), enumerate every variant the matrix needs. Skip subsections that don't apply, but list them as skipped with a one-line rationale ("Imports: skipped — check doesn't inspect IMPORT").
 
 This is the section where Claude consistently forgets coverage. Be exhaustive within applicable subsections.
 

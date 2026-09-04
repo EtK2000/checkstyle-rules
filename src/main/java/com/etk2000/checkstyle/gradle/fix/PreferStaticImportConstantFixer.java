@@ -1507,7 +1507,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 			@Nonnull List<Rewrite> rewrites
 	) {
 		final var modified = new TreeMap<Integer, String>();
-		final var maskedLines = JavaLineScanner.maskAll(lines);
+		final var maskedLines = FixerAst.maskAll(lines);
 		for (var lineIdx = 0; lineIdx < lines.size(); ++lineIdx) {
 			if (lineIdx >= skipStart && lineIdx <= skipEnd)
 				continue;

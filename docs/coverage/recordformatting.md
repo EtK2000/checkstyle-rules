@@ -34,4 +34,12 @@ record header to single-line form when components fit in 120 columns, or to mult
 | Multi-line record header where a block comment or text block spans lines (opens on one line, closes on a later one) | Cross-line comment/text-block state cannot be tracked when matching the closing paren, so the header cannot be collapsed safely; bail to avoid corrupting it |
 | Record header already in canonical single-line or multi-line form (no-op) | The fixer detects when its output would equal the input and returns null instead of looping |
 
+## Known unsound
+
+Unlike the rows above, these are not skips: the check reports and the result may be wrong.
+
+| Pattern | Reason |
+| --- | --- |
+| Record header line containing a supplementary character before the `{` (an astral char in a trailing comment or an annotation string) | The brace-spacing check reads `lineText.charAt(lcurlyCol - 1)` where `lcurlyCol` is `lcurly.getColumnNo()`, a CODE-POINT column, so on a line with a non-BMP character earlier the index is short by one unit per such character and the wrong character is inspected. The result is a spurious or missed `MSG_OPEN_BRACE_BAD_SPACING`. Reporting only, no splice, so nothing is corrupted, and the bound cannot go out of range because a code-point column never exceeds the char length. Fix is `LineText.charIndexOfColumn` before indexing |
+
 Part of [auto-fix coverage](../auto-fix-coverage.md).

@@ -45,6 +45,12 @@
 	var x = new ArrayList<Object();
 // === end ===
 
+// === case: dotted_expression_is_not_a_declaration ===
+// target: col=5
+	foo(a.b = c);
+	} } }
+// === end ===
+
 // === case: double_equals_after_name ===
 // target: col=1
 	int b == true;

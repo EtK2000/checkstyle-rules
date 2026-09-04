@@ -218,7 +218,12 @@
 - Always think about weird input or edge cases
 - Tests should cover all such cases
 - Check `docs/` for project-specific testing guides. If a `docs/testing.md` exists, read it before
-  writing any code and follow it as a driving process, not a post-hoc audit
+  writing any code and follow it as a driving process, not a post-hoc audit. Use `docs/README.md`
+  (the index) to find the right doc instead of globbing and reading blind
+- Never Read a whole fixture file to inspect a case. `tools/slice show <topic> <case>` prints the
+  in/out/fixed versions with line ranges, `tools/slice list <topic>` inventories a topic, and
+  `tools/slice find <pattern>` searches case names across all topics. Full Reads are for when you
+  genuinely need the whole file (e.g. reordering cases)
 - Before writing code: list every input category, plan clean/violation/boundary tests for each, and
   write the coverage matrix. Every cell must be filled before declaring done
 - While writing code: test each branch immediately after writing it, not after finishing all code

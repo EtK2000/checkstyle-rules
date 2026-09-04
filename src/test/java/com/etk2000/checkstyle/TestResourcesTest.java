@@ -81,9 +81,20 @@ public class TestResourcesTest {
 	@Test
 	public void testLoadCaseSliceVariantMissingFallsBackToBase() throws Exception {
 		final var slice = TestResources.loadCaseSlice("preferstandardcharsets", "builtin_functions", "minSdk-99");
+		assertTrue(slice.fixedLines().stream().anyMatch(l -> l.contains("StandardCharsets.UTF_8")));
+	}
+
+	@Test
+	public void testTranslateDirectivesBareFqcnWithTrailingCommentThrows() {
+		final var input = List.of("// imports: java.util.List // note", "body");
+		final var ex = assertThrows(
+				IllegalStateException.class,
+				() -> TestResources.translateDirectives(input)
+		);
+		assertTrue(ex.getMessage().contains("carries a comment"), "unexpected message: " + ex.getMessage());
 		assertTrue(
-				slice.fixedLines().stream().anyMatch(l -> l.contains("StandardCharsets.UTF_8")),
-				"missing variant should fall back to cases.out.java"
+				ex.getMessage().contains("// imports: import java.util.List // note"),
+				"message must show the verbatim form to use: " + ex.getMessage()
 		);
 	}
 

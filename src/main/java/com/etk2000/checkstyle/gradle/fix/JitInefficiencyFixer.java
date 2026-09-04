@@ -117,7 +117,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nonnull
 	private static String builderName(@Nonnull List<String> lines) {
-		final var bound = boundIdentifiers(JavaLineScanner.maskAll(lines));
+		final var bound = boundIdentifiers(FixerAst.maskAll(lines));
 		// the candidates are all distinct, so every rejected one is a distinct member of
 		// `bound`: after bound.size() rejections the set is exhausted and the next
 		// candidate is free. That makes the search bounded without assuming anything
@@ -530,7 +530,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 			return null;
 		// classify header lines off the masked view: a `for (...)`/`while (...)` sitting
 		// inside a text block or block comment is not a loop
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		var currentIdx = bodyLineIdx;
 		var currentIndent = LineLength.tabExpandedLength(LineText.extractIndent(lines.get(currentIdx)));
 		while (true) {
@@ -1048,7 +1048,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		// slip through and it aborted fixable loops on comment content.
 		final var loopTopIndent = LineLength.tabExpandedLength(LineText.extractIndent(lines.get(loop.topLineIdx())));
 		final var scanLimit = loop.braced() ? loop.endLineIdx() : lines.size();
-		final var maskedScan = JavaLineScanner.maskAll(lines);
+		final var maskedScan = FixerAst.maskAll(lines);
 		for (var i = lineIndex + 1; i < scanLimit; ++i) {
 			final var raw = lines.get(i);
 			if (raw.contains("\"\"\""))
@@ -1239,7 +1239,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	private static boolean isBlockStatement(@Nonnull List<String> lines, int lineIdx) {
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		for (var i = lineIdx - 1; i >= 0; --i) {
 			final var stripped = masked.get(i).strip();
 			if (stripped.isEmpty())

@@ -265,9 +265,13 @@ final class FixerTestUtil {
 			// in a multi-violation file are skipped while others are fixed.
 			// The Fixed slice text comparison below catches any divergence.
 		}
+		// net-new for the same reason as the single-violation path: a fixer may report an import
+		// the file already has, and production's insertMissingImports drops those
+		final var netNewImportsToAdd = new TreeSet<>(actualImportsToAdd);
+		netNewImportsToAdd.removeAll(inputImportFqcns);
 		assertEquals(
 				expectedImports,
-				actualImportsToAdd,
+				netNewImportsToAdd,
 				"Case '" + topic + "/" + caseName + "': importsToAdd mismatch (union across all fix calls)"
 		);
 		insertAddedImportsAtFixedPositions(lines, slice.fixedLines(), inputImportFqcns);

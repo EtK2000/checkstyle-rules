@@ -8,28 +8,23 @@ A check has three parts: the check class, message key, and test resources.
 
 ## 1. Check class
 
-In `src/main/java/com/etk2000/checkstyle/`, create a public class extending `AbstractCheck`:
+In `src/main/java/com/etk2000/checkstyle/`, create a public class extending one of three bases.
+Pick the narrowest that fits:
+
+| Base | Use when | Gives you |
+| ---- | -------- | --------- |
+| `AbstractAstCheck` | the default | `getAcceptableTokens`/`getRequiredTokens` delegating to `getDefaultTokens`, plus `logWarning` |
+| `AbstractMinSdkCheck` | the check suggests an API that needs a minimum Android API level | the reflective `minSdk` property and `minSdkAtLeast(int)` |
+| `AbstractResolvingCheck` | the check resolves simple type names against the file's imports or package | a per-file import/package scope, `resolve(String)` and `receiverTypeName(DetailAST)` |
 
 ```java
-public class MyNewCheck extends AbstractCheck {
+public class MyNewCheck extends AbstractAstCheck {
     private static final String MSG_KEY = "my.new.violation";
-
-    @Nonnull
-    @Override
-    public int[] getAcceptableTokens() {
-        return getDefaultTokens();
-    }
 
     @Nonnull
     @Override
     public int[] getDefaultTokens() {
         return new int[]{TokenTypes.METHOD_CALL}; // tokens to visit
-    }
-
-    @Nonnull
-    @Override
-    public int[] getRequiredTokens() {
-        return getDefaultTokens();
     }
 
     @Override
@@ -41,8 +36,15 @@ public class MyNewCheck extends AbstractCheck {
 }
 ```
 
-All three token methods must return the same array. `visitToken()` is called once per matching
-token in the AST.
+`visitToken()` is called once per matching token in the AST.
+
+`AbstractResolvingCheck` differs in two ways that are easy to get wrong:
+
+- Its `beginTree` and `visitToken` are `final`. Override `beginFile(rootAST)` for per-file setup
+  and `visitScopedToken(ast)` instead of `visitToken`.
+- It consumes `IMPORT` and `PACKAGE_DEF` itself, but you must still list both in
+  `getDefaultTokens()` or the scope stays empty and every simple name silently resolves to
+  nothing. `AbstractResolvingCheckTest` fails the build if you forget.
 
 ### Choosing tokens
 
@@ -268,6 +270,9 @@ Run `./gradlew check`. This checks:
 
 Add the check to the appropriate table in `README.md` (custom checks, regex rules, or
 built-in checks).
+
+If you also added a doc under `docs/`, add a hook line for it to [docs/README.md](README.md) in the
+same commit. That index is the only cheap way to find prior art across 150+ docs.
 
 ## 8. Register suppression for test resources
 

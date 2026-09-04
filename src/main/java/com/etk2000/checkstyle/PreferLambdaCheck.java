@@ -1,11 +1,7 @@
 package com.etk2000.checkstyle;
 
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
-import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-
-import java.util.HashSet;
-import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -16,7 +12,7 @@ import javax.annotation.Nonnull;
  * Only flags anonymous classes with a single method and no extra members
  * (fields, inner types, etc.).
  */
-public class PreferLambdaCheck extends AbstractAstCheck {
+public class PreferLambdaCheck extends AbstractResolvingCheck {
 	private static final String MSG = "prefer.lambda";
 
 	@CheckReturnValue
@@ -64,16 +60,6 @@ public class PreferLambdaCheck extends AbstractAstCheck {
 		return methodCount == 1;
 	}
 
-	private final Set<String> imports = new HashSet<>();
-
-	private String packageName;
-
-	@Override
-	public void beginTree(@Nonnull DetailAST rootAST) {
-		imports.clear();
-		packageName = null;
-	}
-
 	private void checkAnonymousClass(@Nonnull DetailAST literalNew) {
 		final var objBlock = literalNew.findFirstToken(TokenTypes.OBJBLOCK);
 		if (objBlock == null)
@@ -89,7 +75,7 @@ public class PreferLambdaCheck extends AbstractAstCheck {
 		if (typeName == null)
 			return;
 
-		final var fqcn = ReflectionUtil.resolveClassName(typeName, packageName, imports);
+		final var fqcn = resolve(typeName);
 		if (fqcn == null)
 			return;
 
@@ -108,14 +94,8 @@ public class PreferLambdaCheck extends AbstractAstCheck {
 	}
 
 	@Override
-	public void visitToken(@Nonnull DetailAST ast) {
-		switch (ast.getType()) {
-			case TokenTypes.IMPORT -> imports.add(FullIdent.createFullIdentBelow(ast).getText());
-			case TokenTypes.LITERAL_NEW -> checkAnonymousClass(ast);
-			case TokenTypes.PACKAGE_DEF -> {
-				final var ident = ast.getLastChild().getPreviousSibling();
-				packageName = FullIdent.createFullIdent(ident).getText();
-			}
-		}
+	protected void visitScopedToken(@Nonnull DetailAST ast) {
+		if (ast.getType() == TokenTypes.LITERAL_NEW)
+			checkAnonymousClass(ast);
 	}
 }

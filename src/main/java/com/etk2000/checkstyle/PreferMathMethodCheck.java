@@ -22,7 +22,7 @@ import javax.annotation.Nullable;
  * Only flags when all operands are pure (no side effects).
  * Skips method calls, constructors, increment/decrement, and assignments.
  */
-public class PreferMathMethodCheck extends AbstractAstCheck {
+public class PreferMathMethodCheck extends AbstractMinSdkCheck {
 	private record BranchInfo(@Nonnull BranchKind kind, @Nullable DetailAST target, @Nonnull DetailAST value, int assignType) {}
 
 	private enum BranchKind {
@@ -343,22 +343,10 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 		return ast;
 	}
 
-	private int minSdk = Integer.MAX_VALUE;
-
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.LITERAL_IF, TokenTypes.METHOD_CALL, TokenTypes.QUESTION};
-	}
-
-	/**
-	 * Sets the minimum SDK version for the target platform.
-	 * {@code Math.clamp} requires Android API 35+.
-	 * <p>Called by Checkstyle via reflection when {@code minSdk} is set in the config.</p>
-	 */
-	@SuppressWarnings("unused")
-	public void setMinSdk(int minSdk) {
-		this.minSdk = minSdk;
 	}
 
 	private void visitIf(@Nonnull DetailAST ast) {
@@ -448,7 +436,7 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 	}
 
 	private void visitMethodCall(@Nonnull DetailAST ast) {
-		if (minSdk < MIN_SDK_CLAMP)
+		if (!minSdkAtLeast(MIN_SDK_CLAMP))
 			return;
 
 		final var result = checkClamp(ast);

@@ -57,6 +57,11 @@ public class PreferVarFixerTest {
 	}
 
 	@Test
+	public void testDottedExpressionIsNotADeclaration() throws Exception {
+		assertSkipResult(fixer, TOPIC, "dotted_expression_is_not_a_declaration", "reported position is not a declaration this fixer recognises");
+	}
+
+	@Test
 	public void testDoubleEqualsAfterName() throws Exception {
 		assertSkipResult(fixer, TOPIC, "double_equals_after_name", "reported position is not a declaration this fixer recognises");
 	}

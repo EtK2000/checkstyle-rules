@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.etk2000.checkstyle.JavaLineScanner;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 
 import java.util.List;
@@ -45,6 +46,8 @@ final class FixerAst {
 	 * later in-place edit to the caller's list cannot make it silently match.
 	 */
 	private static final ThreadLocal<List<String>> CACHED_LINES = new ThreadLocal<>();
+	private static final ThreadLocal<List<String>> CACHED_MASK = new ThreadLocal<>();
+	private static final ThreadLocal<List<String>> CACHED_MASK_LINES = new ThreadLocal<>();
 	private static final ThreadLocal<ThrowingParser> CACHED_PARSER = new ThreadLocal<>();
 	private static final ThreadLocal<DetailAST> CACHED_ROOT = new ThreadLocal<>();
 
@@ -59,6 +62,8 @@ final class FixerAst {
 	 */
 	static void clearCache() {
 		CACHED_LINES.remove();
+		CACHED_MASK.remove();
+		CACHED_MASK_LINES.remove();
 		CACHED_PARSER.remove();
 		CACHED_ROOT.remove();
 	}
@@ -78,6 +83,28 @@ final class FixerAst {
 	 * {@code String} objects for lines it did not touch, and {@code String.equals}
 	 * short-circuits on identity.
 	 */
+	/**
+	 * {@link JavaLineScanner#maskAll} over {@code lines}, served from a cache when the buffer is
+	 * unchanged. Cached for the same reason {@link #parseOrNull} caches its AST: the pipeline calls a
+	 * fixer once per violation, so re-masking the whole file each time makes a pass cost
+	 * O(violations x file size). Keyed on buffer equality rather than an invalidation call, so a
+	 * stale mask cannot outlive an edit. The result is immutable: masked lines are read-only to every
+	 * caller, and sharing one instance is what makes the cache worth having.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static List<String> maskAll(@Nonnull List<String> lines) {
+		final var cachedLines = CACHED_MASK_LINES.get();
+		final var cachedMask = CACHED_MASK.get();
+		if (cachedLines != null && cachedMask != null && cachedLines.equals(lines))
+			return cachedMask;
+
+		final var masked = List.copyOf(JavaLineScanner.maskAll(lines));
+		CACHED_MASK_LINES.set(List.copyOf(lines));
+		CACHED_MASK.set(masked);
+		return masked;
+	}
+
 	@CheckReturnValue
 	@Nullable
 	static DetailAST parseOrNull(@Nonnull List<String> lines) {
