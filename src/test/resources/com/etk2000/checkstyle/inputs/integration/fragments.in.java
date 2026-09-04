@@ -1770,6 +1770,26 @@ class T {
 }
 // === end ===
 
+// === case: prefer_bulk_operation_collections_add_all_object_array ===
+import java.util.List;
+class T {
+	void f(List<String> target, String[] source) {
+		for (var item : source)
+			target.add(item);
+	}
+}
+// === end ===
+
+// === case: prefer_bulk_operation_collections_add_all_varargs ===
+import java.util.List;
+class T {
+	void f(List<String> target, String... source) {
+		for (var item : source)
+			target.add(item);
+	}
+}
+// === end ===
+
 // === case: prefer_bulk_operation_entry_set_put_all ===
 import java.util.Map;
 class T {
@@ -1926,14 +1946,14 @@ class T {
 // === case: prefer_collection_interface_multi_same_line ===
 import java.util.ArrayList;
 import java.util.HashMap;
-class T {
+final class T {
 	void f(ArrayList<String> a, HashMap<String, Integer> b) {}
 }
 // === end ===
 
 // === case: prefer_collection_interface_param ===
 import java.util.HashSet;
-class T {
+final class T {
 	void f(HashSet<String> s) {}
 }
 // === end ===
@@ -1941,7 +1961,7 @@ class T {
 // === case: prefer_collection_interface_return ===
 import java.util.ArrayList;
 class T {
-	ArrayList<String> f() {
+	private ArrayList<String> f() {
 		return new ArrayList<>();
 	}
 }
@@ -1951,7 +1971,7 @@ class T {
 import java.util.ArrayList;
 import java.util.List;
 class T {
-	ArrayList<String> f() {
+	private ArrayList<String> f() {
 		return new ArrayList<>();
 	}
 }

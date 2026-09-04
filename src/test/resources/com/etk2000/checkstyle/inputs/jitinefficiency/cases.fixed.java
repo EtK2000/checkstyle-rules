@@ -1,25 +1,5 @@
 package com.etk2000.checkstyle.inputs.jitinefficiency;
 
-// === case: allocation_new_string_fqn_bails ===
-// skip-reason: redundant new String(...) wrapper
-class InputJitInefficiencyAllocationNewStringFqnBailsSliceViolation {
-	void m() {
-		final var a = "hello";
-		System.out.println(a);
-	}
-}
-// === end ===
-
-// === case: allocation_string_buffer_fqn_constructor ===
-// skip-reason: local StringBuffer
-class InputJitInefficiencyAllocationStringBufferFqnConstructorSliceViolation {
-	void m() {
-		final var sb = new StringBuilder();
-		System.out.println(sb);
-	}
-}
-// === end ===
-
 // === case: allocation_to_array_sized_bare_ident_size ===
 // imports: java.util.List
 class InputJitInefficiencyAllocationToArraySizedBareIdentSizeSliceViolation {
@@ -67,6 +47,18 @@ class InputJitInefficiencyAllocationToArraySizedSizeExprSliceViolation {
 	void m(List<String> list) {
 		final var b = list.toArray(String[]::new);
 		System.out.println(b.length);
+	}
+}
+// === end ===
+
+// === case: allocation_to_array_sized_this_qualified_size ===
+// imports: java.util.List
+class InputJitInefficiencyAllocationToArraySizedThisQualifiedSizeSliceViolation {
+	int n;
+
+	void m(List<String> list) {
+		final var a = list.toArray(String[]::new);
+		System.out.println(a.length);
 	}
 }
 // === end ===
@@ -247,12 +239,11 @@ class InputJitInefficiencyArrayLhsThisChainPrefixMutatedBailsSliceViolation {
 }
 // === end ===
 
-// === case: empty_string_concat_diamond_operand_bails ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
+// === case: empty_string_concat_diamond_operand ===
 // imports: java.util.ArrayList
-class InputJitInefficiencyEmptyStringConcatDiamondOperandBailsSliceViolation {
+class InputJitInefficiencyEmptyStringConcatDiamondOperandSliceViolation {
 	void m() {
-		final var s = "" + new ArrayList<>();
+		final var s = String.valueOf(new ArrayList<>());
 		System.out.println(s);
 	}
 }
@@ -267,11 +258,10 @@ class InputJitInefficiencyEmptyStringConcatSwitchExpressionSliceViolation {
 }
 // === end ===
 
-// === case: empty_string_concat_switch_expression_operand_plus_bails ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
-class InputJitInefficiencyEmptyStringConcatSwitchExpressionOperandPlusBailsSliceViolation {
+// === case: empty_string_concat_switch_expression_operand_plus ===
+class InputJitInefficiencyEmptyStringConcatSwitchExpressionOperandPlusSliceViolation {
 	String m(int kind, String a, String b) {
-		final var label = "" + switch (kind) { case 1 -> a + b; default -> "c"; };
+		final var label = String.valueOf(switch (kind) { case 1 -> a + b; default -> "c"; });
 		return label;
 	}
 }
@@ -389,6 +379,39 @@ class InputJitInefficiencyFieldLhsTier2DoWhileAfterStatementLabelBailsSliceViola
 		do
 			this.out = this.out + x;
 		while (c);
+	}
+}
+// === end ===
+
+// === case: foreign_category_enum_values_field_lhs_does_not_borrow_concat_rewrite ===
+// skip-reason: Enum.values() in a loop
+class InputJitInefficiencyForeignCategoryEnumValuesFieldLhsDoesNotBorrowConcatRewriteSliceViolation {
+	enum Color {
+		BLUE
+	}
+
+	int total;
+
+	int m() {
+		// the loop rewriter's field path synthesizes a String declaration without resolving the
+		// field's type, so reaching it from another category emitted `this.total = sb.toString();`
+		for (var i = 0; i < 3; ++i)
+			this.total = total + Color.values().length;
+		return total;
+	}
+}
+// === end ===
+
+// === case: foreign_category_reusable_object_does_not_borrow_concat_rewrite ===
+// skip-reason: reusable object creation
+// imports: java.util.regex.Pattern
+class InputJitInefficiencyForeignCategoryReusableObjectDoesNotBorrowConcatRewriteSliceViolation {
+	int total;
+
+	int m() {
+		for (var i = 0; i < 3; ++i)
+			this.total = total + Pattern.compile("a").pattern().length();
+		return total;
 	}
 }
 // === end ===
@@ -654,6 +677,55 @@ class InputJitInefficiencyStringConcatFieldLhsSbTakenSliceViolation {
 }
 // === end ===
 
+// === case: string_concat_gap_cross_scope_bails ===
+// skip-reason: string concatenation in a loop
+// imports: java.util.List
+class InputJitInefficiencyStringConcatGapCrossScopeBailsSliceViolation {
+	void g() {
+		final var s = "in g";
+		System.out.println(s);
+	}
+
+	// the accumulator is a parameter here, so the backward scan for its declaration runs past the
+	// method boundary and lands on g()'s local
+	String h(List<String> list, String s) {
+		for (var x : list)
+			s = s + x;
+		return s;
+	}
+}
+// === end ===
+
+// === case: string_concat_gap_nested_scope_bails ===
+// skip-reason: string concatenation in a loop
+// imports: java.util.List
+class InputJitInefficiencyStringConcatGapNestedScopeBailsSliceViolation {
+	String m(boolean flag, List<String> list) {
+		var s = "";
+		if (flag) {
+			for (var x : list)
+				s = s + x;
+		}
+		return s;
+	}
+}
+// === end ===
+
+// === case: string_concat_gap_text_block_bails ===
+// skip-reason: string concatenation in a loop
+// imports: java.util.List
+class InputJitInefficiencyStringConcatGapTextBlockBailsSliceViolation {
+	String m(List<String> list) {
+		var s = "";
+		final var note = """
+				note""";
+		for (var x : list)
+			s = s + x;
+		return s + note;
+	}
+}
+// === end ===
+
 // === case: string_concat_generic_type_args_init_bails ===
 // skip-reason: string concatenation in a loop
 // imports: java.util.HashMap
@@ -708,6 +780,21 @@ class InputJitInefficiencyStringConcatMiddleAppendReadsAccumulatorBailsSliceViol
 		for (var i = 0; i < 3; ++i)
 			s = s + "-" + s.length() + x;
 		return s;
+	}
+}
+// === end ===
+
+// === case: string_concat_nested_assignment_lhs_mismatch_bails ===
+// skip-reason: string concatenation in a loop
+class InputJitInefficiencyStringConcatNestedAssignmentLhsMismatchBailsSliceViolation {
+	String f(String x) {
+		var a = "";
+		var s = "";
+		// the check reports the inner assignment to `s`, while the line scanner stops at the first
+		// `=` and reads `a`, so the two disagree about which variable the rewrite would replace
+		for (var i = 0; i < 3; ++i)
+			a = s = s + x;
+		return a + s;
 	}
 }
 // === end ===
@@ -929,6 +1016,21 @@ class InputJitInefficiencyStringConcatTier2DoWhileMismatchedWhileIndentBailsSlic
 		while (sb.length() < 5);
 		final var s = sb.toString();
 		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: string_concat_tier2_do_while_nested_scope_bails ===
+// skip-reason: string concatenation in a loop
+class InputJitInefficiencyStringConcatTier2DoWhileNestedScopeBailsSliceViolation {
+	String m(boolean flag) {
+		var s = "";
+		if (flag) {
+			do
+				s = s + "y";
+			while (s.length() < 5);
+		}
+		return s;
 	}
 }
 // === end ===

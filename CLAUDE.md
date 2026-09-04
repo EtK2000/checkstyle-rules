@@ -179,9 +179,19 @@
   `getString` is only recognized with a known Context receiver (parameter typed as `Context`,
   variable assigned from `requireContext()`/`getContext()`/`requireActivity()`/`getActivity()`, or
   calling directly on one of those)
-- No empty switch statements, if bodies, or else bodies. Remove them, but preserve any side effects
-  in the condition/expression. Example: `if (++i < 5);` becomes `++i;`,
-  `switch (a.mutate()) {}` becomes `a.mutate();`
+- No empty switch statements, if bodies, else bodies, loop bodies, or stray `;` statements. Remove
+  them, but preserve any side effects in the condition/expression. Example: `if (++i < 5);` becomes
+  `++i;`, `switch (a.mutate()) {}` becomes `a.mutate();`
+  - Exception: a clause body written as a bare `;` is fine when a comment sits on the semicolon's
+    own line, because the `;` is load-bearing (the clause cannot be written without it) and the
+    comment is what marks the no-op deliberate. Applies to `if`, `else`, `while`, `for` and `do`:
+    `if (x > 0)` / newline / tab / `; // handled by the caller`. A block comment on that line
+    (`; /* handled by the caller */`) counts too; a comment on the line *above* does not
+  - The exception does not exist for `{ }`: `;` plus a comment is the sanctioned form, so an empty
+    braced body is a violation commented or not. It does not exist for a `switch`, a `static`
+    initializer or an instance initializer either, since none of them has a `;` spelling
+  - It also does not apply to a stray `;` (one that is not a required clause body). That semicolon
+    is not needed at all, so it goes and any comment on its line stays
 - Early returns and guard clauses preferred over deep nesting
 
 ## Naming & Comments
@@ -218,7 +228,12 @@
 - Always think about weird input or edge cases
 - Tests should cover all such cases
 - Check `docs/` for project-specific testing guides. If a `docs/testing.md` exists, read it before
-  writing any code and follow it as a driving process, not a post-hoc audit
+  writing any code and follow it as a driving process, not a post-hoc audit. Use `docs/README.md`
+  (the index) to find the right doc instead of globbing and reading blind
+- Never Read a whole fixture file to inspect a case. `tools/slice show <topic> <case>` prints the
+  in/out/fixed versions with line ranges, `tools/slice list <topic>` inventories a topic, and
+  `tools/slice find <pattern>` searches case names across all topics. Full Reads are for when you
+  genuinely need the whole file (e.g. reordering cases)
 - Before writing code: list every input category, plan clean/violation/boundary tests for each, and
   write the coverage matrix. Every cell must be filled before declaring done
 - While writing code: test each branch immediately after writing it, not after finishing all code

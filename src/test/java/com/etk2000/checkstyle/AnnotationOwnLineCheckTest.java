@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.puppycrawl.tools.checkstyle.DetailAstImpl;
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
@@ -94,7 +95,7 @@ public class AnnotationOwnLineCheckTest {
 			assertEquals(8, fileContents.getLines().length);
 			final var bogusLine = fileContents.getLines().length + 5;
 			((DetailAstImpl) rparen).setLineNo(bogusLine);
-			assertEquals(bogusLine, AstUtil.lastLine(annotation));
+			assertEquals(bogusLine, AstQuery.lastLine(annotation));
 
 			final var check = new AnnotationOwnLineCheck();
 			check.setFileContents(fileContents);

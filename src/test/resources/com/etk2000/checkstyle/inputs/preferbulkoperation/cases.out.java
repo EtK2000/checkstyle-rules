@@ -208,6 +208,145 @@ class InputPreferBulkOperationArrayFillValueContainsUnaryPlusAndBracketSliceViol
 }
 // === end ===
 
+// === case: collections_add_all_import_present ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllImportPresentSliceViolation {
+	void m(List<String> target, String[] source) {
+		Collections.addAll(target, source);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_method_call_array_source ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllMethodCallArraySourceSliceViolation {
+	void m(List<String> target, String csv) {
+		Collections.addAll(target, csv.split(","));
+	}
+}
+// === end ===
+
+// === case: collections_add_all_nested_loop_var_element ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllNestedLoopVarElementSliceViolation {
+	void m(List<String> target, String[][] grid) {
+		for (var row : grid) {
+			Collections.addAll(target, row);
+		}
+	}
+}
+// === end ===
+
+// === case: collections_add_all_object_array ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllObjectArraySliceViolation {
+	void m(List<String> target, String[] source) {
+		Collections.addAll(target, source);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_paren_source ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllParenSourceSliceViolation {
+	void m(List<String> target, String[] source) {
+		Collections.addAll(target, source);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_two_dim_object_array ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllTwoDimObjectArraySliceViolation {
+	void m(List<String[]> target, String[][] source) {
+		Collections.addAll(target, source);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_var_local_from_dotted_call ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllVarLocalFromDottedCallSliceViolation {
+	void m(List<String> target, String csv) {
+		final var parts = csv.split(",");
+		Collections.addAll(target, parts);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_varargs ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllVarargsSliceViolation {
+	void m(List<String> target, String... source) {
+		Collections.addAll(target, source);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_varargs_array_element ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllVarargsArrayElementSliceViolation {
+	void m(List<String[]> target, String[]... source) {
+		Collections.addAll(target, source);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_varargs_primitive_array_element ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllVarargsPrimitiveArrayElementSliceViolation {
+	void m(List<int[]> target, int[]... source) {
+		Collections.addAll(target, source);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_varargs_record_component ===
+// imports: java.util.Collections
+// imports: java.util.List
+record InputPreferBulkOperationCollectionsAddAllVarargsRecordComponentSliceViolation(String... source) {
+	void m(List<String> target) {
+		Collections.addAll(target, source);
+	}
+}
+// === end ===
+
+// === case: collections_add_all_varargs_record_component_array_element ===
+// imports: java.util.Collections
+// imports: java.util.List
+record InputPreferBulkOperationCollectionsAddAllVarargsRecordComponentArrayElementSliceViolation(String[]... source) {
+	void m(List<String[]> target) {
+		Collections.addAll(target, source);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_anon_inherited_target ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllAnonInheritedTargetSliceViolation {
+	static class Base {
+		final List<String> target = new ArrayList<>();
+	}
+
+	Base holder = new Base() {
+		void run(List<String> source) {
+			target.addAll(source);
+		}
+	};
+}
+// === end ===
+
 // === case: for_each_add_all_braced ===
 // imports: java.util.List
 class InputPreferBulkOperationForEachAddAllBracedSliceViolation {
@@ -235,6 +374,55 @@ class InputPreferBulkOperationForEachAddAllBracelessWithTrailingCommentSliceViol
 }
 // === end ===
 
+// === case: for_each_add_all_double_paren_source ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllDoubleParenSourceSliceViolation {
+	void m(List<String> target, List<String> source) {
+		target.addAll(source);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_enum_constant_super_method_target ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+enum InputPreferBulkOperationForEachAddAllEnumConstantSuperMethodTargetSliceViolation {
+	A {
+		@Override
+		void go(List<String> source) {
+			super.target().addAll(source);
+		}
+	};
+
+	final List<String> items = new ArrayList<>();
+
+	void go(List<String> source) {
+	}
+
+	List<String> target() {
+		return items;
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_enum_constant_target ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+enum InputPreferBulkOperationForEachAddAllEnumConstantTargetSliceViolation {
+	A {
+		@Override
+		void go(List<String> source) {
+			target.addAll(source);
+		}
+	};
+
+	final List<String> target = new ArrayList<>();
+
+	void go(List<String> source) {
+	}
+}
+// === end ===
+
 // === case: for_each_add_all_method_call_source ===
 // imports: java.util.List
 // imports: java.util.Map
@@ -257,8 +445,30 @@ class InputPreferBulkOperationForEachAddAllMultiLineDottedSourceSliceViolation {
 // === case: for_each_add_all_multi_line_paren_source ===
 // imports: java.util.List
 class InputPreferBulkOperationForEachAddAllMultiLineParenSourceSliceViolation {
+	List<String> getList(int a, int b) {
+		return List.of();
+	}
+
 	void m(List<String> target, int a, int b) {
 		target.addAll(getList(a, b));
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_multi_line_string_literal_mid_span ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllMultiLineStringLiteralMidSpanSliceViolation {
+	void m(List<String> target, List<String> src) {
+		target.addAll(src.subList("a".length(), 2));
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_multi_line_supplementary_end_line ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllMultiLineSupplementaryEndLineSliceViolation {
+	void m(List<String> target, List<String> src) {
+		target.addAll(src.subList(0, "𝐀".length()));
 	}
 }
 // === end ===
@@ -266,8 +476,48 @@ class InputPreferBulkOperationForEachAddAllMultiLineParenSourceSliceViolation {
 // === case: for_each_add_all_nested_paren_source ===
 // imports: java.util.List
 class InputPreferBulkOperationForEachAddAllNestedParenSourceSliceViolation {
+	List<String> getList(int a, int b) {
+		return List.of();
+	}
+
 	void m(List<String> target, int a, int b) {
 		target.addAll(getList(a, b));
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_paren_source ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllParenSourceSliceViolation {
+	void m(List<String> target, List<String> source) {
+		target.addAll(source);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_supplementary_before_target ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllSupplementaryBeforeTargetSliceViolation {
+	void m(List<String> target𝐀, List<String> source) {
+		target𝐀.addAll(source);
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_supplementary_inside_source ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllSupplementaryInsideSourceSliceViolation {
+	void m(List<String> target) {
+		target.addAll(List.of("𝐀", "x"));
+	}
+}
+// === end ===
+
+// === case: for_each_add_all_supplementary_trailing_only ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachAddAllSupplementaryTrailingOnlySliceViolation {
+	void m(List<String> target, List<String> source) {
+		target.addAll(source); // 𝐀
 	}
 }
 // === end ===
@@ -504,6 +754,15 @@ class InputPreferBulkOperationForEachMethodRefAddParenthesizedQualifierSliceViol
 }
 // === end ===
 
+// === case: for_each_method_ref_add_supplementary_qualifier ===
+// imports: java.util.List
+class InputPreferBulkOperationForEachMethodRefAddSupplementaryQualifierSliceViolation {
+	void m(List<String> list, List<String> other𝐀) {
+		other𝐀.addAll(list);
+	}
+}
+// === end ===
+
 // === case: for_each_method_ref_add_type_witness ===
 // imports: java.util.List
 class InputPreferBulkOperationForEachMethodRefAddTypeWitnessSliceViolation {
@@ -567,6 +826,15 @@ class InputPreferBulkOperationForEachMethodRefPutMultiLineReceiverSliceViolation
 }
 // === end ===
 
+// === case: for_each_method_ref_put_supplementary_before_call ===
+// imports: java.util.Map
+class InputPreferBulkOperationForEachMethodRefPutSupplementaryBeforeCallSliceViolation {
+	void m(Map<String, String> source, Map<String, String> target, Object lock𝐀) {
+		synchronized (lock𝐀) { target.putAll(source); }
+	}
+}
+// === end ===
+
 // === case: for_each_method_ref_put_ternary_source ===
 // imports: java.util.Map
 class InputPreferBulkOperationForEachMethodRefPutTernarySourceSliceViolation {
@@ -579,6 +847,15 @@ class InputPreferBulkOperationForEachMethodRefPutTernarySourceSliceViolation {
 // === case: indexed_add_all_braced ===
 // imports: java.util.List
 class InputPreferBulkOperationIndexedAddAllBracedSliceViolation {
+	void m(List<String> target, List<String> source) {
+		target.addAll(source);
+	}
+}
+// === end ===
+
+// === case: indexed_add_all_paren_source ===
+// imports: java.util.List
+class InputPreferBulkOperationIndexedAddAllParenSourceSliceViolation {
 	void m(List<String> target, List<String> source) {
 		target.addAll(source);
 	}
@@ -606,6 +883,24 @@ class InputPreferBulkOperationPutAllEntrySetBlockCommentWithFakeBraceSliceViolat
 // === case: put_all_entry_set_braced ===
 // imports: java.util.Map
 class InputPreferBulkOperationPutAllEntrySetBracedSliceViolation {
+	void m(Map<String, String> target, Map<String, String> source) {
+		target.putAll(source);
+	}
+}
+// === end ===
+
+// === case: put_all_entry_set_paren_source ===
+// imports: java.util.Map
+class InputPreferBulkOperationPutAllEntrySetParenSourceSliceViolation {
+	void m(Map<String, String> target, Map<String, String> source) {
+		target.putAll(source);
+	}
+}
+// === end ===
+
+// === case: put_all_entry_set_paren_whole_call ===
+// imports: java.util.Map
+class InputPreferBulkOperationPutAllEntrySetParenWholeCallSliceViolation {
 	void m(Map<String, String> target, Map<String, String> source) {
 		target.putAll(source);
 	}

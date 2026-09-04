@@ -43,3 +43,23 @@ class InputOverloadTypeViolation {
 	void vararg(int a) {} // violation: Overload 'vararg(int)' must appear before 'vararg(int...)'.
 }
 // === end ===
+
+// === case: type_qualified_generic ===
+// imports: java.util.Map
+class InputOverloadQualifiedGenericViolation {
+	// a qualified generic hangs its TYPE_ARGUMENTS off the DOT as the last child,
+	// so the base name must be read from the last IDENT, not the last child
+	void nested(Map<String, String> a) {}
+
+	void nested(Outer.Inner<String> a) {} // violation: Overload 'nested(Inner)' must appear before 'nested(Map)'.
+
+	void nestedArray(Map<String, String> a) {}
+
+	void nestedArray(Outer.Inner<String>[] a) {} // violation: Overload 'nestedArray(Inner[])' must appear before 'nestedArray(Map)'.
+}
+
+class Outer {
+	static class Inner<T> {
+	}
+}
+// === end ===

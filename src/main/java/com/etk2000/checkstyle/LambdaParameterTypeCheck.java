@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -57,7 +58,7 @@ public class LambdaParameterTypeCheck extends AbstractAstCheck {
 		};
 		if (primitiveName != null)
 			return primitiveName;
-		return AstUtil.typeText(type);
+		return AstText.typeText(type);
 	}
 
 	@CheckReturnValue

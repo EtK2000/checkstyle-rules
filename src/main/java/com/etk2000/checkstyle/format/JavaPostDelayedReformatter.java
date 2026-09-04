@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle.format;
 
-import com.etk2000.checkstyle.AstUtil;
+import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.etk2000.checkstyle.format.SpanReformat.CannotReformat;
 import com.etk2000.checkstyle.format.SpanReformat.Reason;
 import com.etk2000.checkstyle.format.SpanReformat.Reformatted;
@@ -22,11 +23,7 @@ import javax.annotation.Nonnull;
  * are unwrapped and the call is collapsed onto one line ({@code handler.postDelayed(() -> stmt, delay);});
  * otherwise (a multi-statement / non-expression lambda body, an anonymous class, or a collapsed form that
  * exceeds the width) the block opens on the {@code (} line, its body stays multi-line, and the closing
- * {@code }, delay);} lands on one line after the body. Indentation of the multi-line shape is delegated
- * to {@link JavaSpanReindenter}; slice/collapse/width primitives are shared via {@link SpanReformat}.
- *
- * <p>Reformatting utility that depends only on the shared {@link AstUtil} / {@link SpanReformat} /
- * {@link JavaSpanReindenter} utilities, never on a check or fixer.
+ * {@code }, delay);} lands on one line after the body.
  */
 public final class JavaPostDelayedReformatter {
 	/**
@@ -58,8 +55,8 @@ public final class JavaPostDelayedReformatter {
 		if (lambdaArg == null || delayArg == null)
 			return new CannotReformat(Reason.STALE);
 
-		// the first arg is a direct braced inline block: a braced lambda (SLIST body) or an anonymous class
-		// (OBJBLOCK body). A lambda's SLIST node IS its `{`; an anon class's OBJBLOCK has an LCURLY child
+		// a braced lambda's body is an SLIST, an anonymous class's an OBJBLOCK; the SLIST node IS the lambda's
+		// `{`, while an OBJBLOCK has an LCURLY child
 		final var block = ArgLayoutClassifier.directInlineBlock(lambdaArg);
 		if (block == null)
 			return new CannotReformat(Reason.STALE);
@@ -81,18 +78,22 @@ public final class JavaPostDelayedReformatter {
 		final var rparenCol = rparen.getColumnNo();
 		if (openIdx < 0 || closeIdx >= lines.size() || openIdx > lcurlyIdx || lcurlyIdx > rcurlyIdx || rcurlyIdx > closeIdx)
 			return new CannotReformat(Reason.STALE);
-		// the reported columns must still point at the block's `{`/`}` and the call's `)`; a prior same-pass
-		// edit that shifted them without shifting line numbers would otherwise slice at the wrong character
+		// a prior same-pass edit that shifted the columns without shifting line numbers would otherwise slice
+		// at the wrong character
 		if (!SpanReformat.pointsAt(lines, lcurlyIdx, lcurlyCol, '{')
 				|| !SpanReformat.pointsAt(lines, rcurlyIdx, rcurlyCol, '}')
 				|| !SpanReformat.pointsAt(lines, closeIdx, rparenCol, ')'))
 			return new CannotReformat(Reason.STALE);
 
-		// any // comment on a joined line would swallow the rest, and a text block / block comment cannot be
-		// collapsed onto one line; either way keep the source as-is
+		// threaded from the file start: seeded per line, a `(` line that begins inside a block comment is
+		// lexed as code, an apostrophe in the prose opens a char literal that masks the rest of it, and the
+		// real trailing `//` goes unseen. The literal guard below does not backstop that, because it
+		// advances before testing and so never asks about openIdx itself
+		var lexer = SpanReformat.lexerStateAt(lines, openIdx);
 		for (var i = openIdx; i < closeIdx; ++i) {
-			if (SpanReformat.hasTrailingLineComment(lines.get(i)))
+			if (SpanReformat.hasTrailingLineComment(lines.get(i), lexer))
 				return new CannotReformat(Reason.COMMENT_ON_JOINED_LINE);
+			lexer = JavaLineScanner.stateAfter(lines.get(i), lexer);
 		}
 		if (SpanReformat.beginsInMultilineLiteral(lines, openIdx, closeIdx + 1))
 			return new CannotReformat(Reason.MULTILINE_LITERAL);
@@ -100,10 +101,8 @@ public final class JavaPostDelayedReformatter {
 		final var baseTabs = SpanReformat.leadingTabs(lines.get(openIdx));
 		final var suffix = lines.get(closeIdx).substring(rparenCol);
 
-		// only a braced lambda with a single EXPRESSION-statement body can be unwrapped onto one line; an anon
-		// class (OBJBLOCK) or a return/if/var-def/throw body keeps its braces via the multi-line fallback,
-		// else the unwrap would emit uncompilable source
-		if (AstUtil.singleExpressionStatementBody(braceBody) != null) {
+		// unwrapping the braces around anything but a single expression statement would emit uncompilable source
+		if (AstQuery.singleExpressionStatementBody(braceBody) != null) {
 			final var head = SpanReformat.collapse(SpanReformat.slice(lines, openIdx, 0, lcurlyIdx, lcurlyCol));
 			final var bodyRaw = SpanReformat.collapse(SpanReformat.slice(lines, lcurlyIdx, lcurlyCol + 1, rcurlyIdx, rcurlyCol));
 			final var body = bodyRaw.endsWith(";") ? bodyRaw.substring(0, bodyRaw.length() - 1).stripTrailing() : bodyRaw;

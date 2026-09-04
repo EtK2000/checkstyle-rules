@@ -12,8 +12,8 @@ import javax.annotation.Nullable;
 class LambdaParameterTypeFixer implements CheckstyleFixer {
 	/**
 	 * Finds the opening paren that matches the closing paren before the arrow.
-	 * Tracks paren depth to handle nested expressions. Operates on the masked
-	 * line so parens inside string/char literals or comments are ignored.
+	 * Operates on the masked line so parens inside string/char literals or
+	 * comments are ignored.
 	 */
 	@CheckReturnValue
 	private static int findLambdaOpenParen(@Nonnull String masked, int arrowStart) {
@@ -93,32 +93,40 @@ class LambdaParameterTypeFixer implements CheckstyleFixer {
 		for (var j = 0; j < origParams.size(); ++j) {
 			if (j > 0)
 				sb.append(", ");
-			final var param = origParams.get(j).trim();
-			final var maskParam = maskParams.get(j).trim();
+			// Both strings are trimmed on the ORIGINAL text's bounds. The mask blanks
+			// a comment's characters, so trimming each independently would shorten
+			// them by different amounts and an index found on the mask would no
+			// longer address the same character in the original.
+			final var raw = origParams.get(j);
+			var begin = 0;
+			var end = raw.length();
+			while (begin < end && Character.isWhitespace(raw.charAt(begin)))
+				++begin;
+			while (end > begin && Character.isWhitespace(raw.charAt(end - 1)))
+				--end;
+			final var param = raw.substring(begin, end);
+			final var maskParam = maskParams.get(j).substring(begin, end);
+			if (anyAnnotated && maskParam.contains("@")) {
+				sb.append(replaceTypeWithVar(param, maskParam));
+				continue;
+			}
+			// The type/name boundary is located on the mask, so a comment between
+			// the type and the name (or trailing the name) is not mistaken for the
+			// name; the name itself is spliced out of the original at those indices.
+			final var strippedMask = stripTrailingArrayBrackets(maskParam);
+			final var lastSpace = lastWhitespaceIndex(strippedMask);
 			if (anyAnnotated) {
-				if (maskParam.contains("@"))
-					sb.append(replaceTypeWithVar(param, maskParam));
-				else {
-					final var stripped = stripTrailingArrayBrackets(param);
-					final var lastSpace = lastWhitespaceIndex(stripped);
-					if (lastSpace >= 0)
-						sb.append("var ").append(stripped.substring(lastSpace + 1));
-					else
-						sb.append(param);
-				}
-			}
-			else {
-				final var stripped = stripTrailingArrayBrackets(param);
-				if (stripped.isEmpty()) {
-					sb.append(param);
-					continue;
-				}
-				final var lastSpace = lastWhitespaceIndex(stripped);
 				if (lastSpace >= 0)
-					sb.append(stripped.substring(lastSpace + 1));
+					sb.append("var ").append(param, lastSpace + 1, strippedMask.length());
 				else
-					sb.append(stripped);
+					sb.append(param);
 			}
+			else if (strippedMask.isEmpty())
+				sb.append(param);
+			else if (lastSpace >= 0)
+				sb.append(param, lastSpace + 1, strippedMask.length());
+			else
+				sb.append(param, 0, strippedMask.length());
 		}
 
 		if (origParams.size() == 1 && !anyAnnotated) {
@@ -149,12 +157,18 @@ class LambdaParameterTypeFixer implements CheckstyleFixer {
 	 * the output); {@code mask} is the same text with string/char/comment
 	 * content blanked, so the annotation-argument paren match and the type/name
 	 * boundary are located on structural characters only (an argument like
-	 * {@code @A(")")} no longer mis-terminates the paren scan).
+	 * {@code @A(")")} no longer mis-terminates the paren scan). The two must be
+	 * index-aligned: every index found on {@code mask} is used to slice
+	 * {@code param}.
 	 */
 	@Nonnull
 	private static String replaceTypeWithVar(@Nonnull String param, @Nonnull String mask) {
 		var lastAnnotationEnd = 0;
 		var i = 0;
+		// a comment ahead of the first annotation masks to whitespace, and it stays
+		// in the output, so skip past it rather than reading it as "no annotation"
+		while (i < mask.length() && Character.isWhitespace(mask.charAt(i)))
+			++i;
 		while (i < mask.length()) {
 			if (mask.charAt(i) == '@') {
 				do ++i;

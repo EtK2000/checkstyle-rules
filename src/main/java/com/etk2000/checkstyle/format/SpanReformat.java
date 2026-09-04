@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle.format;
 
 import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.JavaLineScanner.LexerState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,22 +10,15 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 
 /**
- * Shared vocabulary and text primitives for the source-span reformatters
- * ({@link JavaTernaryReformatter}, {@link JavaArgListReformatter}). Both slice a contiguous source span
- * at AST token boundaries, collapse each sliced segment onto one line (tight-joining around
- * brackets/punctuation), and hand the result to {@link JavaSpanReindenter}. They share the outcome
- * types below and the pure-text helpers here so neither re-derives the join/comment rules.
- *
- * <p>All helpers are pure text operations with no dependency on any check or fixer.
+ * Shared vocabulary and text primitives for the source-span reformatters in this package: the outcome
+ * types below and the pure-text helpers here, so no reformatter re-derives the join/comment rules.
  */
 public final class SpanReformat {
-	/** Outcome of a reformat: either the re-laid-out span or a reason it was left untouched. */
 	public sealed interface Result permits Reformatted, CannotReformat {}
 
 	/** The span {@code lines[fromIndex..toIndex]} (0-based, inclusive) is to be replaced with {@code lines}. */
 	public record Reformatted(int fromIndex, int toIndex, @Nonnull List<String> lines) implements Result {}
 
-	/** The span could not be re-laid-out; {@code reason} says why. */
 	public record CannotReformat(@Nonnull Reason reason) implements Result {}
 
 	public enum Reason {
@@ -39,8 +33,13 @@ public final class SpanReformat {
 	}
 
 	/**
-	 * Whether any line in {@code lines[fromIdx..toIdx)} begins inside a text block or multi-line block
-	 * comment, meaning a collapse across that boundary would corrupt significant whitespace.
+	 * Whether any of {@code lines[fromIdx + 1 .. toIdx]} begins inside a text block or multi-line block
+	 * comment, meaning a collapse across that boundary would corrupt significant whitespace. The state is
+	 * advanced before each test, so {@code fromIdx}'s own entry state is never asked about: that line is
+	 * the base a join appends onto rather than an appended line, and a literal still open at its end
+	 * necessarily reopens on the next line, which is covered. Contrast
+	 * {@link #beginsInMultilineLiteralByLine}, which tests before advancing and so really does report
+	 * whether each line begins inside a literal.
 	 */
 	@CheckReturnValue
 	public static boolean beginsInMultilineLiteral(@Nonnull List<String> lines, int fromIdx, int toIdx) {
@@ -56,9 +55,7 @@ public final class SpanReformat {
 	/**
 	 * Per-line flags for {@code lines[fromIdx..toIdx]} (inclusive): element {@code i} is true when
 	 * {@code lines.get(fromIdx + i)} begins inside a text block or multi-line block comment, threading
-	 * {@link JavaLineScanner.LexerState} from {@code fromIdx}. Unlike {@link #beginsInMultilineLiteral},
-	 * which collapses the range to a single flag, this keeps a flag per line so a caller can re-emit only
-	 * the spanning segments verbatim while collapsing the rest.
+	 * {@link JavaLineScanner.LexerState} from {@code fromIdx}.
 	 */
 	@CheckReturnValue
 	@Nonnull
@@ -73,9 +70,25 @@ public final class SpanReformat {
 	}
 
 	/**
-	 * Whether the first non-blank fragment of {@code fragments} is entirely a {@code //} line comment. Such
-	 * a comment leaked past the previous {@code ,} (it is a trailing comment on the previous line, not this
-	 * argument's own code), so the argument cannot be re-laid-out verbatim while keeping the comment attached.
+	 * Whether any of {@code lines[fromIdx + 1 .. toIdx]} begins inside a text block, on the same
+	 * advance-then-test basis as {@link #beginsInMultilineLiteral}. Narrower than that method, for a
+	 * caller that joins whole lines in order: a block comment survives that intact, because its closing
+	 * delimiter is inside the joined range, but a text block cannot, because nothing may follow its
+	 * opening delimiter on the same line.
+	 */
+	@CheckReturnValue
+	public static boolean beginsInTextBlock(@Nonnull List<String> lines, int fromIdx, int toIdx) {
+		var lexer = JavaLineScanner.LexerState.NONE;
+		for (var i = fromIdx; i < toIdx; ++i) {
+			lexer = JavaLineScanner.stateAfter(lines.get(i), lexer);
+			if (lexer.inTextBlock())
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Whether the first non-blank fragment of {@code fragments} is entirely a {@code //} line comment.
 	 */
 	@CheckReturnValue
 	static boolean beginsWithLineComment(@Nonnull List<String> fragments) {
@@ -104,7 +117,13 @@ public final class SpanReformat {
 
 	@CheckReturnValue
 	public static boolean hasTrailingLineComment(@Nonnull String line) {
-		return JavaLineScanner.firstLineComment(line, JavaLineScanner.LexerState.NONE) >= 0;
+		return hasTrailingLineComment(line, JavaLineScanner.LexerState.NONE);
+	}
+
+	/** Whether {@code line} carries a {@code //} comment, given the lexer state it begins in. */
+	@CheckReturnValue
+	public static boolean hasTrailingLineComment(@Nonnull String line, @Nonnull LexerState state) {
+		return JavaLineScanner.firstLineComment(line, state) >= 0;
 	}
 
 	/**
@@ -142,10 +161,27 @@ public final class SpanReformat {
 	}
 
 	/**
+	 * The lexer state a span beginning at {@code lines[idx]} starts in, threaded from the first line of the
+	 * file. Seeding {@link JavaLineScanner.LexerState#NONE} at the span itself is wrong whenever that line
+	 * begins inside a text block or block comment: the line is then lexed as code, so an apostrophe in
+	 * comment prose opens a char literal that masks the rest of it, hiding a real trailing {@code //}.
+	 *
+	 * <p>Total in {@code idx}: a negative one folds nothing and one past the end folds every line, so a
+	 * caller asking about the position after a span's last line ({@code endLineIdx + 1}, which reaches
+	 * exactly {@code lines.size()}) gets the end-of-buffer state rather than an exception.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	public static LexerState lexerStateAt(@Nonnull List<String> lines, int idx) {
+		var state = LexerState.NONE;
+		for (var i = 0; i < idx && i < lines.size(); ++i)
+			state = JavaLineScanner.stateAfter(lines.get(i), state);
+		return state;
+	}
+
+	/**
 	 * Whether {@code (idx, col)} is an in-range position in {@code lines} whose character equals
-	 * {@code expected}. The reformatters validate every AST-reported token coordinate this way before
-	 * slicing at it, so a stale coordinate (a prior same-pass edit shifted the text) is refused rather
-	 * than slicing at the wrong character.
+	 * {@code expected}.
 	 */
 	@CheckReturnValue
 	static boolean pointsAt(@Nonnull List<String> lines, int idx, int col, char expected) {
@@ -178,17 +214,25 @@ public final class SpanReformat {
 	/**
 	 * Whether collapsing {@code fragments} would pull a {@code //} comment inline ahead of later content
 	 * (swallowing it). A comment on the last non-blank fragment ends a canonical line and is preserved.
+	 *
+	 * <p>{@code state} is the lexer state the first fragment begins in, and is threaded across the rest.
+	 * A caller whose first fragment starts at a code boundary (just past a {@code (}, {@code ,},
+	 * {@code ?} or {@code :}) passes {@link JavaLineScanner.LexerState#NONE}; one whose slice starts at
+	 * column 0 must pass {@link #lexerStateAt}, or a first line that begins inside a block comment is
+	 * lexed as code and an apostrophe in the prose masks a real trailing {@code //}.
 	 */
 	@CheckReturnValue
-	static boolean swallowsComment(@Nonnull List<String> fragments) {
+	static boolean swallowsComment(@Nonnull List<String> fragments, @Nonnull LexerState state) {
 		var lastNonBlank = -1;
 		for (var i = 0; i < fragments.size(); ++i) {
 			if (!fragments.get(i).isBlank())
 				lastNonBlank = i;
 		}
+		var lexer = state;
 		for (var i = 0; i < lastNonBlank; ++i) {
-			if (!fragments.get(i).isBlank() && hasTrailingLineComment(fragments.get(i)))
+			if (!fragments.get(i).isBlank() && hasTrailingLineComment(fragments.get(i), lexer))
 				return true;
+			lexer = JavaLineScanner.stateAfter(fragments.get(i), lexer);
 		}
 		return false;
 	}

@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.format.SpanReformat;
 
 import java.util.List;
 
@@ -57,13 +58,8 @@ class RedundantArrayCreationFixer implements CheckstyleFixer {
 			return null;
 
 		// Mask string/char/comment content (positions preserved) so braces inside
-		// literals or comments aren't counted. The incoming lexer state is folded
-		// from preceding lines so a line continuing a multi-line block comment or
-		// text block is masked correctly rather than assumed to start in code.
-		var state = JavaLineScanner.LexerState.NONE;
-		for (var i = 0; i < lineIndex; ++i)
-			state = JavaLineScanner.stateAfter(lines.get(i), state);
-		final var scan = JavaLineScanner.stripCommentsAndStrings(line, state);
+		// literals or comments aren't counted.
+		final var scan = JavaLineScanner.stripCommentsAndStrings(line, SpanReformat.lexerStateAt(lines, lineIndex));
 
 		final var openBrace = scan.indexOf('{', column);
 		if (openBrace < 0)

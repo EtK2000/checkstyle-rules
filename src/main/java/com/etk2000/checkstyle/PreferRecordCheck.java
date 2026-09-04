@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -23,7 +25,7 @@ public class PreferRecordCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	private static boolean hasAnnotation(@Nonnull DetailAST modifiers, @Nonnull String name) {
 		for (var child = modifiers.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.ANNOTATION && name.equals(AstUtil.annotationName(child)))
+			if (child.getType() == TokenTypes.ANNOTATION && name.equals(AstText.annotationName(child)))
 				return true;
 		}
 		return false;
@@ -50,7 +52,7 @@ public class PreferRecordCheck extends AbstractAstCheck {
 		if (slist == null)
 			return true;
 
-		final var paramNames = AstUtil.collectParameterNames(ctorDef);
+		final var paramNames = AstQuery.collectParameterNames(ctorDef);
 		for (var child = slist.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() != TokenTypes.EXPR)
 				continue;
@@ -128,7 +130,7 @@ public class PreferRecordCheck extends AbstractAstCheck {
 		final var modifiers = ast.findFirstToken(TokenTypes.MODIFIERS);
 		if (modifiers != null && modifiers.findFirstToken(TokenTypes.ABSTRACT) != null)
 			return;
-		if (modifiers != null && AstUtil.hasSuppressWarnings(modifiers, "PreferRecord"))
+		if (modifiers != null && AstQuery.hasSuppressWarnings(modifiers, "PreferRecord"))
 			return;
 
 		final var extendsClause = ast.findFirstToken(TokenTypes.EXTENDS_CLAUSE);
@@ -151,14 +153,14 @@ public class PreferRecordCheck extends AbstractAstCheck {
 		// a constructor must exist whose parameters match all instance
 		// fields exactly (same types as a multiset, order doesn't matter)
 		// and whose body has only simple this.field = param assignments
-		final var fieldTypes = AstUtil.collectInstanceFieldTypes(objBlock);
+		final var fieldTypes = AstQuery.collectInstanceFieldTypes(objBlock);
 		var hasMatchingConstructor = false;
 		for (var child = objBlock.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() != TokenTypes.CTOR_DEF)
 				continue;
 			if (!hasOnlySimpleFieldAssignments(child))
 				continue;
-			if (AstUtil.collectParameterTypes(child).equals(fieldTypes)) {
+			if (AstQuery.collectParameterTypes(child).equals(fieldTypes)) {
 				hasMatchingConstructor = true;
 				break;
 			}

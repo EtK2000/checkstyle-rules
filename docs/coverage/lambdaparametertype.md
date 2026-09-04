@@ -23,6 +23,15 @@ located and split, so a `->`, `(`, `)`, or `,` inside a literal or comment (e.g.
 argument like `@A(")")` or a block comment between the parens and the type) does not misdirect the
 fix; the literal content is preserved verbatim in the output.
 
+The type/name boundary inside each parameter is also located on the mask, so a block comment
+between the type and the name, or trailing the name, is not mistaken for the name itself.
+
+**A comment inside a parameter is dropped when the type goes with it** (`(String x /*c*/) ->`
+becomes `x ->`, and `(/*c*/ String x) ->` becomes `x ->`). The parameter is rebuilt from its name,
+and the comment sits in the part being removed. A comment *before the annotations* of an annotated
+parameter is kept, since the rebuild splices everything up to the last annotation verbatim
+(`(/*c*/ @A String x) ->` becomes `(/*c*/ @A var x) ->`).
+
 ## Not supported
 
 | Pattern | Reason |

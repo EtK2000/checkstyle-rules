@@ -2,6 +2,7 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSimpleFix;
 import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkip;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkipResult;
 
 import org.junit.jupiter.api.Test;
 
@@ -28,7 +29,18 @@ public class BlankLineAfterBreakFixerTest {
 	}
 
 	@Test
+	public void testInsertBlankBelowTextBlock() throws Exception {
+		// can't migrate: BlankLineAfterBreak is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
+		assertSimpleFix(fixer, TOPIC, "insert_blank_below_text_block");
+	}
+
+	@Test
 	public void testNoNextLine() throws Exception {
 		assertSkip(fixer, TOPIC, "no_next_line");
+	}
+
+	@Test
+	public void testSkipBreakInsideTextBlock() throws Exception {
+		assertSkipResult(fixer, TOPIC, "skip_break_inside_text_block", SkipMessages.BLANK_LINE_SKIP_TEXT_BLOCK);
 	}
 }

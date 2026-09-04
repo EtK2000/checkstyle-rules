@@ -61,6 +61,7 @@ non-static type imports don't enable unqualified method resolution and are ignor
 | Unqualified negation call, no static import of `Assert` or `Assertions` | Can't infer the framework class for the opposite-method import |
 | Unqualified negation call, static import of both `Assert` and `Assertions` | Swap would change which framework resolves the unqualified call |
 | Args containing a structural `//` line comment (between `(` and `)`) | The rewrite flattens lines and `//` would consume the rewritten `);` |
+| Comment or text block directly abutting the `instanceof` keyword (`o/* c */instanceof Y`, `o instanceof/*c*/Y`, `"""t"""instanceof Y`) | Masking blanks a comment or text-block delimiter to a space, so the ` instanceof ` needle can match at an index sitting inside that construct; slicing the operand there would cut it in half. The rewrite requires the needle to match the unmasked text too. A comment separated by real spaces (`o /* c */ instanceof Y`) is still rewritten, with the comment carried into the operand |
 | Comment (`/* */` or `//`) between the closing `)` and the `;` | The rewrite requires the `;` be whitespace-adjacent to `)`; an intervening comment would be silently dropped |
 | Args containing an explicit type argument (`Foo.<T>method()`) | `<...>` brackets contain commas that confuse the top-level-comma argument splitter |
 | Multi-line negation argument (`!(...)` spanning lines) | The shared paren-matcher mis-handles `//` line comments in multi-line text; bail to be safe |

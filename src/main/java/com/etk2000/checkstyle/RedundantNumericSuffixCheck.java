@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -45,10 +46,10 @@ public class RedundantNumericSuffixCheck extends AbstractAstCheck {
 		final var assign = varDef.findFirstToken(TokenTypes.ASSIGN);
 		if (assign == null)
 			return false;
-		var value = AstUtil.unwrapParensAndExpr(assign.getFirstChild());
+		var value = AstQuery.unwrapParensAndExpr(assign.getFirstChild());
 		while (value != null
 				&& (value.getType() == TokenTypes.UNARY_MINUS || value.getType() == TokenTypes.UNARY_PLUS))
-			value = AstUtil.unwrapParensAndExpr(value.getFirstChild());
+			value = AstQuery.unwrapParensAndExpr(value.getFirstChild());
 		if (value != literal)
 			return false;
 

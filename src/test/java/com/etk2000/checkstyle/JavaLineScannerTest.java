@@ -631,6 +631,13 @@ public class JavaLineScannerTest {
 	}
 
 	@Test
+	public void testStateAfterBlockCommentCloseThenTextBlockOpen() {
+		final var state = JavaLineScanner.stateAfter("*/ String s = \"\"\"", new LexerState(true, false));
+		assertFalse(state.inBlockComment());
+		assertTrue(state.inTextBlock());
+	}
+
+	@Test
 	public void testStateAfterBlockCommentOpen() {
 		assertTrue(JavaLineScanner.stateAfter("a /* b", LexerState.NONE).inBlockComment());
 	}
@@ -690,6 +697,13 @@ public class JavaLineScannerTest {
 		final var s = JavaLineScanner.stateAfter("x\"\"\"\"", new LexerState(false, true));
 		assertFalse(s.inTextBlock());
 		assertFalse(s.inBlockComment());
+	}
+
+	@Test
+	public void testStateAfterTextBlockCloseThenBlockCommentOpen() {
+		final var state = JavaLineScanner.stateAfter("x\"\"\"; /* c", new LexerState(false, true));
+		assertTrue(state.inBlockComment());
+		assertFalse(state.inTextBlock());
 	}
 
 	@Test

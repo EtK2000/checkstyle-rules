@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import com.etk2000.checkstyle.JavaLineScanner;
 import com.etk2000.checkstyle.StringUtil;
 import com.etk2000.checkstyle.TestResources;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import com.puppycrawl.tools.checkstyle.checks.imports.RedundantImportCheck;
 import com.puppycrawl.tools.checkstyle.checks.imports.UnusedImportsCheck;
 
@@ -17,7 +18,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import javax.annotation.CheckReturnValue;
@@ -60,12 +61,38 @@ public class FullPipelineRegressionTest {
 	private record FixedSlice(@Nonnull List<String> code, @Nonnull Set<String> imports) {}
 
 	private static final Path INPUTS_ROOT = Path.of("src/test/resources/com/etk2000/checkstyle/inputs");
+	private static final Pattern ANY_VIOLATION_MARKER = Pattern.compile("// violation(?:\\s*\\((warning)\\))?(?:\\s*\\[[^\\]]+\\])?(?:\\s*@opener)?\\s*:");
 	static final String CASE_END_MARKER = "// === end ===";
 	static final String CASE_OPEN_PREFIX = "// === case: ";
 	static final String CASE_OPEN_SUFFIX = " ===";
 	private static final String IMPORTS_DIRECTIVE_PREFIX = "// imports: ";
 	private static final String MULTI_FIX_DIRECTIVE = "// multi-fix-expected";
 	private static final String TARGET_DIRECTIVE = "// " + "target:";
+
+	/**
+	 * Whether every violation the slice declares is a warning. This is only a cheap pre-filter for
+	 * {@link #noErrorSeverityViolations}: a slice can carry warning markers and still be rewritten
+	 * by a check it does not mark, so the markers alone do not decide anything.
+	 *
+	 * <p>A slice declaring no violation at all is not covered: it reaches the pipeline unchanged
+	 * for a different reason (nothing fired), and its {@code cases.*.out.java} body already
+	 * records that.
+	 */
+	@CheckReturnValue
+	private static boolean allViolationsAreWarnings(@Nonnull List<String> inputLines) {
+		var sawViolation = false;
+		for (var line : inputLines) {
+			final var marker = ANY_VIOLATION_MARKER.matcher(line);
+			if (!marker.find())
+				continue;
+
+			if (marker.group(1) == null)
+				return false;
+
+			sawViolation = true;
+		}
+		return sawViolation;
+	}
 
 	/**
 	 * Canonicalizes the synthesized expected to match the actual pipeline's
@@ -199,28 +226,36 @@ public class FullPipelineRegressionTest {
 	}
 
 	/**
-	 * Loads the per-slice pipeline-expected lines: prefers the slice's
-	 * body in {@code cases.<variant>.fixed.java} (override) if present,
-	 * otherwise returns the slice's body in {@code cases.<variant>.out.java}.
-	 * Both sources have directives translated by {@code TestResources}.
+	 * Loads the slice's body from {@code cases.<variant>.fixed.java} with its directives
+	 * translated by {@code TestResources}, or {@code null} when that file does not exist or does
+	 * not override this slice. An override outranks every other way of deriving the expected.
 	 */
 	@CheckReturnValue
-	@Nonnull
-	private static List<String> loadPipelineExpectedSlice(
+	@Nullable
+	private static List<String> loadFixedOverrideSlice(
 			@Nonnull String topic,
 			@Nonnull String violationFileName,
 			@Nonnull String sliceName
-	) throws IOException, URISyntaxException {
+	) throws IOException {
 		final var fixedFileName = StringUtil.replaceSuffix(violationFileName, ".in.java", ".fixed.java");
 		final var fixedPath = INPUTS_ROOT.resolve(topic).resolve(fixedFileName);
-		if (Files.exists(fixedPath)) {
-			final var sliced = sliceCaseTranslated(Files.readAllLines(fixedPath), sliceName);
-			if (sliced != null)
-				return sliced;
+		return Files.exists(fixedPath)
+				? sliceCaseTranslated(Files.readAllLines(fixedPath), sliceName)
+				: null;
+	}
+
+	/**
+	 * Whether no check reports an {@code ERROR} on the file. {@code applyFixes} skips every event
+	 * below that severity, so such a file must come back from the pipeline byte-identical and
+	 * needs no {@code cases.*.fixed.java} entry to say so.
+	 */
+	@CheckReturnValue
+	private static boolean noErrorSeverityViolations(@Nonnull File file) throws Exception {
+		for (var event : FullPipelineRunner.runChecks(file, String.valueOf(Integer.MAX_VALUE))) {
+			if (event.getSeverityLevel() == SeverityLevel.ERROR)
+				return false;
 		}
-		final var variantSuffix = extractVariantSuffix(violationFileName);
-		final var slice = TestResources.loadCaseSlice(topic, sliceName, variantSuffix);
-		return slice.fixedLines();
+		return true;
 	}
 
 	@CheckReturnValue
@@ -591,11 +626,20 @@ public class FullPipelineRegressionTest {
 		final var fileName = topic + "__" + StringUtil.replaceSuffix(violationFileName, ".in.java", "__" + sliceName + ".java");
 		final var file = tempDir.resolve(fileName).toFile();
 		Files.writeString(file.toPath(), strippedInput);
+		final var fixedOverride = loadFixedOverrideSlice(topic, violationFileName, sliceName);
+		final var pipelineIsANoOp = fixedOverride == null
+				&& allViolationsAreWarnings(slice.inputLines())
+				&& noErrorSeverityViolations(file);
 		final var pipelineOutput = FullPipelineRunner.runFixToFixedPoint(file, String.valueOf(Integer.MAX_VALUE));
 
-		final var expectedSliceContent = loadPipelineExpectedSlice(topic, violationFileName, sliceName);
-		final var expectedPreamble = readPreamble(topic, StringUtil.replaceSuffix(violationFileName, ".in.java", ".out.java"));
-		final var rawExpected = synthesizeSliceFile(expectedPreamble, expectedSliceContent);
+		final String rawExpected;
+		if (pipelineIsANoOp)
+			rawExpected = synthesizedInput;
+		else {
+			final var expectedSliceContent = fixedOverride == null ? slice.fixedLines() : fixedOverride;
+			final var expectedPreamble = readPreamble(topic, StringUtil.replaceSuffix(violationFileName, ".in.java", ".out.java"));
+			rawExpected = synthesizeSliceFile(expectedPreamble, expectedSliceContent);
+		}
 		final var expectedFileName = topic + "__" + StringUtil.replaceSuffix(violationFileName, ".in.java", "__" + sliceName + "_expected.java");
 		final var synthesizedExpected = canonicalize(tempDir, expectedFileName, rawExpected);
 		final var actualFileName = topic + "__" + StringUtil.replaceSuffix(violationFileName, ".in.java", "__" + sliceName + "_actual.java");

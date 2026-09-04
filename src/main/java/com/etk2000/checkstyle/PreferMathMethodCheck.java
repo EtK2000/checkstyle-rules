@@ -1,5 +1,8 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstDisplay;
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -22,7 +25,7 @@ import javax.annotation.Nullable;
  * Only flags when all operands are pure (no side effects).
  * Skips method calls, constructors, increment/decrement, and assignments.
  */
-public class PreferMathMethodCheck extends AbstractAstCheck {
+public class PreferMathMethodCheck extends AbstractMinSdkCheck {
 	private record BranchInfo(@Nonnull BranchKind kind, @Nullable DetailAST target, @Nonnull DetailAST value, int assignType) {}
 
 	private enum BranchKind {
@@ -32,7 +35,12 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 
 	private static final int MIN_SDK_CLAMP = 35;
 	private static final String MSG_METHOD = "prefer.replacement";
-	private static final String MSG_METHOD_IF = "prefer.math.method.if";
+	/**
+	 * Message key for the if-else form. Public so {@code PreferMathMethodFixer}
+	 * can tell that shape apart from the expression forms by reading the reported
+	 * violation's key instead of guessing from the line's text.
+	 */
+	public static final String MSG_METHOD_IF = "prefer.math.method.if";
 
 	/**
 	 * Returns the display-text of a node, stripping a top-level prefix
@@ -40,7 +48,7 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 	 * post-mutation form used in branches.
 	 *
 	 * <p>Used for structural identity checks instead of
-	 * {@link AstUtil#exprText} to avoid leaf-concatenation collisions
+	 * {@link AstText#exprText} to avoid leaf-concatenation collisions
 	 * (e.g. {@code DOT{a,x}} would otherwise compare equal to
 	 * {@code IDENT[ax]}).
 	 */
@@ -49,9 +57,9 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 	private static String branchText(@Nonnull DetailAST ast) {
 		if (ast.getType() == TokenTypes.INC || ast.getType() == TokenTypes.DEC) {
 			final var child = ast.getFirstChild();
-			return child != null ? AstUtil.displayText(child) : ast.getText();
+			return child != null ? AstDisplay.displayText(child) : ast.getText();
 		}
-		return AstUtil.displayText(ast);
+		return AstDisplay.displayText(ast);
 	}
 
 	@CheckReturnValue
@@ -64,8 +72,8 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 
 		final var op = condition.getType();
 
-		final var leftIsZero = AstUtil.isZeroLiteral(condLeft);
-		final var rightIsZero = AstUtil.isZeroLiteral(condRight);
+		final var leftIsZero = AstQuery.isZeroLiteral(condLeft);
+		final var rightIsZero = AstQuery.isZeroLiteral(condRight);
 		if (!leftIsZero && !rightIsZero)
 			return null;
 		if (leftIsZero && rightIsZero)
@@ -94,7 +102,7 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 		if (!isNegationOf(negativeBranch, varText))
 			return null;
 
-		return "Math.abs(" + AstUtil.displayText(variable) + ")";
+		return "Math.abs(" + AstDisplay.displayText(variable) + ")";
 	}
 
 	/**
@@ -141,9 +149,9 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 			if (innerArgs.length != 2)
 				continue;
 
-			final var outerArgText = AstUtil.displayText(args[1 - i]);
-			final var innerArg1Text = AstUtil.displayText(innerArgs[0]);
-			final var innerArg2Text = AstUtil.displayText(innerArgs[1]);
+			final var outerArgText = AstDisplay.displayText(args[1 - i]);
+			final var innerArg1Text = AstDisplay.displayText(innerArgs[0]);
+			final var innerArg2Text = AstDisplay.displayText(innerArgs[1]);
 
 			final var original = "Math." + outerName + "("
 					+ (i == 0 ? "Math." + expectedInner + "(" + innerArg1Text + ", " + innerArg2Text + "), " + outerArgText
@@ -188,7 +196,7 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 			isMax = trueIsRight;
 
 		final var method = isMax ? "Math.max" : "Math.min";
-		return method + "(" + AstUtil.displayText(condLeft) + ", " + AstUtil.displayText(condRight) + ")";
+		return method + "(" + AstDisplay.displayText(condLeft) + ", " + AstDisplay.displayText(condRight) + ")";
 	}
 
 	@CheckReturnValue
@@ -221,7 +229,7 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	@Nullable
 	private static BranchInfo extractBranch(@Nonnull DetailAST body) {
-		final var stmt = AstUtil.unwrapSingleStatementBlock(body);
+		final var stmt = AstQuery.unwrapSingleStatementBlock(body);
 		if (stmt == null)
 			return null;
 
@@ -319,7 +327,7 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 	}
 
 	/**
-	 * Like {@link AstUtil#isPureExpression} but also allows prefix
+	 * Like {@link AstQuery#isPureExpression} but also allows prefix
 	 * increment/decrement ({@code ++x}, {@code --x}) at the top level.
 	 * The mutation happens before the ternary branches evaluate, so the
 	 * branches see the post-mutation value, making the transformation safe.
@@ -330,9 +338,9 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 	private static boolean isPureOrPrefixMutated(@Nonnull DetailAST ast) {
 		if (ast.getType() == TokenTypes.DEC || ast.getType() == TokenTypes.INC) {
 			final var child = ast.getFirstChild();
-			return child != null && AstUtil.isPureExpression(child);
+			return child != null && AstQuery.isPureExpression(child);
 		}
-		return AstUtil.isPureExpression(ast);
+		return AstQuery.isPureExpression(ast);
 	}
 
 	@CheckReturnValue
@@ -343,22 +351,10 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 		return ast;
 	}
 
-	private int minSdk = Integer.MAX_VALUE;
-
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
 		return new int[]{TokenTypes.LITERAL_IF, TokenTypes.METHOD_CALL, TokenTypes.QUESTION};
-	}
-
-	/**
-	 * Sets the minimum SDK version for the target platform.
-	 * {@code Math.clamp} requires Android API 35+.
-	 * <p>Called by Checkstyle via reflection when {@code minSdk} is set in the config.</p>
-	 */
-	@SuppressWarnings("unused")
-	public void setMinSdk(int minSdk) {
-		this.minSdk = minSdk;
 	}
 
 	private void visitIf(@Nonnull DetailAST ast) {
@@ -435,7 +431,7 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 						|| !branchText(thenBranch.target()).equals(branchText(elseBranch.target()))))
 			return;
 
-		if (!AstUtil.isPureExpression(thenBranch.value()) || !AstUtil.isPureExpression(elseBranch.value()))
+		if (!AstQuery.isPureExpression(thenBranch.value()) || !AstQuery.isPureExpression(elseBranch.value()))
 			return;
 
 		var replacement = checkAbs(condition, thenBranch.value(), elseBranch.value());
@@ -448,7 +444,7 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 	}
 
 	private void visitMethodCall(@Nonnull DetailAST ast) {
-		if (minSdk < MIN_SDK_CLAMP)
+		if (!minSdkAtLeast(MIN_SDK_CLAMP))
 			return;
 
 		final var result = checkClamp(ast);
@@ -479,10 +475,8 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 		final var condRight = condLeft != null ? condLeft.getNextSibling() : null;
 		if (condLeft == null || condRight == null)
 			return;
-		// condition operands allow prefix ++/-- (the mutation happens before branches evaluate)
-		// but branches must be strictly pure
 		if (!isPureOrPrefixMutated(condLeft) || !isPureOrPrefixMutated(condRight)
-				|| !AstUtil.isPureExpression(trueBranch) || !AstUtil.isPureExpression(falseBranch))
+				|| !AstQuery.isPureExpression(trueBranch) || !AstQuery.isPureExpression(falseBranch))
 			return;
 
 		var replacement = checkAbs(condition, trueBranch, falseBranch);
@@ -491,8 +485,8 @@ public class PreferMathMethodCheck extends AbstractAstCheck {
 		if (replacement == null)
 			return;
 
-		final var original = AstUtil.displayText(condition)
-				+ " ? " + AstUtil.displayText(trueBranch) + " : " + AstUtil.displayText(falseBranch);
+		final var original = AstDisplay.displayText(condition)
+				+ " ? " + AstDisplay.displayText(trueBranch) + " : " + AstDisplay.displayText(falseBranch);
 		log(ast, MSG_METHOD, replacement, original);
 	}
 

@@ -1,0 +1,342 @@
+#!/usr/bin/env python3
+"""Read a Java file's shape instead of the whole file.
+
+  tools/outline <file|Class> [...]     members: line, span, visibility, signature
+  tools/outline calls <file|Class>     which members call which, inside the file
+  tools/outline callers <Class.member> files calling it, and what else they use from Class
+  tools/outline find <pattern>         member names matching a regex, across main and test
+
+A bare `AstQuery` resolves under src/main/java then src/test/java. Sizes are the span from a
+member's javadoc to the last line of its body. A type's span covers its members, which are listed
+indented under it, so container spans double-count.
+"""
+
+import os
+import re
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SOURCE_ROOTS = ('src/main/java', 'src/test/java')
+
+# A declaration line is one that sits directly in a type body: brace depth equal to the enclosing
+# type's body depth, no open paren, and not a comment, annotation, or closing brace.
+NAMED = re.compile(r'\b([A-Za-z_]\w*)\s*\(')
+TYPE_DECL = re.compile(r'\b(class|interface|enum|record)\s+([A-Za-z_]\w*)')
+FIELD = re.compile(r'\b([a-zA-Z_]\w*)\s*(?:=|,|;|\[)')
+SKIP_LEAD = ('/*', '*', '//', '@')
+
+
+def die(msg):
+    sys.exit(msg)
+
+
+def resolve(name):
+    if os.path.isfile(name):
+        return name
+
+    for root in SOURCE_ROOTS:
+        for base, _, files in os.walk(os.path.join(ROOT, root)):
+            for f in files:
+                if f in (name, name + '.java'):
+                    return os.path.relpath(os.path.join(base, f), ROOT)
+    die(f'no such file or class: {name}')
+
+
+def visibility(decl):
+    for keyword in ('public', 'protected', 'private'):
+        if decl.startswith(keyword + ' '):
+            return keyword[:4]
+    return 'pkg'
+
+
+def strip_literals(line, state):
+    """The line with comments, strings and chars blanked out, plus the trailing lexer state."""
+    out = []
+    i = 0
+    while i < len(line):
+        two = line[i:i + 2]
+        if state == 'comment':
+            if two == '*/':
+                state, i = None, i + 2
+                continue
+            i += 1
+        elif state == 'text_block':
+            if line[i:i + 3] == '"""':
+                state, i = None, i + 3
+                continue
+            i += 1
+        elif two == '/*':
+            state, i = 'comment', i + 2
+        elif two == '//':
+            break
+        elif line[i:i + 3] == '"""':
+            state, i = 'text_block', i + 3
+        elif line[i] in '"\'':
+            quote = line[i]
+            i += 1
+            while i < len(line):
+                if line[i] == '\\':
+                    i += 2
+                    continue
+                if line[i] == quote:
+                    i += 1
+                    break
+                i += 1
+        else:
+            out.append(line[i])
+            i += 1
+    return ''.join(out), state
+
+
+def declarations(lines):
+    """Members, as (decl_index, body_end, type_nesting, is_enum_constant, prologue_start)."""
+    state = None
+    braces = parens = 0
+    type_stack = []
+    constants_open = []
+    open_types = []
+    type_end = {}
+    found = []
+    # declarations nest (a type holds members), so pending declarations form a stack. One
+    # completes when its braces close, or at its `;` when it never opened a body.
+    pending = []
+
+    for i, raw in enumerate(lines):
+        # a line continuing a text block or block comment declares nothing, whatever it looks like
+        carried = state
+        code, state = strip_literals(raw, state)
+        stripped = raw.strip() if carried is None else ''
+        type_decl = TYPE_DECL.search(code)
+        at_member_depth = bool(type_stack) and braces == type_stack[-1] and parens == 0
+        at_file_level = not type_stack and braces == 0 and parens == 0 and bool(type_decl)
+        starting = ((at_member_depth or at_file_level) and stripped
+                    and not stripped.startswith(SKIP_LEAD) and stripped[0] not in '}),;'
+                    and not (pending and pending[-1]['line'] == i))
+        if starting:
+            pending.append({'line': i, 'depth': len(type_stack), 'base': braces,
+                            'constant': bool(constants_open) and constants_open[-1],
+                            'opened': False,
+                            'owner': open_types[-1] if open_types else None})
+
+        opens_type = bool(type_decl) and '{' in code
+        for ch in code:
+            top = pending[-1] if pending else None
+            if ch == '(':
+                parens += 1
+            elif ch == ')':
+                parens = max(0, parens - 1)
+            elif ch in ';,' and parens == 0 and top and not top['opened'] \
+                    and braces == top['base'] and (ch == ';' or top['constant']):
+                found.append((top['line'], i, top['depth'], top['constant'], top['owner']))
+                pending.pop()
+                if ch == ';' and constants_open and type_stack and braces == type_stack[-1]:
+                    constants_open[-1] = False
+            elif ch == '{':
+                braces += 1
+                if top and not top['opened'] and braces == top['base'] + 1:
+                    top['opened'] = True
+                if opens_type:
+                    type_stack.append(braces)
+                    constants_open.append(type_decl.group(1) == 'enum')
+                    open_types.append(top['line'] if top else i)
+                    opens_type = False
+            elif ch == '}':
+                braces -= 1
+                while type_stack and braces < type_stack[-1]:
+                    type_stack.pop()
+                    constants_open.pop()
+                    type_end[open_types.pop()] = i
+                # a closing brace also ends the last enum constant, which carries no `,` or `;`
+                while pending and ((pending[-1]['opened'] and braces == pending[-1]['base'])
+                                   or braces < pending[-1]['base']):
+                    done = pending.pop()
+                    found.append((done['line'], i, done['depth'], done['constant'], done['owner']))
+    for done in reversed(pending):
+        found.append((done['line'], len(lines) - 1, done['depth'], done['constant'], done['owner']))
+
+    found.sort()
+    # the prologue (javadoc and annotations, however many lines) is whatever non-blank text sits
+    # between the previous sibling's last line and this declaration
+    out = []
+    prev_end = {}
+    for decl, body_end, depth, is_constant, owner in found:
+        floor = prev_end.get(owner, owner if owner is not None else -1)
+        prologue = decl
+        while prologue - 1 > floor and lines[prologue - 1].strip():
+            prologue -= 1
+        out.append((decl, body_end, depth, is_constant, prologue))
+        prev_end[owner] = body_end
+    return out, type_end
+
+
+def parse(path):
+    """Members of `path`, each as (name, kind, depth, decl_start, body_end, signature)."""
+    lines = open(os.path.join(ROOT, path)).read().split('\n')
+    decls, type_end = declarations(lines)
+    out = []
+    for decl, body_end, depth, is_constant, prologue in decls:
+        if is_constant:
+            const = re.match(r'([A-Z_][A-Z0-9_]*)', lines[decl].strip())
+            if const:
+                out.append((const.group(1), 'constant', depth, prologue, decl + 1))
+                continue
+
+        sig, j = lines[decl].strip(), decl
+        while j < body_end and (sig.count('(') != sig.count(')')
+                                or not sig.rstrip().endswith(('{', ';', '}'))):
+            j += 1
+            sig += ' ' + lines[j].strip()
+
+        type_decl = TYPE_DECL.search(sig)
+        named = NAMED.search(sig)
+        if type_decl and (not named or named.start() > type_decl.start()):
+            name, kind = type_decl.group(2), 'type'
+        elif named and '=' not in sig.split('(')[0]:
+            name, kind = named.group(1), 'member'
+        else:
+            field = FIELD.search(sig)
+            if not field:
+                continue
+            name, kind = field.group(1), 'field'
+        out.append((name, kind, depth, prologue, body_end + 1, re.sub(r'\s+', ' ', sig).rstrip('{ ')))
+    return [(n, k, d, s, e, g) if len(r) == 6 else (n, k, d, s, e, n)
+            for r in out for n, k, d, s, e, g in [r if len(r) == 6 else (*r, r[0])]]
+
+
+def cmd_show(names):
+    for name in names:
+        path = resolve(name)
+        members = parse(path)
+        total = len(open(os.path.join(ROOT, path)).read().split('\n'))
+        count = len([m for m in members if m[1] != 'constant' and m[2] > 0])
+        print(f'== {path}  ({total} lines, {count} member{"" if count == 1 else "s"})')
+        run = []
+        for member, kind, depth, start, end, sig in members + [(None, None, 1, 0, 0, '')]:
+            if kind == 'constant':
+                run.append((member, start, depth))
+                continue
+
+            if run:
+                names_ = ', '.join(c for c, _, _ in run)
+                print(f'{run[0][1] + 1:6d} {len(run):4d}  ---  {"  " * (run[0][2] - 1)}'
+                      f'constants: {names_}')
+                run = []
+            if member is not None:
+                print(f'{start + 1:6d} {end - start:4d}  {visibility(sig):4s} '
+                      f'{"  " * max(0, depth - 1)}{sig}')
+
+
+def strip_body(text):
+    """`text` with comments, strings and chars blanked, so a name inside one is not a call."""
+    out = []
+    state = None
+    for line in text.split('\n'):
+        stripped, state = strip_literals(line, state)
+        out.append(stripped)
+    return '\n'.join(out)
+
+
+def internal_calls(path):
+    members = parse(path)
+    lines = open(os.path.join(ROOT, path)).read().split('\n')
+    names = {m for m, kind, *_ in members if kind == 'member'}
+    own = os.path.basename(path)[:-len('.java')]
+    graph = []
+    for member, kind, depth, start, end, sig in members:
+        if kind != 'member':
+            continue
+
+        body = '\n'.join(lines[members[0][3]:end][max(0, start - members[0][3]) + 1:])
+        body = strip_body(body)
+        # A static that instantiates its own class reaches instance members through the local, so
+        # `self.member(` is an edge too. Only locals assigned `new <own class>` count, so an
+        # unrelated receiver that happens to have a same-named method does not invent one.
+        selves = sorted(set(re.findall(r'(\w+)\s*=\s*new\s+' + re.escape(own) + r'\s*[(<]', body)))
+        receivers = [r'(?<![\w.])' + re.escape(v) + r'\s*\.\s*' for v in selves]
+        # unqualified `name(`, `self.name(`, or a method reference (`Cls::name`, `this::name`),
+        # which has no paren and is just as much an edge
+        prefix = '|'.join([r'(?<![\w.])'] + receivers)
+        called = sorted(o for o in names
+                        if o != member
+                        and re.search(f'(?:{prefix}){o}' + r'\s*\(|::\s*' + o + r'\b', body))
+        graph.append((member, start, end - start, called))
+    return graph
+
+
+def cmd_calls(names):
+    for name in names:
+        path = resolve(name)
+        print(f'== {path}')
+        graph = internal_calls(path)
+        called_by = {}
+        for member, _, _, called in graph:
+            for c in called:
+                called_by.setdefault(c, []).append(member)
+        for member, start, span, called in graph:
+            callers = called_by.get(member, [])
+            print(f'{start + 1:6d} {span:4d}  {member}')
+            if called:
+                print(f'              calls: {" ".join(called)}')
+            if callers:
+                print(f'              called by: {" ".join(sorted(callers))}')
+
+
+def java_files():
+    for root in SOURCE_ROOTS:
+        for base, _, files in os.walk(os.path.join(ROOT, root)):
+            for f in files:
+                if f.endswith('.java'):
+                    yield os.path.relpath(os.path.join(base, f), ROOT)
+
+
+def cmd_callers(target):
+    if '.' not in target:
+        die('callers wants Class.member, e.g. AstResolve.resolveVariableType')
+
+    cls, member = target.rsplit('.', 1)
+    own = os.path.basename(resolve(cls))
+    hits = []
+    for path in java_files():
+        if os.path.basename(path) == own:
+            continue
+
+        src = strip_body(open(os.path.join(ROOT, path)).read())
+        ref = r'(?:\.' + member + r'\s*\(|::\s*' + member + r'\b)'
+        n = len(re.findall(re.escape(cls) + ref, src))
+        if n:
+            others = sorted(set(re.findall(re.escape(cls) + r'(?:\.([a-zA-Z_]\w*)\s*\(|::\s*([a-zA-Z_]\w*)\b)', src)))
+            others = sorted({a or b for a, b in others} - {member})
+            hits.append((path, n, others))
+    print(f'{target}: {len(hits)} files, {sum(n for _, n, _ in hits)} call sites')
+    for path, n, others in sorted(hits):
+        print(f'{n:4d}  {path}')
+        if others:
+            print(f'      also uses: {" ".join(others)}')
+
+
+def cmd_find(pattern):
+    rx = re.compile(pattern)
+    for path in sorted(java_files()):
+        for member, kind, depth, start, end, sig in parse(path):
+            if rx.search(member):
+                print(f'{path}:{start + 1}  {visibility(sig):4s} {sig}')
+
+
+def main(argv):
+    if not argv or argv[0] in ('-h', '--help', 'help'):
+        print(__doc__.rstrip())
+        return
+
+    verb, rest = argv[0], argv[1:]
+    if verb == 'calls':
+        cmd_calls(rest or die('calls wants a file or class'))
+    elif verb == 'callers':
+        cmd_callers(rest[0] if rest else die('callers wants Class.member'))
+    elif verb == 'find':
+        cmd_find(rest[0] if rest else die('find wants a pattern'))
+    else:
+        cmd_show(argv)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

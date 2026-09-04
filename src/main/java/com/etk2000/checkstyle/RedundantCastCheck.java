@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -82,7 +83,7 @@ public class RedundantCastCheck extends AbstractAstCheck {
 			}
 			case TokenTypes.IDENT -> lookupVariableType(expr);
 			case TokenTypes.LITERAL_FALSE, TokenTypes.LITERAL_TRUE -> "boolean";
-			case TokenTypes.LITERAL_NEW -> AstUtil.findNewClassName(expr);
+			case TokenTypes.LITERAL_NEW -> AstText.findNewClassName(expr);
 			case TokenTypes.LITERAL_THIS -> enclosingClassName(expr);
 			case TokenTypes.NUM_DOUBLE -> "double";
 			case TokenTypes.NUM_FLOAT -> {

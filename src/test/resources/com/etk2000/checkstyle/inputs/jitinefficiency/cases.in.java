@@ -17,9 +17,8 @@ class InputJitInefficiencyAllocationAppendConcatBracketIndexArithmeticSliceViola
 }
 // === end ===
 
-// === case: allocation_append_concat_cast_receiver_bails ===
-// skip-reason: string concatenation inside append()
-class InputJitInefficiencyAllocationAppendConcatCastReceiverBailsSliceViolation {
+// === case: allocation_append_concat_cast_receiver ===
+class InputJitInefficiencyAllocationAppendConcatCastReceiverSliceViolation {
 	void m(Object o, String b) {
 		((StringBuilder) o).append("a" + b); // violation: Use chained '.append()' instead of string concatenation inside '.append(...)'.
 	}
@@ -27,7 +26,6 @@ class InputJitInefficiencyAllocationAppendConcatCastReceiverBailsSliceViolation 
 // === end ===
 
 // === case: allocation_append_concat_leading_char_literal ===
-// skip-reason: string concatenation inside append()
 class InputJitInefficiencyAllocationAppendConcatLeadingCharLiteralSliceViolation {
 	void m(StringBuilder sb) {
 		sb.append('a' + "x"); // violation: Use chained '.append()' instead of string concatenation inside '.append(...)'.
@@ -36,7 +34,6 @@ class InputJitInefficiencyAllocationAppendConcatLeadingCharLiteralSliceViolation
 // === end ===
 
 // === case: allocation_append_concat_leading_dot_float ===
-// skip-reason: string concatenation inside append()
 class InputJitInefficiencyAllocationAppendConcatLeadingDotFloatSliceViolation {
 	void m(StringBuilder sb) {
 		sb.append(.5 + "x"); // violation: Use chained '.append()' instead of string concatenation inside '.append(...)'.
@@ -45,7 +42,6 @@ class InputJitInefficiencyAllocationAppendConcatLeadingDotFloatSliceViolation {
 // === end ===
 
 // === case: allocation_append_concat_leading_signed_dot_float ===
-// skip-reason: string concatenation inside append()
 class InputJitInefficiencyAllocationAppendConcatLeadingSignedDotFloatSliceViolation {
 	void m(StringBuilder sb) {
 		sb.append(-.5 + "x"); // violation: Use chained '.append()' instead of string concatenation inside '.append(...)'.
@@ -54,7 +50,6 @@ class InputJitInefficiencyAllocationAppendConcatLeadingSignedDotFloatSliceViolat
 // === end ===
 
 // === case: allocation_append_concat_leading_signed_number ===
-// skip-reason: string concatenation inside append()
 class InputJitInefficiencyAllocationAppendConcatLeadingSignedNumberSliceViolation {
 	void m(StringBuilder sb) {
 		sb.append(-1 + "x"); // violation: Use chained '.append()' instead of string concatenation inside '.append(...)'.
@@ -102,9 +97,8 @@ class InputJitInefficiencyAllocationAppendConcatLhsVarSliceViolation {
 }
 // === end ===
 
-// === case: allocation_append_concat_no_literal_operand_bails ===
-// skip-reason: string concatenation inside append()
-class InputJitInefficiencyAllocationAppendConcatNoLiteralOperandBailsSliceViolation {
+// === case: allocation_append_concat_no_literal_operand ===
+class InputJitInefficiencyAllocationAppendConcatNoLiteralOperandSliceViolation {
 	void m(StringBuilder sb, String a, String b) {
 		sb.append(a + b); // violation: Use chained '.append()' instead of string concatenation inside '.append(...)'.
 	}
@@ -188,18 +182,16 @@ class InputJitInefficiencyAllocationAppendConcatUnanalysableReceiverBailsSliceVi
 }
 // === end ===
 
-// === case: allocation_append_concat_unary_increment_operand_bails ===
-// skip-reason: string concatenation inside append()
-class InputJitInefficiencyAllocationAppendConcatUnaryIncrementOperandBailsSliceViolation {
+// === case: allocation_append_concat_unary_increment_operand ===
+class InputJitInefficiencyAllocationAppendConcatUnaryIncrementOperandSliceViolation {
 	void m(StringBuilder sb, int i) {
 		sb.append("a" + ++i); // violation: Use chained '.append()' instead of string concatenation inside '.append(...)'.
 	}
 }
 // === end ===
 
-// === case: allocation_boxed_constructor_space_before_paren_bails ===
-// skip-reason: qualified boxed constructor
-class InputJitInefficiencyAllocationBoxedConstructorSpaceBeforeParenBailsSliceViolation {
+// === case: allocation_boxed_constructor_space_before_paren ===
+class InputJitInefficiencyAllocationBoxedConstructorSpaceBeforeParenSliceViolation {
 	void m() {
 		final var n = new Integer (42); // violation: Use 'Integer.valueOf(...)' instead of 'new Integer(...)'.
 		System.out.println(n);
@@ -252,7 +244,6 @@ class InputJitInefficiencyAllocationEmptyStringConcatCallArgComparisonTernarySli
 // === end ===
 
 // === case: allocation_empty_string_concat_chain ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
 class InputJitInefficiencyAllocationEmptyStringConcatChainSliceViolation {
 	void m(int a, int b) {
 		final var s = "" + a + b; // violation: Use 'String.valueOf(...)' instead of concatenating with the empty string.
@@ -262,7 +253,6 @@ class InputJitInefficiencyAllocationEmptyStringConcatChainSliceViolation {
 // === end ===
 
 // === case: allocation_empty_string_concat_chain_reversed ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
 class InputJitInefficiencyAllocationEmptyStringConcatChainReversedSliceViolation {
 	void m(Object a, Object b) {
 		final var s = a + b + ""; // violation: Use 'String.valueOf(...)' instead of concatenating with the empty string.
@@ -379,7 +369,6 @@ class InputJitInefficiencyAllocationEmptyStringConcatMultiArgGenericWitnessSlice
 // === end ===
 
 // === case: allocation_empty_string_concat_multiline_continuation ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
 class InputJitInefficiencyAllocationEmptyStringConcatMultilineContinuationSliceViolation {
 	void m(Object foo, Object bar) {
 		final var s = "" + foo // violation: Use 'String.valueOf(...)' instead of concatenating with the empty string.
@@ -490,6 +479,15 @@ class InputJitInefficiencyAllocationEmptyStringConcatTrailingBlockCommentSliceVi
 }
 // === end ===
 
+// === case: allocation_empty_string_concat_trailing_line_comment ===
+class InputJitInefficiencyAllocationEmptyStringConcatTrailingLineCommentSliceViolation {
+	void m(Object foo) {
+		final var s = "" + foo; // violation: Use 'String.valueOf(...)' instead of concatenating with the empty string.
+		System.out.println(s);
+	}
+}
+// === end ===
+
 // === case: allocation_empty_string_concat_two_on_one_line ===
 class InputJitInefficiencyAllocationEmptyStringConcatTwoOnOneLineSliceViolation {
 	void m(int x, int y) {
@@ -502,7 +500,6 @@ class InputJitInefficiencyAllocationEmptyStringConcatTwoOnOneLineSliceViolation 
 // === end ===
 
 // === case: allocation_new_string_comment_in_arg ===
-// skip-reason: redundant new String(...) wrapper
 class InputJitInefficiencyAllocationNewStringCommentInArgSliceViolation {
 	void m(String existing) {
 		final var b = new String(/* c */ existing); // violation: Use the String variable directly instead of wrapping in 'new String(...)'.
@@ -511,9 +508,26 @@ class InputJitInefficiencyAllocationNewStringCommentInArgSliceViolation {
 }
 // === end ===
 
-// === case: allocation_new_string_fqn_bails ===
+// === case: allocation_new_string_foreign_qualifier_bails ===
 // skip-reason: redundant new String(...) wrapper
-class InputJitInefficiencyAllocationNewStringFqnBailsSliceViolation {
+class InputJitInefficiencyAllocationNewStringForeignQualifierBailsSliceViolation {
+	static class Foreign {
+		static class String {
+			String(java.lang.String value) {
+				System.out.println(value);
+			}
+		}
+	}
+
+	void m() {
+		final var a = new Foreign.String("hello"); // violation: Use the string literal directly instead of wrapping in 'new String(...)'.
+		System.out.println(a);
+	}
+}
+// === end ===
+
+// === case: allocation_new_string_fqn ===
+class InputJitInefficiencyAllocationNewStringFqnSliceViolation {
 	void m() {
 		final var a = new java.lang.String("hello"); // violation: Use the string literal directly instead of wrapping in 'new String(...)'.
 		System.out.println(a);
@@ -557,8 +571,22 @@ class InputJitInefficiencyAllocationNewStringVarSliceViolation {
 }
 // === end ===
 
-// === case: allocation_string_buffer_fqn_constructor ===
+// === case: allocation_string_buffer_foreign_qualifier_bails ===
 // skip-reason: local StringBuffer
+class InputJitInefficiencyAllocationStringBufferForeignQualifierBailsSliceViolation {
+	static class Foreign {
+		static class StringBuffer {
+		}
+	}
+
+	void m() {
+		final var sb = new Foreign.StringBuffer(); // violation: Use 'StringBuilder' instead of 'StringBuffer' for non-shared local builders.
+		System.out.println(sb);
+	}
+}
+// === end ===
+
+// === case: allocation_string_buffer_fqn_constructor ===
 class InputJitInefficiencyAllocationStringBufferFqnConstructorSliceViolation {
 	void m() {
 		final var sb = new java.lang.StringBuffer(); // violation: Use 'StringBuilder' instead of 'StringBuffer' for non-shared local builders.
@@ -587,7 +615,6 @@ class InputJitInefficiencyAllocationStringBufferLocalWithConstructorArgSliceViol
 // === end ===
 
 // === case: allocation_to_array_sized_annotated_type ===
-// skip-reason: presized toArray(...)
 // imports: java.util.List
 // imports: javax.annotation.Nullable
 class InputJitInefficiencyAllocationToArraySizedAnnotatedTypeSliceViolation {
@@ -598,11 +625,33 @@ class InputJitInefficiencyAllocationToArraySizedAnnotatedTypeSliceViolation {
 }
 // === end ===
 
+// === case: allocation_to_array_sized_arithmetic_size_bails ===
+// skip-reason: presized toArray(...)
+// imports: java.util.List
+class InputJitInefficiencyAllocationToArraySizedArithmeticSizeBailsSliceViolation {
+	void m(List<String> list, int n) {
+		final var a = list.toArray(new String[n + 1]); // violation: Use 'toArray(new String[0])' instead of a sized array (faster on modern JVMs).
+		System.out.println(a.length);
+	}
+}
+// === end ===
+
 // === case: allocation_to_array_sized_bare_ident_size ===
 // imports: java.util.List
 class InputJitInefficiencyAllocationToArraySizedBareIdentSizeSliceViolation {
 	void m(List<String> list, int n) {
 		final var a = list.toArray(new String[n]); // violation: Use 'toArray(new String[0])' instead of a sized array (faster on modern JVMs).
+		System.out.println(a.length);
+	}
+}
+// === end ===
+
+// === case: allocation_to_array_sized_cast_size_bails ===
+// skip-reason: presized toArray(...)
+// imports: java.util.List
+class InputJitInefficiencyAllocationToArraySizedCastSizeBailsSliceViolation {
+	void m(List<String> list, double d) {
+		final var a = list.toArray(new String[(int) d]); // violation: Use 'toArray(new String[0])' instead of a sized array (faster on modern JVMs).
 		System.out.println(a.length);
 	}
 }
@@ -623,6 +672,18 @@ class InputJitInefficiencyAllocationToArraySizedLengthSuffixSizeSliceViolation {
 class InputJitInefficiencyAllocationToArraySizedLiteralSliceViolation {
 	void m(List<String> list) {
 		final var a = list.toArray(new String[5]); // violation: Use 'toArray(new String[0])' instead of a sized array (faster on modern JVMs).
+		System.out.println(a.length);
+	}
+}
+// === end ===
+
+// === case: allocation_to_array_sized_negative_literal_size_bails ===
+// skip-reason: presized toArray(...)
+// imports: java.util.List
+class InputJitInefficiencyAllocationToArraySizedNegativeLiteralSizeBailsSliceViolation {
+	void m(List<String> list) {
+		// a negative size throws where `new String[0]` would not, so the value is not droppable
+		final var a = list.toArray(new String[-1]); // violation: Use 'toArray(new String[0])' instead of a sized array (faster on modern JVMs).
 		System.out.println(a.length);
 	}
 }
@@ -660,10 +721,32 @@ class InputJitInefficiencyAllocationToArraySizedSizeExprSliceViolation {
 }
 // === end ===
 
-// === case: allocation_to_array_sized_wrapped_call_bails ===
+// === case: allocation_to_array_sized_ternary_size_bails ===
 // skip-reason: presized toArray(...)
 // imports: java.util.List
-class InputJitInefficiencyAllocationToArraySizedWrappedCallBailsSliceViolation {
+class InputJitInefficiencyAllocationToArraySizedTernarySizeBailsSliceViolation {
+	void m(List<String> list, boolean cond, int n) {
+		final var a = list.toArray(new String[cond ? n : 1]); // violation: Use 'toArray(new String[0])' instead of a sized array (faster on modern JVMs).
+		System.out.println(a.length);
+	}
+}
+// === end ===
+
+// === case: allocation_to_array_sized_this_qualified_size ===
+// imports: java.util.List
+class InputJitInefficiencyAllocationToArraySizedThisQualifiedSizeSliceViolation {
+	int n;
+
+	void m(List<String> list) {
+		final var a = list.toArray(new String[this.n]); // violation: Use 'toArray(new String[0])' instead of a sized array (faster on modern JVMs).
+		System.out.println(a.length);
+	}
+}
+// === end ===
+
+// === case: allocation_to_array_sized_wrapped_call ===
+// imports: java.util.List
+class InputJitInefficiencyAllocationToArraySizedWrappedCallSliceViolation {
 	void m(List<String> list, int n) {
 		final var a = list.toArray(new String[ // violation: Use 'toArray(new String[0])' instead of a sized array (faster on modern JVMs).
 				n]);
@@ -1563,9 +1646,8 @@ class InputJitInefficiencyBoxedConstructorShortConstructorSliceViolation {
 }
 // === end ===
 
-// === case: empty_string_concat_call_receiver_bails ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
-class InputJitInefficiencyEmptyStringConcatCallReceiverBailsSliceViolation {
+// === case: empty_string_concat_call_receiver ===
+class InputJitInefficiencyEmptyStringConcatCallReceiverSliceViolation {
 	void m() {
 		final var s = f() + ""; // violation: Use 'String.valueOf(...)' instead of concatenating with the empty string.
 		System.out.println(s);
@@ -1589,12 +1671,57 @@ class InputJitInefficiencyEmptyStringConcatCarriedBlockCommentBailsSliceViolatio
 }
 // === end ===
 
-// === case: empty_string_concat_diamond_operand_bails ===
+// === case: empty_string_concat_char_array_operand_bails ===
 // skip-reason: empty-string concatenation the fixer cannot simplify
+class InputJitInefficiencyEmptyStringConcatCharArrayOperandBailsSliceViolation {
+	void m(char[] chars) {
+		// `"" + chars` is the array's toString, while String.valueOf(char[]) returns its contents
+		final var s = "" + chars; // violation: Use 'String.valueOf(...)' instead of concatenating with the empty string.
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_comment_abutting_plus ===
+class InputJitInefficiencyEmptyStringConcatCommentAbuttingPlusSliceViolation {
+	void m(int x) {
+		final var s = "" +/*c*/x; // violation: Use 'String.valueOf(...)' instead of concatenating with the empty string.
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_diamond_operand ===
 // imports: java.util.ArrayList
-class InputJitInefficiencyEmptyStringConcatDiamondOperandBailsSliceViolation {
+class InputJitInefficiencyEmptyStringConcatDiamondOperandSliceViolation {
 	void m() {
 		final String s = "" + new ArrayList<>(); // violation: Use 'String.valueOf(...)' instead of concatenating with the empty string.
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_dotted_array_receiver ===
+class InputJitInefficiencyEmptyStringConcatDottedArrayReceiverSliceViolation {
+	String name;
+
+	void m(InputJitInefficiencyEmptyStringConcatDottedArrayReceiverSliceViolation[] items, int i) {
+		final var s = items[i].name + ""; // violation: Use 'String.valueOf(...)' instead of concatenating with the empty string.
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_dotted_call_receiver ===
+class InputJitInefficiencyEmptyStringConcatDottedCallReceiverSliceViolation {
+	String name;
+
+	InputJitInefficiencyEmptyStringConcatDottedCallReceiverSliceViolation get() {
+		return this;
+	}
+
+	void m() {
+		final var s = get().name + ""; // violation: Use 'String.valueOf(...)' instead of concatenating with the empty string.
 		System.out.println(s);
 	}
 }
@@ -1611,6 +1738,27 @@ class InputJitInefficiencyEmptyStringConcatNewArrayArgumentSliceViolation {
 }
 // === end ===
 
+// === case: empty_string_concat_null_literal_operand_bails ===
+// skip-reason: empty-string concatenation the fixer cannot simplify
+class InputJitInefficiencyEmptyStringConcatNullLiteralOperandBailsSliceViolation {
+	void m() {
+		// `"" + null` is the text "null", while String.valueOf(null) binds to valueOf(char[]) and throws
+		final var s = "" + null; // violation: Use 'String.valueOf(...)' instead of concatenating with the empty string.
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_object_operand ===
+class InputJitInefficiencyEmptyStringConcatObjectOperandSliceViolation {
+	void m(Object o) {
+		// the control for the two gates above: an operand they must not suppress
+		final var s = "" + o; // violation: Use 'String.valueOf(...)' instead of concatenating with the empty string.
+		System.out.println(s);
+	}
+}
+// === end ===
+
 // === case: empty_string_concat_switch_expression ===
 class InputJitInefficiencyEmptyStringConcatSwitchExpressionSliceViolation {
 	String m(int kind) {
@@ -1620,9 +1768,8 @@ class InputJitInefficiencyEmptyStringConcatSwitchExpressionSliceViolation {
 }
 // === end ===
 
-// === case: empty_string_concat_switch_expression_operand_plus_bails ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
-class InputJitInefficiencyEmptyStringConcatSwitchExpressionOperandPlusBailsSliceViolation {
+// === case: empty_string_concat_switch_expression_operand_plus ===
+class InputJitInefficiencyEmptyStringConcatSwitchExpressionOperandPlusSliceViolation {
 	String m(int kind, String a, String b) {
 		final String label = "" + switch (kind) { case 1 -> a + b; default -> "c"; }; // violation: Use 'String.valueOf(...)' instead of concatenating with the empty string.
 		return label;
@@ -1969,6 +2116,56 @@ class InputJitInefficiencyFieldLhsTier2DoWhileAfterStatementLabelBailsSliceViola
 }
 // === end ===
 
+// === case: foreign_category_enum_values_array_lhs_does_not_borrow_concat_rewrite ===
+// skip-reason: Enum.values() in a loop
+class InputJitInefficiencyForeignCategoryEnumValuesArrayLhsDoesNotBorrowConcatRewriteSliceViolation {
+	enum Color {
+		BLUE
+	}
+
+	int[] totals = new int[4];
+
+	int m() {
+		for (var i = 0; i < 3; ++i)
+			totals[0] = totals[0] + Color.values().length; // violation: 'Color.values()' allocates a new array each call; cache to a static final field outside the loop.
+		return totals[0];
+	}
+}
+// === end ===
+
+// === case: foreign_category_enum_values_field_lhs_does_not_borrow_concat_rewrite ===
+// skip-reason: Enum.values() in a loop
+class InputJitInefficiencyForeignCategoryEnumValuesFieldLhsDoesNotBorrowConcatRewriteSliceViolation {
+	enum Color {
+		BLUE
+	}
+
+	int total;
+
+	int m() {
+		// the loop rewriter's field path synthesizes a String declaration without resolving the
+		// field's type, so reaching it from another category emitted `this.total = sb.toString();`
+		for (var i = 0; i < 3; ++i)
+			this.total = this.total + Color.values().length; // violation: 'Color.values()' allocates a new array each call; cache to a static final field outside the loop.
+		return this.total;
+	}
+}
+// === end ===
+
+// === case: foreign_category_reusable_object_does_not_borrow_concat_rewrite ===
+// skip-reason: reusable object creation
+// imports: java.util.regex.Pattern
+class InputJitInefficiencyForeignCategoryReusableObjectDoesNotBorrowConcatRewriteSliceViolation {
+	int total;
+
+	int m() {
+		for (var i = 0; i < 3; ++i)
+			this.total = this.total + Pattern.compile("a").pattern().length(); // violation: 'Pattern.compile(...)' creates a reusable object on every call; hoist to a static final field.
+		return this.total;
+	}
+}
+// === end ===
+
 // === case: loop_boxed_accumulator_byte ===
 // skip-reason: boxed accumulator in a loop
 class InputJitInefficiencyLoopBoxedAccumulatorByteSliceViolation {
@@ -2308,6 +2505,18 @@ class InputJitInefficiencyLoopRegexStringLiteralReceiverSliceViolation {
 	void m(int n) {
 		for (var i = 0; i < n; ++i)
 			System.out.println("abc".matches("\\d+")); // violation: '.matches(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.
+	}
+}
+// === end ===
+
+// === case: loop_regex_unresolvable_resource_receiver ===
+// skip-reason: regex method in a loop
+class InputJitInefficiencyLoopRegexUnresolvableResourceReceiverSliceViolation {
+	void m() throws Exception {
+		try (var tokenizer = InputJitInefficiencyTokenizerFactory.make()) {
+			for (var i = 0; i < 3; ++i)
+				tokenizer.split(","); // violation: '.split(...)' compiles the regex on every call; hoist a 'Pattern.compile(...)' outside the loop.
+		}
 	}
 }
 // === end ===
@@ -3305,6 +3514,55 @@ class InputJitInefficiencyStringConcatForHeaderTrailingCommentBracedSliceViolati
 }
 // === end ===
 
+// === case: string_concat_gap_cross_scope_bails ===
+// skip-reason: string concatenation in a loop
+// imports: java.util.List
+class InputJitInefficiencyStringConcatGapCrossScopeBailsSliceViolation {
+	void g() {
+		final String s = "in g";
+		System.out.println(s);
+	}
+
+	// the accumulator is a parameter here, so the backward scan for its declaration runs past the
+	// method boundary and lands on g()'s local
+	String h(List<String> list, String s) {
+		for (var x : list)
+			s = s + x; // violation: String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.
+		return s;
+	}
+}
+// === end ===
+
+// === case: string_concat_gap_nested_scope_bails ===
+// skip-reason: string concatenation in a loop
+// imports: java.util.List
+class InputJitInefficiencyStringConcatGapNestedScopeBailsSliceViolation {
+	String m(boolean flag, List<String> list) {
+		String s = "";
+		if (flag) {
+			for (var x : list)
+				s = s + x; // violation: String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.
+		}
+		return s;
+	}
+}
+// === end ===
+
+// === case: string_concat_gap_text_block_bails ===
+// skip-reason: string concatenation in a loop
+// imports: java.util.List
+class InputJitInefficiencyStringConcatGapTextBlockBailsSliceViolation {
+	String m(List<String> list) {
+		String s = "";
+		final var note = """
+				note""";
+		for (var x : list)
+			s = s + x; // violation: String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.
+		return s + note;
+	}
+}
+// === end ===
+
 // === case: string_concat_generic_type_args_init_bails ===
 // skip-reason: string concatenation in a loop
 // imports: java.util.HashMap
@@ -3390,6 +3648,24 @@ class InputJitInefficiencyStringConcatInitLiteralCommaPassesSliceViolation {
 		for (var x : list)
 			s = s + x; // violation: String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.
 		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: string_concat_inside_block_comment_not_rewritten ===
+class InputJitInefficiencyStringConcatInsideBlockCommentNotRewrittenSliceViolation {
+	String m() {
+		final var s = "";
+		var t = "";
+		// the commented-out accumulation has no node, so the check never reports it and the
+		// rewrite below cannot reach it; under the old text scan it was live input
+		for (var i = 0; i < 3; ++i) {
+			/* commented out
+			s += "x";
+			*/
+			t += "y"; // violation: String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.
+		}
+		return s + t;
 	}
 }
 // === end ===
@@ -3587,6 +3863,21 @@ class InputJitInefficiencyStringConcatMultivarRelationalRebalancedBailsSliceViol
 			s += i; // violation: String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.
 		t = t.trim();
 		return s + t;
+	}
+}
+// === end ===
+
+// === case: string_concat_nested_assignment_lhs_mismatch_bails ===
+// skip-reason: string concatenation in a loop
+class InputJitInefficiencyStringConcatNestedAssignmentLhsMismatchBailsSliceViolation {
+	String f(String x) {
+		String a = "";
+		String s = "";
+		// the check reports the inner assignment to `s`, while the line scanner stops at the first
+		// `=` and reads `a`, so the two disagree about which variable the rewrite would replace
+		for (var i = 0; i < 3; ++i)
+			a = s = s + x; // violation: String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.
+		return a + s;
 	}
 }
 // === end ===
@@ -4170,6 +4461,20 @@ class InputJitInefficiencyStringConcatTier2DoWhileMismatchedWhileIndentBailsSlic
 		do s = s + "y"; // violation: String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.
 			while (s.length() < 5);
 		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: string_concat_tier2_do_while_nested_scope_bails ===
+// skip-reason: string concatenation in a loop
+class InputJitInefficiencyStringConcatTier2DoWhileNestedScopeBailsSliceViolation {
+	String m(boolean flag) {
+		String s = "";
+		if (flag) {
+			do s = s + "y"; // violation: String concatenation inside a loop allocates a new String per iteration; use a 'StringBuilder'.
+			while (s.length() < 5);
+		}
+		return s;
 	}
 }
 // === end ===

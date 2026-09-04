@@ -7,14 +7,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.etk2000.checkstyle.TestResources;
+import com.etk2000.checkstyle.gradle.fix.FixerAst.ThrowingParser;
 import com.puppycrawl.tools.checkstyle.DetailAstImpl;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -36,8 +39,10 @@ public class PreferStaticImportConstantFixerTest {
 	Path tempDir;
 
 	@AfterEach
+	@BeforeEach
 	public void cleanup() {
 		FixContext.clearFilePath();
+		FixerAst.clearCache();
 	}
 
 	@Nonnull
@@ -166,7 +171,7 @@ public class PreferStaticImportConstantFixerTest {
 				List.of(" X"),
 				0,
 				0,
-				PreferStaticImportConstantFixer::parseLinesToAst
+				FixerAst.DEFAULT_PARSER
 		));
 	}
 
@@ -177,8 +182,16 @@ public class PreferStaticImportConstantFixerTest {
 				lines,
 				0,
 				0,
-				PreferStaticImportConstantFixer::parseLinesToAst
+				FixerAst.DEFAULT_PARSER
 		));
+	}
+
+	@Test
+	public void testFindFieldDefForInlineSharesTheProductionCacheEntry() throws Exception {
+		final var lines = TestResources.loadCaseSlice(TOPIC, "int_alias").inputLines();
+		final var seed = FixerAst.parseOrNull(lines);
+		PreferStaticImportConstantFixer.findFieldDefForInlineUsing(lines, 0, 0, FixerAst.DEFAULT_PARSER);
+		assertSame(seed, FixerAst.parseOrNull(lines));
 	}
 
 	@Test
@@ -227,6 +240,19 @@ public class PreferStaticImportConstantFixerTest {
 					throw new StackOverflowError("deep recursion");
 				}
 		));
+	}
+
+	@Test
+	public void testFindFieldDefForInlineUsingServesTheSecondCallFromTheCache() throws Exception {
+		final var lines = TestResources.loadCaseSlice(TOPIC, "int_alias").inputLines();
+		final var parses = new int[1];
+		final ThrowingParser counting = ls -> {
+			++parses[0];
+			return PreferStaticImportConstantFixer.parseLinesToAst(ls);
+		};
+		PreferStaticImportConstantFixer.findFieldDefForInlineUsing(lines, 0, 0, counting);
+		PreferStaticImportConstantFixer.findFieldDefForInlineUsing(lines, 0, 0, counting);
+		assertEquals(1, parses[0]);
 	}
 
 	@Test
@@ -279,6 +305,33 @@ public class PreferStaticImportConstantFixerTest {
 				}
 		);
 		assertEquals("potential shadow (file does not parse cleanly)", result);
+	}
+
+	@Test
+	public void testFindShadowKindUsingServesTheConservativeAnswerFromACachedFailure() {
+		final List<String> lines = List.of();
+		final var parses = new int[1];
+		final ThrowingParser counting = ls -> {
+			++parses[0];
+			throw new CheckstyleException("bad input");
+		};
+		assertEquals(
+				"potential shadow (file does not parse cleanly)",
+				PreferStaticImportConstantFixer.findShadowKindUsing(lines, "X", Set.of(), counting)
+		);
+		assertEquals(
+				"potential shadow (file does not parse cleanly)",
+				PreferStaticImportConstantFixer.findShadowKindUsing(lines, "X", Set.of(), counting)
+		);
+		assertEquals(1, parses[0]);
+	}
+
+	@Test
+	public void testFindShadowKindUsingSharesTheProductionCacheEntry() throws Exception {
+		final var lines = TestResources.loadCaseSlice(TOPIC, "int_alias").inputLines();
+		final var seed = FixerAst.parseOrNull(lines);
+		PreferStaticImportConstantFixer.findShadowKindUsing(lines, "X", Set.of(), FixerAst.DEFAULT_PARSER);
+		assertSame(seed, FixerAst.parseOrNull(lines));
 	}
 
 	@Test
@@ -454,7 +507,12 @@ public class PreferStaticImportConstantFixerTest {
 
 	@Test
 	public void testParseAliasNoEqualsReturnsSkip() throws Exception {
-		assertSkipResult(fixer, TOPIC, "parse_alias_no_equals_returns_skip");
+		assertSkipResult(
+				fixer,
+				TOPIC,
+				"parse_alias_no_equals_returns_skip",
+				SkipMessages.PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT
+		);
 	}
 
 	@Test

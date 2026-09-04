@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
@@ -205,7 +207,7 @@ public class PreferImportCheck extends AbstractAstCheck {
 		if (rootAST == null)
 			return;
 
-		packageName = AstUtil.getPackageName(rootAST);
+		packageName = AstText.getPackageName(rootAST);
 		for (var child = rootAST.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() == TokenTypes.IMPORT) {
 				final var fqn = FullIdent.createFullIdentBelow(child).getText();
@@ -236,7 +238,7 @@ public class PreferImportCheck extends AbstractAstCheck {
 		// only a pure dotted-identifier receiver can be a type qualifier; an
 		// impure chain (array index, cast, nested call) is never an FQN, and
 		// feeding it to FullIdent could yield a misleading partial name
-		if (typeChain == null || !AstUtil.isPureDotChainOrIdent(typeChain))
+		if (typeChain == null || !AstQuery.isPureDotChainOrIdent(typeChain))
 			return;
 		final var prefix = resolvableTypePrefix(FullIdent.createFullIdent(typeChain).getText());
 		if (prefix != null)

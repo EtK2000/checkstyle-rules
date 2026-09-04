@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstResolve;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
@@ -7,6 +9,7 @@ import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,7 +64,7 @@ import javax.annotation.Nullable;
  *       packages) are not detected.</li>
  * </ul>
  */
-public class PreferStaticImportCheck extends AbstractAstCheck {
+public class PreferStaticImportCheck extends AbstractMinSdkCheck {
 	private static final int DEFAULT_MIN_OCCURRENCES = 2;
 	private static final int MIN_SDK_COLLECTORS = 24;
 	private static final int MIN_SDK_OBJECTS = 19;
@@ -69,7 +72,12 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 	private static final int MIN_SDK_PREDICATE_NOT = 33;
 	private static final Map<String, Map<String, Integer>> CANDIDATES_BY_FQCN = buildCandidates();
 	private static final Map<String, Set<String>> CANDIDATE_OWNERS_BY_METHOD = buildOwnersByMethod(CANDIDATES_BY_FQCN);
-	private static final Map<String, String> SIMPLE_TO_FQCN = buildSimpleToFqcn(CANDIDATES_BY_FQCN);
+	/**
+	 * The candidate classes keyed by simple name, so {@code PreferStaticImportFixer} resolves the
+	 * static import it emits from the same table the check fires on. A second copy in the fixer
+	 * would turn a class added here into a silent skip there.
+	 */
+	public static final Map<String, String> SIMPLE_TO_FQCN = buildSimpleToFqcn(CANDIDATES_BY_FQCN);
 	private static final String MSG_KEY = "prefer.static.import";
 
 	@CheckReturnValue
@@ -117,12 +125,18 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 		return Map.copyOf(copy);
 	}
 
+	/** Package-private rather than private so a test can hand it a colliding table of its own. */
 	@CheckReturnValue
 	@Nonnull
-	private static Map<String, String> buildSimpleToFqcn(@Nonnull Map<String, Map<String, Integer>> candidates) {
+	static Map<String, String> buildSimpleToFqcn(@Nonnull Map<String, Map<String, Integer>> candidates) {
 		final var map = new HashMap<String, String>();
-		for (var fqcn : candidates.keySet())
-			map.put(AstUtil.simpleName(fqcn), fqcn);
+		for (var fqcn : candidates.keySet()) {
+			// the surviving entry would be whichever the hash order put last: the check would go quiet
+			// on the loser's methods and the fixer would emit an import for the wrong class
+			final var clash = map.put(AstText.simpleName(fqcn), fqcn);
+			if (clash != null)
+				throw new IllegalStateException("candidate classes share a simple name: " + clash + " and " + fqcn);
+		}
 		return Map.copyOf(map);
 	}
 
@@ -132,7 +146,6 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 	private final Set<String> shadowedClasses = new HashSet<>();
 
 	private int minOccurrences = DEFAULT_MIN_OCCURRENCES;
-	private int minSdk = Integer.MAX_VALUE;
 
 	@Override
 	public void beginTree(@Nullable DetailAST rootAST) {
@@ -146,9 +159,6 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 		if (rootAST == null)
 			return;
 
-		// pre-scan the AST: collect imports first (needed for conflict and shadow detection),
-		// then walk for local shadows (methods and nested types), then probe the filesystem
-		// for same-directory sibling types.
 		collectImports(rootAST);
 		collectConflictsFromImports();
 		collectExplicitImportShadows();
@@ -182,7 +192,7 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 			else {
 				// non-static import whose simple name matches a candidate method:
 				// e.g. `import com.foo.not;` shadows `not(...)`.
-				final var simple = AstUtil.simpleName(imp);
+				final var simple = AstText.simpleName(imp);
 				if (CANDIDATE_OWNERS_BY_METHOD.containsKey(simple))
 					conflictedMethods.add(simple);
 			}
@@ -190,13 +200,10 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 	}
 
 	private void collectExplicitImportShadows() {
-		// a non-static, non-wildcard import whose simple name matches a candidate class
-		// but whose FQCN differs means the file's `Predicate`/`Objects`/`Collectors` refers
-		// to some other class, not ours.
 		for (var imp : imports) {
 			if (imp.startsWith("static ") || imp.endsWith(".*"))
 				continue;
-			final var simple = AstUtil.simpleName(imp);
+			final var simple = AstText.simpleName(imp);
 			final var candidateFqcn = SIMPLE_TO_FQCN.get(simple);
 			if (candidateFqcn != null && !imp.equals(candidateFqcn))
 				shadowedClasses.add(simple);
@@ -223,7 +230,7 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 	}
 
 	@Override
-	public void finishTree(@Nonnull DetailAST rootAST) {
+	public void finishTree(@Nullable DetailAST rootAST) {
 		for (var entry : occurrences.entrySet()) {
 			final var asts = entry.getValue();
 			if (asts.size() < minOccurrences)
@@ -235,6 +242,10 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 			for (var ast : asts)
 				log(ast, MSG_KEY, simpleClass, simpleMethod);
 		}
+
+		// the nodes held here reach their parents, so an index left populated pins the
+		// finished file's whole AST until the next beginTree
+		occurrences.clear();
 	}
 
 	@Nonnull
@@ -266,17 +277,10 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 	 */
 	@SuppressWarnings("unused")
 	public void setMinOccurrences(int minOccurrences) {
-		this.minOccurrences = minOccurrences;
-	}
+		if (minOccurrences < 1)
+			throw new IllegalArgumentException("minOccurrences must be positive, got " + minOccurrences);
 
-	/**
-	 * Sets the minimum SDK version for the target platform. Methods unavailable
-	 * on older platforms are not flagged.
-	 * <p>Called by Checkstyle via reflection when {@code minSdk} is set in the config.</p>
-	 */
-	@SuppressWarnings("unused")
-	public void setMinSdk(int minSdk) {
-		this.minSdk = minSdk;
+		this.minOccurrences = minOccurrences;
 	}
 
 	@Override
@@ -302,12 +306,9 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 		final var minSdkForMethod = CANDIDATES_BY_FQCN.get(fqcn).get(simpleMethod);
 		if (minSdkForMethod == null)
 			return;
-		if (minSdk < minSdkForMethod)
+		if (!minSdkAtLeast(minSdkForMethod))
 			return;
 
-		// receiver class must be reachable. Either via an explicit import, or via a wildcard
-		// import of the candidate's package — in the latter case we also need to confirm no
-		// class with the same simple name is shadowing it from a closer scope.
 		if (!imports.contains(fqcn)) {
 			final var pkgWildcard = fqcn.substring(0, fqcn.lastIndexOf('.')) + ".*";
 			if (!imports.contains(pkgWildcard))
@@ -317,33 +318,38 @@ public class PreferStaticImportCheck extends AbstractAstCheck {
 		}
 
 		// receiver must not be a local variable/field/parameter shadowing the class name
-		if (AstUtil.resolveVariableType(ast, simpleClass) != null)
+		if (AstResolve.resolveVariableType(ast, simpleClass) != null)
 			return;
 
-		// adding a static import for this method would conflict
 		if (conflictedMethods.contains(simpleMethod))
 			return;
 
 		occurrences.computeIfAbsent(simpleClass + "." + simpleMethod, k -> new ArrayList<>()).add(receiver);
 	}
 
-	private void walkForLocalShadows(@Nonnull DetailAST node) {
-		switch (node.getType()) {
-			case TokenTypes.ANNOTATION_DEF, TokenTypes.CLASS_DEF,
-			     TokenTypes.ENUM_DEF, TokenTypes.INTERFACE_DEF, TokenTypes.RECORD_DEF -> {
-				final var ident = node.findFirstToken(TokenTypes.IDENT);
-				if (ident != null && SIMPLE_TO_FQCN.containsKey(ident.getText()))
-					shadowedClasses.add(ident.getText());
+	private void walkForLocalShadows(@Nonnull DetailAST root) {
+		// iterative: a generated file can nest an expression deeply enough to overflow the stack,
+		// and the Error would abort the run rather than one file
+		final var pending = new ArrayDeque<DetailAST>();
+		pending.push(root);
+		while (!pending.isEmpty()) {
+			final var node = pending.pop();
+			switch (node.getType()) {
+				case TokenTypes.ANNOTATION_DEF, TokenTypes.CLASS_DEF,
+				     TokenTypes.ENUM_DEF, TokenTypes.INTERFACE_DEF, TokenTypes.RECORD_DEF -> {
+					final var ident = node.findFirstToken(TokenTypes.IDENT);
+					if (ident != null && SIMPLE_TO_FQCN.containsKey(ident.getText()))
+						shadowedClasses.add(ident.getText());
+				}
+				case TokenTypes.METHOD_DEF -> {
+					final var ident = node.findFirstToken(TokenTypes.IDENT);
+					if (ident != null && CANDIDATE_OWNERS_BY_METHOD.containsKey(ident.getText()))
+						conflictedMethods.add(ident.getText());
+				}
 			}
 
-			case TokenTypes.METHOD_DEF -> {
-				final var ident = node.findFirstToken(TokenTypes.IDENT);
-				if (ident != null && CANDIDATE_OWNERS_BY_METHOD.containsKey(ident.getText()))
-					conflictedMethods.add(ident.getText());
-			}
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+				pending.push(child);
 		}
-
-		for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
-			walkForLocalShadows(child);
 	}
 }

@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import com.etk2000.checkstyle.MultilineCallFormattingCheck;
+import com.etk2000.checkstyle.MultilineCallMoves;
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FileContents;
@@ -25,7 +25,7 @@ import javax.annotation.Nonnull;
 
 /**
  * Direct-AST tests for {@link JavaArgListReformatter} and
- * {@link MultilineCallFormattingCheck#resolvableSharedLineArgs} covering paths the slice pipeline
+ * {@link MultilineCallMoves#resolvableSharedLineArgs} covering paths the slice pipeline
  * cannot reach: the {@code STALE} guard when a boundary token no longer sits at its reported column,
  * and the classifier returning {@code null} for a special-inline receiver ({@code List.of}) that is
  * exempt from the shared-line rule. Positive controls exercise the {@code METHOD_CALL} and
@@ -168,6 +168,50 @@ public class JavaArgListReformatterTest {
 		assertEquals(SpanReformat.Reason.SPECIAL_ARG, cannot.reason());
 	}
 
+	/**
+	 * A phantom comment: the {@code NONE} scan reads the block comment's prose as code and reports the
+	 * {@code //} of a URL, where the true state reports none. Splicing there would emit {@code http:,//x }
+	 * and leave the next argument unseparated, so the two disagree and the re-emission is refused. The
+	 * boundary partner is {@link #reformatKeepsBlockCommentArgumentVerbatimInSplit}, whose prose holds no
+	 * {@code //} and is still formatted.
+	 */
+	@Test
+	public void reformatDeclinesSeparatorOnVerbatimLineWhoseCommentPositionIsUntrustworthy() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\t/* c1\n\t\t\t\thttp://x */ first,\n\t\t\t\t2\n\t\t);\n\t}\n\tvoid method(Object a, Object b) {\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
+		assertEquals(SpanReformat.Reason.MULTILINE_LITERAL, assertInstanceOf(SpanReformat.CannotReformat.class, result).reason());
+	}
+
+	/**
+	 * A masked real comment: the {@code NONE} scan opens a phantom char literal at the apostrophe and
+	 * reports no comment, so the separator would be appended after the {@code // note}. The true state
+	 * finds it, the two disagree, and the re-emission is refused rather than emitting an unseparated
+	 * argument.
+	 */
+	@Test
+	public void reformatDeclinesSeparatorWhenAnApostropheMasksATrailingComment() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\tmethod(a, /* c1\n\t\t\t\tit's c2 */ b // note\n\t\t\t\t, c);\n\t}\n\tvoid method(Object a, Object b, Object c) {\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
+		assertEquals(SpanReformat.Reason.MULTILINE_LITERAL, assertInstanceOf(SpanReformat.CannotReformat.class, result).reason());
+	}
+
+	/**
+	 * A text block's closing delimiter sharing its line with a trailing comment: the {@code NONE} scan
+	 * misreads the closing {@code """} as an opener and reports no comment, so the separator would land
+	 * after the {@code // note}. The true state sees the comment, the two disagree, and the re-emission
+	 * is refused. Its partner is {@link #reformatKeepsTextBlockArgumentVerbatimInSplit}, whose delimiter
+	 * line carries no comment and is still formatted.
+	 */
+	@Test
+	public void reformatDeclinesSeparatorWhenATextBlockDelimiterMasksATrailingComment() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\t\"\"\"\n\t\t\t\ttext\"\"\"  // note\n\t\t\t\t, b\n\t\t);\n\t}\n\tvoid method(String a, Object b) {\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
+		assertEquals(SpanReformat.Reason.MULTILINE_LITERAL, assertInstanceOf(SpanReformat.CannotReformat.class, result).reason());
+	}
+
 	@Test
 	public void reformatDeclinesTernaryConfigAsSpecialArg() throws Exception {
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(true\n\t\t\t\t? \"a\"\n\t\t\t\t: \"b\");\n\t}\n\tvoid method(Object a) {\n\t}\n}";
@@ -197,6 +241,44 @@ public class JavaArgListReformatterTest {
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
 		final var reformatted = assertInstanceOf(SpanReformat.Reformatted.class, result);
 		assertEquals(List.of("\t\tmethod(", "\t\t\t\t1, // note", "\t\t\t\t2", "\t\t);"), reformatted.lines());
+	}
+
+	/**
+	 * The verbatim branch appends the separator too, and its last kept line can be an own-line {@code //}
+	 * sitting between the argument and its {@code ,}. Appending there puts the {@code ,} inside the
+	 * comment and leaves the following argument with no separator, which does not compile. The comma run
+	 * after the {@code ,} is the comment line's own indentation, preserved by the insert.
+	 */
+	@Test
+	public void reformatHoistsCommaBeforeOwnLineCommentAfterVerbatimArgument() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\tmethod(first, () -> {\n\t\t\t\t\tgo();\n\t\t\t\t}\n\t\t\t\t// TODO: use a method reference\n\t\t\t\t, second);\n\t}\n\tvoid method(Object a, Runnable b, Object c) {\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
+		final var reformatted = assertInstanceOf(SpanReformat.Reformatted.class, result);
+		assertEquals(
+				List.of(
+						"\t\tmethod(", "\t\t\t\tfirst,", "\t\t\t\t() -> {", "\t\t\t\t\tgo();", "\t\t\t\t}",
+						"\t\t\t\t,\t\t\t\t// TODO: use a method reference", "\t\t\t\tsecond", "\t\t);"
+				),
+				reformatted.lines()
+		);
+	}
+
+	/**
+	 * The agreement side of the same comparison, and the reason the guard compares rather than refusing on
+	 * sight: a block comment's closing delimiter is invisible to a {@code NONE} scan, so a comment closing
+	 * mid-line re-synchronises it and its reported position is exact. Refusing here would lose a correct fix.
+	 */
+	@Test
+	public void reformatHoistsCommaWhenABlockCommentClosesBeforeATrailingCommentOnTheSameLine() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\tmethod(a, /* c1\n\t\t\t\tplain c2 */ b // note\n\t\t\t\t, c);\n\t}\n\tvoid method(Object a, Object b, Object c) {\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
+		final var reformatted = assertInstanceOf(SpanReformat.Reformatted.class, result);
+		assertEquals(
+				List.of("\t\tmethod(", "\t\t\t\ta,", "\t\t\t\t/* c1", "\t\t\t\tplain c2 */ b, // note", "\t\t\t\tc", "\t\t);"),
+				reformatted.lines()
+		);
 	}
 
 	@Test
@@ -549,7 +631,7 @@ public class JavaArgListReformatterTest {
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\tx -> {\n\t\t\t\t\tuse(x);\n\t\t\t\t});\n\t}\n\tvoid method(Consumer c) {\n\t}\n}";
 		final var root = parse(source);
 		final var arg = firstArg(root);
-		assertNull(MultilineCallFormattingCheck.resolvableArgListOwner(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo()));
+		assertNull(MultilineCallMoves.resolvableArgListOwner(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo()));
 	}
 
 	@Test
@@ -558,7 +640,7 @@ public class JavaArgListReformatterTest {
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\ttrue\n\t\t\t\t\t\t? \"a\"\n\t\t\t\t\t\t: \"b\"\n\t\t);\n\t}\n\tvoid method(Object a) {\n\t}\n}";
 		final var root = parse(source);
 		final var arg = firstArg(root);
-		assertNull(MultilineCallFormattingCheck.resolvableArgListOwner(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo()));
+		assertNull(MultilineCallMoves.resolvableArgListOwner(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo()));
 	}
 
 	@Test
@@ -566,7 +648,7 @@ public class JavaArgListReformatterTest {
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(1,\n\t\t\t\t2\n\t\t);\n\t}\n\tvoid method(int a, int b) {\n\t}\n}";
 		final var root = parse(source);
 		final var arg = firstArg(root);
-		final var owner = MultilineCallFormattingCheck.resolvableArgListOwner(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo());
+		final var owner = MultilineCallMoves.resolvableArgListOwner(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo());
 		assertNotNull(owner);
 		assertEquals(TokenTypes.METHOD_CALL, owner.getType());
 	}
@@ -585,7 +667,7 @@ public class JavaArgListReformatterTest {
 				break;
 			}
 		}
-		assertNull(MultilineCallFormattingCheck.resolvableSharedLineArgs(
+		assertNull(MultilineCallMoves.resolvableSharedLineArgs(
 				root, List.of(source.split("\n", -1)), secondArg.getLineNo() - 1, secondArg.getColumnNo()
 		));
 	}
@@ -595,7 +677,7 @@ public class JavaArgListReformatterTest {
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\ta, b,\n\t\t\t\tc\n\t\t);\n\t}\n\tvoid method(Object a, Object b, Object c) {\n\t}\n}";
 		final var root = parse(source);
 		final var arg = firstArg(root);
-		final var owner = MultilineCallFormattingCheck.resolvableSharedLineArgs(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo());
+		final var owner = MultilineCallMoves.resolvableSharedLineArgs(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo());
 		assertNotNull(owner);
 		assertEquals(TokenTypes.METHOD_CALL, owner.getType());
 	}

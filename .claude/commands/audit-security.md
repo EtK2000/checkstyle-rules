@@ -27,7 +27,7 @@ b. Filter the union to **this audit's scope** (production source only — tests 
    - `src/main/java/com/etk2000/checkstyle/gradle/fix/*Fixer.java` — in scope (highest priority — fixers can corrupt user code)
    - Shared production utils (`AstUtil.java`, `ReflectionUtil.java`, `CheckstyleFixTask.java`, `CheckstyleFixAction.java`, `CheckstyleFixer.java`, `AnnotationFixerUtil.java`, `FixResult.java`, `FixableCheckNames.java`) — in scope
    - Anything under `src/test/` — out of scope, drop it
-   - Test fixtures (`Input*.java`) — out of scope, drop it
+   - Test fixtures (anything under `src/test/resources/`) — out of scope, drop it
    - Anything else — out of scope
 
 c. Auto-expand each candidate to include its natural companions (check ↔ paired fixer; source file + utils it calls into) so the agent has full context.

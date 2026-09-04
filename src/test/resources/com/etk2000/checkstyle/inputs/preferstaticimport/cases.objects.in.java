@@ -60,3 +60,15 @@ class InputPreferStaticImportObjectsRequireNonNullTwoUsesSliceViolation {
 	}
 }
 // === end ===
+
+// === case: objects_supplementary_before_receiver ===
+// imports: java.util.Objects
+// multi-fix-expected
+class InputPreferStaticImportObjectsSupplementaryBeforeReceiverSliceViolation {
+	void astralChecks(Object a, Object b) {
+		final var markA = "𝐀" + Objects.isNull(a); // violation [minSdk>=19]: Replace 'Objects.isNull' with a static import of 'isNull'.
+		final var markB = "𝐀" + Objects.isNull(b); // violation [minSdk>=19]: Replace 'Objects.isNull' with a static import of 'isNull'.
+		System.out.println(markA + markB);
+	}
+}
+// === end ===

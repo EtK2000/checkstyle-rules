@@ -2,6 +2,7 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSimpleFix;
 import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkip;
+import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkipResult;
 
 import org.junit.jupiter.api.Test;
 
@@ -9,6 +10,12 @@ public class BlankLineAfterClassBraceFixerTest {
 	private static final String TOPIC = "blanklineafterclassbrace";
 
 	private final CheckstyleFixer fixer = new BlankLineAfterClassBraceFixer();
+
+	@Test
+	public void testDeleteBlankAfterBraceBelowTextBlock() throws Exception {
+		// can't migrate: NoBlankLineAfterClassBrace is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
+		assertSimpleFix(fixer, TOPIC, "delete_blank_after_brace_below_text_block");
+	}
 
 	@Test
 	public void testDeleteMixedWhitespaceBlanks() throws Exception {
@@ -66,5 +73,10 @@ public class BlankLineAfterClassBraceFixerTest {
 	public void testRecordKeyword() throws Exception {
 		// can't migrate: NoBlankLineAfterClassBrace is a RegexpMultiline check, no AbstractCheck class for assertCaseFix
 		assertSimpleFix(fixer, TOPIC, "record_keyword");
+	}
+
+	@Test
+	public void testSkipBraceInsideTextBlock() throws Exception {
+		assertSkipResult(fixer, TOPIC, "skip_brace_inside_text_block", SkipMessages.BLANK_LINE_SKIP_TEXT_BLOCK);
 	}
 }

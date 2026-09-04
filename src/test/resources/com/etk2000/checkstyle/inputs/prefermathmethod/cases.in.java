@@ -90,6 +90,14 @@ class InputPreferMathMethodTernaryAbsWithLongParamSliceViolation {
 }
 // === end ===
 
+// === case: clamp_after_foreign_max ===
+class InputPreferMathMethodClampAfterForeignMaxSliceViolation {
+	int m(int p, int q, int lo, int hi, int value) {
+		return MyMath.max(p, q) + Math.max(lo, Math.min(hi, value)); // violation [minSdk>=35]: Use 'Math.clamp(value, lo, hi)' instead of 'Math.max(lo, Math.min(hi, value))'.
+	}
+}
+// === end ===
+
 // === case: clamp_cast_arg ===
 class InputPreferMathMethodClampCastArgSliceViolation {
 	int m(int value, long lo, int hi) {
@@ -102,6 +110,14 @@ class InputPreferMathMethodClampCastArgSliceViolation {
 class InputPreferMathMethodClampCommentParenInArgSliceViolation {
 	int m(int lo, int value, int hi) {
 		return Math.max(lo /* ) */, Math.min(hi, value)); // violation [minSdk>=35]: Use 'Math.clamp(value, lo, hi)' instead of 'Math.max(lo, Math.min(hi, value))'.
+	}
+}
+// === end ===
+
+// === case: clamp_foreign_receiver_with_ternary ===
+class InputPreferMathMethodClampForeignReceiverWithTernarySliceViolation {
+	int m(int a, int b, int lo, int hi, int value) {
+		return MyMath.max(lo, Math.min(hi, value)) + (a > b ? a : b); // violation: Use 'Math.max(a, b)' instead of 'a > b ? a : b'.
 	}
 }
 // === end ===
@@ -1507,6 +1523,20 @@ class InputPreferMathMethodIfReturnElseClauseFalseFallsToTrailingSliceViolation 
 }
 // === end ===
 
+// === case: if_zero_indent_comment_ternary ===
+// skip-reason: if-else not auto-fixable
+class InputPreferMathMethodIfZeroIndentCommentTernarySliceViolation {
+	int m(int a, int b, int x, int y) {
+		int r;
+if (a > b) // keep in sync with x > y ? x : y below // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		else
+			r = b;
+		return r + x + y;
+	}
+}
+// === end ===
+
 // === case: max_compound_assign_bit_or ===
 class InputPreferMathMethodIfCompoundAssignBitOrSliceViolation {
 	int m(int r, int a, int b) {
@@ -1661,6 +1691,14 @@ class InputPreferMathMethodTernaryMaxWithLiteralSliceViolation {
 }
 // === end ===
 
+// === case: max_with_mixed_case_underscore_identifiers ===
+class InputPreferMathMethodTernaryMaxWithMixedCaseUnderscoreIdentifiersSliceViolation {
+	int m(int aB_1, int b) {
+		return aB_1 > b ? aB_1 : b; // violation: Use 'Math.max(aB_1, b)' instead of 'aB_1 > b ? aB_1 : b'.
+	}
+}
+// === end ===
+
 // === case: max_with_pre_decrement ===
 class InputPreferMathMethodTernaryMaxWithPreDecrementSliceViolation {
 	int m(int a, int b) {
@@ -1673,6 +1711,22 @@ class InputPreferMathMethodTernaryMaxWithPreDecrementSliceViolation {
 class InputPreferMathMethodTernaryMaxWithPreIncrementSliceViolation {
 	int m(int a, int b) {
 		return ++a > b ? a : b; // violation: Use 'Math.max(++a, b)' instead of '++a > b ? a : b'.
+	}
+}
+// === end ===
+
+// === case: max_with_pre_increment_right_operand ===
+class InputPreferMathMethodTernaryMaxWithPreIncrementRightOperandSliceViolation {
+	int m(int a, int b) {
+		return a > ++b ? a : b; // violation: Use 'Math.max(a, ++b)' instead of 'a > ++b ? a : b'.
+	}
+}
+// === end ===
+
+// === case: max_with_signed_right_operand ===
+class InputPreferMathMethodTernaryMaxWithSignedRightOperandSliceViolation {
+	int m(int a, int b) {
+		return a > -b ? a : -b; // violation: Use 'Math.max(a, -b)' instead of 'a > -b ? a : -b'.
 	}
 }
 // === end ===
@@ -1705,6 +1759,43 @@ class InputPreferMathMethodTernaryMinLeSliceViolation {
 class InputPreferMathMethodTernaryMinLtSliceViolation {
 	int m(int a, int b) {
 		return a < b ? a : b; // violation: Use 'Math.min(a, b)' instead of 'a < b ? a : b'.
+	}
+}
+// === end ===
+
+// === case: ternary_chained_inner_not_covered ===
+// skip-reason: parenthesized or multiline ternary
+class InputPreferMathMethodTernaryChainedInnerNotCoveredSliceViolation {
+	int m(int a, int b, int c) {
+		return a > b ? a : b > c ? b : c; // violation: Use 'Math.max(b, c)' instead of 'b > c ? b : c'.
+	}
+}
+// === end ===
+
+// === case: ternary_multiline_question_at_column_zero_comment ===
+// skip-reason: parenthesized or multiline ternary
+class InputPreferMathMethodTernaryMultilineQuestionAtColumnZeroCommentSliceViolation {
+	int m(int a, int b, int x, int y) {
+		final var r = a > b
+? a // mirrors x > y ? x : y elsewhere // violation: Use 'Math.max(a, b)' instead of 'a > b ? a : b'.
+: b;
+		return r + x + y;
+	}
+}
+// === end ===
+
+// === case: ternary_non_comparison_first_on_one_line ===
+class InputPreferMathMethodTernaryNonComparisonFirstOnOneLineSliceViolation {
+	int m(boolean flag, int a, int b, int c, int d) {
+		return foo(flag ? a : b, c < d ? c : d); // violation: Use 'Math.min(c, d)' instead of 'c < d ? c : d'.
+	}
+}
+// === end ===
+
+// === case: ternary_two_on_one_line ===
+class InputPreferMathMethodTernaryTwoOnOneLineSliceViolation {
+	int m(int a, int b, int c, int d) {
+		return foo(a > b ? a : b, c < d ? c : d); // violation: Use 'Math.max(a, b)' instead of 'a > b ? a : b'. // violation: Use 'Math.min(c, d)' instead of 'c < d ? c : d'.
 	}
 }
 // === end ===

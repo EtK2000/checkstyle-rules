@@ -9,6 +9,8 @@ but not auto-fixed; the reason is shown in the Auto-fix column below.
 | `"" + a + b` or `a + b + ""` (chain: more than one non-empty operand, either orientation) | (skipped: the single-line fixer only rewrites a two-operand `"" + x` / `x + ""`; a longer chain has no single operand to wrap) | No |
 | `"" + expr` with a `//` line comment before the expression's end on that line, or the concat continuing on the next line | (skipped: the comment masks to end-of-line, so the expression's end can't be located on one line and the concat may continue on the next line) | No |
 | `"" + expr` with an unterminated `/*` block comment opening on that line | (skipped: the line ends inside an open block comment, so the expression's true boundary is undeterminable on one line) | No |
+| `"" +/*c*/x` (a block comment abutting the `+`, where the raw text has no space the needle expects) | (skipped: the needle is located on the masked line, where the comment's delimiter reads as its trailing space; the operand is then sliced from the raw line, so the rewrite would start mid-comment and emit `String.valueOf(*c*/x)`. The match must be present unmasked too) | No |
+| `arr[i].name + ""` / `get().name + ""` (a dotted field access on a call or index result) | (skipped: the backwards operand walk accepts `.`, so it stops at the `]`/`)` and captures only the `.name` suffix; rewriting that alone would emit `arr[i]String.valueOf(.name)`) | No |
 | `new String("literal")` | `"literal"` | Yes |
 | `new String(stringVar)` | `stringVar` | Yes |
 | `new String(/* comment */ arg)` (a comment inside the constructor argument) | (skipped: with a comment present the raw argument text is neither a bare identifier nor a single string literal, so the unwrapped value can't be extracted) | No |
@@ -48,16 +50,11 @@ beyond the canonical `String s = ""; for (...) s += x; return s;`. Output
 uses `final var <name> = sb.toString();` (or `<this.f|obj.f> = sb.toString();`
 for field LHS) to satisfy `PreferVarCheck` and `FinalLocalVariableCheck`.
 
-The builder is named `sb` unless that name already appears as a token anywhere
-in the file, in which case it becomes `stringBuilder`, then `sb2`, `sb3` and so
-on. Reusing a bound name is either a duplicate-local compile error or, when the
-name belongs to a field or a nested type, a silent rebinding of every later
-reference to the new local. The test is deliberately coarse (any whole-token
-occurrence in code, anywhere), so a name in a scope that could not actually
-collide still forces the longer one; occurrences inside strings, char literals,
-text blocks, and comments do not count. Two rewritten loops in one method get
-distinct names, with the lower loop taking the shorter one, because the pipeline
-applies fixes bottom-to-top.
+The builder is named `sb` unless that name already appears as a whole token anywhere in the
+file's code, in which case it becomes `stringBuilder`, then `sb2`, `sb3` and so on. The test is
+deliberately coarse, so a name in a scope that could not actually collide still forces the longer
+one; occurrences inside strings, char literals, text blocks, and comments do not count. Two
+rewritten loops in one method get distinct names, the lower loop taking the shorter one.
 
 | Pattern | Replacement | Auto-fix |
 | --- | --- | --- |

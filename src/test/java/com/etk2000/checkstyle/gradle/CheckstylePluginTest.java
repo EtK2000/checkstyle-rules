@@ -8,12 +8,18 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.etk2000.checkstyle.BaseCheckTest;
 import com.etk2000.checkstyle.gradle.fix.CheckstyleFixAction;
 import com.etk2000.checkstyle.gradle.fix.CheckstyleFixTask;
+import com.puppycrawl.tools.checkstyle.Checker;
+import com.puppycrawl.tools.checkstyle.ConfigurationLoader;
+import com.puppycrawl.tools.checkstyle.PropertiesExpander;
+import com.puppycrawl.tools.checkstyle.checks.imports.ImportControlCheck;
 
 import org.gradle.api.plugins.quality.CheckstyleExtension;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
+import org.xml.sax.InputSource;
 
 import org.junit.jupiter.api.io.TempDir;
 
@@ -698,6 +704,50 @@ public class CheckstylePluginTest {
 		assertTrue(task.getTestSource().isPresent());
 	}
 
+	/**
+	 * No file in the tree imports {@code AstResolve} from the fix package, so {@code check} alone
+	 * never evaluates the rule and a typo in the subpackage nesting or the class name would leave a
+	 * silent no-op behind a green build.
+	 */
+	@Test
+	public void importControlBarsAstResolveFromTheFixPackage() throws Exception {
+		final var rule = new File("config/checkstyle/import-control.xml");
+		assertTrue(rule.isFile(), "rule file not found at " + rule.getAbsolutePath());
+
+		for (var barred : new String[]{
+				"import com.etk2000.checkstyle.ast.AstResolve;",
+				// the static form takes a different path through ClassImportRule
+				"import static com.etk2000.checkstyle.ast.AstResolve.resolveVariableType;"
+		}) {
+			final var events = BaseCheckTest.runCheckInline(
+					ImportControlCheck.class,
+					"package com.etk2000.checkstyle.gradle.fix;\n" + barred + "\nclass T {}",
+					"file",
+					rule.getPath()
+			);
+			assertEquals(1, events.size(), barred);
+			assertTrue(
+					events.getFirst().getMessage().contains("AstResolve"),
+					"message must name the barred class: " + events.getFirst().getMessage()
+			);
+		}
+
+		// PreferStaticImportConstantFixer depends on AstText staying reachable from the fix package
+		assertTrue(BaseCheckTest.runCheckInline(
+				ImportControlCheck.class,
+				"package com.etk2000.checkstyle.gradle.fix;\nimport com.etk2000.checkstyle.ast.AstText;\nclass T {}",
+				"file",
+				rule.getPath()
+		).isEmpty());
+
+		assertTrue(BaseCheckTest.runCheckInline(
+				ImportControlCheck.class,
+				"package com.etk2000.checkstyle;\nimport com.etk2000.checkstyle.ast.AstResolve;\nclass T {}",
+				"file",
+				rule.getPath()
+		).isEmpty());
+	}
+
 	@Test
 	public void selectFixTaskNameBothFixable() {
 		assertEquals("checkstyleFixAll", CheckstylePlugin.selectFixTaskName(3, 2));
@@ -723,6 +773,39 @@ public class CheckstylePluginTest {
 	@Test
 	public void selectFixTaskNameTestOnly() {
 		assertEquals("checkstyleFixTest", CheckstylePlugin.selectFixTaskName(0, 3));
+	}
+
+	/**
+	 * The plugin extracts only {@code checkstyle.xml} and points {@code config_loc} at the
+	 * consumer's own {@code config/checkstyle}, so any {@code ${config_loc}} reference the shipped
+	 * config makes must tolerate that directory being empty.
+	 */
+	@Test
+	public void shippedConfigLoadsWithAnEmptyConfigLoc() throws Exception {
+		final var emptyConfigLoc = Files.createDirectory(tempDir.resolve("empty-config-loc"));
+		final var properties = new Properties();
+		properties.setProperty("config_loc", emptyConfigLoc.toString());
+		properties.setProperty("minSdk", "35");
+
+		final var shipped = CheckstylePlugin.class.getResource("/com/etk2000/checkstyle/checkstyle.xml");
+		assertNotNull(shipped);
+		final var config = ConfigurationLoader.loadConfiguration(
+				new InputSource(shipped.toExternalForm()),
+				new PropertiesExpander(properties),
+				ConfigurationLoader.IgnoredModulesOptions.EXECUTE
+		);
+		assertEquals("Checker", config.getName());
+
+		// configure(), not just loadConfiguration(): a module whose file property points at a
+		// missing path parses fine and fails when the module is instantiated
+		final var checker = new Checker();
+		try {
+			checker.setModuleClassLoader(getClass().getClassLoader());
+			checker.configure(config);
+		}
+		finally {
+			checker.destroy();
+		}
 	}
 
 	@Test

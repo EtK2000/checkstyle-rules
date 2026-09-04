@@ -53,10 +53,15 @@ TestResourcesTest                    # tests translateImportsDirectives with inl
 # (e.g. 2000-element chains), or (c) are regex/messages constants that
 # incidentally match the validator's heuristics.
 AnnotationOwnLineCheckTest           # direct AST mutation for Math.min clamp boundary test
-AstUtilTest                          # direct AST inspection on inline snippets
+AstDisplayTest                       # direct AST inspection on inline snippets
+AstTestSupportTest                   # tests the shared parse/navigate harness on inline snippets
+AstQueryTest                         # direct AST inspection on inline snippets
+AstResolveTest                       # direct AST inspection on inline snippets
+AstTextTest                          # direct AST inspection on inline snippets
 ControlFlowBracesCheckTierTest       # direct AST inspection on inline snippets
+JsonObjectPutCollapseTest            # braceless control bodies are ControlFlowBraces violations, so they cannot be slices
 MessagesFileSortedTest               # validates messages.properties content
-MultilineCallFormattingCheckTest     # direct AST inspection on inline snippet (closingParenMove guard)
+MultilineCallMovesTest               # direct AST inspection on inline snippet (closingParenMove guard)
 PreferDoWhileCheckTest               # direct AST inspection on inline snippets
 PreferImportCheckTest                # generated fuzz input (2000-element name), a reflection-call-count assertion, and a generic-outer-nested type the fixer's line scan can't handle
 PreferPrefixIncrementCheckTest       # direct AST inspection on inline snippets

@@ -11,6 +11,7 @@ import com.etk2000.checkstyle.TestResources;
 import com.etk2000.checkstyle.TestResources.SnippetFixture;
 import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
 import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+import com.puppycrawl.tools.checkstyle.api.Violation;
 
 import java.io.File;
 import java.io.IOException;
@@ -154,7 +155,7 @@ final class FixerTestUtil {
 			if (lineIndex < 0 || lineIndex >= lines.size())
 				continue;
 			final var charColumn = CheckstyleFixAction.tabColumnToCharIndex(lines.get(lineIndex), event.getColumn() - 1);
-			if (invokeFixWithContext(fixer, lines, lineIndex, charColumn) instanceof FixResult result) {
+			if (invokeFixWithContext(fixer, lines, lineIndex, charColumn, event.getViolation()) instanceof FixResult result) {
 				actualImportsToAdd.addAll(result.importsToAdd());
 				applyFixResult(lines, result);
 			}
@@ -256,7 +257,7 @@ final class FixerTestUtil {
 			if (lineIndex < 0 || lineIndex >= lines.size())
 				continue;
 			final var charColumn = CheckstyleFixAction.tabColumnToCharIndex(lines.get(lineIndex), event.getColumn() - 1);
-			if (invokeFixWithContext(fixer, lines, lineIndex, charColumn) instanceof FixResult result) {
+			if (invokeFixWithContext(fixer, lines, lineIndex, charColumn, event.getViolation()) instanceof FixResult result) {
 				actualImportsToAdd.addAll(result.importsToAdd());
 				applyFixResult(lines, result);
 			}
@@ -265,9 +266,13 @@ final class FixerTestUtil {
 			// in a multi-violation file are skipped while others are fixed.
 			// The Fixed slice text comparison below catches any divergence.
 		}
+		// net-new for the same reason as the single-violation path: a fixer may report an import
+		// the file already has, and production's insertMissingImports drops those
+		final var netNewImportsToAdd = new TreeSet<>(actualImportsToAdd);
+		netNewImportsToAdd.removeAll(inputImportFqcns);
 		assertEquals(
 				expectedImports,
-				actualImportsToAdd,
+				netNewImportsToAdd,
 				"Case '" + topic + "/" + caseName + "': importsToAdd mismatch (union across all fix calls)"
 		);
 		insertAddedImportsAtFixedPositions(lines, slice.fixedLines(), inputImportFqcns);
@@ -328,7 +333,7 @@ final class FixerTestUtil {
 		for (var event : sorted) {
 			final var lineIndex = event.getLine() - 1;
 			final var charColumn = CheckstyleFixAction.tabColumnToCharIndex(lines.get(lineIndex), event.getColumn() - 1);
-			final var result = invokeFixWithContext(fixer, lines, lineIndex, charColumn);
+			final var result = invokeFixWithContext(fixer, lines, lineIndex, charColumn, event.getViolation());
 			final var skip = assertInstanceOf(
 					SkipResult.class,
 					result,
@@ -378,7 +383,7 @@ final class FixerTestUtil {
 		final var event = violations.getFirst();
 		final var lineIndex = event.getLine() - 1;
 		final var charColumn = CheckstyleFixAction.tabColumnToCharIndex(lines.get(lineIndex), event.getColumn() - 1);
-		final var result = invokeFixWithContext(fixer, lines, lineIndex, charColumn);
+		final var result = invokeFixWithContext(fixer, lines, lineIndex, charColumn, event.getViolation());
 		final var skip = assertInstanceOf(
 				SkipResult.class,
 				result,
@@ -417,7 +422,7 @@ final class FixerTestUtil {
 		final var lines = new ArrayList<>(fx.inputLines());
 		final var result = assertInstanceOf(
 				FixResult.class,
-				invokeFixWithContext(fixer, lines, t.line(), t.column())
+				invokeFixWithContext(fixer, lines, t.line(), t.column(), null)
 		);
 		assertEquals(expectedImports, result.importsToAdd());
 		applyFixResult(lines, result);
@@ -436,7 +441,7 @@ final class FixerTestUtil {
 	) throws Exception {
 		final var fx = TestResources.loadSnippet(topic, snippetName);
 		final var t = fx.firstTarget();
-		assertNull(invokeFixWithContext(fixer, new ArrayList<>(fx.inputLines()), t.line(), t.column()));
+		assertNull(invokeFixWithContext(fixer, new ArrayList<>(fx.inputLines()), t.line(), t.column(), null));
 	}
 
 	static void assertSkipResult(
@@ -448,7 +453,7 @@ final class FixerTestUtil {
 		final var t = fx.firstTarget();
 		assertInstanceOf(
 				SkipResult.class,
-				invokeFixWithContext(fixer, new ArrayList<>(fx.inputLines()), t.line(), t.column())
+				invokeFixWithContext(fixer, new ArrayList<>(fx.inputLines()), t.line(), t.column(), null)
 		);
 	}
 
@@ -462,7 +467,7 @@ final class FixerTestUtil {
 		final var t = fx.firstTarget();
 		final var result = assertInstanceOf(
 				SkipResult.class,
-				invokeFixWithContext(fixer, new ArrayList<>(fx.inputLines()), t.line(), t.column())
+				invokeFixWithContext(fixer, new ArrayList<>(fx.inputLines()), t.line(), t.column(), null)
 		);
 		assertEquals(expectedReason, result.reason());
 	}
@@ -582,27 +587,44 @@ final class FixerTestUtil {
 	}
 
 	/**
-	 * Invokes {@code fixer.fix(...)} with {@link FixContext} set to a real
-	 * temp file path, mirroring how production {@code CheckstyleFixAction.applyFixes}
-	 * sets {@link FixContext#setFilePath} before each fixer call. Fixers that
-	 * read {@link FixContext#getFilePath()} (e.g. {@code PreferStaticImportConstantFixer}
-	 * for sibling-class resolution) see a non-null path here, matching prod.
+	 * Invokes {@code fixer.fix(...)} with {@link FixContext} populated the way
+	 * production {@code CheckstyleFixAction.applyFixes} populates it: a real temp
+	 * file path, and the violation being fixed. Fixers that read
+	 * {@link FixContext#getFilePath()} (e.g. {@code PreferStaticImportConstantFixer}
+	 * for sibling-class resolution) or {@link FixContext#getViolationKey()} (e.g.
+	 * {@code PreferMathMethodFixer}, which uses it to keep the expression rewrites
+	 * off an if-shape line) see what they would see on a real run.
+	 *
+	 * <p>{@code violation} is null only for the deprecated fragment callers, which
+	 * drive the fixer at a {@code // target:} the check never reported and so have
+	 * no violation to thread. That is a real limitation of the fragment form rather
+	 * than a harness shortcut: a synthesized violation would assert a key no check
+	 * produced. Any fixer branch gated on the key is therefore unreachable from a
+	 * fragment and needs a slice.
+	 *
+	 * <p>The violation is cleared on the way out rather than left for the next call
+	 * to overwrite. {@link FixContext} is thread-local and JUnit reuses threads, so
+	 * a key left behind would leak into an unrelated test as a stale answer.
 	 */
 	@Nullable
 	private static FixAttempt invokeFixWithContext(
 			@Nonnull CheckstyleFixer fixer,
 			@Nonnull List<String> lines,
 			int lineIndex,
-			int column
+			int column,
+			@Nullable Violation violation
 	) throws IOException {
 		final var tempFile = File.createTempFile("fixerTest", ".java");
 		try {
 			FixContext.setFilePath(tempFile.toString());
+			if (violation != null)
+				FixContext.setViolation(violation);
 			try {
 				return fixer.fix(lines, lineIndex, column);
 			}
 			finally {
 				FixContext.clearFilePath();
+				FixContext.clearViolation();
 			}
 		}
 		finally {

@@ -12,6 +12,18 @@ class InputPatternInstanceofClean {
 			System.out.println("ok");
 	}
 
+	// parenthesized operand, but nothing casts to the tested type
+	void andParenthesizedNoCast(Object obj) {
+		if ((obj instanceof String) && obj.hashCode() > 0)
+			System.out.println("ok");
+	}
+
+	// instanceof is the right operand, so nothing after it is gated on the test
+	void andRightOperandInstanceof(Object obj, boolean flag) {
+		if (flag && (obj instanceof String))
+			System.out.println("ok");
+	}
+
 	void instanceofWithoutCast(Object obj) {
 		if (obj instanceof String)
 			System.out.println("is a string");

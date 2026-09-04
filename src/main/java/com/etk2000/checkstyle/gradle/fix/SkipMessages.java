@@ -14,7 +14,9 @@ final class SkipMessages {
 
 	static final String ANNOTATION_SYNTAX_SKIP = get("annotation.syntax.skip");
 	static final String AVOID_SUPER_SKIP = get("avoid.super.skip");
+	static final String BLANK_LINE_SKIP_TEXT_BLOCK = get("blank.line.skip.text.block");
 	static final String COLLECTION_INTERFACE_SKIP = get("prefer.collection.interface.skip");
+	static final String COLLECTION_INTERFACE_STALE = get("prefer.collection.interface.skip.stale");
 	static final String CONSTRUCTOR_ASSIGN_SKIP_COMMENT = get("constructor.assign.skip.comment");
 	static final String CONSTRUCTOR_ASSIGN_SKIP_CYCLE = get("constructor.assign.skip.cycle");
 	static final String CONSTRUCTOR_ASSIGN_SKIP_DUPLICATE_FIELD = get("constructor.assign.skip.duplicate.field");
@@ -25,6 +27,7 @@ final class SkipMessages {
 	static final String CONTROL_FLOW_SKIP_CLOSE_BRACE = get("control.flow.skip.close.brace");
 	static final String CONTROL_FLOW_SKIP_COMMENT_ONLY = get("control.flow.skip.comment.only");
 	static final String CONTROL_FLOW_SKIP_DECLARATION_BODY = get("control.flow.skip.declaration.body");
+	static final String CONTROL_FLOW_SKIP_ELSE_REBIND = get("control.flow.skip.else.rebind");
 	static final String CONTROL_FLOW_SKIP_EMPTY_BODY = get("control.flow.skip.empty.body");
 	static final String CONTROL_FLOW_SKIP_MULTILINE_BRACED = get("control.flow.skip.multiline.braced");
 	static final String CONTROL_FLOW_SKIP_MULTILINE_HEADER = get("control.flow.skip.multiline.header");
@@ -37,6 +40,16 @@ final class SkipMessages {
 	static final String CONTROL_FLOW_SKIP_TEXT_BLOCK = get("control.flow.skip.text.block");
 	static final String CONTROL_FLOW_SKIP_UNTERMINATED_LITERAL = get("control.flow.skip.unterminated.literal");
 	static final String CONTROL_FLOW_SKIP_WHILE_LINE_BODY = get("control.flow.skip.while.line.body");
+	static final String EMPTY_SKIP_COMMENT_IN_SPAN = get("empty.skip.comment.in.span");
+	static final String EMPTY_SKIP_ELSE_BRANCH = get("empty.skip.else.branch");
+	static final String EMPTY_SKIP_ELSE_REBIND = get("empty.skip.else.rebind");
+	static final String EMPTY_SKIP_HOIST_MULTILINE = get("empty.skip.hoist.multiline");
+	static final String EMPTY_SKIP_HOIST_OUT_OF_ELSE = get("empty.skip.hoist.out.of.else");
+	static final String EMPTY_SKIP_HOIST_SHORT_CIRCUIT = get("empty.skip.hoist.short.circuit");
+	static final String EMPTY_SKIP_LOOP_SIDE_EFFECT = get("empty.skip.loop.side.effect");
+	static final String EMPTY_SKIP_NO_NODE = get("empty.skip.no.node");
+	static final String EMPTY_SKIP_REQUIRED_CLAUSE_BODY = get("empty.skip.required.clause.body");
+	static final String EMPTY_SKIP_SHARED_LINE = get("empty.skip.shared.line");
 	static final String EXPLICIT_INIT_SKIP = get("explicit.init.skip");
 	static final String FIELD_SORTING_SKIP_ANON_CLASS_REFERENCED_FIELD = get("field.sorting.skip.anon.class.referenced.field");
 	static final String FIELD_SORTING_SKIP_C_STYLE_ARRAY = get("field.sorting.skip.c.style.array");
@@ -48,6 +61,7 @@ final class SkipMessages {
 	static final String FIELD_SORTING_SKIP_MULTI_VAR_DEPENDENCY = get("field.sorting.skip.multi.var.dependency");
 	static final String FIELD_SORTING_SKIP_MULTI_VAR_INITIALIZED = get("field.sorting.skip.multi.var.initialized");
 	static final String FIELD_SORTING_SKIP_MULTI_VAR_INTERLEAVED = get("field.sorting.skip.multi.var.interleaved");
+	static final String FIELD_SORTING_SKIP_ORPHANED_COMMENT = get("field.sorting.skip.orphaned.comment");
 	static final String FIELD_SORTING_SKIP_STATIC_FIELD = get("field.sorting.skip.static.field");
 	static final String FINAL_LOCAL_ALREADY_FINAL = get("final.local.skip.already.final");
 	static final String FINAL_LOCAL_MULTI_VAR = get("final.local.skip.multi.var");
@@ -93,6 +107,8 @@ final class SkipMessages {
 	static final String PREFER_VAR_SKIP_UNREACHABLE_DIAMOND = get("prefer.var.skip.unreachable.diamond");
 	static final String PREFER_VAR_SKIP_UNRECOGNIZED = get("prefer.var.skip.unrecognized");
 	static final String PREFER_VAR_SKIP_WRAPPED_TYPE_ARGUMENTS = get("prefer.var.skip.wrapped.type.arguments");
+	static final String RECORD_PAIR_DEFERRED = get("prefer.collection.interface.skip.record.pair");
+	static final String RECORD_PAIR_HALF = get("prefer.collection.interface.skip.record.half");
 	static final String REDUNDANT_EQUALITY_SKIP_COMMENT = get("redundant.equality.skip.comment");
 	static final String REDUNDANT_MODIFIER_STALE_COLUMN = get("redundant.modifier.skip.stale.column");
 	static final String UNUSED_IMPORTS_MALFORMED = get("unused.imports.skip.malformed");

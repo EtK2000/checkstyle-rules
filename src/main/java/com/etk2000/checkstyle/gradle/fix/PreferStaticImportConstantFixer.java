@@ -4,10 +4,11 @@ import static com.etk2000.checkstyle.gradle.fix.FqnResolver.resolveFqcn;
 import static com.etk2000.checkstyle.gradle.fix.FqnResolver.stripCommentsAndBom;
 import static com.etk2000.checkstyle.gradle.fix.FqnResolver.stripCommentsForClassification;
 
-import com.etk2000.checkstyle.AstUtil;
 import com.etk2000.checkstyle.JavaLineScanner;
 import com.etk2000.checkstyle.JavaLineScanner.LexerState;
 import com.etk2000.checkstyle.PreferStaticImportConstantCheck;
+import com.etk2000.checkstyle.ast.AstText;
+import com.etk2000.checkstyle.gradle.fix.FixerAst.ThrowingParser;
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
@@ -49,12 +50,6 @@ import javax.annotation.Nullable;
  * for each reason's wording.</p>
  */
 class PreferStaticImportConstantFixer implements CheckstyleFixer {
-	@FunctionalInterface
-	interface ParseFn {
-		@Nonnull
-		DetailAST parse(@Nonnull List<String> lines) throws CheckstyleException;
-	}
-
 	private record MultiVarParse(int firstNameStart, @Nonnull List<VarSegment> segments) {}
 
 	/** A single identifier-to-identifier substitution applied by {@link #rewriteOutsideLiterals}. */
@@ -405,7 +400,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nullable
 	private static DetailAST findFieldDefForInline(@Nonnull List<String> lines, int lineIndex, int column) {
-		return findFieldDefForInlineUsing(lines, lineIndex, column, PreferStaticImportConstantFixer::parseLinesToAst);
+		return findFieldDefForInlineUsing(lines, lineIndex, column, FixerAst.DEFAULT_PARSER);
 	}
 
 	@CheckReturnValue
@@ -414,7 +409,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 			@Nonnull List<String> lines,
 			int lineIndex,
 			int column,
-			@Nonnull ParseFn parser
+			@Nonnull ThrowingParser parser
 	) {
 		if (lineIndex < 0 || lineIndex >= lines.size())
 			return null;
@@ -422,14 +417,9 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 		final var name = extractIdentForward(lineText, column);
 		if (name == null)
 			return null;
-		final DetailAST root;
-		try {
-			root = parser.parse(lines);
-		}
-		catch (CheckstyleException | RuntimeException | StackOverflowError |
-		       AssertionError ignored) {
+		final var root = FixerAst.parseOrNull(lines, parser);
+		if (root == null)
 			return null;
-		}
 		return findFieldDef(root, name, lineIndex + 1, column);
 	}
 
@@ -452,7 +442,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 			@Nonnull String name,
 			@Nonnull Set<Integer> skipLines1
 	) {
-		return findShadowKindUsing(lines, name, skipLines1, PreferStaticImportConstantFixer::parseLinesToAst);
+		return findShadowKindUsing(lines, name, skipLines1, FixerAst.DEFAULT_PARSER);
 	}
 
 	@CheckReturnValue
@@ -461,16 +451,11 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 			@Nonnull List<String> lines,
 			@Nonnull String name,
 			@Nonnull Set<Integer> skipLines1,
-			@Nonnull ParseFn parser
+			@Nonnull ThrowingParser parser
 	) {
-		final DetailAST root;
-		try {
-			root = parser.parse(lines);
-		}
-		catch (CheckstyleException | RuntimeException | StackOverflowError |
-		       AssertionError ignored) {
+		final var root = FixerAst.parseOrNull(lines, parser);
+		if (root == null)
 			return "potential shadow (file does not parse cleanly)";
-		}
 		return walkForShadow(root, name, skipLines1);
 	}
 
@@ -546,14 +531,9 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 		if (fieldName == null)
 			return new SkipResult(SkipMessages.PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT);
 
-		final DetailAST root;
-		try {
-			root = parseLinesToAst(lines);
-		}
-		catch (CheckstyleException | RuntimeException | StackOverflowError |
-		       AssertionError ignored) {
+		final var root = FixerAst.parseOrNull(lines);
+		if (root == null)
 			return new SkipResult(SkipMessages.PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT);
-		}
 
 		final var fieldDef = findFieldDef(root, fieldName, lineIndex + 1, column);
 		if (fieldDef == null)
@@ -563,8 +543,8 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 		if (objBlock == null || objBlock.getType() != TokenTypes.OBJBLOCK)
 			return new SkipResult(SkipMessages.PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT);
 
-		final var enclosingTypeName = AstUtil.getEnclosingTypeName(objBlock);
-		final var packageName = AstUtil.getPackageName(root);
+		final var enclosingTypeName = AstText.getEnclosingTypeName(objBlock);
+		final var packageName = AstText.getPackageName(root);
 		final var cinitAssign = PreferStaticImportConstantCheck.findStaticInitAssign(objBlock, fieldName);
 		if (cinitAssign == null)
 			return new SkipResult(SkipMessages.PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT);
@@ -1507,7 +1487,7 @@ class PreferStaticImportConstantFixer implements CheckstyleFixer {
 			@Nonnull List<Rewrite> rewrites
 	) {
 		final var modified = new TreeMap<Integer, String>();
-		final var maskedLines = JavaLineScanner.maskAll(lines);
+		final var maskedLines = FixerAst.maskAll(lines);
 		for (var lineIdx = 0; lineIdx < lines.size(); ++lineIdx) {
 			if (lineIdx >= skipStart && lineIdx <= skipEnd)
 				continue;

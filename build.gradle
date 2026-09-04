@@ -74,8 +74,17 @@ tasks.register('checkstyleTestResources', Checkstyle) {
 	configProperties = ['minSdk': String.valueOf(Integer.MAX_VALUE)]
 }
 
+tasks.register('checkstyleImportControl', Checkstyle) {
+	source fileTree('src/main/java')
+	include '**/*.java'
+	classpath = files()
+	configFile = file('config/checkstyle/checkstyle-import-control.xml')
+	configDirectory = file('config/checkstyle')
+}
+
 tasks.named('check') {
 	dependsOn 'checkstyleTestResources'
+	dependsOn 'checkstyleImportControl'
 }
 
 // When a Checkstyle task fails because a *check* threw an exception (rather than

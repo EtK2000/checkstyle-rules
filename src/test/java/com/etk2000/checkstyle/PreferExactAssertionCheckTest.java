@@ -1,6 +1,8 @@
 package com.etk2000.checkstyle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static java.util.Objects.requireNonNull;
 
 import com.puppycrawl.tools.checkstyle.api.AuditEvent;
 import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
@@ -10,20 +12,31 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
+
 public class PreferExactAssertionCheckTest {
-	private record Expected(int line, String message) {}
+	private record Expected(String file, int line, SeverityLevel severity, String message) {}
 
 	private static final String DIR = "preferexactassertion/";
 
-	private static void assertViolations(List<AuditEvent> got, Expected... expected) {
-		assertEquals(expected.length, got.size());
-		for (var i = 0; i < expected.length; ++i) {
-			assertEquals(expected[i].line, got.get(i).getLine(), "line " + i);
-			assertEquals(SeverityLevel.ERROR, got.get(i).getSeverityLevel(), "severity " + i);
-			assertEquals(expected[i].message, got.get(i).getMessage(), "message " + i);
+	private static void assertViolations(List<AuditEvent> got, List<Expected> expected) {
+		assertEquals(expected.size(), got.size());
+		for (var i = 0; i < expected.size(); ++i) {
+			assertEquals(expected.get(i).line, got.get(i).getLine(), "line " + i);
+			assertEquals(expected.get(i).severity, got.get(i).getSeverityLevel(), "severity " + i);
+			assertEquals(expected.get(i).message, got.get(i).getMessage(), "message " + i);
+			// a directive-bearing fixture is checked from a translated temp copy, so only the name survives
+			assertTrue(
+					got.get(i).getFileName().endsWith(expected.get(i).file.substring(DIR.length())),
+					"file " + i + ": expected " + expected.get(i).file + ", got " + got.get(i).getFileName()
+			);
 		}
 	}
 
@@ -38,6 +51,19 @@ public class PreferExactAssertionCheckTest {
 		);
 	}
 
+	@CheckReturnValue
+	@Nonnull
+	private static List<Expected> markersOf(@Nonnull String... files) throws Exception {
+		final var expected = new ArrayList<Expected>();
+		for (var file : files) {
+			final var url = BaseCheckTest.class.getResource("/com/etk2000/checkstyle/inputs/" + file);
+			requireNonNull(url, "Test input file not found: " + file);
+			for (var marker : BaseCheckTest.parseViolationMarkers(Files.readAllLines(Path.of(url.toURI()))))
+				expected.add(new Expected(file, marker.line(), marker.severity(), marker.message()));
+		}
+		return expected;
+	}
+
 	@MethodSource("isJunitAssertClassProvider")
 	@ParameterizedTest
 	void testIsJunitAssertClass(String simpleName, boolean expected) {
@@ -46,17 +72,13 @@ public class PreferExactAssertionCheckTest {
 
 	@Test
 	public void testStateResetBetweenFiles() throws Exception {
-		final var violations = BaseCheckTest.runCheckOnFiles(
-				PreferExactAssertionCheck.class,
-				DIR + "cases.junit4wildcard.in.java",
-				DIR + "cases.junit5wildcard.in.java"
-		);
+		final var first = DIR + "cases.junit4wildcard.in.java";
+		final var second = DIR + "cases.junit5wildcard.in.java";
+		final var expected = markersOf(first, second);
+		assertEquals(4, expected.size(), "fixtures lost their violation markers, the assertion would be vacuous");
 		assertViolations(
-				violations,
-				new Expected(10, "Use 'assertEquals' instead of 'assertTrue' with '>'."),
-				new Expected(19, "Use 'assertFalse' instead of 'assertTrue' with a negated argument."),
-				new Expected(10, "Use 'assertEquals' instead of 'assertTrue' with '>'."),
-				new Expected(19, "Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.")
+				BaseCheckTest.runCheckOnFiles(PreferExactAssertionCheck.class, first, second),
+				expected
 		);
 	}
 }

@@ -1,14 +1,30 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import com.etk2000.checkstyle.AstSpan;
+import com.etk2000.checkstyle.AstSpan.TextPos;
 import com.etk2000.checkstyle.ControlFlowBracesCheck;
 import com.etk2000.checkstyle.JavaLineScanner;
 import com.etk2000.checkstyle.JavaLineScanner.LexerState;
 import com.etk2000.checkstyle.JitInefficiencyCheck;
+import com.etk2000.checkstyle.JitInefficiencyCheck.JitTarget;
 import com.etk2000.checkstyle.LineText;
+import com.etk2000.checkstyle.TopLevelScan;
+import com.etk2000.checkstyle.TopLevelScan.Brackets;
+import com.etk2000.checkstyle.TopLevelScan.Target;
+import com.etk2000.checkstyle.TopLevelScan.Unbalanced;
+import com.etk2000.checkstyle.TopLevelScan.Underflow;
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.format.SpanReformat;
+import com.etk2000.checkstyle.gradle.fix.AstSplice.Rewrite;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
@@ -50,6 +66,48 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 			"charAt", "chars", "codePointAt", "codePoints", "isEmpty",
 			"length", "subSequence"
 	);
+
+	static final Target ASSIGNMENT_EQUALS = (scan, i) -> {
+		if (scan.charAt(i) != '=')
+			return false;
+		final var prev = i > 0 ? scan.charAt(i - 1) : ' ';
+		final var next = i + 1 < scan.length() ? scan.charAt(i + 1) : ' ';
+		return prev != '!' && prev != '<' && prev != '>' && prev != '=' && next != '=';
+	};
+
+	private static final TopLevelScan ALL_BRACKET_SCAN = new TopLevelScan(Brackets.ALL, Underflow.CLAMP);
+
+	/**
+	 * The other way to write the same storage: {@code this.f} for {@code f} and {@code f} for
+	 * {@code this.f}, with any trailing chain or index carried along, so {@code this.a.b} pairs with
+	 * {@code a.b} and {@code this.arr[i]} with {@code arr[i]}.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static String aliasSpellingOf(@Nonnull String chain) {
+		return chain.startsWith("this.") ? chain.substring(5) : "this." + chain;
+	}
+
+	/**
+	 * Whether the assignment the line scanner found is the one the check reported on. The loop
+	 * rewrite still locates its own statement in the text, so this is the seam where the two could
+	 * disagree. Compared with whitespace removed, because only the scanner's spelling is normalized.
+	 *
+	 * <p>The shape that disagrees is an assignment nested inside the outer chain,
+	 * {@code a = a + (s = s + x);}: both are reported, and without this the inner one is handed the
+	 * rewrite built for the outer. Measured by removing the comparison, which left the whole suite
+	 * green and that one shape mis-attributed.
+	 */
+	@CheckReturnValue
+	private static boolean assignsTheReportedTarget(
+			@Nonnull List<String> lines,
+			@Nonnull JitTarget target,
+			@Nonnull AssignInfo assign
+	) {
+		final var lhs = target.argument();
+		final var reported = lhs == null ? null : AstSpan.sliceNode(lines, lhs);
+		return reported != null && reported.replaceAll("\\s", "").equals(assign.lhsText().replaceAll("\\s", ""));
+	}
 
 	/**
 	 * Every identifier bound anywhere in {@code masked}, as whole tokens. A run that
@@ -117,7 +175,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nonnull
 	private static String builderName(@Nonnull List<String> lines) {
-		final var bound = boundIdentifiers(JavaLineScanner.maskAll(lines));
+		final var bound = boundIdentifiers(FixerAst.maskAll(lines));
 		// the candidates are all distinct, so every rejected one is a distinct member of
 		// `bound`: after bound.size() rejections the set is exhausted and the next
 		// candidate is free. That makes the search bounded without assuming anything
@@ -164,7 +222,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		}
 
 		final var entryStates = new ArrayList<LexerState>();
-		var lineState = entryStateAt(lines, loop.topLineIdx());
+		var lineState = SpanReformat.lexerStateAt(lines, loop.topLineIdx());
 		for (var i = loop.topLineIdx(); i <= loop.endLineIdx(); ++i) {
 			entryStates.add(lineState);
 			lineState = JavaLineScanner.stateAfter(lines.get(i), lineState);
@@ -188,24 +246,8 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	}
 
 	/**
-	 * Parses {@code lines} to an AST and reuses {@link JitInefficiencyCheck}'s
-	 * detector to recover the inefficiency category at the violation site. When
-	 * the detector reports a category, returns a {@link SkipResult} carrying its
-	 * skip reason; when there is no category (non-violation) or the input is
-	 * unparseable (such as a bare fragment), returns {@code null}.
-	 */
-	@CheckReturnValue
-	@Nullable
-	private static FixAttempt categorizeSkip(@Nonnull List<String> lines, int lineIndex, int column) {
-		final var category = FixerAst.withAst(lines, root -> new JitInefficiencyCheck().categorizeAt(root, lineIndex, column));
-		if (category == null)
-			return null;
-		return new SkipResult(SkipMessages.get(category.skipReasonKey()));
-	}
-
-	/**
-	 * Whether {@code line} assigns {@code chain} in either its bare form or its
-	 * {@code this.}-qualified form. The full-fix pipeline's NoUnnecessaryThis fixer
+	 * Whether {@code line} assigns {@code chain}, or its {@code this.}-qualified form when
+	 * {@code chain} is bare. The full-fix pipeline's NoUnnecessaryThis fixer
 	 * strips {@code this.} from array-element reads (so the receiver prefix derived
 	 * from the LHS is bare, e.g. {@code matrix}) but keeps it on a direct
 	 * instance-field assignment ({@code this.matrix = ...}, per the "this. on field
@@ -222,9 +264,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	 * Returns true if the given line contains an assignment whose LHS is
 	 * exactly {@code chain}, i.e. {@code <chain> [ws]* (= or op=)} where the
 	 * chain has identifier-style boundaries. Skips strings, char literals,
-	 * line comments, and block comments. Used on body lines to detect
-	 * intermediate-prefix mutations like `this.matrix = newMatrix();` packed
-	 * onto the same line as `this.matrix.cells[i] += "x";`.
+	 * line comments, and block comments.
 	 */
 	@CheckReturnValue
 	static boolean containsChainAssignment(@Nonnull String line, @Nonnull String chain, @Nonnull LexerState entryState) {
@@ -269,11 +309,8 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	}
 
 	/**
-	 * Returns true if the given line contains the dotted receiver chain (e.g.
-	 * `this.a.b`) as a substring with identifier-style boundaries. Skips
-	 * strings, char literals, and comments. Used to detect chain-level
-	 * mutations like `this.a.b = newArr;` for an `arr[i]` LHS where the
-	 * array variable is qualified.
+	 * Returns true if the given line contains {@code chain} as a substring with
+	 * identifier-style boundaries. Skips strings, char literals, and comments.
 	 */
 	@CheckReturnValue
 	private static boolean containsReceiverChain(@Nonnull String line, @Nonnull String chain, @Nonnull LexerState entryState) {
@@ -300,42 +337,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 
 	@CheckReturnValue
 	private static boolean containsTopLevelComma(@Nonnull String s) {
-		final var scan = JavaLineScanner.stripCommentsAndStrings(s, JavaLineScanner.LexerState.NONE);
-		var depth = 0;
-		for (var i = 0; i < scan.length(); ++i) {
-			final var ch = scan.charAt(i);
-			// `<`/`>` are deliberately not a pair here: a relational `<` opens a group that
-			// hides every later comma, and a relational `>`, a lambda `->` or a shift `>>`
-			// closes it again, so the scan ends balanced with the separator undetected
-			if (ch == '(' || ch == '[' || ch == '{')
-				++depth;
-			else if (ch == ')' || ch == ']' || ch == '}') {
-				if (depth > 0)
-					--depth;
-			}
-			else if (depth == 0 && ch == ',')
-				return true;
-		}
-		// an unbalanced scan cannot be trusted, so report a separator rather than deny one
-		return depth != 0;
-	}
-
-	@CheckReturnValue
-	private static boolean containsTopLevelPlus(@Nonnull String s) {
-		final var scan = JavaLineScanner.stripCommentsAndStrings(s, JavaLineScanner.LexerState.NONE);
-		var depth = 0;
-		for (var i = 0; i < scan.length(); ++i) {
-			final var ch = scan.charAt(i);
-			if (ch == '(' || ch == '[')
-				++depth;
-			else if (ch == ')' || ch == ']') {
-				if (depth > 0)
-					--depth;
-			}
-			else if (ch == '+' && depth == 0)
-				return true;
-		}
-		return false;
+		return ALL_BRACKET_SCAN.contains(s, ',', Unbalanced.FOUND);
 	}
 
 	/**
@@ -347,20 +349,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	private static boolean containsTopLevelSemicolon(@Nonnull String s) {
-		final var scan = JavaLineScanner.stripCommentsAndStrings(s, JavaLineScanner.LexerState.NONE);
-		var depth = 0;
-		for (var i = 0; i < scan.length(); ++i) {
-			final var ch = scan.charAt(i);
-			if (ch == '(' || ch == '[' || ch == '{')
-				++depth;
-			else if (ch == ')' || ch == ']' || ch == '}') {
-				if (depth > 0)
-					--depth;
-			}
-			else if (depth == 0 && ch == ';')
-				return true;
-		}
-		return false;
+		return ALL_BRACKET_SCAN.contains(s, ';', Unbalanced.NOT_FOUND);
 	}
 
 	@CheckReturnValue
@@ -372,6 +361,27 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 				++count;
 		}
 		return count;
+	}
+
+	/**
+	 * Whether the local {@code literalNew} initializes was declared {@code var}.
+	 *
+	 * <p>The {@code StringBuffer} rewrite replaces the class name inside the {@code new} and
+	 * nothing else, so an explicitly typed local keeps declaring the type the initializer no
+	 * longer produces: {@code StringBuffer sb = new StringBuilder();} does not compile. This
+	 * repo's own fixtures all use {@code var} because {@code PreferVarCheck} requires it, which is
+	 * why the shape never appeared; a consumer project without that check writes it routinely.
+	 */
+	@CheckReturnValue
+	private static boolean declaredTypeIsInferred(@Nonnull DetailAST literalNew) {
+		for (var parent = literalNew.getParent(); parent != null; parent = parent.getParent()) {
+			if (parent.getType() != TokenTypes.VARIABLE_DEF)
+				continue;
+			final var declared = parent.findFirstToken(TokenTypes.TYPE);
+			final var name = declared == null ? null : declared.findFirstToken(TokenTypes.IDENT);
+			return name != null && "var".equals(name.getText());
+		}
+		return false;
 	}
 
 	/**
@@ -407,23 +417,6 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		if (shape == null)
 			return countParensIgnoringLiterals(bodyText) == 1;
 		return shape.tier() == 2;
-	}
-
-	/**
-	 * The lexer state {@code lineIndex} begins in, folded from the top of the buffer.
-	 *
-	 * <p>Callers use this to refuse a splice at a line whose leading text is the content
-	 * of a block comment or text block opened above it. Every line-level scanner here
-	 * masks from a cold state, which reads that carried content as live code, so a guard
-	 * is needed wherever the fixer would emit or rewrite text at such a line.
-	 */
-	@CheckReturnValue
-	@Nonnull
-	private static LexerState entryStateAt(@Nonnull List<String> lines, int lineIndex) {
-		var state = LexerState.NONE;
-		for (var i = 0; i < lineIndex; ++i)
-			state = JavaLineScanner.stateAfter(lines.get(i), state);
-		return state;
 	}
 
 	/**
@@ -485,7 +478,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		if (!stripped.endsWith(";"))
 			return null;
 		final var withoutSemi = stripped.substring(0, stripped.length() - 1);
-		final var eqIdx = findTopLevelAssignEquals(withoutSemi);
+		final var eqIdx = ALL_BRACKET_SCAN.indexOf(withoutSemi, ASSIGNMENT_EQUALS);
 		if (eqIdx < 0)
 			return null;
 		final var lhs = withoutSemi.substring(0, eqIdx).strip();
@@ -530,7 +523,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 			return null;
 		// classify header lines off the masked view: a `for (...)`/`while (...)` sitting
 		// inside a text block or block comment is not a loop
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		var currentIdx = bodyLineIdx;
 		var currentIndent = LineLength.tabExpandedLength(LineText.extractIndent(lines.get(currentIdx)));
 		while (true) {
@@ -589,69 +582,6 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		}
 	}
 
-	@CheckReturnValue
-	private static int findExprEnd(@Nonnull String line, int from) {
-		// Mask strings/chars/comments to spaces so the bespoke depth/operator scan
-		// below only sees structural code. A `//` or unterminated `/*` masks to
-		// end-of-line, so the scan runs off the end and the caller bails rather
-		// than truncating the RHS at a comment or splicing an open comment.
-		final var mask = JavaLineScanner.stripCommentsAndStrings(line, JavaLineScanner.LexerState.NONE);
-		// Paren/bracket nesting and generic-witness nesting are counted separately
-		// so a comparison `>` inside a call argument can't be mistaken for closing a
-		// `(`, and a witness `<...>` can't be mistaken for a comparison.
-		var parenDepth = 0;
-		var genericDepth = 0;
-		var i = from;
-		while (i < mask.length()) {
-			final var ch = mask.charAt(i);
-			// A `<` opens a generic witness when it directly follows `.` (`obj.<T>m()`)
-			// or when one is already open (nested type args like `<List<String>>`); the
-			// paired `>` closes it. Any other `<`/`>` falls through to comparison handling.
-			if (ch == '<') {
-				if (genericDepth > 0) {
-					++genericDepth;
-					++i;
-					continue;
-				}
-				var prev = i - 1;
-				while (prev >= from && mask.charAt(prev) == ' ')
-					--prev;
-				if (prev >= from && mask.charAt(prev) == '.') {
-					++genericDepth;
-					++i;
-					continue;
-				}
-			}
-			if (ch == '>' && genericDepth > 0) {
-				--genericDepth;
-				++i;
-				continue;
-			}
-			if (ch == '(' || ch == '[' || ch == '{')
-				++parenDepth;
-			else if (ch == ')' || ch == ']' || ch == '}') {
-				if (parenDepth == 0)
-					return i;
-				--parenDepth;
-			}
-			else if (parenDepth == 0 && genericDepth == 0) {
-				if (ch == ',' || ch == ';')
-					return i;
-				// stop at operators that bind weaker than `+`
-				if (ch == '?' || ch == ':')
-					return i;
-				if ((ch == '=' || ch == '!') && i + 1 < mask.length() && mask.charAt(i + 1) == '=')
-					return i;
-				if ((ch == '<' || ch == '>') && (i + 1 >= mask.length() || mask.charAt(i + 1) != ch))
-					return i;
-				if ((ch == '&' || ch == '|') && i + 1 < mask.length() && mask.charAt(i + 1) == ch)
-					return i;
-			}
-			++i;
-		}
-		return i;
-	}
-
 	/**
 	 * Returns the line index where the matching `)` of a for-loop header
 	 * closes, or {@code -1} if the loop top isn't a for-loop or the header is
@@ -665,25 +595,6 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		return findLoopHeaderEnd(lines, loopTopIdx)[0];
 	}
 
-	@CheckReturnValue
-	private static int findIdentifierStart(@Nonnull String line, int from) {
-		var pos = from - 1;
-		while (pos >= 0) {
-			final var ch = line.charAt(pos);
-			if (Character.isJavaIdentifierPart(ch) || ch == '.')
-				--pos;
-			else
-				break;
-		}
-		return pos + 1;
-	}
-
-	@CheckReturnValue
-	private static int findLastAppendBefore(@Nonnull String line, int column) {
-		return JavaLineScanner.stripCommentsAndStrings(line, JavaLineScanner.LexerState.NONE)
-				.lastIndexOf(".append(", Math.max(0, column));
-	}
-
 	/**
 	 * Returns {@code {line, index}} of the {@code )} closing the loop header that opens
 	 * on {@code loopTopIdx}, or {@code {-1, -1}} when it never closes.
@@ -691,7 +602,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nonnull
 	private static int[] findLoopHeaderEnd(@Nonnull List<String> lines, int loopTopIdx) {
-		final var topState = entryStateAt(lines, loopTopIdx);
+		final var topState = SpanReformat.lexerStateAt(lines, loopTopIdx);
 		final var openParen = JavaLineScanner
 				.stripCommentsAndStrings(lines.get(loopTopIdx), topState)
 				.indexOf('(');
@@ -760,29 +671,6 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		return -1;
 	}
 
-	@CheckReturnValue
-	private static int findTopLevelAssignEquals(@Nonnull String s) {
-		final var scan = JavaLineScanner.stripCommentsAndStrings(s, JavaLineScanner.LexerState.NONE);
-		var depth = 0;
-		for (var i = 0; i < scan.length(); ++i) {
-			final var ch = scan.charAt(i);
-			// `<`/`>` are deliberately not a pair here, matching containsTopLevelComma
-			if (ch == '(' || ch == '[' || ch == '{')
-				++depth;
-			else if (ch == ')' || ch == ']' || ch == '}') {
-				if (depth > 0)
-					--depth;
-			}
-			else if (depth == 0 && ch == '=') {
-				final var prev = i > 0 ? scan.charAt(i - 1) : ' ';
-				final var next = i + 1 < scan.length() ? scan.charAt(i + 1) : ' ';
-				if (prev != '!' && prev != '<' && prev != '>' && prev != '=' && next != '=')
-					return i;
-			}
-		}
-		return -1;
-	}
-
 	/**
 	 * Returns {@code {line, index}} of the first non-whitespace character at or after
 	 * {@code fromIndex} on {@code fromLine} in {@code masked}, or {@code {-1, -1}}
@@ -801,200 +689,134 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		return new int[]{-1, -1};
 	}
 
+	/**
+	 * Splits {@code .append(a + b + c)} into {@code .append(a).append(b).append(c)}, rewriting from
+	 * the {@code .} that introduces the call's own name so the receiver survives exactly as written,
+	 * whatever shape it has.
+	 */
 	@CheckReturnValue
-	private static int firstStringContainingPart(@Nonnull List<String> parts) {
-		for (var i = 0; i < parts.size(); ++i) {
-			if (parts.get(i).contains("\""))
-				return i;
+	@Nullable
+	private static Rewrite fixAppendConcat(@Nonnull List<String> lines, @Nonnull JitTarget target) {
+		final var call = target.node();
+		final var plus = target.argument();
+		if (plus == null || !JitInefficiencyCheck.splitsIntoAppendsSafely(plus))
+			return null;
+		final var operands = operandNodesOf(plus);
+		final var regions = operandRegionsOf(lines, plus);
+		if (operands == null || regions == null || operands.size() != regions.size())
+			return null;
+
+		// the chain writes each operand into the receiver before evaluating the next, so an operand
+		// that reads the receiver would observe a half-built value instead of its pre-call state.
+		// Compared on identifiers rather than on the receiver's text: a cast or parenthesized
+		// receiver has no root name to match, which is why those two shapes used to be refused
+		final var receiver = AstQuery.unwrapParensAndExpr(AstSplice.receiverOf(call));
+		if (receiver == null)
+			return null;
+		final var receiverNames = rootIdentifiersIn(receiver);
+		for (var operand : operands) {
+			if (!Collections.disjoint(rootIdentifiersIn(operand), receiverNames))
+				return null;
 		}
-		return -1;
+
+		final var chain = new StringBuilder();
+		for (var region : regions)
+			chain.append(".append(").append(region.strip()).append(')');
+		return AstSplice.spliceTail(lines, call, call, chain.toString());
+	}
+
+	/**
+	 * {@code new Integer(x)} becomes {@code Integer.valueOf(x)}, and the two {@code Boolean}
+	 * literals become the cached constants. The emitted name is always unqualified, which is valid
+	 * even where the source wrote the FQN because {@code java.lang} is auto-imported.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static Rewrite fixBoxedConstructor(@Nonnull List<String> lines, @Nonnull JitTarget target) {
+		final var literalNew = target.node();
+		final var type = target.replacement();
+		if (type == null)
+			return null;
+		if ("Float".equals(type) && !floatValueOfAccepts(target.argument()))
+			return null;
+		final var argument = AstSplice.parenthesizedArgumentsOf(lines, literalNew);
+		if (argument == null)
+			return null;
+		final var value = argument.strip();
+		if (value.isEmpty())
+			return null;
+		if ("Boolean".equals(type) && ("true".equals(value) || "false".equals(value)))
+			return AstSplice.spliceNode(lines, literalNew, "Boolean." + value.toUpperCase(Locale.ROOT));
+		return AstSplice.spliceNode(lines, literalNew, type + ".valueOf(" + value + ")");
 	}
 
 	@CheckReturnValue
 	@Nullable
-	private static String fixAppendConcat(@Nonnull List<String> lines, int lineIndex, int column) {
-		final var line = lines.get(lineIndex);
-		// bail on text blocks (line-based fixer can't reason about multi-line literal regions)
-		if (line.contains("\"\"\""))
+	private static Rewrite fixEmptyStringConcat(@Nonnull List<String> lines, @Nonnull JitTarget target) {
+		final var plus = target.node();
+		final var operand = target.argument();
+		if (operand == null || !JitInefficiencyCheck.concatenationSurvivesValueOf(operand))
 			return null;
-		// splice point: the rewritten `.append(...)` chain replaces this line
-		if (entryStateAt(lines, lineIndex).inMultilineLiteral())
+		final var plusPos = AstSplice.positionOf(lines, plus);
+		final var start = AstSpan.spanStart(lines, plus);
+		final var end = AstSpan.spanEnd(lines, plus);
+		final var operandStart = AstSpan.spanStart(lines, operand);
+		if (plusPos == null || start == null || end == null || operandStart == null)
 			return null;
-		final var appendIdx = findLastAppendBefore(line, column);
-		if (appendIdx < 0)
+
+		// the empty literal sits on whichever side the surviving operand does not. Taking the
+		// operand as the text on the far side of the `+` rather than as a slice of its own node:
+		// grouping parens are siblings of the operand under the PLUS, so `"" + (a + b)` would
+		// otherwise slice to the single character `(`
+		final var emptyIsOnTheLeft = operandStart.line() > plusPos.line()
+				|| (operandStart.line() == plusPos.line() && operandStart.index() > plusPos.index());
+		final var afterPlus = new TextPos(plusPos.line(), plusPos.index() + 1);
+		final var text = emptyIsOnTheLeft
+				? AstSplice.textBetween(lines, afterPlus, end)
+				: AstSplice.textBetween(lines, start, plusPos);
+		if (text == null || text.isBlank())
 			return null;
-		final var openParen = appendIdx + ".append".length();
-		final var closeParen = JavaLineScanner.matchingCloseParen(line, openParen);
-		if (closeParen < 0)
+
+		// the side being dropped has to be the empty literal and nothing else. A parenthesized
+		// empty literal (`("") + value`) makes the check hand back that literal as the surviving
+		// operand, because the `(` takes the first-child slot the side test reads; slicing the far
+		// side then deletes `value` and the result still compiles
+		final var discarded = emptyIsOnTheLeft
+				? AstSplice.textBetween(lines, start, plusPos)
+				: AstSplice.textBetween(lines, afterPlus, end);
+		if (discarded == null || !"\"\"".equals(discarded.strip()))
 			return null;
-		final var argsStart = openParen + 1;
-		final var arg = line.substring(argsStart, closeParen);
-		final var parts = splitTopLevelPlus(arg);
-		if (parts == null || parts.size() < 2)
-			return null;
-		// At least one operand must contain a String literal: otherwise the chain
-		// is pure numeric/non-String and splitting changes semantics (e.g. `1+2+x`
-		// evaluating to `3 + x.toString()` versus `.append(1).append(2).append(x)`).
-		final var firstStringPartIdx = firstStringContainingPart(parts);
-		if (firstStringPartIdx < 0)
-			return null;
-		if (firstStringPartIdx > 0 && !leadingOperandsArePromotableToString(parts, firstStringPartIdx))
-			return null;
-		// Self-reference guard: the chained-append rewrite evaluates each operand
-		// in sequence and writes intermediate state into the receiver. If any
-		// operand textually references the receiver expression (e.g. `sb.length()`),
-		// the rewritten chain would observe values from PARTIAL state rather than
-		// the original receiver snapshot, silently changing semantics.
-		final var receiverStart = findIdentifierStart(line, appendIdx);
-		final var receiverText = line.substring(receiverStart, appendIdx);
-		// nothing found even at the chain's root means we cannot analyse the receiver at
-		// all, so refuse rather than split blind
-		final var receiver = receiverText.isEmpty() ? receiverRoot(line, appendIdx) : receiverText;
-		if (receiver.isEmpty() || partsReferenceReceiver(parts, receiver))
-			return null;
-		final var sb = new StringBuilder();
-		sb.append(line, 0, appendIdx);
-		for (var p : parts)
-			sb.append(".append(").append(p.strip()).append(')');
-		sb.append(line, closeParen + 1, line.length());
-		return sb.toString();
+		return AstSplice.spliceNode(lines, plus, "String.valueOf(" + text.strip() + ")");
 	}
 
 	@CheckReturnValue
 	@Nullable
-	private static String fixBoxedConstructor(@Nonnull String line, int column) {
-		if (column >= line.length() || !line.startsWith("new ", column))
+	private static Rewrite fixNewString(@Nonnull List<String> lines, @Nonnull JitTarget target) {
+		final var literalNew = target.node();
+		if (target.replacement() == null)
 			return null;
-		final var typeStart = column + "new ".length();
-		var typeEnd = typeStart;
-		while (typeEnd < line.length()) {
-			final var ch = line.charAt(typeEnd);
-			if (Character.isJavaIdentifierPart(ch)) {
-				++typeEnd;
-				continue;
-			}
-			if (ch == '.' && typeEnd + 1 < line.length()
-					&& Character.isJavaIdentifierStart(line.charAt(typeEnd + 1))) {
-				++typeEnd;
-				continue;
-			}
-			break;
-		}
-		final var qualifiedTypeName = line.substring(typeStart, typeEnd);
-		// Accept either the unqualified boxed-primitive name (e.g. `Integer`) or
-		// its `java.lang.` FQN (e.g. `java.lang.Integer`). Other qualifiers are
-		// rejected because `Foo.Integer.valueOf` doesn't generally exist.
-		final String simpleTypeName;
-		if (JitInefficiencyCheck.BOXED_PRIMITIVE_TYPES.contains(qualifiedTypeName))
-			simpleTypeName = qualifiedTypeName;
-		else if (qualifiedTypeName.startsWith("java.lang.")
-				&& JitInefficiencyCheck.BOXED_PRIMITIVE_TYPES.contains(qualifiedTypeName.substring("java.lang.".length())))
-			simpleTypeName = qualifiedTypeName.substring("java.lang.".length());
-		else
+		final var argument = AstSplice.parenthesizedArgumentsOf(lines, literalNew);
+		if (argument == null)
 			return null;
-		if (typeEnd >= line.length() || line.charAt(typeEnd) != '(')
-			return null;
-		final var openParen = typeEnd;
-		final var closeParen = JavaLineScanner.matchingCloseParen(line, openParen);
-		if (closeParen < 0)
-			return null;
-		final var argText = line.substring(openParen + 1, closeParen).strip();
-		if ("Boolean".equals(simpleTypeName)) {
-			if ("true".equals(argText))
-				return line.substring(0, column) + "Boolean.TRUE" + line.substring(closeParen + 1);
-			if ("false".equals(argText))
-				return line.substring(0, column) + "Boolean.FALSE" + line.substring(closeParen + 1);
-		}
-		// Emit the unqualified `T.valueOf(...)`; `java.lang.*` types are auto-imported
-		// so the result is always valid even when the original used the FQN.
-		return line.substring(0, column) + simpleTypeName + ".valueOf(" + argText + ")"
-				+ line.substring(closeParen + 1);
+		final var value = argument.strip();
+		return value.isEmpty() ? null : AstSplice.spliceNode(lines, literalNew, value);
 	}
 
 	@CheckReturnValue
 	@Nullable
-	private static String fixEmptyStringConcat(@Nonnull List<String> lines, int lineIndex) {
-		final var line = lines.get(lineIndex);
-		// bail on text blocks (line-based fixer can't reason about multi-line literal regions)
-		if (line.contains("\"\"\""))
+	private static Rewrite fixStringBuffer(@Nonnull List<String> lines, @Nonnull JitTarget target) {
+		final var className = target.argument();
+		if (target.replacement() == null || className == null || !declaredTypeIsInferred(target.node()))
 			return null;
-		// splice point: this line is replaced by the `String.valueOf(...)` rewrite
-		if (entryStateAt(lines, lineIndex).inMultilineLiteral())
-			return null;
-		final var leftIdx = JavaLineScanner.stripCommentsAndStrings(line, JavaLineScanner.LexerState.NONE).indexOf("\"\" + ");
-		if (leftIdx >= 0) {
-			final var rhsStart = leftIdx + 5;
-			final var rhsEnd = findExprEnd(line, rhsStart);
-			// bail on multiline: if findExprEnd consumed all the way to end-of-line,
-			// the expression continues on the next line and we can't safely capture it.
-			if (rhsEnd < 0 || rhsEnd >= line.length())
-				return null;
-			// a `<` or `>` cannot terminate a String-concat operand in valid Java, so
-			// stopping on one means a type-argument list (`new ArrayList<>()`) was read as
-			// a comparison and the operand truncated mid-expression
-			if (line.charAt(rhsEnd) == '<' || line.charAt(rhsEnd) == '>')
-				return null;
-			final var rhs = line.substring(rhsStart, rhsEnd);
-			// reject if rhs has a top-level `+` (chain like `"" + a + b` would change semantics)
-			if (containsTopLevelPlus(rhs))
-				return null;
-			return line.substring(0, leftIdx) + "String.valueOf(" + rhs + ")" + line.substring(rhsEnd);
-		}
-		final var rightIdx = JavaLineScanner.stripCommentsAndStrings(line, JavaLineScanner.LexerState.NONE).indexOf(" + \"\"");
-		if (rightIdx >= 0) {
-			final var lhsStart = findIdentifierStart(line, rightIdx);
-			if (lhsStart < 0 || lhsStart == rightIdx)
-				return null;
-			final var lhs = line.substring(lhsStart, rightIdx);
-			// reject chain: scan everything before the LHS for a top-level `+` (symmetric
-			// with the rhs branch). Any `+` to the left at depth 0 means we're in the
-			// middle of a longer concat chain.
-			if (containsTopLevelPlus(line.substring(0, lhsStart)))
-				return null;
-			final var afterEmpty = rightIdx + " + \"\"".length();
-			return line.substring(0, lhsStart) + "String.valueOf(" + lhs + ")"
-					+ line.substring(afterEmpty);
-		}
-		return null;
+		// only the class name is replaced, so a qualifier, a type-use annotation and the
+		// constructor's own arguments all survive as written
+		return AstSplice.spliceNode(lines, className, "StringBuilder");
 	}
 
 	@CheckReturnValue
 	@Nullable
-	private static String fixNewString(@Nonnull String line, int column) {
-		if (column >= line.length() || !line.startsWith("new String(", column))
-			return null;
-		final var openParen = column + "new String".length();
-		final var closeParen = JavaLineScanner.matchingCloseParen(line, openParen);
-		if (closeParen < 0)
-			return null;
-		final var argText = line.substring(openParen + 1, closeParen).strip();
-		if (argText.isEmpty())
-			return null;
-		if (!isSimpleIdentifier(argText) && !isSingleStringLiteral(argText))
-			return null;
-		return line.substring(0, column) + argText + line.substring(closeParen + 1);
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static String fixStringBuffer(@Nonnull String line, int column) {
-		final var prefix = "new StringBuffer";
-		if (!line.startsWith(prefix, column))
-			return null;
-		// guard against `new StringBufferInputStream` (legacy java.io class): the
-		// next char must be `(`, `<`, or whitespace, not an identifier continuation.
-		final var afterPrefix = column + prefix.length();
-		if (afterPrefix < line.length()) {
-			final var nextChar = line.charAt(afterPrefix);
-			if (Character.isJavaIdentifierPart(nextChar))
-				return null;
-		}
-		return line.substring(0, column) + "new StringBuilder" + line.substring(afterPrefix);
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static FixResult fixStringConcatInLoop(@Nonnull List<String> lines, int lineIndex) {
+	private static FixResult fixStringConcatInLoop(@Nonnull List<String> lines, @Nonnull JitTarget target) {
+		final var lineIndex = target.node().getLineNo() - 1;
 		if (lineIndex < 0 || lineIndex >= lines.size())
 			return null;
 		final var bodyLine = lines.get(lineIndex);
@@ -1004,17 +826,17 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 			return null;
 		// splice point: this line becomes an `sb.append(...)` and the assignment it looks
 		// like is hoisted out of the loop
-		if (entryStateAt(lines, lineIndex).inMultilineLiteral())
+		if (SpanReformat.lexerStateAt(lines, lineIndex).inMultilineLiteral())
 			return null;
 		// Tier-2 do-while: `do <stmt>; while (cond);` (body shares line with `do`).
-		// Accept any whitespace separator after `do` (space, tab, etc.).
 		final var bodyStripped = bodyLine.stripLeading();
 		if (bodyStripped.length() > 2
 				&& bodyStripped.charAt(0) == 'd' && bodyStripped.charAt(1) == 'o'
 				&& Character.isWhitespace(bodyStripped.charAt(2)))
-			return fixTier2DoWhile(lines, lineIndex);
+			return fixTier2DoWhile(lines, target, lineIndex);
 		final var assign = parseConcatAssignment(bodyLine);
-		if (assign == null)
+		if (assign == null || !assignsTheReportedTarget(lines, target, assign)
+				|| !loopOperandsSurviveTheRewrite(target.node()))
 			return null;
 		// Any qualified LHS (`this.f`, `obj.f`, `this.a.b`, ...) or array-element
 		// LHS (`arr[i]`, `this.arr[i]`) takes the "field-like" code path: we can't
@@ -1027,12 +849,12 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		// splice point: a field LHS emits the StringBuilder construction above this line.
 		// A local LHS emits at the declaration instead, which findDeclarationAbove already
 		// proves sits outside a literal
-		if (entryStateAt(lines, loop.topLineIdx()).inMultilineLiteral())
+		if (SpanReformat.lexerStateAt(lines, loop.topLineIdx()).inMultilineLiteral())
 			return null;
 		// splice point: the write-back follows the loop's last line. Swallowed, a local's
 		// `final var s = ...` goes missing and a field's assignment silently drops the
 		// whole loop's result
-		if (entryStateAt(lines, loop.endLineIdx() + 1).inMultilineLiteral())
+		if (SpanReformat.lexerStateAt(lines, loop.endLineIdx() + 1).inMultilineLiteral())
 			return null;
 		// an unbraced loop's span ends on the body line the caller passed in, so only the
 		// braced and do-while forms can put the assignment outside the rewritten range
@@ -1048,7 +870,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		// slip through and it aborted fixable loops on comment content.
 		final var loopTopIndent = LineLength.tabExpandedLength(LineText.extractIndent(lines.get(loop.topLineIdx())));
 		final var scanLimit = loop.braced() ? loop.endLineIdx() : lines.size();
-		final var maskedScan = JavaLineScanner.maskAll(lines);
+		final var maskedScan = FixerAst.maskAll(lines);
 		for (var i = lineIndex + 1; i < scanLimit; ++i) {
 			final var raw = lines.get(i);
 			if (raw.contains("\"\"\""))
@@ -1076,7 +898,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		}
 		else {
 			final var found = findDeclarationAbove(lines, loop.topLineIdx() - 1, assign.varName());
-			if (found == null)
+			if (found == null || !initializerSurvivesAnAppend(found))
 				return null;
 			if (!isInSameScope(lines, found.lineIdx(), loop.topLineIdx()))
 				return null;
@@ -1098,7 +920,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 
 	@CheckReturnValue
 	@Nullable
-	private static FixResult fixTier2DoWhile(@Nonnull List<String> lines, int lineIndex) {
+	private static FixResult fixTier2DoWhile(@Nonnull List<String> lines, @Nonnull JitTarget target, int lineIndex) {
 		final var doLine = lines.get(lineIndex);
 		if (doLine.contains("\"\"\"") || doLine.contains("/*"))
 			return null;
@@ -1112,7 +934,8 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		final var bodyText = doStripped.substring(bodySkip);
 		final var virtualBody = indent + "\t" + bodyText;
 		final var assign = parseConcatAssignment(virtualBody);
-		if (assign == null)
+		if (assign == null || !assignsTheReportedTarget(lines, target, assign)
+				|| !loopOperandsSurviveTheRewrite(target.node()))
 			return null;
 		final var isFieldLhs = assign.lhsText().contains(".") || assign.lhsText().contains("[");
 		if (lineIndex + 1 >= lines.size())
@@ -1127,9 +950,9 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 			return null;
 		if (LineLength.tabExpandedLength(LineText.extractIndent(whileLine)) != LineLength.tabExpandedLength(indent))
 			return null;
-		if (!referencesAreAllSafeMethodCalls(whileLine, assign.lhsText()))
-			return null;
 		final var loop = new LoopInfo(lineIndex, lineIndex + 1, LoopKind.DO_WHILE, false);
+		if (!verifyNoOtherVarUseInLoop(lines, loop, lineIndex, assign.lhsText()))
+			return null;
 		if (assign.lhsText().contains("[")
 				&& !validateArrayLhsLoopStable(lines, loop, lineIndex, assign.lhsText()))
 			return null;
@@ -1141,7 +964,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		}
 		else {
 			final var found = findDeclarationAbove(lines, lineIndex - 1, assign.varName());
-			if (found == null)
+			if (found == null || !initializerSurvivesAnAppend(found))
 				return null;
 			if (!isInSameScope(lines, found.lineIdx(), lineIndex))
 				return null;
@@ -1195,39 +1018,68 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		return new FixResult(spanStart, loop.endLineIdx(), replacement);
 	}
 
+	/**
+	 * Replaces only the size expression with {@code 0}, so the element type, a type-use annotation
+	 * on it and any whitespace around the brackets are all left exactly as written.
+	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixToArraySized(@Nonnull String line, int column) {
-		// the violation column points at the LPAREN of the outer `.toArray(...)` call,
-		// so `.toArray(new ` is exactly 8 chars to the left. lastIndexOf is anchored
-		// and cannot drift forward into following text.
-		final var prefix = ".toArray(new ";
-		final var idx = line.lastIndexOf(prefix, Math.max(0, column));
-		if (idx < 0)
+	private static Rewrite fixToArraySized(@Nonnull List<String> lines, @Nonnull JitTarget target) {
+		final var size = target.argument();
+		if (size == null || !sizeEqualsTheCollection(target.node(), size))
 			return null;
-		final var typeStart = idx + prefix.length();
-		final var bracketIdx = line.indexOf('[', typeStart);
-		if (bracketIdx < 0)
-			return null;
-		final var typeText = line.substring(typeStart, bracketIdx);
-		if (typeText.contains("@"))
-			return null;
-		// require a single-dim closing ']' before ')'. Multi-dim has another '[' before ')'.
-		final var sizeStart = bracketIdx + 1;
-		final var sizeEnd = line.indexOf(']', sizeStart);
-		if (sizeEnd < 0)
-			return null;
-		final var afterClose = sizeEnd + 1;
-		if (afterClose >= line.length())
-			return null;
-		if (line.charAt(afterClose) != ')')
-			return null;
-		// refuse unless the size expression is known-pure (whitelist), otherwise dropping
-		// it would silently lose side effects.
-		final var sizeText = line.substring(sizeStart, sizeEnd);
-		if (!sizeExpressionIsKnownPure(sizeText))
-			return null;
-		return line.substring(0, bracketIdx + 1) + "0" + line.substring(sizeEnd);
+		return AstSplice.spliceNode(lines, size, "0");
+	}
+
+	/**
+	 * Whether {@code Float.valueOf} has an overload for this argument.
+	 *
+	 * <p>{@code Float} is the one boxed type whose factory is narrower than its constructor:
+	 * {@code new Float(double)} exists and {@code Float.valueOf(double)} does not, so
+	 * {@code new Float(1.5)} rewrites to code that fails with "no suitable method found for
+	 * valueOf(double)". Verified against javac: {@code 1.5f}, {@code 1} and {@code "1.5"} compile,
+	 * {@code 1.5}, {@code 1.5d} and a {@code double} variable do not.
+	 *
+	 * <p>The suffix is what decides it, not the token type: checkstyle tokenizes {@code 1.5} as
+	 * {@code NUM_FLOAT} too. An identifier is refused rather than resolved, which also turns away
+	 * the {@code float} variable that would have been safe.
+	 */
+	@CheckReturnValue
+	private static boolean floatValueOfAccepts(@Nullable DetailAST argument) {
+		if (argument == null)
+			return false;
+		if (argument.getType() == TokenTypes.NUM_INT || argument.getType() == TokenTypes.STRING_LITERAL)
+			return true;
+		if (argument.getType() != TokenTypes.NUM_FLOAT)
+			return false;
+		final var literal = argument.getText();
+		final var suffix = literal.isEmpty() ? ' ' : literal.charAt(literal.length() - 1);
+		return suffix == 'F' || suffix == 'f';
+	}
+
+	@CheckReturnValue
+	private static int indexOfOperand(@Nonnull List<DetailAST> operands, @Nonnull DetailAST target) {
+		for (var i = 0; i < operands.size(); ++i) {
+			if (AstQuery.astStructuralEquals(operands.get(i), target))
+				return i;
+		}
+		return -1;
+	}
+
+	/**
+	 * Whether the accumulator's initializer can be spliced into an {@code append(...)}. Only an
+	 * unadorned {@code null} cannot: it picks no overload, so the emitted source would not compile.
+	 * A cast one ({@code (String) null}) is fine and must keep being fixed. Nothing else is at risk
+	 * here, because the initializer is spliced whole and a {@code String} variable cannot be
+	 * initialized from a {@code char[]} in the first place.
+	 */
+	@CheckReturnValue
+	private static boolean initializerSurvivesAnAppend(@Nonnull DeclInfo decl) {
+		// grouping parens do not change which overload `null` picks, so `(null)` is the same hazard
+		var initializer = decl.initExpr().strip();
+		while (initializer.startsWith("(") && initializer.endsWith(")"))
+			initializer = initializer.substring(1, initializer.length() - 1).strip();
+		return !"null".equals(initializer);
 	}
 
 	/**
@@ -1239,7 +1091,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	private static boolean isBlockStatement(@Nonnull List<String> lines, int lineIdx) {
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		for (var i = lineIdx - 1; i >= 0; --i) {
 			final var stripped = masked.get(i).strip();
 			if (stripped.isEmpty())
@@ -1255,10 +1107,17 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		return false;
 	}
 
+	/** Whether {@code ident} is the name after a {@code .}, which denotes a member and not a variable. */
+	@CheckReturnValue
+	private static boolean isDotSuffix(@Nonnull DetailAST ident) {
+		final var parent = ident.getParent();
+		return parent != null && parent.getType() == TokenTypes.DOT && parent.getFirstChild() != ident;
+	}
+
 	@CheckReturnValue
 	private static boolean isInSameScope(@Nonnull List<String> lines, int declLineIdx, int targetLineIdx) {
 		var depth = 0;
-		var state = entryStateAt(lines, declLineIdx + 1);
+		var state = SpanReformat.lexerStateAt(lines, declLineIdx + 1);
 		// Walk lines strictly between decl and target; the target line itself is the
 		// loop top (or do-line) whose braces belong to the loop body, not the
 		// enclosing scope. Including it would falsely raise depth.
@@ -1280,76 +1139,6 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 			state = JavaLineScanner.stateAfter(line, state);
 		}
 		return depth == 0;
-	}
-
-	@CheckReturnValue
-	private static boolean isSimpleIdentifier(@Nonnull String s) {
-		if (s.isEmpty())
-			return false;
-		if (!Character.isJavaIdentifierStart(s.charAt(0)))
-			return false;
-		for (var i = 1; i < s.length(); ++i) {
-			if (!Character.isJavaIdentifierPart(s.charAt(i)))
-				return false;
-		}
-		return true;
-	}
-
-	@CheckReturnValue
-	private static boolean isSingleStringLiteral(@Nonnull String s) {
-		if (s.length() < 2 || s.charAt(0) != '"' || s.charAt(s.length() - 1) != '"')
-			return false;
-		var i = 1;
-		while (i < s.length() - 1) {
-			final var ch = s.charAt(i);
-			if (ch == '\\' && i + 1 < s.length()) {
-				i += 2;
-				continue;
-			}
-			if (ch == '"')
-				return false;
-			++i;
-		}
-		return true;
-	}
-
-	/**
-	 * Returns true if every operand in {@code parts} before {@code firstStringIdx}
-	 * is safe to append individually without changing concat semantics. Pure
-	 * numeric and char literals are rejected because they would otherwise be
-	 * summed arithmetically before promotion to String (e.g. {@code 1 + 2 + "x"}
-	 * evaluates to {@code "3x"} but chained appends produce {@code "12x"}).
-	 * Identifier-style operands and method calls are accepted: their type is
-	 * unknowable from text but Java's {@code +} promotes the operand to String
-	 * regardless of its numeric/reference type when paired with a String, and
-	 * {@code StringBuilder.append} has matching overloads for every primitive
-	 * and Object type.
-	 */
-	@CheckReturnValue
-	private static boolean leadingOperandsArePromotableToString(@Nonnull List<String> parts, int firstStringIdx) {
-		for (var i = 0; i < firstStringIdx; ++i) {
-			final var part = parts.get(i).strip();
-			if (part.isEmpty())
-				return false;
-			final var firstCh = part.charAt(0);
-			// numeric literal (decimal/hex/binary/float) starts with a digit or `.`
-			if (Character.isDigit(firstCh))
-				return false;
-			if (firstCh == '.' && part.length() > 1 && Character.isDigit(part.charAt(1)))
-				return false;
-			// char literal, would also fail with reordering since it implicit-promotes to int
-			if (firstCh == '\'')
-				return false;
-			// leading sign followed by a numeric literal (e.g. `-1`, `+0xFF`)
-			if ((firstCh == '-' || firstCh == '+') && part.length() > 1) {
-				final var next = part.charAt(1);
-				if (Character.isDigit(next))
-					return false;
-				if (next == '.' && part.length() > 2 && Character.isDigit(part.charAt(2)))
-					return false;
-			}
-		}
-		return true;
 	}
 
 	/**
@@ -1395,6 +1184,47 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		return false;
 	}
 
+	/**
+	 * Whether the loop rewrite renders every operand the way the concatenation it replaces did.
+	 *
+	 * <p>Only an operand emitted <em>alone</em> is at risk. {@link #buildAppendBody} gives each
+	 * append its own {@code append(...)} and a lone prepend its own {@code insert(0, ...)}, where
+	 * a {@code char[]} binds the array overload and writes the characters the concatenation would
+	 * have rendered as {@code [C@1b6d}, and a bare {@code null} picks no overload at all. Several
+	 * prepends are joined into one {@code insert(0, a + b)} whose argument is a String however the
+	 * parts render, so that form is safe and must keep being fixed.
+	 */
+	@CheckReturnValue
+	private static boolean loopOperandsSurviveTheRewrite(@Nonnull DetailAST assign) {
+		final var lhs = assign.getFirstChild();
+		final var rhs = lhs == null ? null : lhs.getNextSibling();
+		if (rhs == null)
+			return false;
+
+		final var chain = AstQuery.unwrapParensAndExpr(rhs);
+		if (chain == null)
+			return false;
+
+		// `s += X` splices X whole into one append, so the chain is never taken apart
+		if (assign.getType() != TokenTypes.ASSIGN || chain.getType() != TokenTypes.PLUS)
+			return JitInefficiencyCheck.concatenationSurvivesValueOf(chain);
+
+		final var operands = operandNodesOf(chain);
+		if (operands == null)
+			return false;
+
+		// the accumulator need not be a bare name: `arr[i] = arr[i] + x` reads it through an index
+		final var accumulator = indexOfOperand(operands, lhs);
+		if (accumulator < 0)
+			return false;
+
+		for (var i = accumulator + 1; i < operands.size(); ++i) {
+			if (!JitInefficiencyCheck.concatenationSurvivesValueOf(operands.get(i)))
+				return false;
+		}
+		return accumulator != 1 || JitInefficiencyCheck.concatenationSurvivesValueOf(operands.getFirst());
+	}
+
 	@CheckReturnValue
 	private static boolean mentionsIdentifier(@Nonnull String line, @Nonnull String name) {
 		return mentionsIdentifier(line, name, LexerState.NONE);
@@ -1427,7 +1257,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	private static boolean mutatedAfterLoop(@Nonnull List<String> lines, int loopEndIdx, @Nonnull String name) {
 		var depth = 0;
-		var state = entryStateAt(lines, loopEndIdx + 1);
+		var state = SpanReformat.lexerStateAt(lines, loopEndIdx + 1);
 		for (var lineIdx = loopEndIdx + 1; lineIdx < lines.size(); ++lineIdx) {
 			final var line = lines.get(lineIdx);
 			// the scanner cannot reason across `"""`, and a text block below the loop
@@ -1517,6 +1347,62 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 			++i;
 		}
 		return false;
+	}
+
+	@CheckReturnValue
+	private static boolean namesTheEnclosingInstance(@Nonnull DetailAST qualifier) {
+		final var type = qualifier.getType();
+		if (type == TokenTypes.LITERAL_SUPER || type == TokenTypes.LITERAL_THIS)
+			return true;
+
+		final var last = type == TokenTypes.DOT ? qualifier.getLastChild() : null;
+		return last != null && last.getType() == TokenTypes.LITERAL_THIS;
+	}
+
+	/**
+	 * The top-level operands of a {@code +} chain, as nodes. {@code A + B + C} parses as
+	 * {@code PLUS(PLUS(A, B), C)}, so the chain's spine is its left edge; a parenthesized left
+	 * operand ends the spine, which is right, because the group is one operand.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static List<DetailAST> operandNodesOf(@Nonnull DetailAST plus) {
+		final var spine = spineOf(plus);
+		final var operands = new ArrayList<DetailAST>();
+		operands.add(AstQuery.unwrapParensAndExpr(spine.getLast().getFirstChild()));
+		for (var i = spine.size() - 1; i >= 0; --i)
+			operands.add(AstQuery.unwrapParensAndExprFromEnd(spine.get(i).getLastChild()));
+		return operands.contains(null) ? null : operands;
+	}
+
+	/**
+	 * The same operands as {@link #operandNodesOf}, but as the verbatim text between the chain's
+	 * {@code +} tokens, so grouping parens and any comment inside an operand ride along.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static List<String> operandRegionsOf(@Nonnull List<String> lines, @Nonnull DetailAST plus) {
+		final var start = AstSpan.spanStart(lines, plus);
+		final var end = AstSpan.spanEnd(lines, plus);
+		if (start == null || end == null)
+			return null;
+		final var spine = spineOf(plus);
+		final var regions = new ArrayList<String>();
+		var from = start;
+		// the spine runs outermost first, so its operators are in right-to-left source order
+		for (var i = spine.size() - 1; i >= 0; --i) {
+			final var operator = AstSplice.positionOf(lines, spine.get(i));
+			final var region = operator == null ? null : AstSplice.textBetween(lines, from, operator);
+			if (region == null)
+				return null;
+			regions.add(region);
+			from = new TextPos(operator.line(), operator.index() + 1);
+		}
+		final var last = AstSplice.textBetween(lines, from, end);
+		if (last == null)
+			return null;
+		regions.add(last);
+		return regions;
 	}
 
 	@CheckReturnValue
@@ -1687,45 +1573,6 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		return false;
 	}
 
-	/**
-	 * The identifier the receiver expression ending at {@code from} is rooted in, or
-	 * {@code ""} when there is none. {@link #findIdentifierStart} stops at the first
-	 * non-name character, so for a chained receiver (`sb.append(x).`) it yields nothing
-	 * and the self-reference guard it feeds would silently not run. Walking back over
-	 * balanced call and index groups reaches the root (`sb`), which is what an operand
-	 * has to avoid referencing.
-	 */
-	@CheckReturnValue
-	@Nonnull
-	private static String receiverRoot(@Nonnull String line, int from) {
-		var pos = from;
-		while (pos > 0) {
-			final var ch = line.charAt(pos - 1);
-			if (Character.isJavaIdentifierPart(ch) || ch == '.') {
-				--pos;
-				continue;
-			}
-			if (ch != ')' && ch != ']')
-				break;
-			final var open = ch == ')' ? '(' : '[';
-			var depth = 0;
-			var i = pos - 1;
-			while (i >= 0) {
-				final var c = line.charAt(i);
-				if (c == ch)
-					++depth;
-				else if (c == open && --depth == 0)
-					break;
-				--i;
-			}
-			if (i < 0)
-				return "";
-			pos = i;
-		}
-		final var end = LineText.identEnd(line, pos);
-		return end > pos ? line.substring(pos, end) : "";
-	}
-
 	@CheckReturnValue
 	private static boolean referencesAreAllSafeMethodCalls(@Nonnull String line, @Nonnull String lhsText) {
 		return referencesAreAllSafeMethodCalls(line, lhsText, LexerState.NONE);
@@ -1778,7 +1625,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	private static boolean referencesChainOrThisForm(@Nonnull String line, @Nonnull String chain, @Nonnull LexerState entryState) {
 		return containsReceiverChain(line, chain, entryState)
-				|| (!chain.startsWith("this.") && containsReceiverChain(line, "this." + chain, entryState));
+				|| containsReceiverChain(line, aliasSpellingOf(chain), entryState);
 	}
 
 	@CheckReturnValue
@@ -1831,38 +1678,124 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		return out.toString();
 	}
 
+	/**
+	 * The one rewrite each category has, or null when this category has none and when the one it
+	 * has refuses the shape. Dispatching on the category rather than trying every rewrite against
+	 * the line is what keeps a rewrite off a violation that is not its own: four of the seven used
+	 * a positional anchor that could match left of the reported column or ignore it outright, and a
+	 * foreign category reaching the loop rewriter emitted {@code this.total = sb.toString();} for an
+	 * {@code int} field, which does not compile.
+	 */
 	@CheckReturnValue
-	private static boolean sizeExpressionIsKnownPure(@Nonnull String size) {
-		// Whitelist of known-pure size shapes (values can be safely dropped):
-		// - integer literal (decimal, hex, binary, optionally underscore-separated)
-		// - simple identifier or dotted-name (e.g. `n`, `THIS.field`)
-		// - dotted access ending in `.size()` or `.length()` (idempotent on collections/arrays/strings)
-		final var trimmed = size.strip();
-		if (trimmed.isEmpty())
-			return false;
-		if (Character.isDigit(trimmed.charAt(0))) {
-			for (var i = 0; i < trimmed.length(); ++i) {
-				final var ch = trimmed.charAt(i);
-				if (!Character.isLetterOrDigit(ch) && ch != '_')
-					return false;
+	@Nullable
+	private static FixResult rewrittenFor(@Nonnull List<String> lines, @Nonnull JitTarget target) {
+		return switch (target.category()) {
+			case APPEND_CONCAT -> singleLine(fixAppendConcat(lines, target));
+			// the seven the fixer recognizes and leaves to the developer: each needs a declaration
+			// moved, a type changed or a loop restructured, none of which is a splice
+			case BOXED_ACCUMULATOR, DOUBLE_BRACE, ENUM_VALUES_IN_LOOP, ITERATOR_LOOP, MAP_KEYSET_GET,
+					REUSABLE_OBJECT, STRING_REGEX_IN_LOOP -> null;
+			case BOXED_CONSTRUCTOR -> singleLine(fixBoxedConstructor(lines, target));
+			case EMPTY_STRING_CONCAT -> singleLine(fixEmptyStringConcat(lines, target));
+			case NEW_STRING -> singleLine(fixNewString(lines, target));
+			case STRING_BUFFER -> singleLine(fixStringBuffer(lines, target));
+			case STRING_CONCAT_IN_LOOP -> fixStringConcatInLoop(lines, target);
+			case TOARRAY_SIZED -> singleLine(fixToArraySized(lines, target));
+		};
+	}
+
+	/**
+	 * The variables {@code node} reads, which is every identifier in its subtree except the ones
+	 * naming a member. {@code foo.sb} reads {@code foo}, not a variable called {@code sb}, so a
+	 * receiver named {@code sb} does not collide with it.
+	 *
+	 * <p>{@code this} and {@code super} count as names of their own, except in a {@code this.f},
+	 * {@code super.f} or {@code Outer.this.f} qualified field, which contributes the field name
+	 * {@code f}.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static Set<String> rootIdentifiersIn(@Nonnull DetailAST node) {
+		final var names = new HashSet<String>();
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(node);
+		while (!stack.isEmpty()) {
+			final var current = stack.pop();
+			final var type = current.getType();
+
+			// NoUnnecessaryThisFixer may strip one side's `this.` earlier in the same pass, so the
+			// qualified and bare spellings of one field have to collect the same name
+			if (type == TokenTypes.DOT) {
+				final var qualifier = current.getFirstChild();
+				final var field = current.getLastChild();
+				if (qualifier != null && field != null && field.getType() == TokenTypes.IDENT
+						&& namesTheEnclosingInstance(qualifier)) {
+					names.add(field.getText());
+					continue;
+				}
 			}
-			return true;
+			if (type == TokenTypes.LITERAL_SUPER || type == TokenTypes.LITERAL_THIS
+					|| (type == TokenTypes.IDENT && !isDotSuffix(current)))
+				names.add(current.getText());
+			for (var child = current.getFirstChild(); child != null; child = child.getNextSibling())
+				stack.push(child);
 		}
-		final var sizeSuffix = ".size()";
-		final var lengthSuffix = ".length()";
-		var prefix = trimmed;
-		if (trimmed.endsWith(sizeSuffix))
-			prefix = trimmed.substring(0, trimmed.length() - sizeSuffix.length());
-		else if (trimmed.endsWith(lengthSuffix))
-			prefix = trimmed.substring(0, trimmed.length() - lengthSuffix.length());
-		if (prefix.isEmpty())
+		return names;
+	}
+
+	/** A one-line rewrite as the fix result that replaces that line, or null when there was none. */
+	@CheckReturnValue
+	@Nullable
+	private static FixResult singleLine(@Nullable Rewrite rewrite) {
+		return rewrite == null ? null : new FixResult(rewrite.line(), rewrite.line(), List.of(rewrite.text()));
+	}
+
+	/**
+	 * Whether the array size is the collection's own count, which is the only size the rewrite can
+	 * drop without changing what the call returns.
+	 *
+	 * <p>{@code Collection.toArray(T[] a)} hands back {@code a} itself whenever
+	 * {@code a.length >= size}, padding the tail with nulls. Measured on a three-element list,
+	 * {@code toArray(new String[16])} has length 16 with {@code [3] == null} while
+	 * {@code toArray(new String[0])} has length 3. So a literal, a bare identifier, and a
+	 * {@code size()} on some <em>other</em> receiver can each change the result; only a count read
+	 * from the same receiver the call is made on is provably equal to it.
+	 *
+	 * <p>The check still reports the rest. The performance advice holds either way, and whether
+	 * the padding is load-bearing is the developer's to know.
+	 */
+	@CheckReturnValue
+	private static boolean sizeEqualsTheCollection(@Nonnull DetailAST call, @Nonnull DetailAST size) {
+		if (size.getType() != TokenTypes.METHOD_CALL)
 			return false;
-		for (var i = 0; i < prefix.length(); ++i) {
-			final var ch = prefix.charAt(i);
-			if (!Character.isJavaIdentifierPart(ch) && ch != '.')
-				return false;
+		final var elist = size.findFirstToken(TokenTypes.ELIST);
+		if (elist == null || AstQuery.countArguments(elist) != 0)
+			return false;
+		final var dot = size.findFirstToken(TokenTypes.DOT);
+		final var name = dot == null ? null : dot.getLastChild();
+		if (name == null || name.getType() != TokenTypes.IDENT
+				|| (!"length".equals(name.getText()) && !"size".equals(name.getText())))
+			return false;
+		final var collection = AstQuery.unwrapParensAndExpr(AstSplice.receiverOf(call));
+		final var counted = AstQuery.unwrapParensAndExpr(dot.getFirstChild());
+		return collection != null && counted != null
+				&& AstQuery.isSideEffectFree(counted)
+				&& AstQuery.astStructuralEquals(counted, collection);
+	}
+
+	/** The {@code PLUS} nodes forming a concatenation chain's left spine, outermost first. */
+	@CheckReturnValue
+	@Nonnull
+	private static List<DetailAST> spineOf(@Nonnull DetailAST plus) {
+		final var spine = new ArrayList<DetailAST>();
+		var node = plus;
+		while (true) {
+			spine.add(node);
+			final var first = node.getFirstChild();
+			if (first == null || first.getType() != TokenTypes.PLUS)
+				return spine;
+			node = first;
 		}
-		return Character.isJavaIdentifierStart(prefix.charAt(0));
 	}
 
 	@CheckReturnValue
@@ -1945,9 +1878,8 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	/**
 	 * Verifies that an array-element LHS like `arr[i]` is loop-stable: the
 	 * array variable and the index expression's identifier(s) are not mutated
-	 * anywhere in the loop scope, and the index identifier is not a for-each
-	 * iteration variable. The body line itself is excluded since it always
-	 * "writes" to the LHS by definition.
+	 * anywhere in the loop scope. The body line itself is checked for
+	 * mutation only, since it always "writes" to the LHS by definition.
 	 */
 	@CheckReturnValue
 	private static boolean validateArrayLhsLoopStable(
@@ -2022,7 +1954,7 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		if (loop.kind() == LoopKind.FOR && forHeaderEnd < 0)
 			return false;
 		if (forHeaderEnd >= 0) {
-			var headerState = entryStateAt(lines, loop.topLineIdx());
+			var headerState = SpanReformat.lexerStateAt(lines, loop.topLineIdx());
 			for (var headerIdx = loop.topLineIdx(); headerIdx <= forHeaderEnd; ++headerIdx) {
 				final var headerLine = lines.get(headerIdx);
 				for (var idx : identIndexes) {
@@ -2032,25 +1964,16 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 				headerState = JavaLineScanner.stateAfter(headerLine, headerState);
 			}
 		}
-		// Enumerate every dotted prefix of the receiver chain (including the
-		// leftmost segment) EXCLUDING the full chain itself. For
-		// `this.matrix.cells`, this gives `["this", "this.matrix"]`.
 		// Mutation of any prefix in the loop scope (e.g. `this.matrix = ...`
 		// or `this = ...`, the latter illegal Java but harmlessly conservative)
-		// invalidates the post-loop write. The full chain is allowed to appear
-		// as part of `<lhsText>.<safe>()` reads, validated separately.
+		// invalidates the post-loop write, so the body line refuses an assignment to a
+		// prefix and every other line refuses any mention of one. The full chain is
+		// allowed to appear as part of `<lhsText>.<safe>()` reads, validated separately.
 		final var dottedPrefixes = enumerateDottedPrefixes(receiverPart);
 		final var intermediatePrefixes = dottedPrefixes.size() <= 1
 				? List.<String>of()
 				: dottedPrefixes.subList(0, dottedPrefixes.size() - 1);
 		final var bracketPortion = lhsText.substring(firstBracket);
-		// Scan loop scope: top line through end. The body line legitimately
-		// contains the LHS (`arr[idx] = arr[idx] + ...`); only check it for
-		// actual MUTATION patterns. Non-body lines must reference the array
-		// only as `<receiver>[<exact-lhs-indices>]` (followed by anything;
-		// safe-method validation is done by `verifyNoOtherVarUseInLoop`).
-		// Anything else (bare receiver, sibling-element index, method-call
-		// arg) is rejected.
 		final var scanFrom = loop.topLineIdx();
 		final var scanTo = Math.min(loop.endLineIdx(), lines.size() - 1);
 		// Conservative bail on text blocks anywhere in the loop scope: the
@@ -2063,9 +1986,9 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 		}
 		// threaded rather than restarted per line: a scanned line can continue a block
 		// comment opened above the loop, whose carried content a cold lexer reads as
-		// code -- a quote in the comment's tail would blank the rest of the line and
+		// code: a quote in the comment's tail would blank the rest of the line and
 		// hide a real mutation sitting after the `*/`
-		var scanState = entryStateAt(lines, scanFrom);
+		var scanState = SpanReformat.lexerStateAt(lines, scanFrom);
 		for (var i = scanFrom; i <= scanTo; ++i) {
 			final var line = lines.get(i);
 			final var lineState = scanState;
@@ -2118,10 +2041,6 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 			// (sibling element), `arr.length`, `arr = newArr()`, etc.
 			if (lineHasUnsafeArrayReference(line, receiverPart, bracketPortion, lineState))
 				return false;
-			// For dotted receivers like `this.matrix.cells`, the receiver
-			// check above only detects references to the FULL chain. Mutation
-			// of an intermediate prefix (`this.matrix = pickNew()`) is missed.
-			// Scan each intermediate prefix.
 			for (var prefix : intermediatePrefixes) {
 				if (referencesChainOrThisForm(line, prefix, lineState))
 					return false;
@@ -2136,25 +2055,27 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 
 	@CheckReturnValue
 	private static boolean verifyNoOtherVarUseInLoop(@Nonnull List<String> lines, @Nonnull LoopInfo loop, int bodyLineIdx, @Nonnull String lhsText) {
-		// Conservative bail on text blocks anywhere in the loop scope: the
-		// line-by-line scanner doesn't track `"""` content, and a text block
-		// mentioning the variable name would pass safe-method validation only to
-		// be rewritten as if it were live code by `rewriteSafeMethodCalls`.
-		// The scan starts at the header line, not after it: a pre-test `while`/`for`
+		// the scan starts at the header line, not after it: a pre-test `while`/`for`
 		// condition is evaluated every iteration, so a reference there is as live as
-		// one in the body.
+		// one in the body
 		final var scanFrom = loop.topLineIdx();
 		final var scanTo = Math.min(loop.endLineIdx(), lines.size() - 1);
-		var lineState = entryStateAt(lines, scanFrom);
+		var lineState = SpanReformat.lexerStateAt(lines, scanFrom);
 		// the terminator line is included: buildStringConcatReplacement rewrites through
-		// loop.endLineIdx(), so a reference packed onto it -- a statement cuddled after
-		// `}`, or a do-while's `while (s.equals(t))` -- has to be validated like any other
+		// loop.endLineIdx(), so a reference packed onto it (a statement cuddled after
+		// `}`, or a do-while's `while (s.equals(t))`) has to be validated like any other
 		for (var i = scanFrom; i <= scanTo; ++i) {
 			final var entryState = lineState;
 			lineState = JavaLineScanner.stateAfter(lines.get(i), lineState);
-			if (i == bodyLineIdx)
-				continue;
-			if (!referencesAreAllSafeMethodCalls(lines.get(i), lhsText, entryState))
+			// the body line legitimately spells the accumulator, on both sides of its own
+			// assignment, so only the other lines are checked for a reference to it
+			if (i != bodyLineIdx && !referencesAreAllSafeMethodCalls(lines.get(i), lhsText, entryState))
+				return false;
+
+			// the write-back lands after the loop, so a read through the spelling the rewrite does
+			// not redirect sees the pre-loop value on every iteration, and an operand is as live
+			// as any
+			if (containsReceiverChain(lines.get(i), aliasSpellingOf(lhsText), entryState))
 				return false;
 		}
 		return true;
@@ -2164,33 +2085,12 @@ class JitInefficiencyFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
-		final var line = lines.get(lineIndex);
-
-		// the helpers below index the line's chars, while categorizeSkip compares against
-		// AST positions and needs the reported code-point column unchanged
-		final var charColumn = LineText.charIndexOfColumn(line, column);
-		if (charColumn < 0)
-			return categorizeSkip(lines, lineIndex, column);
-
-		var fixedLine = fixBoxedConstructor(line, charColumn);
-		if (fixedLine == null)
-			fixedLine = fixNewString(line, charColumn);
-		if (fixedLine == null)
-			fixedLine = fixStringBuffer(line, charColumn);
-		if (fixedLine == null)
-			fixedLine = fixToArraySized(line, charColumn);
-		if (fixedLine == null)
-			fixedLine = fixEmptyStringConcat(lines, lineIndex);
-		if (fixedLine == null)
-			fixedLine = fixAppendConcat(lines, lineIndex, charColumn);
-
-		if (fixedLine != null)
-			return new FixResult(lineIndex, lineIndex, List.of(fixedLine));
-
-		final var loopResult = fixStringConcatInLoop(lines, lineIndex);
-		if (loopResult != null)
-			return loopResult;
-
-		return categorizeSkip(lines, lineIndex, column);
+		final var target = FixerAst.withAst(lines, root -> JitInefficiencyCheck.locateAt(root, lineIndex, column));
+		// a buffer an earlier fix in the same pass left unparseable, or a position nothing starts
+		// at. Neither is a recognized violation, so there is no category to name a skip reason for
+		if (target == null)
+			return null;
+		final var rewritten = rewrittenFor(lines, target);
+		return rewritten != null ? rewritten : new SkipResult(SkipMessages.get(target.category().skipReasonKey()));
 	}
 }

@@ -102,7 +102,7 @@ public class StandardCheckTests {
 			new Entry(ClassStructureOrderCheck.class),
 			new Entry(ConstructorAssignmentOrderCheck.class, true),
 			new Entry(ControlFlowBracesCheck.class, true),
-			new Entry(EmptyBodyCheck.class),
+			new Entry(EmptyBodyCheck.class, true),
 			new Entry(EmptySwitchCheck.class),
 			new Entry(ExplicitInitializationCheck.class, true),
 			new Entry(FieldConsolidationCheck.class, true),
@@ -147,11 +147,18 @@ public class StandardCheckTests {
 			new Entry(PreferStandardCharsetsCheck.class, true, Map.of("minSdk", "19")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minOccurrences", "1")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minSdk", "18"), List.of("objects")),
+			// exactly at MIN_SDK_OBJECTS: the fixed output matches the minSdk-29 row byte for byte,
+			// so this row pins the constant through the gated markers without a duplicate fixture
+			new Entry(PreferStaticImportCheck.class, false, Map.of("minSdk", "19"), List.of("objects")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minSdk", "2147483647"), List.of("chained", "collectors", "conflicts", "explicitshadow", "importconflict", "nestedtypeshadows", "objects", "predicate", "samefileshadow", "wildcard")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minSdk", "23"), List.of("collectors")),
+			// exactly at MIN_SDK_COLLECTORS
+			new Entry(PreferStaticImportCheck.class, false, Map.of("minSdk", "24"), List.of("collectors")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minSdk", "29"), List.of("objects")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minSdk", "30"), List.of("objects")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minSdk", "32"), List.of("predicate")),
+			// exactly at MIN_SDK_PREDICATE_NOT
+			new Entry(PreferStaticImportCheck.class, false, Map.of("minSdk", "33"), List.of("predicate")),
 			new Entry(PreferStaticImportConstantCheck.class, true),
 			new Entry(PreferVarCheck.class, true),
 			new Entry(PreferVarCheck.class, false, Map.of("allowedMethods", "genericMethod")),

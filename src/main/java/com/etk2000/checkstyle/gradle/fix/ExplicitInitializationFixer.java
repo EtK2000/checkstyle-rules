@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.format.SpanReformat;
 
 import java.util.List;
 
@@ -71,13 +72,7 @@ class ExplicitInitializationFixer implements CheckstyleFixer {
 		if (column < 0 || column >= line.length())
 			return null;
 
-		// Fold the lexer state over preceding lines so a declaration that continues a
-		// multi-line comment or text block (its closer sits before the code on this
-		// line) is masked with the correct entry state; a NONE mask would mis-lex a
-		// stray quote in the carried comment tail and blank the real assignment.
-		var entryState = JavaLineScanner.LexerState.NONE;
-		for (var i = 0; i < lineIndex; ++i)
-			entryState = JavaLineScanner.stateAfter(lines.get(i), entryState);
+		final var entryState = SpanReformat.lexerStateAt(lines, lineIndex);
 		// Locate the assignment and initializer terminator on the mask so a '=', ';',
 		// or ',' inside a comment/string/char literal can't hijack them. The comment
 		// between the name and '=' is why the '=' locate itself must be masked.

@@ -1,5 +1,16 @@
 package com.etk2000.checkstyle.inputs.preferbulkoperation;
 
+// === case: collections_add_all_nested_loop_var_element ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputPreferBulkOperationCollectionsAddAllNestedLoopVarElementSliceViolation {
+	void m(List<String> target, String[][] grid) {
+		for (var row : grid)
+			Collections.addAll(target, row);
+	}
+}
+// === end ===
+
 // === case: for_each_lambda_add_all_dotted_target ===
 // imports: java.util.List
 class InputPreferBulkOperationForEachLambdaAddAllDottedTargetSliceViolation {

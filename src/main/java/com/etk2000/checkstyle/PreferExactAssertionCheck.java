@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
@@ -220,7 +222,7 @@ public class PreferExactAssertionCheck extends AbstractAstCheck {
 				return;
 			classFqn = classFqn.substring(0, lastDot);
 		}
-		final var simple = AstUtil.simpleName(classFqn);
+		final var simple = AstText.simpleName(classFqn);
 		if (ASSERT_CLASS.equals(simple))
 			hasJunit4StaticAssert = true;
 		else if (ASSERTIONS_CLASS.equals(simple))
@@ -243,7 +245,7 @@ public class PreferExactAssertionCheck extends AbstractAstCheck {
 	}
 
 	private void visitMethodCall(@Nonnull DetailAST ast) {
-		final var methodName = AstUtil.getMethodName(ast);
+		final var methodName = AstQuery.getMethodName(ast);
 		if (!"assertTrue".equals(methodName) && !"assertFalse".equals(methodName))
 			return;
 

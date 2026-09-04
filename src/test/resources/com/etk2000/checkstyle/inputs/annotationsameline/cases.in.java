@@ -127,6 +127,35 @@ class InputAnnotationSameLineRecordComponentSliceViolation {
 }
 // === end ===
 
+// === case: entry_state_block_comment_before_inline_annotations ===
+// imports: java.util.List
+class InputAnnotationSameLineEntryStateBlockCommentSliceViolation {
+	void m(List<String> list) {
+		for (/* sorted by
+		, uh */ @B @A var item : list) // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+			System.out.println(item);
+	}
+}
+// === end ===
+
+// === case: inline_reorder_after_annotation_with_named_arg ===
+class InputAnnotationSameLineInlineReorderAfterNamedArgSliceViolation {
+	void foo(@B(num = 1) @C @A String param) {} // violation: Annotation 'A' must appear before 'C' (alphabetical order).
+}
+// === end ===
+
+// === case: inline_reorder_after_annotation_with_string_comma ===
+class InputAnnotationSameLineInlineReorderAfterStringCommaSliceViolation {
+	void foo(@B("a, @Y @X") @C @A String param) {} // violation: Annotation 'A' must appear before 'C' (alphabetical order).
+}
+// === end ===
+
+// === case: inline_reorder_after_annotation_with_string_paren ===
+class InputAnnotationSameLineInlineReorderAfterStringParenSliceViolation {
+	void foo(@B("a(b") @C @A String param) {} // violation: Annotation 'A' must appear before 'C' (alphabetical order).
+}
+// === end ===
+
 // === case: inline_reorder_three_annotations ===
 class InputAnnotationSameLineInlineReorderThreeAnnotationsSliceViolation {
 	void foo(@C @A @B String param) {} // violation: Annotation 'A' must appear before 'C' (alphabetical order).

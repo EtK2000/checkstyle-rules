@@ -41,6 +41,7 @@ final class FixableCheckNames {
 			"com.etk2000.checkstyle.ArrayTypeStyleCheck",
 			"com.etk2000.checkstyle.ConstructorAssignmentOrderCheck",
 			"com.etk2000.checkstyle.ControlFlowBracesCheck",
+			"com.etk2000.checkstyle.EmptyBodyCheck",
 			"com.etk2000.checkstyle.FieldConsolidationCheck",
 			"com.etk2000.checkstyle.FieldSortingCheck",
 			"com.etk2000.checkstyle.JitInefficiencyCheck",

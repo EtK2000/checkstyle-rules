@@ -23,7 +23,8 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 
 /**
- * Proves every check that overrides {@code beginTree} tolerates the null root
+ * Proves every check whose {@code beginTree} runs per-file setup, its own or the
+ * one inherited from {@link AbstractResolvingCheck}, tolerates the null root
  * checkstyle hands it for a comments-only or empty file (which has no
  * compilation unit), both via a direct {@code beginTree(null)} call and
  * end-to-end through the checker. {@code PreferStaticImportCheck} and
@@ -43,24 +44,23 @@ public class BeginTreeNullRootTest {
 	 */
 	@CheckReturnValue
 	@Nonnull
-	static Stream<Class<? extends AbstractCheck>> beginTreeCheckerDrivenChecks() {
+	static Stream<Class<? extends AbstractCheck>> beginTreeCheckerDrivenChecks() throws Exception {
 		return Stream.concat(beginTreeChecks(), Stream.of(PreferBulkOperationCheck.class));
 	}
 
 	@CheckReturnValue
 	@Nonnull
-	static Stream<Class<? extends AbstractCheck>> beginTreeChecks() {
-		return Stream.of(
-				MultilineCallFormattingCheck.class,
-				PreferCollectionInterfaceCheck.class,
-				PreferExactAssertionCheck.class,
-				PreferLambdaCheck.class,
-				PreferSpecificApiCheck.class,
-				PreferStandardCharsetsCheck.class,
-				PreferStaticImportCheck.class,
-				PreferStaticImportConstantCheck.class,
-				PreferVarCheck.class,
-				RedundantArrayCreationCheck.class
+	static Stream<Class<? extends AbstractCheck>> beginTreeChecks() throws Exception {
+		// the resolving half is derived, not listed, so a future resolving check is covered
+		// here the moment it is registered rather than whenever someone remembers this list
+		return Stream.concat(
+				Stream.of(
+						MultilineCallFormattingCheck.class,
+						PreferExactAssertionCheck.class,
+						PreferStaticImportCheck.class,
+						PreferStaticImportConstantCheck.class
+				),
+				AbstractResolvingCheckTest.registeredResolvingChecks()
 		);
 	}
 

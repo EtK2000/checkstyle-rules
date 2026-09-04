@@ -159,6 +159,18 @@ class InputRedundantArrayCreationPrimitiveVarargsMethodSliceViolation {
 }
 // === end ===
 
+// === case: resource_receiver_varargs ===
+// imports: java.io.PrintWriter
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationResourceReceiverVarargsSliceViolation {
+	void m() throws Exception {
+		try (var writer = new PrintWriter(System.out)) {
+			writer.format("%s", new Object[]{"a"}); // violation: Remove redundant array creation for varargs parameter of 'format'.
+		}
+	}
+}
+// === end ===
+
 // === case: single_element ===
 // imports: java.util.Arrays
 @SuppressWarnings("unused")

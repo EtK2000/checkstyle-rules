@@ -7,8 +7,7 @@ How tests work in this project, common pitfalls, and how to ensure coverage.
 ### Check tests
 
 Check tests are driven by `StandardCheckTests` / `StandardFixerCases`,
-which expand each `ENTRIES` row into per-case dynamic tests (see
-"`StandardCheckTests` and the per-case fixer pipeline" above). Every new
+which expand each `ENTRIES` row into per-case dynamic tests. Every new
 check should land in `ENTRIES`. Each check has:
 
 - **Clean file** (`cases.clean.java`): valid code that must produce zero violations. For a
@@ -50,15 +49,48 @@ full output. Integration tests are split across three classes:
 - **`CheckstyleFixUtilTest`**: pure utility tests (hint message formatting, tab-column conversion,
   skip reason tracking) with no file I/O
 
+## Reading fixtures
+
+Fixture files are large (`jitinefficiency/cases.in.java` holds 344 cases in 4,576 lines), but
+every case is delimited:
+
+```java
+// === case: <name> ===
+...
+// === end ===
+```
+
+`tools/slice` reads one case instead of the whole file. Reach for it before any Read of a fixture.
+
+| Command | What it gives |
+| ------- | ------------- |
+| `tools/slice list` | every topic and its case count |
+| `tools/slice list <topic>` | case names + line numbers in the topic's canonical input |
+| `tools/slice list <topic> --all` | same, for every sliced file in the topic |
+| `tools/slice show <topic> <name>` | the case from each sliced file, with line ranges |
+| `tools/slice find <pattern>` | case names matching a regex, across all topics |
+
+`show` is the one to use when changing a case: it prints the `in`, `out` and `fixed` versions
+together, so a `.out` vs `.fixed` divergence is visible in one call rather than three file reads.
+Both a topic name and a direct file path work as the first argument.
+
+`find` answers "does a case for this exist already" without reading any fixture. Case names are
+descriptive, so a pattern search over names usually locates prior coverage on its own.
+
+`cases.clean.java` files carry no case markers, so `list` and `show` skip them; clean files are
+whole-file fixtures by design.
+
 ## Tab-expanded columns
 
 Checkstyle reports column numbers with tabs expanded to the configured `tabWidth`. This project
 sets `tabWidth=4` (see `LineLength.TAB_WIDTH`), so a tab at position 0 makes the next character
 report as column 4 instead of 1.
 
-`CheckstyleFixTask.tabColumnToCharIndex()` converts tab-expanded columns to character indices.
-Any code that uses `event.getColumn()` to index into a line string must convert first. This
-applies to all fixers since `applyFixes` does the conversion before calling `fix()`.
+`CheckstyleFixAction.tabColumnToCharIndex()` converts a tab-expanded column back to the
+*code-point* column an AST node carries, which is what `fix()` receives. That is not yet a char
+index: indexing a line with it needs a second conversion through `LineText.charIndexOfColumn`,
+which matters on any line containing a supplementary character. See the `getColumnNo()` note in
+`adding-a-check.md` for the full rule.
 
 **Diagnosis**: if a fixer works in unit tests (no tabs) but fails on real files (tabs), the column
 conversion is the first thing to check. Write integration tests with tab-indented files to catch
@@ -257,13 +289,8 @@ territory.
 
 ```java
 // AnnotationOwnLineCheck must not fire on any SameLine test files
-assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR +"Clean.java").
-
-isEmpty());
-
-assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR +"Violation.java").
-
-isEmpty());
+assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR + "cases.clean.java").isEmpty());
+assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR + "cases.in.java").isEmpty());
 // ... and vice versa for every file
 ```
 
@@ -291,10 +318,8 @@ whether to suggest `var` vs implicit. For a 2-param lambda, these cases are dist
 | `@A String x` | `@B String y` | Both MSG_VAR      |
 | `String x`    | `String y`    | Both MSG_IMPLICIT |
 
-The first three share the same code path (anyAnnotated=true), but testing only case 1 missed a
-fixer bug where non-annotated params in an annotated context were stripped to implicit instead of
-getting `var`. Case 2 caught it because the fixer iterated params left-to-right and handled the
-non-annotated first param differently.
+The first three share the same code path (anyAnnotated=true), but a fixer that iterates params
+left-to-right can still handle the non-annotated param differently depending on its position.
 
 **Rule**: when code loops over a group and sets a flag from any member, test the flag-setting member
 in every position (first, middle, last, all).
@@ -502,10 +527,9 @@ Every fixable pattern needs three layers of tests:
 3. **Violation/clean test resources**: the check must have violation test cases for every pattern
    the fixer handles, and clean cases for every pattern it should NOT handle.
 
-When adding a new fixer, also check existing integration tests. A new fixer may change the
-behavior of tests that previously relied on the pattern being unfixable (e.g. adding a
-`Collections.sort` fixer broke `testPreferSpecificApiCollectionsFactoryRetainsUsedImport` because
-the sort call was the reason the `Collections` import was retained).
+When adding a new fixer, also check existing integration tests. A new fixer changes the behavior
+of any test that relied on the pattern being unfixable, including tests whose input keeps an
+import alive only through the now-fixable call.
 
 ### Fragment-migration guard
 
@@ -520,9 +544,8 @@ returns a `SkipResult` at the reported site (a `// skip-reason:` skip-slice). It
 `// target:` that is *redundant* (points at a position the check already reports): the directive is
 only justified for a synthetic position the check never reports.
 
-The migration is complete, so the guard simply fails on any flagged case: migrate it to a slice, or
-delete it if an existing slice already covers the behavior. (There is no whitelist; the ratchet
-reached zero and it was removed.)
+The guard fails on any flagged case: migrate it to a slice, or delete it if an existing slice
+already covers the behavior.
 
 A case is legitimately fragment-only (and correctly NOT flagged) when it is:
 
@@ -539,8 +562,8 @@ A case is legitimately fragment-only (and correctly NOT flagged) when it is:
 
 To migrate a flagged case: author the `cases.in.java`/`cases.out.java` slice (a `// skip-reason:`
 slice for a skip case, `.out == .in` minus markers), add a per-topic cross-check suppression if a
-non-topic check fires on it, then delete the fragment (both `.in` and `.out` entries), its whitelist
-line, and its dedicated fixer-test method. If the flagged case is already covered by an existing
+non-topic check fires on it, then delete the fragment (both `.in` and `.out` entries) and its
+dedicated fixer-test method. If the flagged case is already covered by an existing
 slice (the fragment is a leftover duplicate), delete it outright instead of creating a second copy.
 
 ### Comparison operator coverage
@@ -601,19 +624,17 @@ New test resource files must comply with the project's formatting rules:
 
 ### Hardcoded value sets instead of parsing
 
-The original `ExplicitInitializationFixer` used `Set.of("0", "0L", "0.0f", ...)` to match default
-values. This missed `0.000`, `0x0`, `0_0`, `0.0e0`, and many other valid zero representations. The
-fix was to parse the value (strip suffix, underscores, prefix, then verify all remaining chars are
-zero).
+A `Set.of("0", "0L", "0.0f", ...)` of default values misses `0.000`, `0x0`, `0_0`, `0.0e0`, and
+many other valid zero representations. Parse the value instead: strip suffix, underscores and
+prefix, then verify every remaining char is zero.
 
 When matching against a set of known values, ask: "is this set exhaustive, or should I parse the
 structure instead?"
 
 ### Missing lowercase `l` suffix
 
-`RedundantNumericSuffixFixer` originally checked `D/F/L/d/f` but not `l`. The boundary pairing
-audit caught it: adding a test for `100l` revealed the bug. This is why boundary pairing matters,
-it catches omissions that look correct at a glance.
+A suffix check covering `D/F/L/d/f` but not `l` looks correct at a glance. Boundary pairing is what
+catches that class of omission: a test for `100l` beside the `100L` one.
 
 ### Method ordering in test resource files
 

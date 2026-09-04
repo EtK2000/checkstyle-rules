@@ -7,6 +7,8 @@ import com.etk2000.checkstyle.ControlFlowBracesCheck.OneLinerBody;
 import com.etk2000.checkstyle.JavaLineScanner;
 import com.etk2000.checkstyle.JavaLineScanner.LexerState;
 import com.etk2000.checkstyle.LineText;
+import com.etk2000.checkstyle.format.SpanReformat;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -127,7 +129,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		final var trailingIsCode = !trailing.isBlank() && !isCommentOnly(trailing);
 
 		final var keywordLine = lines.get(lineIndex);
-		final var commentIdx = findTrailingComment(keywordLine, entryStateAt(lines, lineIndex));
+		final var commentIdx = findTrailingComment(keywordLine, SpanReformat.lexerStateAt(lines, lineIndex));
 		final var result = new ArrayList<String>();
 		if (commentIdx >= 0)
 			result.add(keywordLine.substring(0, commentIdx).stripTrailing() + " { " + keywordLine.substring(commentIdx));
@@ -184,20 +186,6 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		return new FixResult(startLine, endLine, result);
 	}
 
-	/**
-	 * The lexer state {@code lineIndex} begins in. Threaded from the top rather
-	 * than read off the line above alone, since a line reading {@code """;} in
-	 * isolation looks like an opener when it is really a closer.
-	 */
-	@CheckReturnValue
-	@Nonnull
-	private static LexerState entryStateAt(@Nonnull List<String> lines, int lineIndex) {
-		var state = LexerState.NONE;
-		for (var i = 0; i < lineIndex; ++i)
-			state = JavaLineScanner.stateAfter(lines.get(i), state);
-		return state;
-	}
-
 	@CheckReturnValue
 	private static int findTrailingComment(@Nonnull String line) {
 		return JavaLineScanner.firstLineComment(line, JavaLineScanner.LexerState.NONE);
@@ -237,7 +225,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	) {
 		// searched on a masked buffer so a `}` inside a string, comment, or text block
 		// is not mistaken for the block's own brace
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		var closeBraceLine = -1;
 		for (var i = braceLine + 1; i < lines.size(); ++i) {
 			if (masked.get(i).stripLeading().startsWith("}")) {
@@ -384,7 +372,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		if (braceLine < 0 || braceLine >= lines.size())
 			return null;
 
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		final var bodyLine = JavaLineScanner.nextCodeLine(masked, braceLine + 1);
 		if (bodyLine < 0)
 			return null;
@@ -434,7 +422,9 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	private static FixAttempt fixNonDoWhileFromAst(
 			@Nonnull List<String> lines,
 			int lineIndex,
+			int column,
 			@Nonnull String indent,
+			@Nonnull DetailAST root,
 			@Nonnull ControlBody body
 	) {
 		// every handler below rewrites the keyword line and takes the body from the
@@ -444,6 +434,10 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 			return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_MULTILINE_HEADER);
 		if (!body.block())
 			return fixNonDoWhileMissingBracesFromAst(lines, lineIndex, indent, body);
+		// both brace-removal routes below drop the block's two brace lines without
+		// looking at what surrounds it, so the re-binding has to be refused here
+		if (ControlFlowBracesCheck.unwrapRebindsElse(root, lineIndex, column))
+			return new SkipResult(SkipMessages.CONTROL_FLOW_SKIP_ELSE_REBIND);
 		return body.line() == lineIndex
 				? fixNonDoWhileUnnecessaryBraces(lines, lineIndex, LineText.charIndexOfColumn(lines.get(lineIndex), body.column()), indent)
 				: fixNonDoWhileBraceOnOwnLine(lines, lineIndex, body.line(), indent);
@@ -545,7 +539,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 
 		// a line comment after the `{` documents the statement, not the block, so it
 		// stays on the keyword line rather than being dropped with the brace
-		final var commentIdx = findTrailingComment(line, entryStateAt(lines, lineIndex));
+		final var commentIdx = findTrailingComment(line, SpanReformat.lexerStateAt(lines, lineIndex));
 		// anything else after the `{` is code (or a block comment the line-comment
 		// scan does not see), and rebuilding the keyword line would drop it
 		if (!(commentIdx > braceIdx ? line.substring(braceIdx + 1, commentIdx) : line.substring(braceIdx + 1)).isBlank())
@@ -555,7 +549,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 				? line.substring(0, braceIdx).stripTrailing() + " " + line.substring(commentIdx).stripTrailing()
 				: line.substring(0, braceIdx).stripTrailing();
 
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		final var bodyLine = JavaLineScanner.nextCodeLine(masked, lineIndex + 1);
 		if (bodyLine < 0)
 			return null;
@@ -681,7 +675,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 
 		// a comment between the `do` and its own-line `{` still leaves a braced body:
 		// treating the comment as the body would brace the existing block a second time
-		final var masked = JavaLineScanner.maskAll(lines);
+		final var masked = FixerAst.maskAll(lines);
 		final var braceLine = JavaLineScanner.nextCodeLine(masked, bodyStart);
 		if (braceLine >= 0 && masked.get(braceLine).stripLeading().startsWith("{")) {
 			// the `{` shares its line with a comment ahead of it, so every index below
@@ -816,6 +810,12 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	 * so keeping them would leave stray gaps inside it. A blank line reached while a
 	 * block comment or text block is open is that literal's own content rather than a
 	 * gap, so it is kept.
+	 *
+	 * <p>The fold below is deliberately NOT {@code SpanReformat.lexerStateAt(lines, from + 1)},
+	 * though it folds the same lines: that method is total, so a {@code from} past the end of the
+	 * buffer would return a state rather than throw, and with {@code to <= from + 1} the walk below
+	 * reads nothing and cannot throw either, so the fixer would go on to build a {@code FixResult}
+	 * over a line range that does not exist.
 	 */
 	@CheckReturnValue
 	@Nonnull
@@ -838,13 +838,11 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	 * Whether a block comment or text block is still open after the lines
 	 * {@code from..to}. State is threaded from the top of the buffer rather than
 	 * started cold at {@code from}: a line reading {@code """;} in isolation looks
-	 * like an opener when it is really a closer, and {@code from} itself may sit
-	 * inside a literal opened above, whose carried content a cold lexer reads as
-	 * code.
+	 * like an opener when it is really a closer.
 	 */
 	@CheckReturnValue
 	private static boolean leavesLiteralOpen(@Nonnull List<String> lines, int from, int to) {
-		var state = entryStateAt(lines, from);
+		var state = SpanReformat.lexerStateAt(lines, from);
 		for (var i = from; i <= to; ++i)
 			state = JavaLineScanner.stateAfter(lines.get(i), state);
 		return state.inMultilineLiteral();
@@ -866,7 +864,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	private static boolean opensInsideLiteral(@Nonnull List<String> lines, int lineIndex) {
-		return entryStateAt(lines, lineIndex).inMultilineLiteral();
+		return SpanReformat.lexerStateAt(lines, lineIndex).inMultilineLiteral();
 	}
 
 	/**
@@ -931,7 +929,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 		final var indent = LineText.extractIndent(line);
 
 		final var root = FixerAst.parseOrNull(lines);
-		final var entryState = entryStateAt(lines, lineIndex);
+		final var entryState = SpanReformat.lexerStateAt(lines, lineIndex);
 
 		// a line whose carried comment content opens with `do ` is not a do-while: the
 		// keyword text is literal content, and routing there drops a fixable violation
@@ -943,7 +941,7 @@ class ControlFlowBracesFixer implements CheckstyleFixer {
 
 				final var body = ControlFlowBracesCheck.bodyAt(root, lineIndex, column);
 				if (body != null)
-					return fixNonDoWhileFromAst(lines, lineIndex, indent, body);
+					return fixNonDoWhileFromAst(lines, lineIndex, column, indent, root, body);
 			}
 			// Every body span comes from the check's own AST classifier, so a buffer that
 			// does not parse cannot have produced a violation in the first place, and a

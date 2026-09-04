@@ -606,10 +606,68 @@ class InputMultilineCallSharedLineFirstTwoSharingSliceViolation {
 }
 // === end ===
 
+// === case: get_quantity_string_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetQuantityStringContextParamNotOnOpeningSliceViolation {
+	void m(Context ctx) {
+		method(ctx.getResources().getQuantityString(
+				1,
+				2
+		));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: get_string_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringContextParamNotOnOpeningSliceViolation {
+	void m(Context ctx) {
+		method(ctx.getString(
+				1
+		));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: get_string_fqn_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringFqnContextParamNotOnOpeningSliceViolation {
+	void m(android.content.Context ctx) {
+		method(ctx.getString(
+				1
+		));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
 // === case: get_string_not_on_closing ===
 class InputMultilineCallSpecialMethodGetStringNotOnClosingSliceViolation {
 	void m() {
 		method(requireContext().getString(
+				1
+		));
+	}
+
+	void method(Object a) {
+	}
+
+	Object requireContext() {
+		return null;
+	}
+}
+// === end ===
+
+// === case: get_string_tracked_var_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringTrackedVarNotOnOpeningSliceViolation {
+	void m() {
+		final var ctx = requireContext();
+		method(ctx.getString(
 				1
 		));
 	}

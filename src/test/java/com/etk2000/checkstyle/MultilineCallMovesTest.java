@@ -20,9 +20,10 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 /**
- * Direct-AST tests for {@link MultilineCallFormattingCheck}'s fixer entry point.
+ * Direct-AST tests for {@link MultilineCallMoves}, the fixer's entry point into the check's layout
+ * analysis.
  */
-public class MultilineCallFormattingCheckTest {
+public class MultilineCallMovesTest {
 	private static DetailAST findFirst(@Nonnull DetailAST root, int tokenType) {
 		for (var node = root; node != null; node = node.getNextSibling()) {
 			if (node.getType() == tokenType)
@@ -54,7 +55,7 @@ public class MultilineCallFormattingCheckTest {
 	/**
 	 * A split {@code new JSONObject().put(...)} is a collapse ({@code analyzeLayout} classifies it
 	 * {@code multiline.put.collapsible}, not a closing move), so
-	 * {@link MultilineCallFormattingCheck#closingParenMove} at its {@code )} returns null.
+	 * {@link MultilineCallMoves#closingParenMove} at its {@code )} returns null.
 	 */
 	@Test
 	public void closingParenMoveReturnsNullForSplitCollapsiblePut() throws Exception {
@@ -62,7 +63,7 @@ public class MultilineCallFormattingCheckTest {
 		final var root = parse(source);
 		final var putCall = findFirst(root, TokenTypes.METHOD_CALL);
 		final var rparen = putCall.findFirstToken(TokenTypes.RPAREN);
-		assertNull(MultilineCallFormattingCheck.closingParenMove(root, lines(source), rparen.getLineNo() - 1, rparen.getColumnNo()));
+		assertNull(MultilineCallMoves.closingParenMove(root, lines(source), rparen.getLineNo() - 1, rparen.getColumnNo()));
 	}
 
 	/**
@@ -76,65 +77,65 @@ public class MultilineCallFormattingCheckTest {
 		final var source = "class T {\n\tvoid m() {\n\t\tcache.put(\n\t\t\t\t\"\"\"\n\t\t\t\ta // b\n\t\t\t\t\"\"\",\n\t\t\t\tnew JSONObject()\n\t\t\t\t\t\t.put(\"x\", 1)\n\t\t\t\t\t\t.put(\"y\", 2)\n\t\t);\n\t}\n}\n";
 		final var root = parse(source);
 		final var putCall = findFirst(root, TokenTypes.METHOD_CALL);
-		assertNotNull(MultilineCallFormattingCheck.openingParenMove(root, lines(source), putCall.getLineNo() - 1, putCall.getColumnNo()));
+		assertNotNull(MultilineCallMoves.openingParenMove(root, lines(source), putCall.getLineNo() - 1, putCall.getColumnNo()));
 	}
 
 	/**
 	 * A split {@code new JSONObject().put(...)} is a collapse ({@code analyzeLayout} classifies it
 	 * {@code multiline.put.collapsible}, not an opening move), so
-	 * {@link MultilineCallFormattingCheck#openingParenMove} at its {@code (} returns null.
+	 * {@link MultilineCallMoves#openingParenMove} at its {@code (} returns null.
 	 */
 	@Test
 	public void openingParenMoveReturnsNullForSplitCollapsiblePut() throws Exception {
 		final var source = "class T {\n\tvoid m() {\n\t\tnew JSONObject()\n\t\t\t\t.put(\"k\", 1);\n\t}\n}\n";
 		final var root = parse(source);
 		final var putCall = findFirst(root, TokenTypes.METHOD_CALL);
-		assertNull(MultilineCallFormattingCheck.openingParenMove(root, lines(source), putCall.getLineNo() - 1, putCall.getColumnNo()));
+		assertNull(MultilineCallMoves.openingParenMove(root, lines(source), putCall.getLineNo() - 1, putCall.getColumnNo()));
 	}
 
 	/**
 	 * A multi-line-value {@code put} whose key line ends in a {@code //} line comment that follows an
 	 * inline block comment still cannot pull the key onto the {@code (} line, so the check suppresses the
-	 * opening violation and {@link MultilineCallFormattingCheck#openingParenMove} returns null.
+	 * opening violation and {@link MultilineCallMoves#openingParenMove} returns null.
 	 */
 	@Test
 	public void openingParenMoveReturnsNullWhenBlockCommentThenLineCommentInfeasible() throws Exception {
 		final var source = "class T {\n\tvoid m() {\n\t\tcache.put(\n\t\t\t\t\"k\", /* c */ // note\n\t\t\t\tnew JSONObject()\n\t\t\t\t\t\t.put(\"a\", 1)\n\t\t\t\t\t\t.put(\"b\", 2)\n\t\t);\n\t}\n}\n";
 		final var root = parse(source);
 		final var putCall = findFirst(root, TokenTypes.METHOD_CALL);
-		assertNull(MultilineCallFormattingCheck.openingParenMove(root, lines(source), putCall.getLineNo() - 1, putCall.getColumnNo()));
+		assertNull(MultilineCallMoves.openingParenMove(root, lines(source), putCall.getLineNo() - 1, putCall.getColumnNo()));
 	}
 
 	/**
 	 * A multi-line-value {@code put} whose key line carries a {@code //} comment cannot pull the key onto
 	 * the {@code (} line (joining the head would swallow the comment), so the check suppresses the opening
-	 * violation and {@link MultilineCallFormattingCheck#openingParenMove} returns null.
+	 * violation and {@link MultilineCallMoves#openingParenMove} returns null.
 	 */
 	@Test
 	public void openingParenMoveReturnsNullWhenCommentInfeasible() throws Exception {
 		final var source = "class T {\n\tvoid m() {\n\t\tcache.put(\n\t\t\t\t\"k\", // note\n\t\t\t\tnew JSONObject()\n\t\t\t\t\t\t.put(\"a\", 1)\n\t\t\t\t\t\t.put(\"b\", 2)\n\t\t);\n\t}\n}\n";
 		final var root = parse(source);
 		final var putCall = findFirst(root, TokenTypes.METHOD_CALL);
-		assertNull(MultilineCallFormattingCheck.openingParenMove(root, lines(source), putCall.getLineNo() - 1, putCall.getColumnNo()));
+		assertNull(MultilineCallMoves.openingParenMove(root, lines(source), putCall.getLineNo() - 1, putCall.getColumnNo()));
 	}
 
 	/**
 	 * A single-line-value {@code put} whose collapsed one-line form would exceed the max width cannot pull
 	 * the key onto the {@code (} line, so the check suppresses the opening violation and
-	 * {@link MultilineCallFormattingCheck#openingParenMove} returns null.
+	 * {@link MultilineCallMoves#openingParenMove} returns null.
 	 */
 	@Test
 	public void openingParenMoveReturnsNullWhenLengthInfeasible() throws Exception {
 		final var source = "class T {\n\tvoid m() {\n\t\tcache.put(\n\t\t\t\t\"aKeyNameLongEnoughToPushTheCollapsedFormPastOneHundredTwentyColumnsWithRoom\",\n\t\t\t\tnew JSONObject().put(\"k\", 1)\n\t\t);\n\t}\n}\n";
 		final var root = parse(source);
 		final var putCall = findFirst(root, TokenTypes.METHOD_CALL);
-		assertNull(MultilineCallFormattingCheck.openingParenMove(root, lines(source), putCall.getLineNo() - 1, putCall.getColumnNo()));
+		assertNull(MultilineCallMoves.openingParenMove(root, lines(source), putCall.getLineNo() - 1, putCall.getColumnNo()));
 	}
 
 	/**
 	 * A plain call whose first argument is on the {@code (} line AND whose last arguments are on the
 	 * {@code )} line has both an opening and a closing (and shared-line) violation. A plain push-down
-	 * resolves only the opening one, so {@link MultilineCallFormattingCheck#openingParenMove} must
+	 * resolves only the opening one, so {@link MultilineCallMoves#openingParenMove} must
 	 * return null rather than emit a move that leaves the pipeline non-convergent.
 	 */
 	@Test
@@ -142,14 +143,14 @@ public class MultilineCallFormattingCheckTest {
 		final var source = "class T {\n\tvoid m() {\n\t\tmethod(1,\n\t\t\t\t2, 3);\n\t}\n\tvoid method(int a, int b, int c) {\n\t}\n}\n";
 		final var root = parse(source);
 		final var call = findFirst(root, TokenTypes.METHOD_CALL);
-		assertNull(MultilineCallFormattingCheck.openingParenMove(root, lines(source), call.getLineNo() - 1, call.getColumnNo()));
+		assertNull(MultilineCallMoves.openingParenMove(root, lines(source), call.getLineNo() - 1, call.getColumnNo()));
 	}
 
 	/**
 	 * The load-bearing check/fixer consistency case: an infeasible-opening {@code put} (a {@code //}
 	 * comment on the key line) whose value also ends on the {@code )} line. The check suppresses the
-	 * opening violation but still emits the closing one, so {@link MultilineCallFormattingCheck#openingParenMove}
-	 * returns null while {@link MultilineCallFormattingCheck#closingParenMove} returns a push-down move
+	 * opening violation but still emits the closing one, so {@link MultilineCallMoves#openingParenMove}
+	 * returns null while {@link MultilineCallMoves#closingParenMove} returns a push-down move
 	 * (not a pull-up): the fixer moves the {@code )} down and leaves the key where it is.
 	 */
 	@Test
@@ -158,8 +159,8 @@ public class MultilineCallFormattingCheckTest {
 		final var root = parse(source);
 		final var putCall = findFirst(root, TokenTypes.METHOD_CALL);
 		final var rparen = putCall.findFirstToken(TokenTypes.RPAREN);
-		assertNull(MultilineCallFormattingCheck.openingParenMove(root, lines(source), putCall.getLineNo() - 1, putCall.getColumnNo()));
-		final var move = MultilineCallFormattingCheck.closingParenMove(root, lines(source), rparen.getLineNo() - 1, rparen.getColumnNo());
+		assertNull(MultilineCallMoves.openingParenMove(root, lines(source), putCall.getLineNo() - 1, putCall.getColumnNo()));
+		final var move = MultilineCallMoves.closingParenMove(root, lines(source), rparen.getLineNo() - 1, rparen.getColumnNo());
 		assertNotNull(move);
 		assertFalse(move.pullUp());
 	}

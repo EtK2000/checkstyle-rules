@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -34,7 +35,7 @@ public class FieldConsolidationCheck extends AbstractAstCheck {
 		if (modifiers != null) {
 			for (var child = modifiers.getFirstChild(); child != null; child = child.getNextSibling()) {
 				if (child.getType() == TokenTypes.ANNOTATION)
-					result.add(AstUtil.canonicalAnnotation(child, MAX_ANNOTATION_DEPTH));
+					result.add(AstText.canonicalAnnotation(child, MAX_ANNOTATION_DEPTH));
 			}
 		}
 		result.sort(String::compareTo);
@@ -148,7 +149,7 @@ public class FieldConsolidationCheck extends AbstractAstCheck {
 				for (var ann = bc.getFirstChild(); ann != null; ann = ann.getNextSibling()) {
 					if (ann.getType() == TokenTypes.ANNOTATION) {
 						sb.append('@');
-						sb.append(AstUtil.canonicalAnnotation(ann, MAX_ANNOTATION_DEPTH));
+						sb.append(AstText.canonicalAnnotation(ann, MAX_ANNOTATION_DEPTH));
 						sb.append(' ');
 					}
 				}
@@ -187,7 +188,7 @@ public class FieldConsolidationCheck extends AbstractAstCheck {
 							for (var ann = tc.getFirstChild(); ann != null; ann = ann.getNextSibling()) {
 								if (ann.getType() == TokenTypes.ANNOTATION) {
 									sb.append('@');
-									sb.append(AstUtil.canonicalAnnotation(ann, MAX_ANNOTATION_DEPTH));
+									sb.append(AstText.canonicalAnnotation(ann, MAX_ANNOTATION_DEPTH));
 									sb.append(' ');
 								}
 							}

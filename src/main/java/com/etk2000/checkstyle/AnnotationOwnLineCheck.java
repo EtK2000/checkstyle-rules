@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -83,7 +85,7 @@ public class AnnotationOwnLineCheck extends AbstractAstCheck {
 		if (!isOwnLineContext(ast))
 			return;
 
-		final var annotations = AstUtil.collectAnnotations(ast);
+		final var annotations = AstQuery.collectAnnotations(ast);
 		if (annotations.isEmpty())
 			return;
 
@@ -100,7 +102,7 @@ public class AnnotationOwnLineCheck extends AbstractAstCheck {
 				continue;
 
 			if (lineCount.get(line) > 1 || line == declLine) {
-				log(annotation, MSG_KEY, AstUtil.annotationName(annotation));
+				log(annotation, MSG_KEY, AstText.annotationName(annotation));
 				reportedLines.add(line);
 			}
 		}
@@ -109,12 +111,12 @@ public class AnnotationOwnLineCheck extends AbstractAstCheck {
 		for (var i = 0; i < annotations.size(); ++i) {
 			final var annotation = annotations.get(i);
 			final var startLine = annotation.getLineNo();
-			final var currentLastLine = AstUtil.lastLine(annotation);
+			final var currentLastLine = AstQuery.lastLine(annotation);
 
 			final var internalScanEnd = Math.min(currentLastLine, fileLines.length);
 			for (var line = startLine; line < internalScanEnd; ++line) {
 				if (fileLines[line].isBlank()) {
-					log(line + 1, 0, MSG_BLANK_LINE_INTERNAL, AstUtil.annotationName(annotation));
+					log(line + 1, 0, MSG_BLANK_LINE_INTERNAL, AstText.annotationName(annotation));
 					break;
 				}
 			}
@@ -127,7 +129,7 @@ public class AnnotationOwnLineCheck extends AbstractAstCheck {
 				var state = JavaLineScanner.LexerState.NONE;
 				for (var line = currentLastLine; line < betweenScanEnd; ++line) {
 					if (!state.inBlockComment() && fileLines[line].isBlank()) {
-						log(currentLastLine, annotation.getColumnNo(), MSG_BLANK_LINE, AstUtil.annotationName(annotation));
+						log(currentLastLine, annotation.getColumnNo(), MSG_BLANK_LINE, AstText.annotationName(annotation));
 						break;
 					}
 					state = JavaLineScanner.stateAfter(fileLines[line], state);
@@ -137,7 +139,7 @@ public class AnnotationOwnLineCheck extends AbstractAstCheck {
 
 		String previousName = null;
 		for (var annotation : annotations) {
-			final var name = AstUtil.annotationName(annotation);
+			final var name = AstText.annotationName(annotation);
 			if (previousName != null && name.compareTo(previousName) < 0)
 				log(annotation, MSG_ORDER, name, previousName);
 			previousName = name;

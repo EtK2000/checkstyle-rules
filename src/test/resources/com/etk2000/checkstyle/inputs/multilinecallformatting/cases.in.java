@@ -677,6 +677,49 @@ class InputMultilineCallSharedLineFirstTwoSharingSliceViolation {
 }
 // === end ===
 
+// === case: get_quantity_string_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetQuantityStringContextParamNotOnOpeningSliceViolation {
+	void m(Context ctx) {
+		method( // violation: Inline block argument: must be on the opening paren line.
+				ctx.getResources().getQuantityString(
+						1,
+						2
+				));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: get_string_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringContextParamNotOnOpeningSliceViolation {
+	void m(Context ctx) {
+		method( // violation: Inline block argument: must be on the opening paren line.
+				ctx.getString(
+						1
+				));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: get_string_fqn_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringFqnContextParamNotOnOpeningSliceViolation {
+	void m(android.content.Context ctx) {
+		method( // violation: Inline block argument: must be on the opening paren line.
+				ctx.getString(
+						1
+				));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
 // === case: get_string_not_on_closing ===
 class InputMultilineCallSpecialMethodGetStringNotOnClosingSliceViolation {
 	void m() {
@@ -684,6 +727,25 @@ class InputMultilineCallSpecialMethodGetStringNotOnClosingSliceViolation {
 				1
 		)
 		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+	}
+
+	void method(Object a) {
+	}
+
+	Object requireContext() {
+		return null;
+	}
+}
+// === end ===
+
+// === case: get_string_tracked_var_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringTrackedVarNotOnOpeningSliceViolation {
+	void m() {
+		final var ctx = requireContext();
+		method( // violation: Inline block argument: must be on the opening paren line.
+				ctx.getString(
+						1
+				));
 	}
 
 	void method(Object a) {

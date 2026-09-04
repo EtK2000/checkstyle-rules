@@ -2034,6 +2034,36 @@ interface InputFieldSortingInterfaceFieldNameOrderSliceViolation {
 }
 // === end ===
 
+// === case: leading_block_comment_no_star_continuation ===
+class InputFieldSortingLeadingBlockCommentNoStarSliceViolation {
+	/* block
+	continuing line without a star
+	*/
+	String zebra;
+	int alpha; // violation: Field 'alpha' (type 'int') must appear before 'zebra' (type 'String').
+}
+// === end ===
+
+// === case: leading_block_comment_opener_on_code_line ===
+// skip-reason: cannot reorder fields across a comment that belongs to no field
+class InputFieldSortingLeadingBlockCommentOpenerOnCodeLineSliceViolation {
+	int zebra; /* start
+	// middle
+	*/
+	int alpha; // violation: Field 'alpha' must appear before 'zebra' (alphabetical order, same type).
+}
+// === end ===
+
+// === case: leading_comment_separated_by_blank ===
+// skip-reason: cannot reorder fields across a comment that belongs to no field
+class InputFieldSortingLeadingCommentSeparatedByBlankSliceViolation {
+	int zebra;
+	// a note about nothing in particular
+
+	int alpha; // violation: Field 'alpha' must appear before 'zebra' (alphabetical order, same type).
+}
+// === end ===
+
 // === case: lexer_string_with_block_comment_marker ===
 class InputFieldSortingLexerStringWithBlockCommentMarkerSliceViolation {
 	final String zebra = "contains /* fake block */ inside";

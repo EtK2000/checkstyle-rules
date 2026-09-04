@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import com.etk2000.checkstyle.MultilineCallFormattingCheck;
+import com.etk2000.checkstyle.MultilineCallMoves;
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FileContents;
@@ -25,7 +25,7 @@ import javax.annotation.Nonnull;
 
 /**
  * Direct-AST tests for {@link JavaTernaryReformatter} and
- * {@link MultilineCallFormattingCheck#resolvableTernaryLayoutQuestion} that drive guards the
+ * {@link MultilineCallMoves#resolvableTernaryLayoutQuestion} that drive guards the
  * slice-based topic pipeline cannot reach: the {@code STALE} column-mismatch bail, a ternary nested
  * inside a larger expression (not a bare call argument), and a ternary that is one of several plain
  * arguments (a surviving non-ternary violation the re-emission would not resolve).
@@ -61,7 +61,7 @@ public class JavaTernaryReformatterTest {
 	private static DetailAST resolvableQuestion(@Nonnull String source) throws Exception {
 		final var root = parse(source);
 		final var question = findQuestion(root);
-		return MultilineCallFormattingCheck.resolvableTernaryLayoutQuestion(
+		return MultilineCallMoves.resolvableTernaryLayoutQuestion(
 				root, List.of(source.split("\n", -1)), question.getLineNo() - 1, question.getColumnNo()
 		);
 	}

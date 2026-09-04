@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstDisplay;
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -78,11 +80,11 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 		final var rightOp = leftOp != null ? leftOp.getNextSibling() : null;
 		if (leftOp == null || rightOp == null)
 			return null;
-		if (!AstUtil.isPureExpression(leftOp) || !AstUtil.isPureExpression(rightOp))
+		if (!AstQuery.isPureExpression(leftOp) || !AstQuery.isPureExpression(rightOp))
 			return null;
 
-		final var leftText = AstUtil.displayText(leftOp);
-		final var rightText = AstUtil.displayText(rightOp);
+		final var leftText = AstDisplay.displayText(leftOp);
+		final var rightText = AstDisplay.displayText(rightOp);
 
 		final var rparen = ifAst.findFirstToken(TokenTypes.RPAREN);
 		if (rparen == null)
@@ -105,7 +107,7 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 			elseBranch = extractBranch(elseBody);
 			if (elseBranch == null)
 				return null;
-			endLine = AstUtil.lastLine(ifAst) - 1;
+			endLine = AstQuery.lastLine(ifAst) - 1;
 		}
 		else {
 			if (thenBranch.kind() != BranchKind.RETURN)
@@ -120,20 +122,20 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 			if (nextValue == null)
 				return null;
 			elseBranch = new BranchInfo(BranchKind.RETURN, null, nextValue);
-			endLine = AstUtil.lastLine(nextStmt) - 1;
+			endLine = AstQuery.lastLine(nextStmt) - 1;
 		}
 
 		if (thenBranch.kind() != elseBranch.kind())
 			return null;
 		if (thenBranch.kind() == BranchKind.ASSIGN
-				&& !AstUtil.displayText(thenBranch.target()).equals(AstUtil.displayText(elseBranch.target())))
+				&& !AstDisplay.displayText(thenBranch.target()).equals(AstDisplay.displayText(elseBranch.target())))
 			return null;
 
-		if (!AstUtil.isPureExpression(thenBranch.value()) || !AstUtil.isPureExpression(elseBranch.value()))
+		if (!AstQuery.isPureExpression(thenBranch.value()) || !AstQuery.isPureExpression(elseBranch.value()))
 			return null;
 
-		final var thenValueText = AstUtil.displayText(thenBranch.value());
-		final var elseValueText = AstUtil.displayText(elseBranch.value());
+		final var thenValueText = AstDisplay.displayText(thenBranch.value());
+		final var elseValueText = AstDisplay.displayText(elseBranch.value());
 		if (!leftText.equals(thenValueText) && !rightText.equals(thenValueText))
 			return null;
 		if (!leftText.equals(elseValueText) && !rightText.equals(elseValueText))
@@ -141,7 +143,7 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 
 		final var hint = condition.getType() == TokenTypes.EQUAL ? elseValueText : thenValueText;
 		final var kind = thenBranch.kind();
-		final var target = kind == BranchKind.ASSIGN ? AstUtil.displayText(thenBranch.target()) : null;
+		final var target = kind == BranchKind.ASSIGN ? AstDisplay.displayText(thenBranch.target()) : null;
 		final var startLine = ifAst.getLineNo() - 1;
 
 		var declLine = -1;
@@ -154,7 +156,7 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 					&& isUninitializedDeclOf(decl, target)
 					&& returnsBareName(next, target)) {
 				declLine = decl.getLineNo() - 1;
-				collapseReturnLine = AstUtil.lastLine(next) - 1;
+				collapseReturnLine = AstQuery.lastLine(next) - 1;
 			}
 		}
 
@@ -169,14 +171,14 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	@Nullable
 	public static Redundancy classifyAt(@Nonnull DetailAST root, int line, int column) {
-		final var ifAst = AstUtil.findNodeAt(root, line, column, node -> node.getType() == TokenTypes.LITERAL_IF);
+		final var ifAst = AstQuery.findNodeAt(root, line, column, node -> node.getType() == TokenTypes.LITERAL_IF);
 		return ifAst == null ? null : classify(ifAst);
 	}
 
 	@CheckReturnValue
 	@Nullable
 	private static BranchInfo extractBranch(@Nonnull DetailAST body) {
-		final var stmt = AstUtil.unwrapSingleStatementBlock(body);
+		final var stmt = AstQuery.unwrapSingleStatementBlock(body);
 		if (stmt == null)
 			return null;
 

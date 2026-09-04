@@ -92,6 +92,30 @@ class InputStandardCharsetsOtherCharsetsSliceViolation {
 }
 // === end ===
 
+// === case: resource_receiver_charset_literal ===
+// imports: java.io.ByteArrayOutputStream
+// imports: java.nio.charset.StandardCharsets
+class InputStandardCharsetsResourceReceiverCharsetLiteralSliceViolation {
+	void m() throws Exception {
+		try (var out = new ByteArrayOutputStream()) {
+			final var s = out.toString(StandardCharsets.UTF_8);
+		}
+	}
+}
+// === end ===
+
+// === case: resource_receiver_string_charset ===
+// skip-reason: the violation names a String variable, not a charset literal
+// imports: java.io.ByteArrayOutputStream
+class InputStandardCharsetsResourceReceiverStringCharsetSliceViolation {
+	void m(String encoding) throws Exception {
+		try (var out = new ByteArrayOutputStream()) {
+			final var s = out.toString(encoding);
+		}
+	}
+}
+// === end ===
+
 // === case: string_field ===
 // skip-reason: the violation names a String variable, not a charset literal
 // imports: java.io.ByteArrayInputStream

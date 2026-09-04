@@ -5,6 +5,7 @@ import com.etk2000.checkstyle.AnnotationSameLineCheck;
 import com.etk2000.checkstyle.ArrayTypeStyleCheck;
 import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck;
 import com.etk2000.checkstyle.ControlFlowBracesCheck;
+import com.etk2000.checkstyle.EmptyBodyCheck;
 import com.etk2000.checkstyle.FieldConsolidationCheck;
 import com.etk2000.checkstyle.FieldSortingCheck;
 import com.etk2000.checkstyle.JitInefficiencyCheck;
@@ -124,6 +125,7 @@ public abstract class CheckstyleFixAction implements WorkAction<CheckstyleFixAct
 				Map.entry(AvoidNoArgumentSuperConstructorCallCheck.class.getName(), new AvoidNoArgumentSuperCallFixer()),
 				Map.entry(ConstructorAssignmentOrderCheck.class.getName(), new ConstructorAssignmentOrderFixer()),
 				Map.entry(ControlFlowBracesCheck.class.getName(), new ControlFlowBracesFixer()),
+				Map.entry(EmptyBodyCheck.class.getName(), new EmptyBodyFixer()),
 				Map.entry(ExplicitInitializationCheck.class.getName(), new ExplicitInitializationFixer()),
 				Map.entry(FieldConsolidationCheck.class.getName(), new FieldConsolidationFixer()),
 				Map.entry(FieldSortingCheck.class.getName(), new FieldSortingFixer()),

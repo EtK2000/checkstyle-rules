@@ -1700,6 +1700,26 @@ class T {
 }
 // === end ===
 
+// === case: prefer_bulk_operation_collections_add_all_object_array ===
+import java.util.Collections;
+import java.util.List;
+class T {
+	void f(List<String> target, String[] source) {
+		Collections.addAll(target, source);
+	}
+}
+// === end ===
+
+// === case: prefer_bulk_operation_collections_add_all_varargs ===
+import java.util.Collections;
+import java.util.List;
+class T {
+	void f(List<String> target, String... source) {
+		Collections.addAll(target, source);
+	}
+}
+// === end ===
+
 // === case: prefer_bulk_operation_entry_set_put_all ===
 import java.util.Map;
 class T {
@@ -1837,14 +1857,14 @@ class T {
 // === case: prefer_collection_interface_multi_same_line ===
 import java.util.List;
 import java.util.Map;
-class T {
+final class T {
 	void f(List<String> a, Map<String, Integer> b) {}
 }
 // === end ===
 
 // === case: prefer_collection_interface_param ===
 import java.util.Set;
-class T {
+final class T {
 	void f(Set<String> s) {}
 }
 // === end ===
@@ -1853,7 +1873,7 @@ class T {
 import java.util.ArrayList;
 import java.util.List;
 class T {
-	List<String> f() {
+	private List<String> f() {
 		return new ArrayList<>();
 	}
 }
@@ -1863,7 +1883,7 @@ class T {
 import java.util.ArrayList;
 import java.util.List;
 class T {
-	List<String> f() {
+	private List<String> f() {
 		return new ArrayList<>();
 	}
 }

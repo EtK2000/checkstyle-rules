@@ -1,13 +1,3 @@
-// === case: assignment_body ===
-class InputPreferDoWhileAssignmentBodySliceViolation {
-	void m(int i) {
-		do
-			i = i + 1;
-		while (i < 10);
-	}
-}
-// === end ===
-
 // === case: body_formatting_skipped ===
 // skip-reason: body formatting
 class InputPreferDoWhileBodyFormattingSkippedSliceViolation {

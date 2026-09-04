@@ -1,5 +1,8 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstResolve;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -12,12 +15,14 @@ import javax.annotation.Nullable;
 
 /**
  * Flags loops that add/put/copy elements one at a time when a bulk operation exists
- * ({@code addAll}, {@code putAll}, {@code System.arraycopy}, {@code Arrays.fill}).
+ * ({@code addAll}, {@code Collections.addAll}, {@code putAll}, {@code System.arraycopy},
+ * {@code Arrays.fill}).
  */
-public class PreferBulkOperationCheck extends AbstractAstCheck {
+public class PreferBulkOperationCheck extends AbstractResolvingCheck {
 	public enum BulkKind {
 		ADD_ALL,
 		ARRAY_COPY,
+		COLLECTIONS_ADD_ALL,
 		FILL,
 		PUT_ALL
 	}
@@ -27,26 +32,100 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 	 * texts the message and fixer use ({@code target}/{@code source} for add/put; {@code src}/
 	 * {@code dst} for arraycopy; {@code arr}/{@code value} for fill), sliced verbatim from the source
 	 * so any receiver/type shape (qualified name, generics, cast) survives. The 0-based span
-	 * {@code [startLine:startCol, endLine:endCol)} covers the whole {@code for} statement when
+	 * {@code [startLine:startIndex, endLine:endIndex)} covers the whole {@code for} statement when
 	 * {@link #statementForm}, otherwise the {@code forEach} call expression.
+	 *
+	 * <p>{@code startIndex}/{@code endIndex} are <em>char</em> indices into their own line, already
+	 * converted from the code-point columns {@link DetailAST} reports, so they may be handed to
+	 * {@link String#substring} directly and must not be compared against an AST column. Contrast
+	 * {@link #classifyAt}, whose {@code column} parameter is a code-point column because it is
+	 * matched against AST positions.
+	 *
+	 * @see LineText#charIndexOfColumn
 	 */
 	public record BulkOp(
 			@Nonnull BulkKind kind,
 			@Nonnull String first,
 			@Nonnull String second,
 			int startLine,
-			int startCol,
+			int startIndex,
 			int endLine,
-			int endCol,
+			int endIndex,
 			boolean statementForm
 	) {}
 
-	private record KindArgs(@Nonnull BulkKind kind, @Nonnull String first, @Nonnull String second) {}
+	/**
+	 * A classified opportunity plus the operand nodes the type gate needs. {@code sourceExpr} and
+	 * {@code targetExpr} are null for the array kinds, which carry no collection operands.
+	 */
+	private record KindArgs(
+			@Nonnull BulkKind kind,
+			@Nonnull String first,
+			@Nonnull String second,
+			@Nullable DetailAST sourceExpr,
+			@Nullable DetailAST targetExpr
+	) {
+		KindArgs(@Nonnull BulkKind kind, @Nonnull String first, @Nonnull String second) {
+			this(kind, first, second, null, null);
+		}
+
+		@CheckReturnValue
+		@Nonnull
+		KindArgs withKind(@Nonnull BulkKind replacement) {
+			return new KindArgs(replacement, first, second, sourceExpr, targetExpr);
+		}
+	}
+
+	private static final String COLLECTION_FQCN = "java.util.Collection";
+	private static final String MAP_FQCN = "java.util.Map";
 
 	static final String MSG_ADDALL = "prefer.bulk.addall";
 	static final String MSG_ARRAYCOPY = "prefer.bulk.arraycopy";
+	static final String MSG_COLLECTIONSADDALL = "prefer.bulk.collectionsaddall";
 	static final String MSG_FILL = "prefer.bulk.fill";
 	static final String MSG_PUTALL = "prefer.bulk.putall";
+
+	/**
+	 * Whether the bulk method this opportunity names actually applies to its operands' types: the
+	 * source assignable to {@code Collection}/{@code Map}, and the target declaring
+	 * {@code addAll}/{@code putAll}. A type the file's scope cannot resolve answers no, so a
+	 * rewrite is refused rather than guessed.
+	 *
+	 * <p>Applied once here instead of at each classifier, so no path can be left ungated.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static KindArgs applyTypeGate(@Nonnull KindArgs kindArgs, @Nonnull ResolutionScope scope) {
+		// `arr.length` and `arr[i]` only parse against an array, which establishes array-ness but
+		// NOT component-type compatibility: known wrong for a byte/short/char fill and for an
+		// arraycopy between mismatched component types
+		if (kindArgs.kind() == BulkKind.ARRAY_COPY || kindArgs.kind() == BulkKind.FILL)
+			return kindArgs;
+
+		if (kindArgs.sourceExpr() == null || kindArgs.targetExpr() == null)
+			return null;
+
+		final var isMap = kindArgs.kind() == BulkKind.PUT_ALL;
+		final var elementsFqcn = isMap ? MAP_FQCN : COLLECTION_FQCN;
+
+		final var targetFqcn = resolvedTypeOf(kindArgs.targetExpr(), scope);
+		if (targetFqcn == null)
+			return null;
+		if (!ReflectionUtil.declaresMethodErasure(targetFqcn, isMap ? "putAll" : "addAll", List.of(elementsFqcn)))
+			return null;
+
+		// an object array has no addAll overload but does have Collections.addAll, so it
+		// reclassifies rather than refusing; a primitive array has no boxing-free bulk API.
+		// Collections.addAll takes a Collection, which declaring addAll(Collection) does not imply
+		if (!isMap && isObjectArraySource(kindArgs.sourceExpr(), scope)) {
+			return ReflectionUtil.acceptsValueOfType(COLLECTION_FQCN, targetFqcn)
+					? kindArgs.withKind(BulkKind.COLLECTIONS_ADD_ALL)
+					: null;
+		}
+
+		final var sourceFqcn = resolvedTypeOf(kindArgs.sourceExpr(), scope);
+		return sourceFqcn != null && ReflectionUtil.acceptsValueOfType(elementsFqcn, sourceFqcn) ? kindArgs : null;
+	}
 
 	@CheckReturnValue
 	@Nullable
@@ -113,7 +192,7 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 		if (target == null || source == null)
 			return null;
 
-		return new KindArgs(BulkKind.ADD_ALL, target, source);
+		return new KindArgs(BulkKind.ADD_ALL, target, source, getReceiver(ast), getReceiver(bodyStmt));
 	}
 
 	@CheckReturnValue
@@ -177,7 +256,7 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 		if (target == null || source == null)
 			return null;
 
-		return new KindArgs(BulkKind.PUT_ALL, target, source);
+		return new KindArgs(BulkKind.PUT_ALL, target, source, getReceiver(ast), getReceiver(bodyStmt));
 	}
 
 	@CheckReturnValue
@@ -198,7 +277,7 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 		DetailAST sourceExpr = null;
 		for (var child = forEachClause.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() == TokenTypes.EXPR) {
-				sourceExpr = child.getFirstChild();
+				sourceExpr = AstQuery.unwrapParensAndExpr(child);
 				break;
 			}
 		}
@@ -216,9 +295,9 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 
 		if ("add".equals(methodName) && getArgCount(bodyStmt) == 1) {
 			final var arg = getNthArg(bodyStmt, 0);
-			final var source = sliceNode(lines, sourceExpr);
+			final var source = AstSpan.sliceNode(lines, sourceExpr);
 			if (arg != null && source != null && isIdent(arg.getFirstChild(), iterVarName))
-				return new KindArgs(BulkKind.ADD_ALL, target, source);
+				return new KindArgs(BulkKind.ADD_ALL, target, source, sourceExpr, getReceiver(bodyStmt));
 		}
 		else if ("put".equals(methodName) && getArgCount(bodyStmt) == 2) {
 			if (sourceExpr.getType() != TokenTypes.METHOD_CALL)
@@ -241,10 +320,10 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 			if (mapReceiver == null)
 				return null;
 
-			final var map = sliceNode(lines, mapReceiver);
+			final var map = AstSpan.sliceNode(lines, mapReceiver);
 			if (map == null)
 				return null;
-			return new KindArgs(BulkKind.PUT_ALL, target, map);
+			return new KindArgs(BulkKind.PUT_ALL, target, map, mapReceiver, getReceiver(bodyStmt));
 		}
 		return null;
 	}
@@ -262,10 +341,12 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 		if (target == null || source == null)
 			return null;
 
+		final var sourceExpr = getReceiver(ast);
+		final var targetExpr = methodRef.getFirstChild();
 		if ("put".equals(methodName))
-			return new KindArgs(BulkKind.PUT_ALL, target, source);
+			return new KindArgs(BulkKind.PUT_ALL, target, source, sourceExpr, targetExpr);
 		if ("add".equals(methodName))
-			return new KindArgs(BulkKind.ADD_ALL, target, source);
+			return new KindArgs(BulkKind.ADD_ALL, target, source, sourceExpr, targetExpr);
 		return null;
 	}
 
@@ -302,15 +383,15 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 		final var getReceiverNode = getReceiver(argInner);
 		if (getReceiverNode == null)
 			return null;
-		if (!AstUtil.exprText(getReceiverNode).equals(AstUtil.exprText(boundReceiver)))
+		if (!AstText.exprText(getReceiverNode).equals(AstText.exprText(boundReceiver)))
 			return null;
 
 		final var target = sliceReceiver(lines, bodyStmt);
-		final var source = sliceNode(lines, boundReceiver);
+		final var source = AstSpan.sliceNode(lines, boundReceiver);
 		if (target == null || source == null)
 			return null;
 
-		return new KindArgs(BulkKind.ADD_ALL, target, source);
+		return new KindArgs(BulkKind.ADD_ALL, target, source, boundReceiver, getReceiver(bodyStmt));
 	}
 
 	@CheckReturnValue
@@ -346,21 +427,21 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 			final var rhsIndex = unwrapExpr(rhsArray.getNextSibling());
 			if (!isIdent(rhsIndex, loopVar))
 				return null;
-			if (!AstUtil.exprText(rhsArray).equals(AstUtil.exprText(boundArrayExpr)))
+			if (!AstText.exprText(rhsArray).equals(AstText.exprText(boundArrayExpr)))
 				return null;
 
-			final var src = sliceNode(lines, rhsArray);
-			final var dst = sliceNode(lines, lhsArray);
+			final var src = AstSpan.sliceNode(lines, rhsArray);
+			final var dst = AstSpan.sliceNode(lines, lhsArray);
 			if (src == null || dst == null)
 				return null;
 			return new KindArgs(BulkKind.ARRAY_COPY, src, dst);
 		}
-		if (AstUtil.isPureExpression(rhs) && !referencesVar(rhs, loopVar)) {
-			if (!AstUtil.exprText(lhsArray).equals(AstUtil.exprText(boundArrayExpr)))
+		if (AstQuery.isPureExpression(rhs) && !referencesVar(rhs, loopVar)) {
+			if (!AstText.exprText(lhsArray).equals(AstText.exprText(boundArrayExpr)))
 				return null;
 
-			final var arr = sliceNode(lines, lhsArray);
-			final var value = sliceNode(lines, rhs);
+			final var arr = AstSpan.sliceNode(lines, lhsArray);
+			final var value = AstSpan.sliceNode(lines, rhs);
 			if (arr == null || value == null)
 				return null;
 			return new KindArgs(BulkKind.FILL, arr, value);
@@ -398,7 +479,7 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 		if (initExpr == null)
 			return null;
 		final var initValue = initExpr.getFirstChild();
-		if (initValue == null || !AstUtil.isZeroLiteral(initValue))
+		if (initValue == null || !AstQuery.isZeroLiteral(initValue))
 			return null;
 
 		final var forCond = ast.findFirstToken(TokenTypes.FOR_CONDITION);
@@ -448,6 +529,17 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	@Nullable
 	public static BulkOp classify(@Nonnull DetailAST ast, @Nonnull List<String> lines) {
+		return classify(ast, lines, ResolutionScope.of(ast));
+	}
+
+	/** As {@link #classify(DetailAST, List)}, against the scope the caller already holds. */
+	@CheckReturnValue
+	@Nullable
+	private static BulkOp classify(
+			@Nonnull DetailAST ast,
+			@Nonnull List<String> lines,
+			@Nonnull ResolutionScope scope
+	) {
 		final var kindArgs = switch (ast.getType()) {
 			case TokenTypes.LITERAL_FOR -> ast.findFirstToken(TokenTypes.FOR_EACH_CLAUSE) != null
 					? checkForEachLoop(ast, lines)
@@ -455,18 +547,21 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 			case TokenTypes.METHOD_CALL -> checkForEachCall(ast, lines);
 			default -> null;
 		};
-		if (kindArgs == null)
+		final var gated = kindArgs == null ? null : applyTypeGate(kindArgs, scope);
+		if (gated == null)
 			return null;
-		final var start = spanStart(ast);
-		final var end = spanEnd(ast);
+		final var start = AstSpan.spanStart(lines, ast);
+		final var end = AstSpan.spanEnd(lines, ast);
+		if (start == null || end == null)
+			return null;
 		return new BulkOp(
-				kindArgs.kind(),
-				kindArgs.first(),
-				kindArgs.second(),
-				start[0],
-				start[1],
-				end[0],
-				end[1],
+				gated.kind(),
+				gated.first(),
+				gated.second(),
+				start.line(),
+				start.index(),
+				end.line(),
+				end.index(),
 				ast.getType() == TokenTypes.LITERAL_FOR
 		);
 	}
@@ -479,19 +574,54 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	@Nullable
 	public static BulkOp classifyAt(@Nonnull DetailAST root, @Nonnull List<String> lines, int line, int column) {
-		final var node = AstUtil.findNodeAt(
+		final var node = AstQuery.findNodeAt(
 				root,
 				line,
 				column,
 				n -> n.getType() == TokenTypes.METHOD_CALL || n.getType() == TokenTypes.LITERAL_FOR
 		);
-		return node == null ? null : classify(node, lines);
+		return node == null ? null : classify(node, lines, ResolutionScope.of(root));
+	}
+
+	/**
+	 * The type of a {@code forEach} lambda parameter, which carries no declared type of its own:
+	 * {@code v} in {@code map.forEach((k, v) -> ...)} takes its type from {@code map}. Every
+	 * {@code forEach} in the JDK hands the receiver's type arguments to the lambda in declaration
+	 * order ({@code Consumer<T>}, {@code BiConsumer<K, V>}), so the n-th parameter reads the n-th
+	 * argument. Restricted to {@code forEach} precisely because that ordering is not general:
+	 * {@code Map.merge}'s {@code BiFunction<V, V, V>} would map its first parameter to {@code V}.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static String forEachLambdaParamType(@Nonnull DetailAST ident, @Nonnull ResolutionScope scope) {
+		for (var scopeNode = ident.getParent(); scopeNode != null; scopeNode = scopeNode.getParent()) {
+			if (scopeNode.getType() != TokenTypes.LAMBDA)
+				continue;
+
+			final var index = lambdaParamIndex(scopeNode, ident.getText());
+			if (index < 0)
+				return null;
+
+			final var elist = scopeNode.getParent();
+			final var call = elist == null ? null : elist.getParent();
+			if (call == null || call.getType() != TokenTypes.METHOD_CALL)
+				return null;
+			if (!"forEach".equals(getCallMethodName(call)))
+				return null;
+
+			final var receiver = getReceiver(call);
+			if (receiver == null || receiver.getType() != TokenTypes.IDENT)
+				return null;
+
+			return AstResolve.variableTypeArgumentName(receiver, receiver.getText(), index);
+		}
+		return null;
 	}
 
 	@CheckReturnValue
 	private static int getArgCount(@Nonnull DetailAST methodCall) {
 		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
-		return elist == null ? 0 : AstUtil.countArguments(elist);
+		return elist == null ? 0 : AstQuery.countArguments(elist);
 	}
 
 	@CheckReturnValue
@@ -572,7 +702,8 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 	@Nullable
 	private static DetailAST getReceiver(@Nonnull DetailAST methodCall) {
 		final var dot = methodCall.findFirstToken(TokenTypes.DOT);
-		return dot != null ? dot.getFirstChild() : null;
+		// grouping parens are siblings under the DOT, so the first child of `(src).f()` is the LPAREN
+		return dot != null ? AstQuery.unwrapParensAndExpr(dot.getFirstChild()) : null;
 	}
 
 	@CheckReturnValue
@@ -616,6 +747,35 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 		return getArgCount(ast) == 0 && isIdent(getReceiver(ast), varName);
 	}
 
+	/**
+	 * Whether {@code expr} is an array whose component is a reference type, the only array shape
+	 * {@code Collections.addAll} accepts. A declaration spells an array {@code Foo[]} while
+	 * reflection spells it {@code [LFoo;}, so both are read here.
+	 */
+	@CheckReturnValue
+	private static boolean isObjectArraySource(@Nonnull DetailAST expr, @Nonnull ResolutionScope scope) {
+		// expressionTypeName's pattern-variable fallback over-answers, which its own contract says is
+		// safe only for callers that REFUSE on the answer; this one rewrites on it
+		if (expr.getType() == TokenTypes.IDENT && !AstResolve.variableIsBound(expr, expr.getText()))
+			return false;
+
+		final var name = AstResolve.expressionTypeName(expr, scope.packageName(), scope.imports());
+		if (name == null)
+			return false;
+
+		// `[[I` and `[Ljava.lang.String;` are both arrays of a reference component; only a
+		// single-bracket primitive descriptor such as `[I` is not
+		if (name.startsWith("["))
+			return name.startsWith("[[") || name.startsWith("[L");
+
+		if (!name.endsWith("[]"))
+			return false;
+
+		final var component = name.substring(0, name.length() - 2);
+		return component.endsWith("[]")
+				|| ReflectionUtil.resolveClassName(component, scope.packageName(), scope.imports()) != null;
+	}
+
 	@CheckReturnValue
 	private static boolean isSimpleIncrement(@Nonnull DetailAST forIter, @Nonnull String varName) {
 		final var elist = forIter.findFirstToken(TokenTypes.ELIST);
@@ -640,25 +800,35 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 	}
 
 	@CheckReturnValue
+	private static int lambdaParamIndex(@Nonnull DetailAST lambda, @Nonnull String name) {
+		final var params = lambda.findFirstToken(TokenTypes.PARAMETERS);
+		if (params == null) {
+			final var naked = lambda.getFirstChild();
+			return naked != null && naked.getType() == TokenTypes.IDENT && name.equals(naked.getText()) ? 0 : -1;
+		}
+
+		var index = 0;
+		for (var param = params.getFirstChild(); param != null; param = param.getNextSibling()) {
+			if (param.getType() != TokenTypes.PARAMETER_DEF)
+				continue;
+			final var ident = param.findFirstToken(TokenTypes.IDENT);
+			if (ident != null && name.equals(ident.getText()))
+				return index;
+			++index;
+		}
+		return -1;
+	}
+
+	@CheckReturnValue
 	@Nonnull
 	private static String messageKey(@Nonnull BulkKind kind) {
 		return switch (kind) {
 			case ADD_ALL -> MSG_ADDALL;
 			case ARRAY_COPY -> MSG_ARRAYCOPY;
+			case COLLECTIONS_ADD_ALL -> MSG_COLLECTIONSADDALL;
 			case FILL -> MSG_FILL;
 			case PUT_ALL -> MSG_PUTALL;
 		};
-	}
-
-	/**
-	 * Whether a space is needed when joining two source fragments of a multi-line operand, so a
-	 * chain break (a line ending {@code x}, the next starting {@code .y}) or a bracketed break
-	 * rejoins without a stray space, while an operator/operand break keeps its separating space.
-	 */
-	@CheckReturnValue
-	private static boolean needsSpaceBetween(char prevLast, char nextFirst) {
-		return prevLast != '(' && prevLast != '['
-				&& nextFirst != ')' && nextFirst != ']' && nextFirst != ',' && nextFirst != '.' && nextFirst != ';';
 	}
 
 	@CheckReturnValue
@@ -677,11 +847,22 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 		return false;
 	}
 
+	/** The fully qualified name of {@code expr}'s type in {@code scope}, or null when unknown. */
+	@CheckReturnValue
+	@Nullable
+	private static String resolvedTypeOf(@Nonnull DetailAST expr, @Nonnull ResolutionScope scope) {
+		var name = AstResolve.expressionTypeName(expr, scope.packageName(), scope.imports());
+		if (name == null && expr.getType() == TokenTypes.IDENT)
+			name = forEachLambdaParamType(expr, scope);
+		return name == null ? null : ReflectionUtil.resolveClassName(name, scope.packageName(), scope.imports());
+	}
+
 	/**
 	 * Slices the source text of {@code methodRef}'s qualifier: from the qualifier's start up to the
 	 * {@code ::} (the {@code METHOD_REF} node's own position), so a type witness ({@code x::<T>m})
-	 * and the method name are excluded. Returns {@code null} for an empty qualifier or one that does
-	 * not start on the {@code ::} line.
+	 * and the method name are excluded. Returns {@code null} for an empty qualifier, one that does
+	 * not start on the {@code ::} line, one whose ends do not convert to char indices, and one whose
+	 * start lands after the {@code ::}.
 	 */
 	@CheckReturnValue
 	@Nullable
@@ -689,21 +870,15 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 		final var first = methodRef.getFirstChild();
 		if (first == null)
 			return null;
-		final var start = spanStart(first);
-		if (start[0] != methodRef.getLineNo() - 1)
+		final var start = AstSpan.spanStart(lines, first);
+		if (start == null || start.line() != methodRef.getLineNo() - 1)
 			return null;
-		final var qualifier = lines.get(start[0]).substring(start[1], methodRef.getColumnNo());
+		final var lineText = lines.get(start.line());
+		final var end = LineText.charIndexOfColumn(lineText, methodRef.getColumnNo());
+		if (end < 0 || start.index() > end)
+			return null;
+		final var qualifier = lineText.substring(start.index(), end);
 		return qualifier.isEmpty() ? null : qualifier;
-	}
-
-	/**
-	 * Slices the source text of {@code node}'s full span, or {@code null} when the span is
-	 * multi-line and carries a comment (see {@link #sliceSpan}).
-	 */
-	@CheckReturnValue
-	@Nullable
-	private static String sliceNode(@Nonnull List<String> lines, @Nonnull DetailAST node) {
-		return sliceSpan(lines, spanStart(node), spanEnd(node));
 	}
 
 	/**
@@ -724,89 +899,7 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 		final var lastReceiverChild = method.getPreviousSibling();
 		if (lastReceiverChild == null)
 			return null;
-		return sliceSpan(lines, spanStart(first), spanEnd(lastReceiverChild));
-	}
-
-	/**
-	 * Slices the source text of the span {@code [start, end)}. A single-line span is returned
-	 * verbatim. A multi-line span is refused ({@code null}) when a comment falls inside it (slicing
-	 * it verbatim and collapsing to one line would comment out the trailing code); otherwise its
-	 * lines are joined, each stripped, with a single space where one is needed to keep adjacent
-	 * tokens apart (see {@link #needsSpaceBetween}).
-	 */
-	@CheckReturnValue
-	@Nullable
-	private static String sliceSpan(@Nonnull List<String> lines, @Nonnull int[] start, @Nonnull int[] end) {
-		if (start[0] == end[0])
-			return lines.get(start[0]).substring(start[1], end[1]);
-		// The operand starts on a code token, so the lexer state at its start column is NONE. Scan
-		// only the operand region [from, to) of each line (not the whole line) so a comment BEFORE
-		// the operand cannot mask one inside it, and carry the state over that region alone.
-		var state = JavaLineScanner.LexerState.NONE;
-		final var joined = new StringBuilder();
-		for (var i = start[0]; i <= end[0]; ++i) {
-			final var line = lines.get(i);
-			final var from = i == start[0] ? start[1] : 0;
-			final var to = i == end[0] ? end[1] : line.length();
-			final var region = line.substring(from, to);
-			if (state.inBlockComment())
-				return null;
-			if (JavaLineScanner.firstCommentMarker(region, state) >= 0)
-				return null;
-			final var fragment = region.strip();
-			if (!fragment.isEmpty()) {
-				if (!joined.isEmpty() && needsSpaceBetween(joined.charAt(joined.length() - 1), fragment.charAt(0)))
-					joined.append(' ');
-				joined.append(fragment);
-			}
-			state = JavaLineScanner.stateAfter(region, state);
-		}
-		return joined.isEmpty() ? null : joined.toString();
-	}
-
-	/**
-	 * The 0-based {@code [line, columnAfter]} of the last token in {@code ast}'s subtree, where
-	 * {@code columnAfter} is the char index immediately past that token. Tokens do not overlap, so
-	 * the node whose start position is furthest right is the last token; its length gives the end.
-	 */
-	@CheckReturnValue
-	@Nonnull
-	private static int[] spanEnd(@Nonnull DetailAST ast) {
-		var best = ast;
-		final var stack = new ArrayDeque<DetailAST>();
-		stack.push(ast);
-		while (!stack.isEmpty()) {
-			final var node = stack.pop();
-			if (node.getLineNo() > best.getLineNo()
-					|| (node.getLineNo() == best.getLineNo() && node.getColumnNo() > best.getColumnNo()))
-				best = node;
-			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
-				stack.push(child);
-		}
-		return new int[]{best.getLineNo() - 1, best.getColumnNo() + best.getText().length()};
-	}
-
-	/**
-	 * The 0-based {@code [line, column]} of the first token in {@code ast}'s subtree (its leftmost,
-	 * topmost position).
-	 */
-	@CheckReturnValue
-	@Nonnull
-	private static int[] spanStart(@Nonnull DetailAST ast) {
-		var line = ast.getLineNo();
-		var col = ast.getColumnNo();
-		final var stack = new ArrayDeque<DetailAST>();
-		stack.push(ast);
-		while (!stack.isEmpty()) {
-			final var node = stack.pop();
-			if (node.getLineNo() < line || (node.getLineNo() == line && node.getColumnNo() < col)) {
-				line = node.getLineNo();
-				col = node.getColumnNo();
-			}
-			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
-				stack.push(child);
-		}
-		return new int[]{line - 1, col};
+		return AstSpan.sliceSpan(lines, AstSpan.spanStart(lines, first), AstSpan.spanEnd(lines, lastReceiverChild));
 	}
 
 	@CheckReturnValue
@@ -815,13 +908,23 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 		return ast != null && ast.getType() == TokenTypes.EXPR ? ast.getFirstChild() : ast;
 	}
 
-	// held per file rather than rebuilt per token: `getDefaultTokens` registers two very common
-	// tokens, so copying the whole file at each visit is quadratic in file size
+	// both held per file rather than rebuilt per token: `getDefaultTokens` registers two very
+	// common tokens, so redoing either at each visit is quadratic in file size
 	private List<String> sourceLines = List.of();
 
+	private ResolutionScope scope = ResolutionScope.EMPTY;
+
 	@Override
-	public void beginTree(@Nonnull DetailAST rootAST) {
-		sourceLines = List.of(getLines());
+	protected void beginFile(@Nullable DetailAST rootAST) {
+		// a bare instance has no file contents, which a null root is the only signal of
+		sourceLines = rootAST == null ? List.of() : List.of(getLines());
+		scope = ResolutionScope.of(rootAST);
+	}
+
+	@Override
+	protected void finishFile(@Nullable DetailAST rootAST) {
+		scope = ResolutionScope.EMPTY;
+		sourceLines = List.of();
 	}
 
 	@Nonnull
@@ -831,8 +934,8 @@ public class PreferBulkOperationCheck extends AbstractAstCheck {
 	}
 
 	@Override
-	public void visitToken(@Nonnull DetailAST ast) {
-		final var op = classify(ast, sourceLines);
+	protected void visitScopedToken(@Nonnull DetailAST ast) {
+		final var op = classify(ast, sourceLines, scope);
 		if (op != null)
 			log(ast, messageKey(op.kind()), op.first(), op.second());
 	}

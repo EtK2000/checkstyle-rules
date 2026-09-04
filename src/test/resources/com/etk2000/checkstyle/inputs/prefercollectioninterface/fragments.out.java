@@ -17,6 +17,22 @@ import java.util.ArrayList;
 	List<String> m() { return null; }
 // === end ===
 
+// === case: record_word_in_comment_not_a_pair ===
+import java.util.ArrayList;
+	static List<String> getItems() { // record
+// === end ===
+
+// === case: record_word_in_string_not_a_pair ===
+import java.util.ArrayList;
+	static List<String> getItems() { return of("record");
+// === end ===
+
+// === case: replacement_import_already_present ===
+import java.util.ArrayList;
+import java.util.List;
+	List<String> m() { return null; }
+// === end ===
+
 // === case: return_and_param_param ===
 import java.util.ArrayList;
 import java.util.HashSet;

@@ -34,4 +34,12 @@ record header to single-line form when components fit in 120 columns, or to mult
 | Multi-line record header where a block comment or text block spans lines (opens on one line, closes on a later one) | Cross-line comment/text-block state cannot be tracked when matching the closing paren, so the header cannot be collapsed safely; bail to avoid corrupting it |
 | Record header already in canonical single-line or multi-line form (no-op) | The fixer detects when its output would equal the input and returns null instead of looping |
 
+## Known unsound
+
+Unlike the rows above, these are not skips: the check reports and the result may be wrong.
+
+| Pattern | Reason |
+| --- | --- |
+| Record header line containing a supplementary character before the `{` (an astral char in a trailing comment or an annotation string) | The brace-spacing check indexes the line with the `{`'s code-point column, so a non-BMP character earlier on the line leaves the index short by one unit per such character and the wrong character is inspected. The result is a spurious or missed brace-spacing violation. Reporting only, no splice, so nothing is corrupted, and the index cannot go out of range because a code-point column never exceeds the char length |
+
 Part of [auto-fix coverage](../auto-fix-coverage.md).

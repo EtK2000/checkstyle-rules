@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle.format;
 
+import com.etk2000.checkstyle.JavaLineScanner.LexerState;
 import com.etk2000.checkstyle.format.SpanReformat.CannotReformat;
 import com.etk2000.checkstyle.format.SpanReformat.Reason;
 import com.etk2000.checkstyle.format.SpanReformat.Reformatted;
@@ -24,11 +25,11 @@ import javax.annotation.Nonnull;
  * AST, so a nested ternary, string, or comment inside a branch is carried verbatim within its
  * segment). Because the whole ternary is re-emitted, this also satisfies the opening/closing layout
  * rules on the same ternary. Collapsing is refused when a {@code //} comment would be swallowed by a
- * joined segment or a branch spans a text block or multi-line block comment.
+ * joined segment; a segment that spans a text block or multi-line block comment is re-emitted verbatim
+ * instead.
  *
- * <p>This is a reformatting utility with no dependency on any particular check or fixer, so a future
- * formatting fixer can reuse it. It applies no line-length policy: callers measure the returned lines
- * and decide whether the result is acceptable.
+ * <p>It applies no line-length policy: callers measure the returned lines and decide whether the result
+ * is acceptable.
  */
 public final class JavaTernaryReformatter {
 	/**
@@ -73,7 +74,7 @@ public final class JavaTernaryReformatter {
 
 	/**
 	 * Re-lays-out the ternary whose {@code QUESTION} node is {@code question} (as returned by
-	 * {@code MultilineCallFormattingCheck.resolvableTernaryLayoutQuestion}). The ternary must be a call
+	 * {@code MultilineCallMoves.resolvableTernaryLayoutQuestion}). The ternary must be a call
 	 * argument; {@code lines} are the current source lines the {@code question} AST was parsed from.
 	 */
 	@CheckReturnValue
@@ -102,8 +103,6 @@ public final class JavaTernaryReformatter {
 				|| !SpanReformat.pointsAt(lines, closeIdx, closeCol, ')'))
 			return new CannotReformat(Reason.STALE);
 
-		// which lines begin inside a text block / multi-line comment: a segment spanning one cannot be
-		// joined onto its canonical line, so it is re-emitted verbatim instead
 		final var beginsInLiteral = SpanReformat.beginsInMultilineLiteralByLine(lines, openIdx, closeIdx);
 		final var headVerbatim = spansLiteral(beginsInLiteral, openIdx, openIdx, qIdx);
 		final var trueVerbatim = spansLiteral(beginsInLiteral, openIdx, qIdx, cIdx);
@@ -113,10 +112,12 @@ public final class JavaTernaryReformatter {
 		final var trueFragments = SpanReformat.slice(lines, qIdx, qCol + 1, cIdx, cCol);
 		final var falseFragments = SpanReformat.slice(lines, cIdx, cCol + 1, closeIdx, closeCol);
 
-		// a `//` comment on a joined line would swallow the rest, but only for a segment being COLLAPSED
-		if ((!headVerbatim && SpanReformat.swallowsComment(headFragments))
-				|| (!trueVerbatim && SpanReformat.swallowsComment(trueFragments))
-				|| (!falseVerbatim && SpanReformat.swallowsComment(falseFragments)))
+		// a `//` comment on a joined line would swallow the rest, but only for a segment being COLLAPSED.
+		// The head slice starts at column 0, so it needs the state threaded from the file start; the other
+		// two start just past the `?`/`:`, which is code, so they begin in NONE
+		if ((!headVerbatim && SpanReformat.swallowsComment(headFragments, SpanReformat.lexerStateAt(lines, openIdx)))
+				|| (!trueVerbatim && SpanReformat.swallowsComment(trueFragments, LexerState.NONE))
+				|| (!falseVerbatim && SpanReformat.swallowsComment(falseFragments, LexerState.NONE)))
 			return new CannotReformat(Reason.COMMENT_ON_JOINED_LINE);
 
 		final var broken = new ArrayList<String>();

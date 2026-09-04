@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
@@ -62,8 +64,8 @@ public class PreferStaticImportConstantCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	@Nullable
 	public static DetailAST findStaticInitAssign(@Nonnull DetailAST objBlock, @Nonnull String fieldName) {
-		final var enclosingTypeName = AstUtil.getEnclosingTypeName(objBlock);
-		final var packageName = AstUtil.getPackageName(objBlock);
+		final var enclosingTypeName = AstText.getEnclosingTypeName(objBlock);
+		final var packageName = AstText.getPackageName(objBlock);
 		DetailAST found = null;
 		for (var child = objBlock.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() != TokenTypes.STATIC_INIT)
@@ -100,7 +102,7 @@ public class PreferStaticImportConstantCheck extends AbstractAstCheck {
 			return fieldName.equals(lhs.getText());
 		if (lhs.getType() != TokenTypes.DOT || enclosingTypeName == null)
 			return false;
-		if (!AstUtil.isPureDotChainOrIdent(lhs))
+		if (!AstQuery.isPureDotChainOrIdent(lhs))
 			return false;
 		final var lhsText = FullIdent.createFullIdent(lhs).getText();
 		if (lhsText.equals(enclosingTypeName + "." + fieldName))
@@ -240,10 +242,10 @@ public class PreferStaticImportConstantCheck extends AbstractAstCheck {
 	}
 
 	private void processAlias(@Nonnull DetailAST reportTarget, @Nonnull DetailAST initRoot) {
-		final var init = AstUtil.unwrapParensAndExpr(initRoot);
+		final var init = AstQuery.unwrapParensAndExpr(initRoot);
 		if (init == null || init.getType() != TokenTypes.DOT)
 			return;
-		if (!AstUtil.isPureDotChainOrIdent(init))
+		if (!AstQuery.isPureDotChainOrIdent(init))
 			return;
 
 		final var leftSubtree = init.getFirstChild();
@@ -335,7 +337,7 @@ public class PreferStaticImportConstantCheck extends AbstractAstCheck {
 				|| modifiers.findFirstToken(TokenTypes.FINAL) == null)
 			return;
 
-		if (AstUtil.hasSuppressWarnings(modifiers, SUPPRESS_KEY))
+		if (AstQuery.hasSuppressWarnings(modifiers, SUPPRESS_KEY))
 			return;
 		for (var enclosing = parent.getParent(); enclosing != null; enclosing = enclosing.getParent()) {
 			final var type = enclosing.getType();
@@ -344,7 +346,7 @@ public class PreferStaticImportConstantCheck extends AbstractAstCheck {
 					&& type != TokenTypes.ANNOTATION_DEF)
 				continue;
 			final var typeModifiers = enclosing.findFirstToken(TokenTypes.MODIFIERS);
-			if (typeModifiers != null && AstUtil.hasSuppressWarnings(typeModifiers, SUPPRESS_KEY))
+			if (typeModifiers != null && AstQuery.hasSuppressWarnings(typeModifiers, SUPPRESS_KEY))
 				return;
 		}
 

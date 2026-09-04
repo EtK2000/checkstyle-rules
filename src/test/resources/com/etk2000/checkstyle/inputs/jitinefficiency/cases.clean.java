@@ -13,6 +13,12 @@ class InputJitInefficiencyClean {
 		RED
 	}
 
+	static class Log {
+		void append(String s) {
+			System.out.println(s);
+		}
+	}
+
 	private static final Color[] CACHED_VALUES = Color.values();
 	private static final Pattern P = Pattern.compile("\\d+");
 	private static final Pattern STATIC_INIT_PATTERN;
@@ -33,6 +39,22 @@ class InputJitInefficiencyClean {
 	void appendChained(StringBuilder sb, String key, String value) {
 		sb.append(key).append('=').append(value);
 		sb.append("plain");
+	}
+
+	// the receiver gate is affirmative: a call result is not provably a builder, so the concat is
+	// not reported rather than reported and refused. Moved here from a skip-slice when the gate
+	// changed, because a void `append` on a user class produced `out.append(a).append(b)`
+	void appendCallReceiverIsClean() {
+		buf().append("len=" + buf().length());
+	}
+
+	void appendIndexedBuilderReceiverIsClean(StringBuilder[] bufs, String a, String b) {
+		// an array element is not one of the receiver shapes the gate proves, so it is not reported
+		bufs[0].append(a + b);
+	}
+
+	void appendNonBuilderReceiverIsClean(Log out, String a, String b) {
+		out.append(a + b);
 	}
 
 	void appendNumericAddIsClean(StringBuilder sb, int a, int b) {
@@ -323,8 +345,120 @@ class InputJitInefficiencyClean {
 			System.out.println(fixed);
 	}
 
+	void appendConcatOnResolvedResourceReceiverIsClean(String value) throws Exception {
+		try (var writer = new java.io.CharArrayWriter()) {
+			writer.append(value + "!");
+		}
+	}
+
+	void regexInLoopOnResolvedResourceReceiverIsClean() throws Exception {
+		try (var tokenizer = new InputJitInefficiencyTokenizer()) {
+			for (var i = 0; i < 3; ++i)
+				tokenizer.split(",");
+		}
+	}
+
+	private StringBuilder buf() {
+		return new StringBuilder();
+	}
+
 	private Long compute() {
 		return 0L;
+	}
+}
+
+class InputJitInefficiencyAnonymousSuperBase {
+	protected final InputJitInefficiencySuperReceiverBase.Sink sb = new InputJitInefficiencySuperReceiverBase.Sink();
+
+	void go(String a, String b) {
+		System.out.println(a + b);
+	}
+}
+
+class InputJitInefficiencyAnonymousSuperOuter extends InputJitInefficiencySuperBuilderBase {
+	// `super.sb` inside the anonymous body reads the type it extends, not this class's supertype.
+	// Reading the outer one typed a void-returning Sink.append as a builder and emitted
+	// `super.sb.append(a).append(b)`, which fails with "void cannot be dereferenced"
+	InputJitInefficiencyAnonymousSuperBase make() {
+		return new InputJitInefficiencyAnonymousSuperBase() {
+			@Override
+			void go(String a, String b) {
+				super.sb.append(a + b);
+			}
+		};
+	}
+}
+
+class InputJitInefficiencySuperBuilderBase {
+	protected final StringBuilder sb = new StringBuilder();
+}
+
+class InputJitInefficiencyUnboundReceiverClean extends InputJitInefficiencyUnboundReceiverOffFileStandIn {
+	// `holder` has no declaration this file can see, so its type is unknown. Only `this` reads its
+	// fields off the enclosing class; letting an unresolved name share that path typed `holder.sb`
+	// from the same-named field below and emitted `holder.sb.append(a).append(b)`
+	private final StringBuilder sb = new StringBuilder();
+
+	void unboundReceiverIsClean(String a, String b) {
+		holder.sb.append(a + b);
+	}
+
+	StringBuilder own() {
+		return sb;
+	}
+}
+
+class InputJitInefficiencyEnumConstantSuperOuter extends InputJitInefficiencySuperBuilderBase {
+	// an enum constant's body extends the enum, not this class, so `super.sb` names nothing here.
+	// Reading the enclosing class's supertype emitted `super.sb.append(a).append(b)`, which fails
+	// with "cannot find symbol: sb"
+	enum E {
+		A {
+			@Override
+			void go(String a, String b) {
+				super.sb.append(a + b);
+			}
+		};
+
+		final StringBuilder sb = new StringBuilder();
+
+		void go(String a, String b) {
+			System.out.println(a + b);
+		}
+	}
+}
+
+class InputJitInefficiencySuperReceiverBase {
+	static class Sink {
+		void append(String s) {
+			System.out.println(s);
+		}
+	}
+
+	protected final Sink sb = new Sink();
+}
+
+class InputJitInefficiencySuperReceiverClean extends InputJitInefficiencySuperReceiverBase {
+	// `super.sb` is resolved on the supertype, so the subclass field shadowing it does not make a
+	// non-builder look like a builder
+	private final StringBuilder sb = new StringBuilder();
+
+	void shadowedSuperReceiverIsClean(String a, String b) {
+		super.sb.append(a + b);
+	}
+
+	void ownBuilderStillReads(String a) {
+		System.out.println(sb.length() + a);
+	}
+}
+
+class InputJitInefficiencyTokenizer implements AutoCloseable {
+	@Override
+	public void close() {
+	}
+
+	void split(String separator) {
+		System.out.println(separator);
 	}
 }
 

@@ -50,11 +50,51 @@ class InputLambdaParamAnnotationArgStringArrowSliceViolation {
 }
 // === end ===
 
+// === case: block_comment_before_annotation ===
+// imports: java.util.List
+class InputLambdaParamBlockCommentBeforeAnnotationSliceViolation {
+	@interface A {}
+
+	void m(List<String> list) {
+		list.forEach((/* c */ @A var x) -> System.out.println(x));
+	}
+}
+// === end ===
+
 // === case: block_comment_before_arrow ===
 // imports: java.util.List
 class InputLambdaParamBlockCommentBeforeArrowSliceViolation {
 	void m(List<String> list) {
 		list.forEach(x -> System.out.println(x));
+	}
+}
+// === end ===
+
+// === case: block_comment_trailing_name ===
+// imports: java.util.List
+class InputLambdaParamBlockCommentTrailingNameSliceViolation {
+	void m(List<String> list) {
+		list.forEach(x -> System.out.println(x));
+	}
+}
+// === end ===
+
+// === case: block_comment_trailing_name_annotated ===
+// imports: java.util.List
+class InputLambdaParamBlockCommentTrailingNameAnnotatedSliceViolation {
+	@interface A {}
+
+	void m(List<String> list) {
+		list.forEach((@A var x) -> System.out.println(x));
+	}
+}
+// === end ===
+
+// === case: block_comment_trailing_name_second_param ===
+// imports: java.util.List
+class InputLambdaParamBlockCommentTrailingNameSecondParamSliceViolation {
+	void m(List<String> list) {
+		list.sort((x, y) -> x.compareTo(y));
 	}
 }
 // === end ===

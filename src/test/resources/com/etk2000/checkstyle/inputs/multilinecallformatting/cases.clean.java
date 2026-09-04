@@ -310,6 +310,14 @@ class InputMultilineCallClean {
 		}, 1000);
 	}
 
+	void postDelayedBlockCommentBodyStaysMultiline() {
+		handler.postDelayed(() -> {
+			/* first
+			second */
+			doThing();
+		}, 1000);
+	}
+
 	void postDelayedMethodRefStaysClean() {
 		handler.postDelayed(this::doThing, 1000);
 	}
@@ -321,6 +329,15 @@ class InputMultilineCallClean {
 	void postDelayedReturnBodyStacked() {
 		handler.postDelayed(() -> {
 			return;
+		}, 1000);
+	}
+
+	void postDelayedTextBlockBodyStaysMultiline() {
+		handler.postDelayed(() -> {
+			doThing(
+					"""
+							text"""
+			);
 		}, 1000);
 	}
 
@@ -385,6 +402,11 @@ class InputMultilineCallClean {
 				.put("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", 1);
 	}
 
+	void putJsonObjectSinglePutJustUnderLimitWithTrailingComment() {
+		new JSONObject()
+				.put("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", 1); // this trailing comment is what pushes the joined line past the limit
+	}
+
 	void putJsonObjectSinglePutMissingValue() {
 		new JSONObject()
 				.put("k");
@@ -398,6 +420,15 @@ class InputMultilineCallClean {
 		cache.put("someExtremelyLongKeyNameThatByItselfAlreadyForcesUsWellBeyondTheColumnBudget", new JSONObject()
 				.put("anotherFairlyLongInnerKeyNameHere", 123456789)
 		);
+	}
+
+	void putJsonObjectSinglePutTextBlockKey() {
+		new JSONObject()
+				.put(
+						"""
+								k""",
+						1
+				);
 	}
 
 	void putJsonObjectSinglePutThreeArgs() {
@@ -427,6 +458,14 @@ class InputMultilineCallClean {
 		cache.put(
 				"aKeyNameLongEnoughThatTheCollapsedSingleLineFormWouldExceedOneHundredTwentyColumns",
 				new JSONObject().put("innerKeyNameAlsoContributingLength", "theValueString")
+		);
+	}
+
+	void putKeyTextBlockChainedValueSuppressed() {
+		cache.put(
+				"""
+						k""",
+				new JSONObject().put("innerKey", "theValueString")
 		);
 	}
 
@@ -821,9 +860,25 @@ class InputMultilineCallGetStringNotContext {
 		);
 	}
 
+	void contextArrayParameterGetString(Context[] arrayCtx) {
+		method(
+				arrayCtx.getString(
+						1
+				)
+		);
+	}
+
 	void dottedNonContextMethodGetString() {
 		method(
 				something.notAContextMethod().getString(
+						1
+				)
+		);
+	}
+
+	void dottedTypeNotContextParameterGetString(content.Context.Inner innerCtx) {
+		method(
+				innerCtx.getString(
 						1
 				)
 		);
@@ -866,6 +921,14 @@ class InputMultilineCallGetStringNotContext {
 		method(
 				bundle.getString(
 						"key"
+				)
+		);
+	}
+
+	void varargsContextParameterGetString(Context... varargsCtx) {
+		method(
+				varargsCtx.getString(
+						1
 				)
 		);
 	}

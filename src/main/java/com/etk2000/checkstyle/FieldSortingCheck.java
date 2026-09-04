@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -61,7 +63,7 @@ public class FieldSortingCheck extends AbstractAstCheck {
 			return;
 		for (var ann = annotations.getFirstChild(); ann != null; ann = ann.getNextSibling()) {
 			if (ann.getType() == TokenTypes.ANNOTATION)
-				keys.add(AstUtil.canonicalAnnotation(ann, MAX_ANNOTATION_DEPTH));
+				keys.add(AstText.canonicalAnnotation(ann, MAX_ANNOTATION_DEPTH));
 		}
 	}
 
@@ -82,7 +84,7 @@ public class FieldSortingCheck extends AbstractAstCheck {
 		final var keys = new ArrayList<String>();
 		for (var child = modifiers.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() == TokenTypes.ANNOTATION)
-				keys.add(AstUtil.canonicalAnnotation(child, MAX_ANNOTATION_DEPTH));
+				keys.add(AstText.canonicalAnnotation(child, MAX_ANNOTATION_DEPTH));
 		}
 		if (keys.isEmpty())
 			return List.of();
@@ -127,7 +129,7 @@ public class FieldSortingCheck extends AbstractAstCheck {
 			}
 			// walking to the last child would pick up a TYPE_ARGUMENTS sibling and render
 			// its token name; dottedName stops at the qualified segments
-			case TokenTypes.DOT -> sb.append(AstUtil.dottedName(ast));
+			case TokenTypes.DOT -> sb.append(AstText.dottedName(ast));
 			case TokenTypes.IDENT, TokenTypes.LITERAL_BOOLEAN, TokenTypes.LITERAL_BYTE,
 			     TokenTypes.LITERAL_CHAR, TokenTypes.LITERAL_DOUBLE, TokenTypes.LITERAL_FLOAT,
 			     TokenTypes.LITERAL_INT, TokenTypes.LITERAL_LONG,
@@ -279,7 +281,7 @@ public class FieldSortingCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	@Nullable
 	public static DetailAST objblockAt(@Nonnull DetailAST root, int line, int column) {
-		final var member = AstUtil.findNodeAt(
+		final var member = AstQuery.findNodeAt(
 				root,
 				line,
 				column,
@@ -499,7 +501,7 @@ public class FieldSortingCheck extends AbstractAstCheck {
 			var parentModifiers = parent.findFirstToken(TokenTypes.MODIFIERS);
 			if (parentModifiers == null)
 				parentModifiers = parent.findFirstToken(TokenTypes.ANNOTATIONS);
-			if (parentModifiers != null && AstUtil.hasSuppressWarnings(parentModifiers, "FieldSorting"))
+			if (parentModifiers != null && AstQuery.hasSuppressWarnings(parentModifiers, "FieldSorting"))
 				return;
 		}
 

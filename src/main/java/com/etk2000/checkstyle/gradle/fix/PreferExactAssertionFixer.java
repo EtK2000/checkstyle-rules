@@ -4,11 +4,13 @@ import static com.etk2000.checkstyle.PreferExactAssertionCheck.ASSERT_CLASS;
 import static com.etk2000.checkstyle.PreferExactAssertionCheck.ASSERTIONS_CLASS;
 import static com.etk2000.checkstyle.PreferExactAssertionCheck.isJunitAssertClass;
 
-import com.etk2000.checkstyle.AstUtil;
 import com.etk2000.checkstyle.JavaLineScanner;
 import com.etk2000.checkstyle.JavaLineScanner.LexerState;
+import com.etk2000.checkstyle.TopLevelScan;
+import com.etk2000.checkstyle.TopLevelScan.Brackets;
+import com.etk2000.checkstyle.TopLevelScan.Underflow;
+import com.etk2000.checkstyle.ast.AstText;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -61,6 +63,15 @@ class PreferExactAssertionFixer implements CheckstyleFixer {
 			"assertNull", "assertSame", "assertThrows", "assertTimeout",
 			"assertTimeoutPreemptively", "assertTrue", "fail"
 	);
+
+	private static final String INSTANCEOF = " instanceof ";
+
+	/**
+	 * The scans run over an argument list already cut out of its call, so a stray closer
+	 * means the cut was wrong and whatever follows it must not be treated as another
+	 * top-level argument.
+	 */
+	private static final TopLevelScan STRUCTURAL_SCAN = new TopLevelScan(Brackets.ALL, Underflow.SIGNED);
 
 	/**
 	 * Scans existing static imports for a JUnit 5 {@code Assertions} prefix and adds the
@@ -124,7 +135,7 @@ class PreferExactAssertionFixer implements CheckstyleFixer {
 				continue;
 
 			if (parsed.wildcard()) {
-				if (isJunitAssertClass(AstUtil.simpleName(parsed.fqn())))
+				if (isJunitAssertClass(AstText.simpleName(parsed.fqn())))
 					return;
 				continue;
 			}
@@ -134,7 +145,7 @@ class PreferExactAssertionFixer implements CheckstyleFixer {
 				continue;
 			final var methodName = parsed.fqn().substring(lastDot + 1);
 			final var classFqn = parsed.fqn().substring(0, lastDot);
-			if (!isJunitAssertClass(AstUtil.simpleName(classFqn)))
+			if (!isJunitAssertClass(AstText.simpleName(classFqn)))
 				continue;
 			if (oppositeMethod.equals(methodName))
 				return;
@@ -284,10 +295,6 @@ class PreferExactAssertionFixer implements CheckstyleFixer {
 		return new CallFix(lineIndex, span.semiLine(), resultLines, rewritten.replacementMethod, qualified, qualifierSimpleName);
 	}
 
-	/**
-	 * Collapses runs of whitespace (including newlines) to single spaces. Used to
-	 * normalize an LHS that crossed lines in the original source.
-	 */
 	@CheckReturnValue
 	@Nonnull
 	private static String collapseWhitespace(@Nonnull String s) {
@@ -487,29 +494,20 @@ class PreferExactAssertionFixer implements CheckstyleFixer {
 	}
 
 	/**
-	 * Returns the index of {@code " instanceof "} in {@code text} that sits at
+	 * Returns the index of {@link #INSTANCEOF} in {@code text} that sits at
 	 * paren/bracket/brace depth 0, outside any string/char/text-block or comment content.
-	 * Returns -1 if no top-level occurrence exists. Unlike a plain
-	 * {@link LambdaCallParser#indexOfStructural} this also respects paren depth so a
-	 * sub-expression like {@code "...(x instanceof Y)..."} is correctly skipped. The scan runs
-	 * over the masked text so literal/comment content can't contribute brackets to the depth
-	 * count or a spurious {@code instanceof}; the returned index aligns with {@code text}.
+	 * Returns -1 if no top-level occurrence exists.
+	 *
+	 * <p>The token must match in the unmasked text as well, because masking blanks comment
+	 * content to spaces: in {@code x/*}{@code c*}{@code /instanceof Y} the needle's leading
+	 * space is the {@code /} of the comment terminator, and slicing {@code text} there would
+	 * hand back {@code x/*}{@code c*} as the left operand, an unterminated comment that
+	 * swallows the rest of the file. A comment surrounded by real spaces still matches and
+	 * is carried into the operand untouched.</p>
 	 */
 	@CheckReturnValue
 	private static int findTopLevelInstanceof(@Nonnull String text) {
-		final var needle = " instanceof ";
-		final var masked = JavaLineScanner.stripCommentsAndStrings(text, LexerState.NONE);
-		var depth = 0;
-		for (var i = 0; i + needle.length() <= masked.length(); ++i) {
-			final var c = masked.charAt(i);
-			if (c == '(' || c == '[' || c == '{')
-				++depth;
-			else if (c == ')' || c == ']' || c == '}')
-				--depth;
-			else if (depth == 0 && masked.startsWith(needle, i))
-				return i;
-		}
-		return -1;
+		return STRUCTURAL_SCAN.indexOf(text, (masked, i) -> masked.startsWith(INSTANCEOF, i) && text.startsWith(INSTANCEOF, i));
 	}
 
 	/**
@@ -537,7 +535,7 @@ class PreferExactAssertionFixer implements CheckstyleFixer {
 	private static boolean hasJunit4AssertImport(@Nonnull List<String> lines) {
 		return hasStaticImportOfClass(
 				lines,
-				fqn -> ASSERT_CLASS.equals(AstUtil.simpleName(fqn))
+				fqn -> ASSERT_CLASS.equals(AstText.simpleName(fqn))
 		);
 	}
 
@@ -589,7 +587,7 @@ class PreferExactAssertionFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	private static boolean isJunit5AssertionsClass(@Nonnull String fqn) {
-		return ASSERTIONS_CLASS.equals(AstUtil.simpleName(fqn));
+		return ASSERTIONS_CLASS.equals(AstText.simpleName(fqn));
 	}
 
 	/**
@@ -672,7 +670,7 @@ class PreferExactAssertionFixer implements CheckstyleFixer {
 
 		final var instOffset = findTopLevelInstanceof(content);
 		final var lhs = collapseWhitespace(content.substring(0, instOffset).strip());
-		var typePart = collapseWhitespace(content.substring(instOffset + " instanceof ".length()).strip());
+		var typePart = collapseWhitespace(content.substring(instOffset + INSTANCEOF.length()).strip());
 
 		final var replacement = negated ? negative : positive;
 		// pattern binding ("Y y") is only reachable when the assertion's effective polarity
@@ -805,32 +803,12 @@ class PreferExactAssertionFixer implements CheckstyleFixer {
 		return null;
 	}
 
-	/**
-	 * Splits {@code argsText} at top-level commas, respecting parens, brackets, braces, and
-	 * string/char/text-block/comment content (commas inside those don't split). Commas are located
-	 * on the masked text so literal and comment content is ignored, and the arg substrings are
-	 * sliced from the original so that content is preserved verbatim. Returns trimmed arg substrings.
-	 */
 	@CheckReturnValue
 	@Nonnull
 	private static List<String> splitTopLevelArgs(@Nonnull String argsText) {
-		final var masked = JavaLineScanner.stripCommentsAndStrings(argsText, LexerState.NONE);
-		final var result = new ArrayList<String>();
-		var depth = 0;
-		var start = 0;
-		for (var i = 0; i < masked.length(); ++i) {
-			final var c = masked.charAt(i);
-			if (c == '(' || c == '[' || c == '{')
-				++depth;
-			else if (c == ')' || c == ']' || c == '}')
-				--depth;
-			else if (c == ',' && depth == 0) {
-				result.add(argsText.substring(start, i).strip());
-				start = i + 1;
-			}
-		}
-		result.add(argsText.substring(start).strip());
-		return result;
+		final var args = STRUCTURAL_SCAN.split(argsText, ',');
+		args.replaceAll(String::strip);
+		return args;
 	}
 
 	/**
@@ -1119,7 +1097,7 @@ class PreferExactAssertionFixer implements CheckstyleFixer {
 			// the negation rewrite works under either framework. Skip only when we can't infer
 			// a class to import from, or when both frameworks are imported simultaneously
 			// (the swap would change which class resolves the unqualified call).
-			if (!hasStaticImportOfClass(lines, fqn -> isJunitAssertClass(AstUtil.simpleName(fqn))))
+			if (!hasStaticImportOfClass(lines, fqn -> isJunitAssertClass(AstText.simpleName(fqn))))
 				return new SkipResult(SkipMessages.PREFER_ASSERT_SKIP);
 			if (hasAssertionsImport(lines) && hasJunit4AssertImport(lines))
 				return new SkipResult(SkipMessages.PREFER_ASSERT_SKIP);

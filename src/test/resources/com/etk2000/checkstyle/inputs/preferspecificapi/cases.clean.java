@@ -395,10 +395,24 @@ class InputSpecificApiClean {
 }
 
 class InputSpecificApiReflectionClean {
+	static final Map<Integer, String> SHARED = Map.of();
+
+	List<String> listField = List.of();
+
 	Map<Integer, String> mapField = Map.of();
+
+	Map<Integer, String>[] mapRows;
+
+	void arrayElementReceiverGetZero() {
+		System.out.println(mapRows[0].get(0));
+	}
 
 	void chainedCallResolvesToMap(Map<Integer, String> map) {
 		System.out.println(Collections.synchronizedMap(map).get(0));
+	}
+
+	void lambdaParamMapGetZero(List<Map<Integer, String>> maps) {
+		maps.forEach((Map<Integer, String> m) -> System.out.println(m.get(0)));
 	}
 
 	void mapFieldGetZero() {
@@ -412,5 +426,217 @@ class InputSpecificApiReflectionClean {
 	void objectEqualsEmpty(Object obj) {
 		if (obj.equals(""))
 			System.out.println("empty");
+	}
+
+	void shadowingCatchGetZero() {
+		try {
+			System.out.println("x");
+		}
+		catch (IllegalStateException listField) {
+			System.out.println(listField.get(0));
+		}
+	}
+
+	void shadowingLambdaParamGetZero(List<Map<Integer, String>> maps) {
+		maps.forEach((Map<Integer, String> listField) -> System.out.println(listField.get(0)));
+	}
+
+	void staticFieldReceiverGetZero() {
+		System.out.println(InputSpecificApiReflectionClean.SHARED.get(0));
+	}
+
+	void thisQualifiedMapFieldGetZero(String mapField) {
+		System.out.println(this.mapField.get(0));
+	}
+}
+
+class InputSpecificApiResourceReceiverClean {
+	void sameFileResourceReceiverGetLast() throws Exception {
+		try (var buffer = new InputSpecificApiResourceBuffer()) {
+			System.out.println(buffer.get(buffer.size() - 1));
+		}
+	}
+
+	void sameFileResourceReceiverGetZero() throws Exception {
+		try (var buffer = new InputSpecificApiResourceBuffer()) {
+			System.out.println(buffer.get(0));
+		}
+	}
+
+	void sameFileResourceReceiverIndexOf() throws Exception {
+		try (var buffer = new InputSpecificApiResourceBuffer()) {
+			if (buffer.indexOf("xy") >= 0)
+				System.out.println();
+		}
+	}
+
+	void sameFileResourceReceiverRemoveLast() throws Exception {
+		try (var buffer = new InputSpecificApiResourceBuffer()) {
+			buffer.remove(buffer.size() - 1);
+		}
+	}
+
+	void sameFileResourceReceiverRemoveZero() throws Exception {
+		try (var buffer = new InputSpecificApiResourceBuffer()) {
+			buffer.remove(0);
+		}
+	}
+}
+
+class InputSpecificApiResourceBuffer implements AutoCloseable {
+	@Override
+	public void close() {
+	}
+
+	Object get(int index) {
+		return null;
+	}
+
+	int indexOf(String needle) {
+		return needle.length();
+	}
+
+	boolean remove(int index) {
+		return index >= 0;
+	}
+
+	int size() {
+		return 0;
+	}
+}
+
+class InputSpecificApiInheritedFieldBase {
+	Map<Integer, String> inheritedMap = Map.of();
+}
+
+class InputSpecificApiInheritedFieldClean extends InputSpecificApiInheritedFieldBase {
+	void inheritedMapFieldGetZero() {
+		System.out.println(inheritedMap.get(0));
+	}
+}
+
+/**
+ * Shapes the check deliberately stays silent on, migrated from fragments when the fixer stopped
+ * matching text: every literal notation other than exactly "0"/"1" is a non-match, a negation
+ * binds tighter than the comparison, and a receiver whose type cannot be confirmed is refused.
+ */
+class InputSpecificApiLiteralBoundaryClean {
+	static class Holder {
+		String name;
+	}
+
+	Holder obj;
+
+	String foo() {
+		return "";
+	}
+
+	String getStr() {
+		return "";
+	}
+
+	void lengthAlreadyNegated(String str) {
+		if (!str.length() > 0)
+			return;
+	}
+
+	void lengthComplexReceiver() {
+		if (getStr().length() > 0)
+			return;
+	}
+
+	void lengthDottedReceiver() {
+		if (obj.name.length() > 0)
+			return;
+	}
+
+	void lengthEqualsZeroFollowedByLetter(String s) {
+		if (s.length() == 0xF)
+			return;
+	}
+
+	void lengthLessThanFollowedByDigit(String s) {
+		if (s.length() < 10)
+			return;
+	}
+
+	void lengthLessThanOneFollowedByDecimal(String s) {
+		if (s.length() < 1.5)
+			return;
+	}
+
+	void lengthLessThanOneFollowedByUnderscore(String s) {
+		if (s.length() < 1_0)
+			return;
+	}
+
+	void lengthReversedAfterDigitsRejected(String s) {
+		if (300 == s.length())
+			return;
+	}
+
+	void lengthReversedMethodReceiver() {
+		if (0 == foo().length())
+			return;
+	}
+
+	void stripLengthAlreadyNegated(String s) {
+		if (!s.strip().length() > 0)
+			return;
+	}
+
+	void stripLengthEqualsZeroFollowedByLetter(String s) {
+		if (s.strip().length() == 0xF)
+			return;
+	}
+
+	void stripLengthLessThanFollowedByDigit(String s) {
+		if (s.strip().length() < 10)
+			return;
+	}
+
+	void stripLengthLessThanOneFollowedByDecimal(String s) {
+		if (s.strip().length() < 1.5)
+			return;
+	}
+
+	void stripLengthLessThanOneFollowedByUnderscore(String s) {
+		if (s.strip().length() < 1_0)
+			return;
+	}
+
+	void stripLengthReversedAfterDigitsRejected(String s) {
+		if (300 == s.strip().length())
+			return;
+	}
+
+	void trimLengthAlreadyNegated(String s) {
+		if (!s.trim().length() > 0)
+			return;
+	}
+
+	void trimLengthEqualsZeroFollowedByLetter(String s) {
+		if (s.trim().length() == 0xF)
+			return;
+	}
+
+	void trimLengthLessThanFollowedByDigit(String s) {
+		if (s.trim().length() < 10)
+			return;
+	}
+
+	void trimLengthLessThanOneFollowedByDecimal(String s) {
+		if (s.trim().length() < 1.5)
+			return;
+	}
+
+	void trimLengthLessThanOneFollowedByUnderscore(String s) {
+		if (s.trim().length() < 1_0)
+			return;
+	}
+
+	void trimLengthReversedAfterDigitsRejected(String s) {
+		if (300 == s.trim().length())
+			return;
 	}
 }

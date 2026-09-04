@@ -8,10 +8,18 @@ unqualified (resolves via a static import). Qualified calls (`org.junit.Assert.a
 
 A pattern that appears only inside a string, char literal, or comment is never mistaken for a call
 site, and a line that continues a text block (its closing `"""` sits before the real call) is still
-rewritten. The one exception is the `.indexOf("x")` ->
-`.indexOf('x')`
-rewrite, which is anchored to the violation column rather than the first textual match, so an
-earlier same-line literal cannot hijack it in the first place.
+rewritten.
+
+The rules are swept twice: first honouring the reported column, then unanchored. The check reports
+each of these at a position inside its own pattern (the call's `(`, or the comparison operator), so
+the anchored sweep picks out the one call the check accepted when a line carries several candidates
+for the same rule and the check refused the others: a `File.length() == 0` beside a
+`List.size() == 0`, or a `Map.get(0)` beside a `List.get(0)`. The unanchored sweep covers a
+synthetic or stale position.
+
+Anchored rules: `.length()`/`.size()` comparisons, `.trim()`/`.strip()` comparisons, `.equals("")`,
+`.get(0)`/`.remove(0)`, `.replaceAll(`, `String.format(`, `.toArray(new `, and `.indexOf("x")` ->
+`.indexOf('x')`. The remaining rules take the first textual match on the line.
 
 ## No minSdk gate
 
@@ -91,5 +99,16 @@ earlier same-line literal cannot hijack it in the first place.
 | `.get(size() - 1)` | `.getLast()` | Yes (receivers must textually match: `r.get(r.size() - 1)`) |
 | `.remove(0)` | `.removeFirst()` | Yes |
 | `.remove(size() - 1)` | `.removeLast()` | Yes (receivers must textually match: `r.remove(r.size() - 1)`) |
+
+## Not flagged by check (receiver resolution)
+
+The collection-shape rules (`contains`, `getFirst`, `getLast`, `removeFirst`, `removeLast`) only
+fire when reflection can confirm the receiver's type actually declares the target method. Guessing
+would rewrite to a method that does not exist.
+
+| Pattern | Reason |
+| --- | --- |
+| Receiver whose type resolves to a type this file declares (or is otherwise off the checkstyle classpath) | Check does not fire: reflection cannot load the type, so the target method cannot be confirmed |
+| Receiver whose type is not written down and cannot be inferred (chained call, dotted factory) | Check fires anyway: the type is unknown rather than known-unsuitable, so the rule falls open |
 
 Part of [auto-fix coverage](../auto-fix-coverage.md).

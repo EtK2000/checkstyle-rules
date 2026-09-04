@@ -10,6 +10,13 @@ have caused bugs or confusion.
 - `exprText(node)` concatenates all leaf text under a node without operators or punctuation. Use for
   structural equality comparison, not for display.
 - `displayText(node)` recursively renders operators, dots, brackets. Use for violation messages.
+- A comment attaches **forward**, to the next real token, never to the preceding one. Under a
+  `WITH_COMMENTS` parse `appendHiddenCommentNodes` calls `addPreviousSibling` on the node built from
+  that next token, so the comment becomes that node's *sibling*, and therefore a child of the
+  node's parent. No `IDENT` ever gains a child this way. A trailing `// note` belongs to whatever
+  follows it, not to the line it sits on. The one exception is a comment at EOF, which attaches
+  after the pre-order-last node of the tree. Navigate with `AstText.firstRealChild` /
+  `AstText.nextRealSibling` rather than the raw `DetailAST` walks.
 
 ## Ternary (QUESTION)
 

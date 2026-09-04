@@ -119,6 +119,42 @@ class InputRecordFormattingFixBraceNewlineWithBodySliceViolation {
 }
 // === end ===
 
+// === case: fix_comment_before_brace_no_space ===
+class InputRecordFormattingFixCommentBeforeBraceNoSpaceSliceViolation {
+	record R(int a) /* c */ {}
+}
+// === end ===
+
+// === case: fix_comment_before_brace_two_spaces ===
+class InputRecordFormattingFixCommentBeforeBraceTwoSpacesSliceViolation {
+	record R(int a) /* c */ {}
+}
+// === end ===
+
+// === case: fix_comment_only_body_same_line ===
+class InputRecordFormattingFixCommentOnlyBodySameLineSliceViolation {
+	record R(int a) {
+		/* note */
+	}
+}
+// === end ===
+
+// === case: fix_comment_only_body_same_line_javadoc ===
+class InputRecordFormattingFixCommentOnlyBodySameLineJavadocSliceViolation {
+	record R(int a) {
+		/** note */
+	}
+}
+// === end ===
+
+// === case: fix_comment_only_body_same_line_trailing_content ===
+class InputRecordFormattingFixCommentOnlyBodySameLineTrailingContentSliceViolation {
+	record R(int a) {
+		/* note */
+	} // trailing
+}
+// === end ===
+
 // === case: fix_component_bitshift_in_annotation ===
 class InputRecordFormattingFixComponentBitshiftInAnnotationSliceViolation {
 	@interface A { int value(); }
@@ -301,6 +337,14 @@ class InputRecordFormattingFixComponentWithStringContainingRecordOnPriorLineSlic
 }
 // === end ===
 
+// === case: fix_cuddled_inner_brace ===
+class InputRecordFormattingFixCuddledInnerBraceSliceViolation {
+	record R(int a) {
+		static { init("x");}
+	}
+}
+// === end ===
+
 // === case: fix_empty_body_braces_split ===
 class InputRecordFormattingFixEmptyBodyBracesSplitSliceViolation {
 	record R(int a) {}
@@ -310,14 +354,6 @@ class InputRecordFormattingFixEmptyBodyBracesSplitSliceViolation {
 // === case: fix_empty_body_braces_split_open_line_has_block_comment ===
 class InputRecordFormattingFixEmptyBodyBracesSplitOpenLineHasBlockCommentSliceViolation {
 	record R(int a) /* { */ {}
-}
-// === end ===
-
-// === case: fix_empty_body_braces_split_open_line_has_line_comment ===
-// skip-reason: cannot collapse empty record body without losing surrounding content
-class InputRecordFormattingFixEmptyBodyBracesSplitOpenLineHasLineCommentSliceViolation {
-	record R(int a) { // note
-	}
 }
 // === end ===
 
@@ -395,6 +431,26 @@ class InputRecordFormattingFixOpenBraceAfterLineCommentSliceViolation {
 // === case: fix_open_brace_after_terminated_block_comment ===
 class InputRecordFormattingFixOpenBraceAfterTerminatedBlockCommentSliceViolation {
 	record R(int a) /* note */ {}
+}
+// === end ===
+
+// === case: fix_supplementary_comment_no_space ===
+class InputRecordFormattingFixSupplementaryCommentNoSpaceSliceViolation {
+	record R(int a) /* 𝐀 */ {}
+}
+// === end ===
+
+// === case: fix_supplementary_comment_two_spaces ===
+class InputRecordFormattingFixSupplementaryCommentTwoSpacesSliceViolation {
+	record R(int a) /* 𝐀 */ {}
+}
+// === end ===
+
+// === case: fix_supplementary_cuddled_inner_brace ===
+class InputRecordFormattingFixSupplementaryCuddledInnerBraceSliceViolation {
+	record R(int a) {
+		static { init("𝐀");}
+	}
 }
 // === end ===
 

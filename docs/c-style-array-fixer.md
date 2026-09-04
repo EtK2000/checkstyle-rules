@@ -62,20 +62,8 @@ The same rules apply to multidimensional arrays:
 - `String[] alpha[]; String[] beta[];` merges to `String[][] alpha, beta;`
 - `String[] alpha[]; String[][] beta;` merges to `String[][] alpha, beta;`
 
-## Normalization to Java-style
+## Stale columns
 
-The fixer rewrites C-style brackets to Java-style as part of the merge. The motivations:
-
-1. The merge produces a single declaration covering all fields, so leaving brackets on the
-   first field's name (`int alpha[], beta;`) would change `beta`'s type from `int[]` to `int`.
-   The fixer must either move brackets onto every name or move them to the base type. The
-   latter is shorter and matches the project's other type conventions.
-
-2. Without this normalization, the fixer could not handle the C-style-prev / Java-style-curr
-   combination (`int alpha[]; int[] beta;`) — there is no way to express both fields in a
-   single C-style declaration without rewriting at least one bracket position.
-
-3. Normalization removes a class of cross-fixer interleaving bugs where `ArrayTypeStyleFixer`
-   rewrites `int beta[]` to `int[] beta` mid-pass and shifts the column the
-   `FieldConsolidationCheck` event reported. The fixer now relocates the identifier when
-   `column` does not point at a Java identifier start.
+`ArrayTypeStyleFixer` can rewrite `int beta[]` to `int[] beta` mid-pass and shift the column the
+`FieldConsolidationCheck` event reported. The fixer relocates the identifier when `column` does not
+point at a Java identifier start.

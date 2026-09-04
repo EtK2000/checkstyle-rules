@@ -3,8 +3,8 @@ package com.etk2000.checkstyle.format;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.puppycrawl.tools.checkstyle.JavaParser;
+import com.puppycrawl.tools.checkstyle.JavaParser.Options;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
-import com.puppycrawl.tools.checkstyle.api.FileContents;
 import com.puppycrawl.tools.checkstyle.api.FileText;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -62,6 +62,32 @@ public class ArgLayoutClassifierTest {
 		throw new AssertionError("no call named " + name + " in parsed source");
 	}
 
+	/**
+	 * One case per navigation site a comment node can derail, plus the boundary cases that must
+	 * stay a plain list. Each is asserted against both parses, so the expectation is pinned to the
+	 * behaviour that ships today rather than to whatever the comment-bearing tree happens to give.
+	 */
+	private static Stream<Arguments> commentPositions() {
+		return Stream.of(
+				Arguments.of("block comment before the comma", "target", "target(this /*c*/, x -> {\n\t\t\t\tuse(x);\n\t\t\t\t})", true),
+				Arguments.of("line comment before the comma", "target", "target(this // c\n\t\t\t\t, x -> {\n\t\t\t\tuse(x);\n\t\t\t\t})", true),
+				Arguments.of("comment before a this first arg", "target", "target(/*c*/ this, x -> {\n\t\t\t\tuse(x);\n\t\t\t\t})", true),
+				Arguments.of("comment before a resource-id first arg", "target", "target(/*c*/ R.string.name, x -> {\n\t\t\t\tuse(x);\n\t\t\t\t})", true),
+				Arguments.of("comment inside a resource-id first arg", "target", "target(R./*c*/string.name, x -> {\n\t\t\t\tuse(x);\n\t\t\t\t})", true),
+				Arguments.of("comment before a special inline receiver", "target", "target(/*c*/ List.of(\n\t\t\t\t1, 2, 3\n\t\t\t\t))", true),
+				Arguments.of("comment before a special inline method name", "target", "target(List./*c*/of(\n\t\t\t\t1, 2, 3\n\t\t\t\t))", true),
+				Arguments.of("comment before a sole ternary", "target", "target(/*c*/ cond\n\t\t\t\t? a\n\t\t\t\t: b)", true),
+				Arguments.of("comment inside a sole ternary", "target", "target(cond /*c*/\n\t\t\t\t? a\n\t\t\t\t: b)", true),
+				Arguments.of("comment before a sole anonymous class", "target", "target(/*c*/ new Runnable() {\n\t\t\t\tpublic void run() {}\n\t\t\t\t})", true),
+				Arguments.of("postDelayed comment before the comma", "postDelayed", "postDelayed(x -> {\n\t\t\t\tuse(x);\n\t\t\t\t} /*c*/, 1000)", true),
+				Arguments.of("computeIfAbsent comment before the comma", "computeIfAbsent", "computeIfAbsent(k /*c*/, x -> {\n\t\t\t\tuse(x);\n\t\t\t\t})", true),
+				Arguments.of("put comment before the comma", "put", "put(\"k\" /*c*/, x -> {\n\t\t\t\tuse(x);\n\t\t\t\t})", true),
+				Arguments.of("comment does not make a plain multi-arg special", "target", "target(a /*c*/, b,\n\t\t\t\tc)", false),
+				Arguments.of("comment does not make a plain nested call special", "target", "target(/*c*/ other(\n\t\t\t\targ))", false),
+				Arguments.of("comment does not rescue a special call among plain args", "target", "target(List.of(1, 2), other /*c*/,\n\t\t\t\tz)", false)
+		);
+	}
+
 	private static Stream<Arguments> configurations() {
 		return Stream.of(
 				Arguments.of("single braced lambda", "target", "target(x -> {\n\t\t\t\tuse(x);\n\t\t\t\t})", true),
@@ -96,14 +122,25 @@ public class ArgLayoutClassifierTest {
 
 	@Nonnull
 	private static DetailAST parse(@Nonnull String source) throws Exception {
+		return parse(source, Options.WITHOUT_COMMENTS);
+	}
+
+	@Nonnull
+	private static DetailAST parse(@Nonnull String source, @Nonnull Options options) throws Exception {
 		final var tmp = File.createTempFile("classifier", ".java");
 		try {
 			Files.writeString(tmp.toPath(), source);
-			return JavaParser.parse(new FileContents(new FileText(tmp, StandardCharsets.UTF_8.name())));
+			return JavaParser.parseFileText(new FileText(tmp, StandardCharsets.UTF_8.name()), options);
 		}
 		finally {
 			tmp.delete();
 		}
+	}
+
+	/** The parse the shipped code does not do today; see {@code AstText.isCommentToken}. */
+	@Nonnull
+	private static DetailAST parseWithComments(@Nonnull String source) throws Exception {
+		return parse(source, Options.WITH_COMMENTS);
 	}
 
 	@MethodSource("bracedBlocks")
@@ -120,5 +157,21 @@ public class ArgLayoutClassifierTest {
 		final var source = "class C {\n\tvoid m() {\n\t\t" + call + ";\n\t}\n}";
 		final var root = parse(source);
 		assertEquals(expected, ArgLayoutClassifier.isSpecialLayoutConfiguration(callNamed(root, callName), node -> false));
+	}
+
+	@MethodSource("commentPositions")
+	@ParameterizedTest(name = "{0}")
+	public void isSpecialLayoutConfigurationWithComments(@Nonnull String label, @Nonnull String callName, @Nonnull String call, boolean expected) throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\t" + call + ";\n\t}\n}";
+		assertEquals(
+				expected,
+				ArgLayoutClassifier.isSpecialLayoutConfiguration(callNamed(parse(source), callName), node -> false),
+				"WITHOUT_COMMENTS"
+		);
+		assertEquals(
+				expected,
+				ArgLayoutClassifier.isSpecialLayoutConfiguration(callNamed(parseWithComments(source), callName), node -> false),
+				"WITH_COMMENTS"
+		);
 	}
 }

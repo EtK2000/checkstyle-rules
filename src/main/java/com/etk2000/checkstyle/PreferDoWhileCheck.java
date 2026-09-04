@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -75,7 +76,7 @@ public class PreferDoWhileCheck extends AbstractAstCheck {
 		final var prevExpr = previousExpressionStatement(ast);
 		if (prevExpr == null)
 			return;
-		if (AstUtil.astStructuralEquals(prevExpr, bodyExpr))
+		if (AstQuery.astStructuralEquals(prevExpr, bodyExpr))
 			log(ast, MSG_KEY);
 	}
 }

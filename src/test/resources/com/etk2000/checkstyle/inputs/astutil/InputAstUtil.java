@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 import javax.annotation.Nonnull;
 
-@javax.annotation.CheckReturnValue // intentional FQN: tested by AstUtilTest.testTypeTextQualified
+@javax.annotation.CheckReturnValue // intentional FQN: tested by AstTextTest.testAnnotationNameQualified
 class InputAstUtil {
 	@interface A {}
 	@interface B {}
@@ -12,7 +12,7 @@ class InputAstUtil {
 	int noAnnotationField, primitiveField;
 	@Nonnull
 	int field;
-	java.util.List qualifiedField; // intentional FQN: tested by AstUtilTest.testTypeTextQualified
+	java.util.List qualifiedField; // intentional FQN: tested by AstTextTest.testTypeTextQualified
 
 	InputAstUtil(String ctorParam) {}
 
@@ -46,7 +46,6 @@ class InputAstUtil {
 	}
 
 	void varAnonymousClassLocal() {
-		// Thread has multiple methods, so this is not convertible to a lambda.
 		final var x = new Thread() {
 			@Override
 			public void run() {}

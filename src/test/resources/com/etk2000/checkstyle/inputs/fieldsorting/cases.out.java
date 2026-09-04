@@ -2047,6 +2047,36 @@ interface InputFieldSortingInterfaceFieldNameOrderSliceViolation {
 }
 // === end ===
 
+// === case: leading_block_comment_no_star_continuation ===
+class InputFieldSortingLeadingBlockCommentNoStarSliceViolation {
+	int alpha;
+	/* block
+	continuing line without a star
+	*/
+	String zebra;
+}
+// === end ===
+
+// === case: leading_block_comment_opener_on_code_line ===
+// skip-reason: cannot reorder fields across a comment that belongs to no field
+class InputFieldSortingLeadingBlockCommentOpenerOnCodeLineSliceViolation {
+	int zebra; /* start
+	// middle
+	*/
+	int alpha;
+}
+// === end ===
+
+// === case: leading_comment_separated_by_blank ===
+// skip-reason: cannot reorder fields across a comment that belongs to no field
+class InputFieldSortingLeadingCommentSeparatedByBlankSliceViolation {
+	int zebra;
+	// a note about nothing in particular
+
+	int alpha;
+}
+// === end ===
+
 // === case: lexer_string_with_block_comment_marker ===
 class InputFieldSortingLexerStringWithBlockCommentMarkerSliceViolation {
 	final String alpha = "one";

@@ -1,13 +1,13 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
-import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -63,7 +63,69 @@ import javax.annotation.Nullable;
  * Uses reflection to verify the receiver type actually has
  * the suggested method before flagging.
  */
-public class PreferSpecificApiCheck extends AbstractAstCheck {
+public class PreferSpecificApiCheck extends AbstractResolvingCheck {
+	/**
+	 * Which rewrite the check reported at a position. The fixer dispatches on this, so two rewrites
+	 * that read differently must never share a constant.
+	 */
+	public enum ApiRule {
+		ARRAYS_AS_LIST,
+		ASSERT,
+		COLLECT_TO_LIST,
+		COLLECTIONS_COPY_OF,
+		COLLECTIONS_FACTORY,
+		COLLECTIONS_SORT,
+		EQUALS_EMPTY,
+		GET_FIRST,
+		GET_LAST,
+		INDEX_OF_CHAR,
+		INDEX_OF_CONTAINS,
+		MAP_CHAIN,
+		REMOVE_FIRST,
+		REMOVE_LAST,
+		REPLACE_ALL,
+		SIZE_IS_EMPTY,
+		STREAM_COUNT,
+		STREAM_FIND_FIRST,
+		STREAM_FOR_EACH,
+		STRING_FORMAT_FORMATTED,
+		STRING_FORMAT_STRIP,
+		TO_ARRAY_GENERATOR,
+		TRIM_IS_BLANK,
+		TRIM_LENGTH_IS_BLANK,
+		UNMODIFIABLE_AS_LIST
+	}
+
+	/**
+	 * The rewrite the check reported at a position, and the node it reported on: a
+	 * {@code METHOD_CALL} positioned on its own {@code (}, or a comparison positioned on its
+	 * operator. Those two characters never coincide, which is what lets one position name one rule.
+	 *
+	 * <p>{@code replacement} is the target spelling for the rules whose own detector already
+	 * computes it ({@link #collectionsFactoryReplacement}, {@link #collectionsCopyOfReplacement},
+	 * and the assertion's replacement method), and null for the rules whose rewrite is fixed by the
+	 * constant alone. Re-deriving it in the fixer would be a second copy of the detector.
+	 *
+	 * @see #locateAt
+	 */
+	public record ApiTarget(
+			@Nonnull ApiRule rule,
+			@Nonnull DetailAST node,
+			@Nullable String replacement,
+			@Nullable DetailAST argument
+	) {}
+
+	/**
+	 * How a simplifiable assertion rewrites: the method to call instead, the literal spelling the
+	 * message quotes, and the {@code ELIST} child holding that literal, which the rewrite drops.
+	 */
+	private record AssertSimplification(
+			@Nonnull String replacement,
+			@Nonnull String literal,
+			@Nonnull DetailAST argument
+	) {}
+
+	private static final int MIN_SDK_CHAR_SEQUENCE_IS_EMPTY = 35;
 	private static final int MIN_SDK_COLLECTION_FACTORY = 30;
 	private static final int MIN_SDK_COPY_OF = 31;
 	private static final int MIN_SDK_FOR_EACH = 24;
@@ -74,18 +136,47 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 	private static final String MSG_ASSERT = "prefer.api.assert";
 	private static final String MSG_METHOD = "prefer.replacement";
 
+	/** Arguments in an {@code ELIST}, which interleaves its {@code COMMA} separators as children. */
+	@CheckReturnValue
+	private static int argumentCount(@Nullable DetailAST elist) {
+		if (elist == null)
+			return 0;
+		var count = 0;
+		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() != TokenTypes.COMMA)
+				++count;
+		}
+		return count;
+	}
+
+	/** The first of {@code candidates} whose expression is a literal of {@code type}. */
+	@CheckReturnValue
+	@Nullable
+	private static DetailAST argumentWithLiteral(@Nonnull List<DetailAST> candidates, int type) {
+		for (var argument : candidates) {
+			final var inner = unwrapArgument(argument);
+			if (inner != null && inner.getType() == type)
+				return argument;
+		}
+		return null;
+	}
+
 	/**
-	 * Returns a two-element array {@code [replacement, literal]} for a call like
-	 * {@code assertEquals(true, x)} or {@code assertNotEquals(null, x)},
-	 * or {@code null} if the call is not a simplifiable assertion.
-	 * Handles both static-import ({@code assertEquals}) and qualified
-	 * ({@code Assert.assertEquals}) forms, as well as
+	 * How a call like {@code assertEquals(true, x)} or {@code assertNotEquals(null, x)} simplifies,
+	 * or {@code null} if the call is not a simplifiable assertion. Handles both static-import
+	 * ({@code assertEquals}) and qualified ({@code Assert.assertEquals}) forms, as well as
 	 * {@code assertSame}/{@code assertNotSame} with {@code null}.
+	 *
+	 * <p>{@code argument} is the {@code ELIST} child holding the literal, which the rewrite drops.
+	 * It is returned from here rather than re-found by the caller because which argument matched
+	 * is a precedence decision (null before true before false, and within each, the expected
+	 * position before the actual before the 3-arg first), and a second copy of that precedence
+	 * would be a second thing to keep in step.
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String[] assertionSimplification(@Nonnull DetailAST methodCall) {
-		final var methodName = AstUtil.getMethodName(methodCall);
+	private static AssertSimplification assertionSimplification(@Nonnull DetailAST methodCall) {
+		final var methodName = AstQuery.getMethodName(methodCall);
 		if (methodName == null)
 			return null;
 
@@ -96,16 +187,11 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 
 		final var isSame = "assertSame".equals(methodName) || "assertNotSame".equals(methodName);
 
-		// find the two-argument form (expected, actual), skip if more than 3 args
 		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
 		if (elist == null)
 			return null;
 
-		var argCount = 0;
-		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() != TokenTypes.COMMA)
-				++argCount;
-		}
+		final var argCount = argumentCount(elist);
 
 		// for 3-arg form (message, expected, actual), check the second arg
 		// for 2-arg form (expected, actual), check the first arg
@@ -117,54 +203,104 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 		else
 			return null;
 
-		final var expected = expectedExpr.getType() == TokenTypes.EXPR
-				? expectedExpr.getFirstChild()
-				: expectedExpr;
-		if (expected == null)
+		if (unwrapArgument(expectedExpr) == null)
 			return null;
 
-		// also check the last argument (actual) for null/true/false in reversed form
-		final var lastArg = elist.getLastChild();
-		final var actual = lastArg.getType() == TokenTypes.EXPR
-				? lastArg.getFirstChild()
-				: lastArg;
+		// the positions a literal is accepted in, most-preferred first: the expected slot, then
+		// the last argument (reversed form), then the 3-arg first slot (JUnit 5 message-last)
+		final var candidates = new ArrayList<DetailAST>();
+		candidates.add(expectedExpr);
+		candidates.add(elist.getLastChild());
+		if (argCount == 3)
+			candidates.add(elist.getFirstChild());
 
-		// for 3-arg form, also check the first arg (JUnit 5 message-last: expected, actual, message)
-		final DetailAST firstArg;
-		if (argCount == 3) {
-			final var raw = elist.getFirstChild();
-			firstArg = raw.getType() == TokenTypes.EXPR ? raw.getFirstChild() : raw;
-		}
-		else
-			firstArg = null;
-
-		if (expected.getType() == TokenTypes.LITERAL_NULL || actual.getType() == TokenTypes.LITERAL_NULL
-				|| (firstArg != null && firstArg.getType() == TokenTypes.LITERAL_NULL))
-			return new String[]{isEquals ? "assertNull" : "assertNotNull", "null"};
+		final var nullArg = argumentWithLiteral(candidates, TokenTypes.LITERAL_NULL);
+		if (nullArg != null)
+			return new AssertSimplification(isEquals ? "assertNull" : "assertNotNull", "null", nullArg);
 
 		// assertSame/assertNotSame only applies to null, not true/false
 		if (isSame)
 			return null;
 
-		if (expected.getType() == TokenTypes.LITERAL_TRUE || actual.getType() == TokenTypes.LITERAL_TRUE
-				|| (firstArg != null && firstArg.getType() == TokenTypes.LITERAL_TRUE))
-			return new String[]{isEquals ? "assertTrue" : "assertFalse", "true"};
-		if (expected.getType() == TokenTypes.LITERAL_FALSE || actual.getType() == TokenTypes.LITERAL_FALSE
-				|| (firstArg != null && firstArg.getType() == TokenTypes.LITERAL_FALSE))
-			return new String[]{isEquals ? "assertFalse" : "assertTrue", "false"};
+		final var trueArg = argumentWithLiteral(candidates, TokenTypes.LITERAL_TRUE);
+		if (trueArg != null)
+			return new AssertSimplification(isEquals ? "assertTrue" : "assertFalse", "true", trueArg);
+
+		final var falseArg = argumentWithLiteral(candidates, TokenTypes.LITERAL_FALSE);
+		if (falseArg != null)
+			return new AssertSimplification(isEquals ? "assertFalse" : "assertTrue", "false", falseArg);
 		return null;
 	}
 
+	/**
+	 * The rewrite a {@code METHOD_CALL} carries, or null for a call no rule accepts.
+	 *
+	 * <p>The detectors below are disjoint on method name except where noted, so the order is for
+	 * reading rather than precedence; {@code PreferSpecificApiLocatorTest} pins that by asserting a
+	 * single rule for every shape. The two that genuinely overlap are split on their own detector's
+	 * answer rather than on position: a {@code Collections.unmodifiableList} wrapping an
+	 * {@code Arrays.asList} collapses instead of copying, and {@code String.format} strips instead
+	 * of reformatting when it has one argument.
+	 */
 	@CheckReturnValue
-	@Nonnull
-	private static String childText(@Nonnull DetailAST ast) {
-		if (ast.getChildCount() == 0)
-			return ast.getText();
+	@Nullable
+	private static ApiTarget callRuleFor(@Nonnull DetailAST call) {
+		final var assertion = assertionSimplification(call);
+		if (assertion != null)
+			return new ApiTarget(ApiRule.ASSERT, call, assertion.replacement(), assertion.argument());
+		if (isCollectToListCall(call))
+			return new ApiTarget(ApiRule.COLLECT_TO_LIST, call, null, null);
+		if (isEqualsEmptyString(call))
+			return new ApiTarget(ApiRule.EQUALS_EMPTY, call, null, null);
+		if (isIndexOfSingleCharStringCall(call)) {
+			final var literal = unwrapArgument(call.findFirstToken(TokenTypes.ELIST).getFirstChild());
+			return new ApiTarget(ApiRule.INDEX_OF_CHAR, call, null, literal);
+		}
+		if (mapChainReplacement(call) != null)
+			return new ApiTarget(ApiRule.MAP_CHAIN, call, mapChainReplacement(call), null);
+		if (isReplaceAllWithLiteral(call))
+			return new ApiTarget(ApiRule.REPLACE_ALL, call, null, null);
+		if (isStreamTerminalCall(call, "count"))
+			return new ApiTarget(ApiRule.STREAM_COUNT, call, null, null);
+		if (isStreamFindFirstIsPresentCall(call))
+			return new ApiTarget(ApiRule.STREAM_FIND_FIRST, call, null, null);
+		if (isCollectionsSortCall(call))
+			return new ApiTarget(ApiRule.COLLECTIONS_SORT, call, null, null);
+		if (isStreamForEachCall(call))
+			return new ApiTarget(ApiRule.STREAM_FOR_EACH, call, null, null);
+		if (isStandaloneArraysAsListCall(call))
+			return new ApiTarget(ApiRule.ARRAYS_AS_LIST, call, "List.of", null);
 
-		final var sb = new StringBuilder();
-		for (var child = ast.getFirstChild(); child != null; child = child.getNextSibling())
-			sb.append(childText(child));
-		return sb.toString();
+		final var factory = collectionsFactoryReplacement(call);
+		if (factory != null)
+			return new ApiTarget(ApiRule.COLLECTIONS_FACTORY, call, factory, null);
+
+		final var copyOf = collectionsCopyOfReplacement(call);
+		if (copyOf != null) {
+			return "List.of".equals(copyOf)
+					? new ApiTarget(ApiRule.UNMODIFIABLE_AS_LIST, call, copyOf, null)
+					: new ApiTarget(ApiRule.COLLECTIONS_COPY_OF, call, copyOf, null);
+		}
+
+		if (isTrimIsEmptyCall(call))
+			return new ApiTarget(ApiRule.TRIM_IS_BLANK, call, null, trimOrStripCall(call));
+
+		final var arrayType = toArrayNewZeroType(call);
+		if (arrayType != null)
+			return new ApiTarget(ApiRule.TO_ARRAY_GENERATOR, call, arrayType, null);
+
+		if (isStringFormatCall(call)) {
+			return argumentCount(call.findFirstToken(TokenTypes.ELIST)) == 1
+					? new ApiTarget(ApiRule.STRING_FORMAT_STRIP, call, null, null)
+					: new ApiTarget(ApiRule.STRING_FORMAT_FORMATTED, call, null, null);
+		}
+
+		return indexedAccessRuleFor(call);
+	}
+
+	@CheckReturnValue
+	private static boolean carriesRule(@Nonnull DetailAST node) {
+		return ruleFor(node) != null;
 	}
 
 	/**
@@ -240,6 +376,28 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 		};
 	}
 
+	/**
+	 * The rewrite a comparison carries, or null. The three detectors are disjoint by construction:
+	 * {@link #isSizeCall} refuses a {@code length()} whose receiver is a {@code trim}/{@code strip}
+	 * call, which is the only shape {@link #trimLengthZeroReplacement} accepts, and both require a
+	 * {@code size}/{@code length} call where {@link #indexOfContainsReplacement} requires an
+	 * {@code indexOf}.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static ApiTarget comparisonRuleFor(@Nonnull DetailAST comparison) {
+		final var trimLength = trimLengthZeroReplacement(comparison);
+		if (trimLength != null)
+			return new ApiTarget(ApiRule.TRIM_LENGTH_IS_BLANK, comparison, trimLength, trimOrStripCall(comparison));
+
+		final var isEmpty = isEmptyReplacement(comparison);
+		if (isEmpty != null)
+			return new ApiTarget(ApiRule.SIZE_IS_EMPTY, comparison, isEmpty, sizeCallFromComparison(comparison));
+
+		final var contains = indexOfContainsReplacement(comparison);
+		return contains == null ? null : new ApiTarget(ApiRule.INDEX_OF_CONTAINS, comparison, contains, null);
+	}
+
 	@CheckReturnValue
 	private static int decodedJavaStringLength(@Nonnull String literalText) {
 		if (literalText.length() < 2 || literalText.charAt(0) != '"'
@@ -284,6 +442,31 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 			++len;
 		}
 		return len;
+	}
+
+	/**
+	 * The rewrite a single-argument {@code get}/{@code remove} call carries, or null. The index
+	 * decides which end: the literal {@code 0} for the first element, {@code receiver.size() - 1}
+	 * for the last, and anything else is not a rewrite at all.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static ApiTarget indexedAccessRuleFor(@Nonnull DetailAST call) {
+		final var isGet = isGetCall(call);
+		if (!isGet && !isRemoveCall(call))
+			return null;
+
+		final var dot = call.findFirstToken(TokenTypes.DOT);
+		final var elist = call.findFirstToken(TokenTypes.ELIST);
+		if (dot == null || elist == null || elist.getChildCount() != 1)
+			return null;
+
+		final var arg = elist.getFirstChild();
+		if (isLiteralZero(arg))
+			return new ApiTarget(isGet ? ApiRule.GET_FIRST : ApiRule.REMOVE_FIRST, call, null, null);
+		if (isSizeMinusOne(arg, dot))
+			return new ApiTarget(isGet ? ApiRule.GET_LAST : ApiRule.REMOVE_LAST, call, null, null);
+		return null;
 	}
 
 	/**
@@ -380,11 +563,7 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 		final var elist = methodCall.findFirstToken(TokenTypes.ELIST);
 		if (elist == null)
 			return false;
-		var argCount = 0;
-		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() != TokenTypes.COMMA)
-				++argCount;
-		}
+		final var argCount = argumentCount(elist);
 		return argCount == 1 || argCount == 2;
 	}
 
@@ -907,7 +1086,7 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 
 	/**
 	 * Like {@link #isSizeCall(DetailAST)} but checks for {@code .trim().length()} or
-	 * {@code .strip().length()} specifically. Used by the isBlank detection.
+	 * {@code .strip().length()} specifically.
 	 */
 	@CheckReturnValue
 	private static boolean isTrimLengthCall(@Nonnull DetailAST ast) {
@@ -953,6 +1132,29 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 		return elist == null || elist.getChildCount() == 0;
 	}
 
+	/**
+	 * The rewrite this check reported at {@code line}:{@code column} (both 0-based, the column
+	 * counting <em>code points</em> as {@link DetailAST#getColumnNo} does), or null when no node
+	 * there carries one. Lets the fixer rewrite the one call the check accepted instead of
+	 * re-deriving the rule from the line's text, which cannot tell two candidates apart.
+	 *
+	 * <p>Deliberately re-applies none of the check's three refusal gates: the minSdk floors, the
+	 * reflective receiver checks, and {@code visitMethodScope}'s scope-wide suppression of a
+	 * {@code get(0)} whose receiver indexes elsewhere. All three are instance state, and the fixer
+	 * runs only where the check already logged, so all three are already satisfied at every
+	 * position it is given. The consequence is that {@code locateAt} answers for strictly more
+	 * positions than the check reports; that is sound for a fixer and wrong for a detector, so this
+	 * must not become one.
+	 *
+	 * @see com.etk2000.checkstyle.gradle.fix.CheckstyleFixAction#tabColumnToCharIndex
+	 */
+	@CheckReturnValue
+	@Nullable
+	public static ApiTarget locateAt(@Nonnull DetailAST root, int line, int column) {
+		final var node = AstQuery.findNodeAt(root, line, column, PreferSpecificApiCheck::carriesRule);
+		return node == null ? null : ruleFor(node);
+	}
+
 	@CheckReturnValue
 	@Nullable
 	private static String mapChainReplacement(@Nonnull DetailAST methodCall) {
@@ -979,9 +1181,11 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 		final var receiverElist = receiver.findFirstToken(TokenTypes.ELIST);
 		if (receiverElist != null && receiverElist.getChildCount() > 0)
 			return null;
+		// the bare method name, not the display form: the fixer splices it into source, and the
+		// message decorates it at the log site
 		return switch (receiverMethod.getText()) {
-			case "keySet" -> ".containsKey(...)";
-			case "values" -> ".containsValue(...)";
+			case "keySet" -> "containsKey";
+			case "values" -> "containsValue";
 			default -> null;
 		};
 	}
@@ -995,9 +1199,32 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 				break;
 			if (!sb.isEmpty())
 				sb.append('.');
-			sb.append(childText(child));
+			sb.append(AstText.exprText(child));
 		}
 		return sb.toString();
+	}
+
+	/**
+	 * The rewrite {@code node} carries, dispatching on the two node types the check logs on: a
+	 * {@code METHOD_CALL}, positioned on its own {@code (}, and a comparison, positioned on its
+	 * operator.
+	 *
+	 * <p>This is dispatch and not a guard. The imaginary {@code EXPR} and {@code ELIST} nodes that
+	 * borrow those exact positions are already refused by the classifiers themselves: all three
+	 * comparison detectors switch on {@code getType()} with a null default, and every call
+	 * detector wants a {@code DOT} and an {@code ELIST} as direct children, which only a
+	 * {@code METHOD_CALL} has. Deleting the switch and trying both classifiers on every node was
+	 * measured to change no answer, so do not read it as load-bearing.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static ApiTarget ruleFor(@Nonnull DetailAST node) {
+		return switch (node.getType()) {
+			case TokenTypes.EQUAL, TokenTypes.GE, TokenTypes.GT,
+					TokenTypes.LE, TokenTypes.LT, TokenTypes.NOT_EQUAL -> comparisonRuleFor(node);
+			case TokenTypes.METHOD_CALL -> callRuleFor(node);
+			default -> null;
+		};
 	}
 
 	/**
@@ -1055,7 +1282,7 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 		if (inner == null || inner.getType() != TokenTypes.LITERAL_NEW)
 			return null;
 
-		final var typeName = AstUtil.findNewClassName(inner);
+		final var typeName = AstText.findNewClassName(inner);
 		if (typeName == null)
 			return null;
 
@@ -1146,38 +1373,37 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 	}
 
 	/**
-	 * Given a node matched by {@link #isTrimIsEmptyCall} or
-	 * {@link #trimLengthZeroReplacement}, returns the actual method name
-	 * ({@code "trim"} or {@code "strip"}) for use in violation messages.
+	 * The {@code trim()}/{@code strip()} call itself, reached either from the {@code isEmpty()}
+	 * call chained onto it or from the comparison its {@code length()} appears in. The fixer needs
+	 * the node (to take its receiver) where the message needs only the name.
 	 */
 	@CheckReturnValue
 	@Nonnull
-	private static String trimOrStripName(@Nonnull DetailAST detectedNode) {
-		final DetailAST trimOrStripCall;
+	private static DetailAST trimOrStripCall(@Nonnull DetailAST detectedNode) {
 		if (detectedNode.getType() == TokenTypes.METHOD_CALL)
-			trimOrStripCall = detectedNode.findFirstToken(TokenTypes.DOT).getFirstChild();
-		else {
-			final var left = detectedNode.getFirstChild();
-			final var side = isTrimLengthCall(left) ? left : left.getNextSibling();
-			final var inner = side.getType() == TokenTypes.EXPR ? side.getFirstChild() : side;
-			trimOrStripCall = inner.findFirstToken(TokenTypes.DOT).getFirstChild();
-		}
-		final var dot = trimOrStripCall.findFirstToken(TokenTypes.DOT);
+			return detectedNode.findFirstToken(TokenTypes.DOT).getFirstChild();
+
+		final var left = detectedNode.getFirstChild();
+		final var side = isTrimLengthCall(left) ? left : left.getNextSibling();
+		final var inner = unwrapArgument(side);
+		return inner.findFirstToken(TokenTypes.DOT).getFirstChild();
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static String trimOrStripName(@Nonnull DetailAST detectedNode) {
+		final var dot = trimOrStripCall(detectedNode).findFirstToken(TokenTypes.DOT);
 		var last = dot.getFirstChild();
 		while (last.getNextSibling() != null)
 			last = last.getNextSibling();
 		return last.getText();
 	}
 
-	private final Set<String> imports = new HashSet<>();
-
-	private int minSdk = Integer.MAX_VALUE;
-	private String packageName;
-
-	@Override
-	public void beginTree(@Nonnull DetailAST rootAST) {
-		imports.clear();
-		packageName = null;
+	/** The expression inside an argument, which the parser wraps in an {@code EXPR} in most positions. */
+	@CheckReturnValue
+	@Nullable
+	private static DetailAST unwrapArgument(@Nonnull DetailAST argument) {
+		return argument.getType() == TokenTypes.EXPR ? argument.getFirstChild() : argument;
 	}
 
 	@Nonnull
@@ -1186,43 +1412,28 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 		return new int[]{
 				TokenTypes.COMPACT_CTOR_DEF,
 				TokenTypes.CTOR_DEF,
-				TokenTypes.IMPORT,
 				TokenTypes.INSTANCE_INIT,
 				TokenTypes.METHOD_DEF,
-				TokenTypes.PACKAGE_DEF,
 				TokenTypes.STATIC_INIT
 		};
 	}
 
 	/**
-	 * Checks whether the receiver of a .get() call has the specified
-	 * method available, using reflection to resolve the receiver type.
-	 * Returns {@code true} if the type can't be resolved (best-effort:
-	 * flag it and let the user decide).
+	 * Whether {@code methodCall}'s receiver names a type we can confirm declares
+	 * {@code methodName}.
+	 *
+	 * <p>A named type that resolves to nothing answers false. The analysed
+	 * project's own classes are never on the checkstyle classpath, so a
+	 * same-package receiver always lands there, and guessing would have the fixer
+	 * rewrite {@code grid.get(0)} to a method that does not exist.
 	 */
 	@CheckReturnValue
 	private boolean receiverHasMethod(@Nonnull DetailAST methodCall, @Nonnull String methodName) {
-		final var receiverTypeName = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
-		if (receiverTypeName == null)
-			return true;
-
-		final var fqcn = ReflectionUtil.resolveClassName(receiverTypeName, packageName, imports);
-		return fqcn == null || ReflectionUtil.hasMethod(fqcn, methodName);
-	}
-
-	/**
-	 * Like {@link #receiverHasMethod} but returns {@code false} when the
-	 * type can't be resolved. Used for isEmpty replacements where a wrong
-	 * suggestion would break compilation (e.g. {@code File.length() > 0}
-	 * has no {@code isEmpty()}).
-	 */
-	@CheckReturnValue
-	private boolean receiverHasMethodStrict(@Nonnull DetailAST methodCall, @Nonnull String methodName) {
-		final var receiverTypeName = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
+		final var receiverTypeName = receiverTypeName(methodCall);
 		if (receiverTypeName == null)
 			return false;
 
-		final var fqcn = ReflectionUtil.resolveClassName(receiverTypeName, packageName, imports);
+		final var fqcn = resolve(receiverTypeName);
 		return fqcn != null && ReflectionUtil.hasMethod(fqcn, methodName);
 	}
 
@@ -1233,26 +1444,48 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 	 */
 	@CheckReturnValue
 	private boolean receiverIsCharSequenceNotString(@Nonnull DetailAST methodCall) {
-		final var typeName = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
+		final var typeName = receiverTypeName(methodCall);
 		if (typeName == null)
 			return false;
-		final var fqcn = ReflectionUtil.resolveClassName(typeName, packageName, imports);
+		final var fqcn = resolve(typeName);
 		return fqcn != null && ReflectionUtil.isCharSequenceNotString(fqcn);
 	}
 
 	/**
-	 * Sets the minimum SDK version for the target platform.
-	 * APIs not available below this SDK level will not be suggested.
-	 * For example, {@code .getFirst()}/{@code .getLast()} require Android API 35+.
-	 * <p>Called by Checkstyle via reflection when {@code minSdk} is set in the config.</p>
+	 * Like {@link #receiverHasMethod}, but answers true for a receiver whose type is
+	 * not written down anywhere, as for a {@code var} local or a chained call. Used
+	 * where staying silent on those would drop the common case.
+	 *
+	 * <p>Unresolvability alone is not enough: a receiver written as {@code this.field},
+	 * {@code Owner.CONSTANT} or {@code array[i]} names a type this file declares, so
+	 * failing open there would let the fixer rewrite {@code this.byId.get(0)} on a
+	 * {@code Map} into a method that does not exist.
 	 */
-	@SuppressWarnings("unused")
-	public void setMinSdk(int minSdk) {
-		this.minSdk = minSdk;
+	@CheckReturnValue
+	private boolean receiverMayHaveMethod(@Nonnull DetailAST methodCall, @Nonnull String methodName) {
+		return receiverTypeName(methodCall) == null
+				? receiverTypeIsUnwritten(methodCall)
+				: receiverHasMethod(methodCall, methodName);
+	}
+
+	/**
+	 * Whether {@code methodCall}'s receiver is written in a form that carries no type of
+	 * its own: a bare name whose declaration could not be read (a {@code var} local with
+	 * an uninferable initializer) or a call whose type is the callee's return type.
+	 */
+	@CheckReturnValue
+	private boolean receiverTypeIsUnwritten(@Nonnull DetailAST methodCall) {
+		final var dot = methodCall.getFirstChild();
+		if (dot == null || dot.getType() != TokenTypes.DOT)
+			return false;
+
+		final var receiver = dot.getFirstChild();
+		return receiver != null
+				&& (receiver.getType() == TokenTypes.IDENT || receiver.getType() == TokenTypes.METHOD_CALL);
 	}
 
 	private void visitArraysAsList(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isStandaloneArraysAsListCall(n));
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isStandaloneArraysAsListCall(n));
 		for (var call : calls) {
 			final var elist = call.findFirstToken(TokenTypes.ELIST);
 			final var hasArgs = elist != null && elist.getChildCount() > 0;
@@ -1262,15 +1495,15 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 	}
 
 	private void visitAssertions(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && assertionSimplification(n) != null);
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && assertionSimplification(n) != null);
 		for (var call : calls) {
 			final var result = assertionSimplification(call);
-			log(call, MSG_ASSERT, result[0], AstUtil.getMethodName(call), result[1]);
+			log(call, MSG_ASSERT, result.replacement(), AstQuery.getMethodName(call), result.literal());
 		}
 	}
 
 	private void visitCollectionsCopyOf(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && collectionsCopyOfReplacement(n) != null);
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && collectionsCopyOfReplacement(n) != null);
 		for (var call : calls) {
 			final var prefix = collectionsCopyOfReplacement(call);
 			final var dot = call.findFirstToken(TokenTypes.DOT);
@@ -1280,7 +1513,7 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 	}
 
 	private void visitCollectionsFactory(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && collectionsFactoryReplacement(n) != null);
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && collectionsFactoryReplacement(n) != null);
 		for (var call : calls) {
 			final var prefix = collectionsFactoryReplacement(call);
 			final var dot = call.findFirstToken(TokenTypes.DOT);
@@ -1293,13 +1526,13 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 	}
 
 	private void visitCollectionsSort(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isCollectionsSortCall(n));
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isCollectionsSortCall(n));
 		for (var call : calls)
 			log(call, MSG_METHOD, ".sort(...)", "Collections.sort(...)");
 	}
 
 	private void visitCollectToList(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isCollectToListCall(n));
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isCollectToListCall(n));
 		for (var call : calls) {
 			final var elist = call.findFirstToken(TokenTypes.ELIST);
 			final var argExpr = elist.getFirstChild();
@@ -1311,18 +1544,18 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 	}
 
 	private void visitEqualsEmptyString(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isEqualsEmptyString(n));
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isEqualsEmptyString(n));
 		for (var call : calls) {
-			if (!receiverHasMethodStrict(call, "isEmpty"))
+			if (!receiverHasMethod(call, "isEmpty"))
 				continue;
-			if (minSdk < 35 && receiverIsCharSequenceNotString(call))
+			if (!minSdkAtLeast(MIN_SDK_CHAR_SEQUENCE_IS_EMPTY) && receiverIsCharSequenceNotString(call))
 				continue;
 			log(call, MSG_METHOD, ".isEmpty()", ".equals(\"\")");
 		}
 	}
 
 	private void visitIndexOfChar(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isIndexOfSingleCharStringCall(n));
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isIndexOfSingleCharStringCall(n));
 		for (var call : calls) {
 			final var dot = call.findFirstToken(TokenTypes.DOT);
 			var methodIdent = dot.getFirstChild();
@@ -1341,10 +1574,10 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 	}
 
 	private void visitIndexOfContains(@Nonnull DetailAST ast) {
-		final var comparisons = AstUtil.collectMatching(ast, n -> indexOfContainsReplacement(n) != null);
+		final var comparisons = AstQuery.collectMatching(ast, n -> indexOfContainsReplacement(n) != null);
 		for (var comparison : comparisons) {
 			final var indexOfCall = indexOfCallFromComparison(comparison);
-			if (!receiverHasMethod(indexOfCall, "contains"))
+			if (!receiverMayHaveMethod(indexOfCall, "contains"))
 				continue;
 
 			final var replacement = indexOfContainsReplacement(comparison);
@@ -1362,7 +1595,7 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 			final var indexOfText = ".indexOf(...)";
 			final var indexOfOnLeft = isIndexOfStringCall(left);
 			final var literalSide = indexOfOnLeft ? right : left;
-			final var literalText = isLiteralNegativeOne(literalSide) ? "-1" : childText(literalSide);
+			final var literalText = isLiteralNegativeOne(literalSide) ? "-1" : AstText.exprText(literalSide);
 			final var actual = indexOfOnLeft
 					? indexOfText + " " + op + " " + literalText
 					: literalText + " " + op + " " + indexOfText;
@@ -1371,7 +1604,7 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 	}
 
 	private void visitMapChain(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && mapChainReplacement(n) != null);
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && mapChainReplacement(n) != null);
 		for (var call : calls) {
 			final var replacement = mapChainReplacement(call);
 			final var dot = call.findFirstToken(TokenTypes.DOT);
@@ -1380,7 +1613,7 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 			var receiverMethod = receiverDot.getFirstChild();
 			while (receiverMethod.getNextSibling() != null)
 				receiverMethod = receiverMethod.getNextSibling();
-			log(call, MSG_METHOD, replacement, "." + receiverMethod.getText() + "().contains(...)");
+			log(call, MSG_METHOD, "." + replacement + "(...)", "." + receiverMethod.getText() + "().contains(...)");
 		}
 	}
 
@@ -1396,32 +1629,32 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 		visitStreamCount(ast);
 		visitStreamFindFirstIsPresent(ast);
 
-		if (minSdk >= MIN_SDK_FOR_EACH) {
+		if (minSdkAtLeast(MIN_SDK_FOR_EACH)) {
 			visitCollectionsSort(ast);
 			visitStreamForEach(ast);
 		}
 
-		if (minSdk >= MIN_SDK_COLLECTION_FACTORY) {
+		if (minSdkAtLeast(MIN_SDK_COLLECTION_FACTORY)) {
 			visitArraysAsList(ast);
 			visitCollectionsFactory(ast);
 		}
 
-		if (minSdk >= MIN_SDK_COPY_OF)
+		if (minSdkAtLeast(MIN_SDK_COPY_OF))
 			visitCollectionsCopyOf(ast);
 
-		if (minSdk >= MIN_SDK_IS_BLANK)
+		if (minSdkAtLeast(MIN_SDK_IS_BLANK))
 			visitTrimIsBlank(ast);
 
-		if (minSdk >= MIN_SDK_TO_ARRAY_GENERATOR)
+		if (minSdkAtLeast(MIN_SDK_TO_ARRAY_GENERATOR))
 			visitToArrayNewZero(ast);
 
-		if (minSdk >= MIN_SDK_FORMATTED)
+		if (minSdkAtLeast(MIN_SDK_FORMATTED))
 			visitStringFormat(ast);
 
-		if (minSdk < MIN_SDK_GET_FIRST_LAST)
+		if (!minSdkAtLeast(MIN_SDK_GET_FIRST_LAST))
 			return;
 
-		final var getCalls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isGetCall(n));
+		final var getCalls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isGetCall(n));
 
 		final var zeroGets = new ArrayList<DetailAST>();
 		final var lastGets = new ArrayList<DetailAST>();
@@ -1446,24 +1679,21 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 				receiversWithOtherIndices.put(receiver, Boolean.TRUE);
 		}
 
-		// flag .get(0) only if receiver doesn't also use .get(N) with other indices
 		for (var call : zeroGets) {
 			final var dot = call.findFirstToken(TokenTypes.DOT);
 			final var receiver = receiverText(dot);
-			if (!receiversWithOtherIndices.containsKey(receiver) && receiverHasMethod(call, "getFirst"))
+			if (!receiversWithOtherIndices.containsKey(receiver) && receiverMayHaveMethod(call, "getFirst"))
 				log(call, MSG_METHOD, ".getFirst()", ".get(0)");
 		}
 
-		// flag .get(size() - 1) only if receiver doesn't also use .get(N) with other indices and has getLast()
 		for (var call : lastGets) {
 			final var dot = call.findFirstToken(TokenTypes.DOT);
 			final var receiver = receiverText(dot);
-			if (!receiversWithOtherIndices.containsKey(receiver) && receiverHasMethod(call, "getLast"))
+			if (!receiversWithOtherIndices.containsKey(receiver) && receiverMayHaveMethod(call, "getLast"))
 				log(call, MSG_METHOD, ".getLast()", ".get(size() - 1)");
 		}
 
-		// same logic for .remove(0) -> .removeFirst(), .remove(size()-1) -> .removeLast()
-		final var removeCalls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isRemoveCall(n));
+		final var removeCalls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isRemoveCall(n));
 		if (removeCalls.isEmpty())
 			return;
 
@@ -1493,32 +1723,37 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 		for (var call : zeroRemoves) {
 			final var dot = call.findFirstToken(TokenTypes.DOT);
 			final var receiver = receiverText(dot);
-			if (!removeReceiversWithOtherIndices.containsKey(receiver) && receiverHasMethod(call, "removeFirst"))
+			if (!removeReceiversWithOtherIndices.containsKey(receiver) && receiverMayHaveMethod(call, "removeFirst"))
 				log(call, MSG_METHOD, ".removeFirst()", ".remove(0)");
 		}
 
 		for (var call : lastRemoves) {
 			final var dot = call.findFirstToken(TokenTypes.DOT);
 			final var receiver = receiverText(dot);
-			if (!removeReceiversWithOtherIndices.containsKey(receiver) && receiverHasMethod(call, "removeLast"))
+			if (!removeReceiversWithOtherIndices.containsKey(receiver) && receiverMayHaveMethod(call, "removeLast"))
 				log(call, MSG_METHOD, ".removeLast()", ".remove(size() - 1)");
 		}
 	}
 
 	private void visitReplaceAllLiteral(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isReplaceAllWithLiteral(n));
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isReplaceAllWithLiteral(n));
 		for (var call : calls)
 			log(call, MSG_METHOD, ".replace(...)", ".replaceAll(...)");
 	}
 
+	@Override
+	protected void visitScopedToken(@Nonnull DetailAST ast) {
+		visitMethodScope(ast);
+	}
+
 	private void visitSizeEqualsZero(@Nonnull DetailAST ast) {
-		final var comparisons = AstUtil.collectMatching(ast, n -> isEmptyReplacement(n) != null);
+		final var comparisons = AstQuery.collectMatching(ast, n -> isEmptyReplacement(n) != null);
 		for (var comparison : comparisons) {
 			final var sizeCall = sizeCallFromComparison(comparison);
-			if (sizeCall == null || !receiverHasMethodStrict(sizeCall, "isEmpty"))
+			if (sizeCall == null || !receiverHasMethod(sizeCall, "isEmpty"))
 				continue;
 
-			if (minSdk < 35 && receiverIsCharSequenceNotString(sizeCall))
+			if (!minSdkAtLeast(MIN_SDK_CHAR_SEQUENCE_IS_EMPTY) && receiverIsCharSequenceNotString(sizeCall))
 				continue;
 
 			final var replacement = isEmptyReplacement(comparison);
@@ -1529,7 +1764,6 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 			while (methodName.getNextSibling() != null)
 				methodName = methodName.getNextSibling();
 
-			// build the actual comparison text, e.g. ".size() > 0" or "0 < .size()"
 			final var left = comparison.getFirstChild();
 			final var right = left.getNextSibling();
 			final var op = switch (comparison.getType()) {
@@ -1543,40 +1777,34 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 			};
 			final var sizeText = "." + methodName.getText() + "()";
 			final var actual = isSizeCall(left)
-					? sizeText + " " + op + " " + childText(right)
-					: childText(left) + " " + op + " " + sizeText;
+					? sizeText + " " + op + " " + AstText.exprText(right)
+					: AstText.exprText(left) + " " + op + " " + sizeText;
 			log(comparison, MSG_METHOD, "." + replacement, actual);
 		}
 	}
 
 	private void visitStreamCount(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isStreamTerminalCall(n, "count"));
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isStreamTerminalCall(n, "count"));
 		for (var call : calls)
 			log(call, MSG_METHOD, ".size()", ".stream().count()");
 	}
 
 	private void visitStreamFindFirstIsPresent(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isStreamFindFirstIsPresentCall(n));
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isStreamFindFirstIsPresentCall(n));
 		for (var call : calls)
 			log(call, MSG_METHOD, "!.isEmpty()", ".stream().findFirst().isPresent()");
 	}
 
 	private void visitStreamForEach(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isStreamForEachCall(n));
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isStreamForEachCall(n));
 		for (var call : calls)
 			log(call, MSG_METHOD, ".forEach(...)", ".stream().forEach(...)");
 	}
 
 	private void visitStringFormat(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isStringFormatCall(n));
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && isStringFormatCall(n));
 		for (var call : calls) {
-			final var elist = call.findFirstToken(TokenTypes.ELIST);
-			var argCount = 0;
-			for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
-				if (child.getType() != TokenTypes.COMMA)
-					++argCount;
-			}
-			if (argCount == 1)
+			if (argumentCount(call.findFirstToken(TokenTypes.ELIST)) == 1)
 				log(call, MSG_METHOD, "the value directly", "String.format(value)");
 			else
 				log(call, MSG_METHOD, ".formatted(...)", "String.format(...)");
@@ -1584,27 +1812,15 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 	}
 
 	private void visitToArrayNewZero(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && toArrayNewZeroType(n) != null);
+		final var calls = AstQuery.collectMatching(ast, n -> n.getType() == TokenTypes.METHOD_CALL && toArrayNewZeroType(n) != null);
 		for (var call : calls) {
 			final var typeName = toArrayNewZeroType(call);
 			log(call, MSG_METHOD, typeName + "[]::new", "new " + typeName + "[0]");
 		}
 	}
 
-	@Override
-	public void visitToken(@Nonnull DetailAST ast) {
-		switch (ast.getType()) {
-			case TokenTypes.IMPORT -> imports.add(FullIdent.createFullIdentBelow(ast).getText());
-			case TokenTypes.PACKAGE_DEF -> {
-				final var ident = ast.getLastChild().getPreviousSibling();
-				packageName = FullIdent.createFullIdent(ident).getText();
-			}
-			default -> visitMethodScope(ast);
-		}
-	}
-
 	private void visitTrimIsBlank(@Nonnull DetailAST ast) {
-		final var calls = AstUtil.collectMatching(ast, n -> (n.getType() == TokenTypes.METHOD_CALL && isTrimIsEmptyCall(n)) || trimLengthZeroReplacement(n) != null);
+		final var calls = AstQuery.collectMatching(ast, n -> (n.getType() == TokenTypes.METHOD_CALL && isTrimIsEmptyCall(n)) || trimLengthZeroReplacement(n) != null);
 		for (var node : calls) {
 			final var methodName = trimOrStripName(node);
 			if (node.getType() == TokenTypes.METHOD_CALL)
@@ -1624,7 +1840,7 @@ public class PreferSpecificApiCheck extends AbstractAstCheck {
 				};
 				final var trimLengthOnLeft = isTrimLengthCall(left);
 				final var literalSide = trimLengthOnLeft ? right : left;
-				final var literalText = childText(literalSide);
+				final var literalText = AstText.exprText(literalSide);
 				final var lengthSuffix = "." + methodName + "().length()";
 				final var actual = trimLengthOnLeft
 						? lengthSuffix + " " + op + " " + literalText

@@ -1,6 +1,8 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.LineText;
+import com.etk2000.checkstyle.PreferMathMethodCheck;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -27,6 +29,21 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 			boolean hasElse
 	) {}
 
+	/**
+	 * One {@code left OP right ? trueBranch : falseBranch} occurrence, located by
+	 * {@link #ternarySpanCovering}. {@code start} is inclusive and {@code end} exclusive,
+	 * both indices into the line the span was found in.
+	 */
+	private record TernarySpan(
+			int start,
+			int end,
+			@Nonnull String left,
+			@Nonnull String op,
+			@Nonnull String right,
+			@Nonnull String trueBranch,
+			@Nonnull String falseBranch
+	) {}
+
 	private static final Pattern ASSIGN_BODY_PATTERN = Pattern.compile(
 			"^\\s*([\\w.\\[\\]]+)\\s*=\\s*(.+?)\\s*;\\s*$"
 	);
@@ -44,9 +61,6 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 	);
 	private static final Pattern RETURN_BODY_PATTERN = Pattern.compile("^\\s*return\\s+(.+?)\\s*;\\s*$");
 	private static final Pattern RETURN_VAR_PATTERN = Pattern.compile("^\\s*return\\s+(\\w+)\\s*;\\s*$");
-	private static final Pattern TERNARY_PATTERN = Pattern.compile(
-			"((?:\\+\\+|--)?(?:[+\\-]\\s*)?[\\w.\\[\\]]+)\\s*(>=?|<=?)\\s*((?:\\+\\+|--)?(?:[+\\-]\\s*)?[\\w.\\[\\]]+)\\s*\\?\\s*((?:[+\\-]\\s*)?[\\w.\\[\\]]+)\\s*:\\s*((?:[+\\-]\\s*)?[\\w.\\[\\]]+)"
-	);
 	// init capture excludes ',' to reject multi-decls like `int r = a, s = b;`
 	private static final Pattern VAR_DECL_INIT_PATTERN = Pattern.compile(
 			"^(\\s*)(?:final\\s+)?(?:\\w+(?:\\s*\\[\\s*\\])*\\s+)(\\w+)\\s*=\\s*([^,]+?)\\s*;\\s*$"
@@ -94,6 +108,44 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 	}
 
 	/**
+	 * Whether the text starting at {@code start} is the tail of a longer name:
+	 * the character before it continues an identifier or is the dot of a
+	 * qualified receiver.
+	 */
+	@CheckReturnValue
+	private static boolean continuesAName(@Nonnull String line, int start) {
+		if (start == 0)
+			return false;
+		final var prev = line.charAt(start - 1);
+		return Character.isJavaIdentifierPart(prev) || prev == '.';
+	}
+
+	/**
+	 * Whether {@code line}, ignoring trailing whitespace, ends in one of {@code enders}.
+	 *
+	 * <p>A linear pre-gate for the line-shape patterns, every one of which anchors on {@code $}
+	 * after a required closing character. Each carries two lazy {@code (.+?)} groups, so on a line
+	 * that cannot match they re-expand the second group from every position the first can end at,
+	 * which is quadratic in the line's length. Rejecting those here costs one backward scan. This
+	 * only narrows what reaches the matcher, since a line the pattern would have accepted ends in
+	 * the same character the gate requires.
+	 */
+	@CheckReturnValue
+	private static boolean endsWithAny(@Nonnull String line, char... enders) {
+		var end = line.length();
+		while (end > 0 && Character.isWhitespace(line.charAt(end - 1)))
+			--end;
+		if (end == 0)
+			return false;
+		final var last = line.charAt(end - 1);
+		for (var ender : enders) {
+			if (last == ender)
+				return true;
+		}
+		return false;
+	}
+
+	/**
 	 * Finds the index of {@code target} at paren nesting depth 0, starting from {@code from}.
 	 * Returns -1 if not found before the end of the string or before depth goes negative.
 	 */
@@ -120,18 +172,21 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 
 	@CheckReturnValue
 	@Nullable
-	private static String fixClamp(@Nonnull String line) {
-		final var result = tryFixClampOuter(line, "Math.max(", "Math.min(", true);
+	private static String fixClamp(@Nonnull String line, int charColumn) {
+		final var result = tryFixClampOuter(line, charColumn, "Math.max(", "Math.min(", true);
 		if (result != null)
 			return result;
 
-		return tryFixClampOuter(line, "Math.min(", "Math.max(", false);
+		return tryFixClampOuter(line, charColumn, "Math.min(", "Math.max(", false);
 	}
 
 	@CheckReturnValue
 	@Nullable
 	private static FixAttempt fixIfShape(@Nonnull List<String> lines, int lineIndex) {
-		final var ifMatch = IF_COMPARISON_PATTERN.matcher(lines.get(lineIndex));
+		final var ifLine = lines.get(lineIndex);
+		if (!endsWithAny(ifLine, ')', '{'))
+			return null;
+		final var ifMatch = IF_COMPARISON_PATTERN.matcher(ifLine);
 		if (!ifMatch.matches())
 			return null;
 		final var indent = ifMatch.group(1);
@@ -144,6 +199,8 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 		if (layout == null)
 			return null;
 		final var thenLine = lines.get(layout.thenBodyIndex());
+		if (!endsWithAny(thenLine, ';'))
+			return null;
 
 		final var thenCompound = COMPOUND_ASSIGN_BODY_PATTERN.matcher(thenLine);
 		if (thenCompound.matches()) {
@@ -208,53 +265,89 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 		return null;
 	}
 
+	/**
+	 * Rewrites the ternary covering {@code column}, or {@code null} when none does.
+	 *
+	 * <p>{@code maskedLine} is {@code line} with comment and literal content blanked at
+	 * the same columns, so a comment or string cannot supply the match: matching the raw
+	 * line rewrote {@code // mirrors c > d ? c : d} into {@code // mirrors Math.max(c, d)}
+	 * and left the real violation unfixed.
+	 *
+	 * <p>Column 0 is a real column, not a "no column" sentinel: the check reports a ternary
+	 * at its {@code ?} and an if-else at its {@code if}, so either opening a zero-indented
+	 * line yields it. A column no match covers means the construct is not locatable, so the
+	 * search stays anchored rather than falling back to an unanchored {@code find()}.
+	 */
 	@CheckReturnValue
 	@Nullable
-	private static String fixTernary(@Nonnull String line, int column) {
-		final var m = TERNARY_PATTERN.matcher(line);
-		final boolean found;
-		if (column <= 0)
-			found = m.find();
-		else {
-			var matchContainingColumn = false;
-			while (m.find()) {
-				if (m.start() <= column && column < m.end()) {
-					matchContainingColumn = true;
-					break;
-				}
-			}
-			found = matchContainingColumn;
-		}
-		if (!found)
+	private static String fixTernary(@Nonnull String line, @Nonnull String maskedLine, int column) {
+		final var span = ternarySpanCovering(maskedLine, column);
+		if (span == null)
 			return null;
 
-		final var left = m.group(1).strip();
-		final var op = m.group(2);
-		final var right = m.group(3).strip();
-		final var trueBranch = m.group(4).strip();
-		final var falseBranch = m.group(5).strip();
+		// Masking blanks comments to spaces and the gaps between operands are optional, so a
+		// comment *inside* the expression (`a /* n */ > b ? a : b`) becomes matchable when the
+		// raw line was not. The replacement splices the original line, so rewriting would
+		// delete it.
+		if (!maskedLine.regionMatches(span.start(), line, span.start(), span.end() - span.start()))
+			return null;
 
-		if (isZero(right)) {
-			final var absResult = tryFixAbs(left, op, trueBranch, falseBranch);
+		if (isZero(span.right())) {
+			final var absResult = tryFixAbs(span.left(), span.op(), span.trueBranch(), span.falseBranch());
 			if (absResult != null)
-				return line.substring(0, m.start()) + absResult + line.substring(m.end());
+				return spliceTernary(line, span, absResult);
 		}
-		if (isZero(left)) {
-			final var absResult = tryFixAbsZeroLeft(right, op, trueBranch, falseBranch);
+		if (isZero(span.left())) {
+			final var absResult = tryFixAbsZeroLeft(span.right(), span.op(), span.trueBranch(), span.falseBranch());
 			if (absResult != null)
-				return line.substring(0, m.start()) + absResult + line.substring(m.end());
+				return spliceTernary(line, span, absResult);
 		}
 
-		final var maxMinResult = tryFixMaxMin(left, op, right, trueBranch, falseBranch);
+		final var maxMinResult = tryFixMaxMin(
+				span.left(), span.op(), span.right(), span.trueBranch(), span.falseBranch()
+		);
 		if (maxMinResult != null)
-			return line.substring(0, m.start()) + maxMinResult + line.substring(m.end());
+			return spliceTernary(line, span, maxMinResult);
 
 		return null;
 	}
 
 	@CheckReturnValue
+	private static boolean hasMutationBefore(@Nonnull String s, int i) {
+		if (i < 2)
+			return false;
+		final var c = s.charAt(i - 1);
+		return (c == '+' || c == '-') && s.charAt(i - 2) == c;
+	}
+
+	@CheckReturnValue
 	private static boolean isNegation(@Nonnull String expr, @Nonnull String variable) {
 		return expr.startsWith("-") && expr.substring(1).strip().equals(variable);
+	}
+
+	/**
+	 * Whether {@code c} is one of the six characters Java's {@code \s} accepts. Deliberately
+	 * not {@link Character#isWhitespace}, which also accepts Unicode separators and so would
+	 * widen what counts as a gap inside an expression.
+	 *
+	 * <p>The vertical tab is written as an escape: raw, it is invisible in diffs and review
+	 * tools, and anything that normalized it to a space would drop it from the class while
+	 * still compiling.
+	 */
+	@CheckReturnValue
+	private static boolean isTernarySpace(char c) {
+		return c == ' ' || c == '\t' || c == '\n' || c == '\u000B' || c == '\f' || c == '\r';
+	}
+
+	/**
+	 * Whether {@code c} can appear in an operand. ASCII only, matching Java's {@code \w}:
+	 * {@link Character#isLetterOrDigit} would admit letters from other scripts and pull a
+	 * supplementary character into an operand.
+	 */
+	@CheckReturnValue
+	private static boolean isTernaryWord(char c) {
+		return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9'
+				|| c == '_' || c == '.' || c == '[' || c == ']';
 	}
 
 	@CheckReturnValue
@@ -349,6 +442,28 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 		return new IfElseLayout(thenBodyIndex, -1, thenBlockEndIndex, false);
 	}
 
+	@CheckReturnValue
+	private static int skipTernarySpaces(@Nonnull String s, int i) {
+		var j = i;
+		while (j < s.length() && isTernarySpace(s.charAt(j)))
+			++j;
+		return j;
+	}
+
+	@CheckReturnValue
+	private static int skipTernarySpacesBack(@Nonnull String s, int i) {
+		var j = i;
+		while (j > 0 && isTernarySpace(s.charAt(j - 1)))
+			--j;
+		return j;
+	}
+
+	@CheckReturnValue
+	@Nonnull
+	private static String spliceTernary(@Nonnull String line, @Nonnull TernarySpan span, @Nonnull String replacement) {
+		return line.substring(0, span.start()) + replacement + line.substring(span.end());
+	}
+
 	/**
 	 * Splits a call like "Math.min(arg1, arg2)" into its two arguments,
 	 * using paren-balancing to find the correct comma.
@@ -379,6 +494,134 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 		if (operand.startsWith("++") || operand.startsWith("--"))
 			return operand.substring(2);
 		return operand;
+	}
+
+	/**
+	 * End of the operand starting at {@code start}, or -1 when none does. Forward counterpart
+	 * of {@link #ternaryOperandStart}; the branches after {@code ?} take no mutation prefix.
+	 */
+	@CheckReturnValue
+	private static int ternaryOperandEnd(@Nonnull String s, int start) {
+		var i = start;
+		if (i < s.length() && (s.charAt(i) == '+' || s.charAt(i) == '-'))
+			i = skipTernarySpaces(s, i + 1);
+		final var wordStart = i;
+		while (i < s.length() && isTernaryWord(s.charAt(i)))
+			++i;
+		return i == wordStart ? -1 : i;
+	}
+
+	/**
+	 * Start of the operand ending at {@code end}, or -1 when no operand ends there.
+	 *
+	 * <p>{@code ++a} reads two ways backwards, as a mutation on the word or as a sign with a
+	 * stray {@code +} before it, and only the first starts where the leftmost match does. Both
+	 * readings are built and the leftmost wins, which is also what settles {@code +++a} as
+	 * {@code ++} then {@code +}. A mutation prefix never reaches across whitespace.
+	 */
+	@CheckReturnValue
+	private static int ternaryOperandStart(@Nonnull String s, int end, boolean allowMutation) {
+		var wordStart = end;
+		while (wordStart > 0 && isTernaryWord(s.charAt(wordStart - 1)))
+			--wordStart;
+		if (wordStart == end)
+			return -1;
+
+		var start = allowMutation && hasMutationBefore(s, wordStart) ? wordStart - 2 : wordStart;
+
+		final var afterSign = skipTernarySpacesBack(s, wordStart);
+		if (afterSign > 0) {
+			final var sign = s.charAt(afterSign - 1);
+			if (sign == '+' || sign == '-') {
+				final var signed = afterSign - 1;
+				start = Math.min(start, allowMutation && hasMutationBefore(s, signed) ? signed - 2 : signed);
+			}
+		}
+		return start;
+	}
+
+	/**
+	 * Parses outward from the {@code ?} at {@code questionIndex}, or {@code null} when the
+	 * surrounding text is not {@code left OP right ? trueBranch : falseBranch}.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static TernarySpan ternarySpanAt(@Nonnull String s, int questionIndex) {
+		final var rightEnd = skipTernarySpacesBack(s, questionIndex);
+		final var rightStart = ternaryOperandStart(s, rightEnd, true);
+		if (rightStart < 0)
+			return null;
+
+		final var opEnd = skipTernarySpacesBack(s, rightStart);
+		if (opEnd == 0)
+			return null;
+		var opStart = opEnd - 1;
+		if (s.charAt(opStart) == '=') {
+			if (opStart == 0)
+				return null;
+			--opStart;
+		}
+		final var comparison = s.charAt(opStart);
+		if (comparison != '>' && comparison != '<')
+			return null;
+
+		final var leftEnd = skipTernarySpacesBack(s, opStart);
+		final var leftStart = ternaryOperandStart(s, leftEnd, true);
+		if (leftStart < 0)
+			return null;
+
+		final var trueStart = skipTernarySpaces(s, questionIndex + 1);
+		final var trueEnd = ternaryOperandEnd(s, trueStart);
+		if (trueEnd < 0)
+			return null;
+
+		final var colon = skipTernarySpaces(s, trueEnd);
+		if (colon >= s.length() || s.charAt(colon) != ':')
+			return null;
+
+		final var falseStart = skipTernarySpaces(s, colon + 1);
+		final var falseEnd = ternaryOperandEnd(s, falseStart);
+		if (falseEnd < 0)
+			return null;
+
+		return new TernarySpan(
+				leftStart,
+				falseEnd,
+				s.substring(leftStart, leftEnd).strip(),
+				s.substring(opStart, opEnd),
+				s.substring(rightStart, rightEnd).strip(),
+				s.substring(trueStart, trueEnd).strip(),
+				s.substring(falseStart, falseEnd).strip()
+		);
+	}
+
+	/**
+	 * The ternary span covering {@code column}, or {@code null} when none does.
+	 *
+	 * <p>Replaces a regex whose {@code [\w.\[\]]+} runs backtracked quadratically on a long
+	 * identifier run with no match. Here each character is visited a bounded number of times
+	 * per candidate {@code ?}.
+	 *
+	 * <p>Spans are produced left to right and non-overlapping, reproducing
+	 * {@code Matcher.find()}: one whose operand reaches back into an earlier span is skipped
+	 * rather than reported, so a chained {@code a > b ? a : b > c ? b : c} still yields only
+	 * its first ternary.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static TernarySpan ternarySpanCovering(@Nonnull String s, int column) {
+		var from = 0;
+		for (var q = s.indexOf('?'); q >= 0; q = s.indexOf('?', q + 1)) {
+			final var span = ternarySpanAt(s, q);
+			if (span == null || span.start() < from)
+				continue;
+			if (span.start() > column)
+				return null;
+			if (column < span.end())
+				return span;
+			from = span.end();
+		}
+		return null;
 	}
 
 	@CheckReturnValue
@@ -456,21 +699,32 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 	}
 
 	/**
-	 * Tries to parse and fix a clamp pattern starting with {@code outerPrefix}
-	 * (e.g. "Math.max(") containing {@code innerPrefix} (e.g. "Math.min(").
-	 * Uses paren-balancing to correctly split arguments even when they contain
-	 * nested calls, casts, or other parenthesized expressions.
+	 * Tries to parse and fix a clamp pattern whose {@code outerPrefix} (e.g.
+	 * "Math.max(") ends at {@code charColumn} and that contains
+	 * {@code innerPrefix} (e.g. "Math.min("). Uses paren-balancing to correctly
+	 * split arguments even when they contain nested calls, casts, or other
+	 * parenthesized expressions.
+	 *
+	 * <p>The check logs a clamp at its {@code METHOD_CALL}, whose position is the
+	 * call's {@code (}, so the prefix must end exactly at {@code charColumn}
+	 * rather than be searched for from the start of the line. Without the anchor
+	 * the rewrite lands on whichever call comes first, including one the check
+	 * deliberately refused. The character before the match is checked too: a
+	 * qualified receiver such as {@code MyMath.max(} carries {@code Math.max(} as
+	 * a suffix and would otherwise satisfy the anchor by accident, yielding a call
+	 * to a {@code clamp} that does not exist.
 	 */
 	@CheckReturnValue
 	@Nullable
 	private static String tryFixClampOuter(
 			@Nonnull String line,
+			int charColumn,
 			@Nonnull String outerPrefix,
 			@Nonnull String innerPrefix,
 			boolean isOuterMax
 	) {
-		final var outerStart = line.indexOf(outerPrefix);
-		if (outerStart < 0)
+		final var outerStart = charColumn - (outerPrefix.length() - 1);
+		if (outerStart < 0 || !line.startsWith(outerPrefix, outerStart) || continuesAName(line, outerStart))
 			return null;
 
 		final var argsStart = outerStart + outerPrefix.length();
@@ -680,11 +934,22 @@ class PreferMathMethodFixer implements CheckstyleFixer {
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
 
-		var result = fixClamp(line);
-		if (result == null)
-			result = fixTernary(line, column);
-		if (result != null)
-			return new FixResult(lineIndex, lineIndex, List.of(result));
+		// The if-else form is reported under its own key at the `if`, which is not
+		// a call position, so the expression rewrites can only mis-target there.
+		if (!PreferMathMethodCheck.MSG_METHOD_IF.equals(FixContext.getViolationKey())) {
+			// both rewrites index the line, so both need the char index rather than the
+			// code-point column the pipeline reports
+			final var charColumn = LineText.charIndexOfColumn(line, column);
+			var result = fixClamp(line, charColumn);
+			if (result == null) {
+				// masked through FixerAst so the lexer state is threaded from line 0: a line
+				// that merely *closes* a text block starts with """, which per-line masking
+				// would read as an opener and blank the real expression after it
+				result = fixTernary(line, FixerAst.maskAll(lines).get(lineIndex), charColumn);
+			}
+			if (result != null)
+				return new FixResult(lineIndex, lineIndex, List.of(result));
+		}
 
 		final var ifShapeResult = fixIfShape(lines, lineIndex);
 		if (ifShapeResult != null)

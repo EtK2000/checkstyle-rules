@@ -427,14 +427,18 @@ class RecordFormattingFixer implements CheckstyleFixer {
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var line = lines.get(lineIndex);
-		if (column < 0 || column >= line.length())
+		// the reported column counts code points, so without converting it a supplementary character
+		// earlier on the line shifts the index back onto a neighbouring brace, and a cuddled inner
+		// `}` then gets split instead of the record's own
+		final var charColumn = LineText.charIndexOfColumn(line, column);
+		if (charColumn < 0 || charColumn >= line.length())
 			return null;
 
-		final var c = line.charAt(column);
+		final var c = line.charAt(charColumn);
 		if (c == '{')
-			return fixOpenBrace(lines, lineIndex, column);
+			return fixOpenBrace(lines, lineIndex, charColumn);
 		if (c == '}')
-			return fixCloseBrace(lines, lineIndex, column);
+			return fixCloseBrace(lines, lineIndex, charColumn);
 		return fixComponentLayout(lines, lineIndex);
 	}
 }

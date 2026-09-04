@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstDisplay;
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.etk2000.checkstyle.gradle.fix.LineLength;
 
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
@@ -69,25 +71,25 @@ public class PreferDirectBooleanReturnCheck extends AbstractAstCheck {
 	 */
 	@CheckReturnValue
 	private static boolean extractableSameLiteral(@Nonnull DetailAST conditionExpr) {
-		var top = AstUtil.unwrapParensAndExpr(conditionExpr);
+		var top = AstQuery.unwrapParensAndExpr(conditionExpr);
 		while (top != null && top.getType() == TokenTypes.TYPECAST) {
 			final var rparen = top.findFirstToken(TokenTypes.RPAREN);
-			top = rparen == null ? null : AstUtil.unwrapParensAndExpr(rparen.getNextSibling());
+			top = rparen == null ? null : AstQuery.unwrapParensAndExpr(rparen.getNextSibling());
 		}
 		if (top == null)
 			return false;
 		if (isStatementExpr(top))
 			return true;
-		final var left = AstUtil.unwrapParensAndExpr(top.getFirstChild());
-		final var right = AstUtil.unwrapParensAndExprFromEnd(top.getLastChild());
+		final var left = AstQuery.unwrapParensAndExpr(top.getFirstChild());
+		final var right = AstQuery.unwrapParensAndExprFromEnd(top.getLastChild());
 		if (left == null || right == null)
 			return false;
 		return switch (top.getType()) {
 			case TokenTypes.EQUAL, TokenTypes.GE, TokenTypes.GT, TokenTypes.LE, TokenTypes.LT, TokenTypes.NOT_EQUAL ->
-					(isStatementExpr(left) && AstUtil.isSideEffectFree(right))
-							|| (isStatementExpr(right) && AstUtil.isSideEffectFree(left));
+					(isStatementExpr(left) && AstQuery.isSideEffectFree(right))
+							|| (isStatementExpr(right) && AstQuery.isSideEffectFree(left));
 			case TokenTypes.LAND -> isStatementExpr(right)
-					|| (isStatementExpr(left) && AstUtil.isSideEffectFree(right));
+					|| (isStatementExpr(left) && AstQuery.isSideEffectFree(right));
 			default -> false;
 		};
 	}
@@ -95,7 +97,7 @@ public class PreferDirectBooleanReturnCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	private static boolean isStatementExpr(@Nonnull DetailAST node) {
 		final var type = node.getType();
-		return AstUtil.isAssignmentOperator(type)
+		return AstQuery.isAssignmentOperator(type)
 				|| type == TokenTypes.DEC || type == TokenTypes.INC
 				|| type == TokenTypes.METHOD_CALL
 				|| type == TokenTypes.POST_DEC || type == TokenTypes.POST_INC;
@@ -117,7 +119,7 @@ public class PreferDirectBooleanReturnCheck extends AbstractAstCheck {
 		final var expr = stmt.findFirstToken(TokenTypes.EXPR);
 		if (expr == null)
 			return null;
-		final var value = AstUtil.unwrapParensAndExpr(expr);
+		final var value = AstQuery.unwrapParensAndExpr(expr);
 		if (value == null)
 			return null;
 		return switch (value.getType()) {
@@ -142,7 +144,7 @@ public class PreferDirectBooleanReturnCheck extends AbstractAstCheck {
 		if (thenBody == null)
 			return;
 
-		final var thenStmt = AstUtil.unwrapSingleStatementBlock(thenBody);
+		final var thenStmt = AstQuery.unwrapSingleStatementBlock(thenBody);
 		if (thenStmt == null || !isValuedReturn(thenStmt))
 			return;
 
@@ -152,7 +154,7 @@ public class PreferDirectBooleanReturnCheck extends AbstractAstCheck {
 			final var elseBody = elseAst.getFirstChild();
 			if (elseBody == null)
 				return;
-			elseStmt = AstUtil.unwrapSingleStatementBlock(elseBody);
+			elseStmt = AstQuery.unwrapSingleStatementBlock(elseBody);
 		}
 		else
 			elseStmt = ast.getNextSibling();
@@ -171,7 +173,7 @@ public class PreferDirectBooleanReturnCheck extends AbstractAstCheck {
 			final var valueExpr = (xInBody ? thenStmt : elseStmt).findFirstToken(TokenTypes.EXPR);
 			if (conditionExpr == null || valueExpr == null)
 				return;
-			if (AstUtil.lastLine(valueExpr) > AstUtil.firstLine(valueExpr))
+			if (AstQuery.lastLine(valueExpr) > AstQuery.firstLine(valueExpr))
 				return;
 			final var literalTrue = xInBody ? elseValue : thenValue;
 			final var ands = countType(conditionExpr, TokenTypes.LAND)
@@ -182,11 +184,15 @@ public class PreferDirectBooleanReturnCheck extends AbstractAstCheck {
 				return;
 			final var negateCondition = xInBody == literalTrue;
 			final var ifLine = getLine(ast.getLineNo() - 1);
-			final var indentEnd = Math.min(ast.getColumnNo(), ifLine.length());
+			// getColumnNo() counts code points, so it cannot be used as a char index on a line
+			// carrying an astral character
+			final var indentEnd = ast.getColumnNo() < ifLine.codePointCount(0, ifLine.length())
+					? ifLine.offsetByCodePoints(0, ast.getColumnNo())
+					: ifLine.length();
 			final var collapsedLength = LineLength.tabExpandedLength(ifLine.substring(0, indentEnd))
 					+ "return ".length() + (negateCondition ? "!".length() : 0)
-					+ AstUtil.displayText(conditionExpr).length() + " && ".length()
-					+ AstUtil.displayText(valueExpr).length() + ";".length();
+					+ AstDisplay.displayText(conditionExpr).length() + " && ".length()
+					+ AstDisplay.displayText(valueExpr).length() + ";".length();
 			if (collapsedLength > LineLength.MAX_LINE_LENGTH)
 				return;
 			log(ast, MSG_COMBINE);
@@ -199,7 +205,7 @@ public class PreferDirectBooleanReturnCheck extends AbstractAstCheck {
 		}
 
 		final var condition = ast.findFirstToken(TokenTypes.EXPR);
-		if (condition != null && (AstUtil.isSideEffectFree(condition) || extractableSameLiteral(condition)))
+		if (condition != null && (AstQuery.isSideEffectFree(condition) || extractableSameLiteral(condition)))
 			log(ast, MSG_REDUNDANT);
 	}
 }

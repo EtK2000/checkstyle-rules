@@ -535,6 +535,36 @@ class GenericTypeSkippedSlice {
 }
 // === end ===
 
+// === case: instanceof_comment_abutting_keyword_skipped ===
+// skip-reason: complex assertion form
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class InstanceofCommentAbuttingKeywordSkippedSlice {
+	void m(Object o) {
+		assertTrue(o/* c */instanceof String);
+	}
+}
+// === end ===
+
+// === case: instanceof_comment_abutting_type_no_spaces_skipped ===
+// skip-reason: complex assertion form
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class InstanceofCommentAbuttingTypeNoSpacesSkippedSlice {
+	void m(Object o) {
+		assertTrue(o instanceof/*c*/String);
+	}
+}
+// === end ===
+
+// === case: instanceof_comment_abutting_type_skipped ===
+// skip-reason: complex assertion form
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class InstanceofCommentAbuttingTypeSkippedSlice {
+	void m(Object o) {
+		assertTrue(o instanceof/* c */String);
+	}
+}
+// === end ===
+
 // === case: instanceof_inside_parens_in_other_arg_ignored ===
 // imports: static org.junit.jupiter.api.Assertions.*
 class InstanceofInsideParensInOtherArgIgnoredSlice {
@@ -543,6 +573,16 @@ class InstanceofInsideParensInOtherArgIgnoredSlice {
 
 	void m(Object x) {
 		assertInstanceOf(Y.class, x, "got: " + (x instanceof Y));
+	}
+}
+// === end ===
+
+// === case: instanceof_text_block_abutting_keyword_skipped ===
+// skip-reason: complex assertion form
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class InstanceofTextBlockAbuttingKeywordSkippedSlice {
+	void m() {
+		assertTrue("""some text"""instanceof String);
 	}
 }
 // === end ===

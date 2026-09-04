@@ -1,0 +1,21 @@
+<?xml version="1.0"?><!DOCTYPE module PUBLIC
+	"-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+	"https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!-- Project-internal architecture guard, deliberately NOT part of the shipped config.
+     ImportControl has no `optional` property, so a module referencing ${config_loc} in
+     src/main/resources/com/etk2000/checkstyle/checkstyle.xml breaks every consumer twice over:
+     the plugin ships only checkstyle.xml, so the control file is absent and config load fails
+     with "cannot initialize module ImportControl"; and a consumer who copies it in then gets
+     "Import control file does not handle this package" as an error on every file outside
+     com.etk2000.checkstyle. Both were reproduced against the checkstyle CLI. -->
+<module name="Checker">
+	<property name="charset" value="UTF-8" />
+	<property name="severity" value="error" />
+
+	<module name="TreeWalker">
+		<module name="ImportControl">
+			<property name="file" value="${config_loc}/import-control.xml" />
+		</module>
+	</module>
+</module>

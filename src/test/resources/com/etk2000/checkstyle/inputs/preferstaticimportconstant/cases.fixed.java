@@ -67,8 +67,7 @@ class InputPreferStaticImportConstantCinitBlankFinalWithCommentOnStaticOpenerLin
 
 // === case: cinit_blank_final_with_decl_after_static_block_on_same_line_keeps_block ===
 class InputPreferStaticImportConstantCinitBlankFinalWithDeclAfterStaticBlockOnSameLineKeepsBlockSliceViolation {
-	static {
-	} private static final int Y = 0;
+	private static final int Y = 0;
 }
 // === end ===
 
@@ -89,8 +88,6 @@ class InputPreferStaticImportConstantCinitBlankFinalWithLeadingCommentInStaticBl
 
 // === case: cinit_blank_final_with_leading_comment_on_cinit_line_keeps_block ===
 class InputPreferStaticImportConstantCinitBlankFinalWithLeadingCommentOnCinitLineKeepsBlockSliceViolation {
-	static {
-	}
 }
 // === end ===
 
@@ -104,8 +101,6 @@ class InputPreferStaticImportConstantCinitBlankFinalWithTrailingCommentInStaticB
 
 // === case: cinit_blank_final_with_trailing_comment_on_cinit_line_keeps_block ===
 class InputPreferStaticImportConstantCinitBlankFinalWithTrailingCommentOnCinitLineKeepsBlockSliceViolation {
-	static {
-	}
 }
 // === end ===
 

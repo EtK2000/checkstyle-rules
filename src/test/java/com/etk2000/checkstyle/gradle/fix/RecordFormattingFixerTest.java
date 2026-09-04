@@ -13,6 +13,17 @@ public class RecordFormattingFixerTest {
 
 	private final CheckstyleFixer fixer = new RecordFormattingFixer();
 
+	/**
+	 * Column 28 is past the fragment line's 27 code points but inside its 29 chars: the only column
+	 * the old {@code column >= line.length()} bound accepted that the code-point conversion now
+	 * rejects, so it lands on the {@code charColumn < 0} arm rather than the
+	 * {@code charColumn >= line.length()} one, which column 27 would take.
+	 */
+	@Test
+	public void testFixColumnPastCodePointCountReturnsNull() throws Exception {
+		assertSkip(fixer, TOPIC, "fix_column_past_code_point_count_returns_null");
+	}
+
 	@Test
 	public void testFixComponentBitshiftInAnnotation() throws Exception {
 		assertCaseFixMultiViolation(RecordFormattingCheck.class, fixer, TOPIC, "fix_component_bitshift_in_annotation");

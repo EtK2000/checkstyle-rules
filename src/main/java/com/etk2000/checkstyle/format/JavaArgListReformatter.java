@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.format;
 
+import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.JavaLineScanner.LexerState;
 import com.etk2000.checkstyle.format.SpanReformat.CannotReformat;
 import com.etk2000.checkstyle.format.SpanReformat.Reason;
 import com.etk2000.checkstyle.format.SpanReformat.Reformatted;
@@ -31,18 +33,15 @@ import javax.annotation.Nonnull;
  * comment that leaked past a {@code ,} (it leads the next argument's slice, being a trailing comment on
  * the previous line) is lifted back onto the previous argument's line (or the {@code (} head), so it is
  * preserved rather than blocking the re-layout. Re-layout is refused entirely (the caller keeps the
- * source as-is or falls back to a layout-preserving move) only when an argument needs its own
+ * source as-is or falls back to a layout-preserving move) when an argument needs its own
  * opening-line shape (an inline-block or ternary configuration, per
  * {@link ArgLayoutClassifier#isSpecialLayoutConfiguration}).
- *
- * <p>Reformatting utility that depends only on the shared {@link ArgLayoutClassifier} /
- * {@link SpanReformat} / {@link JavaSpanReindenter} utilities, never on a check or fixer.
  */
 public final class JavaArgListReformatter {
 	/**
 	 * Re-lays-out the argument/parameter list of {@code owner} (a {@code METHOD_CALL},
 	 * {@code LITERAL_NEW}, {@code SUPER_CTOR_CALL}, {@code METHOD_DEF} or {@code CTOR_DEF}, as returned by
-	 * {@code MultilineCallFormattingCheck.resolvableSharedLineArgs}). Collapses the whole list onto one
+	 * {@code MultilineCallMoves.resolvableSharedLineArgs}). Collapses the whole list onto one
 	 * line when it fits within {@code maxLineWidth} (tabs expanded to {@code tabWidth}); otherwise puts
 	 * each argument on its own line. {@code lines} are the current source lines the {@code owner} AST was
 	 * parsed from.
@@ -96,12 +95,9 @@ public final class JavaArgListReformatter {
 			}
 		}
 
-		// which lines begin inside a text block / multi-line block comment: a collapse across them would
-		// corrupt the literal, so an argument spanning one is re-emitted verbatim instead of joined
 		final var beginsInLiteral = SpanReformat.beginsInMultilineLiteralByLine(lines, openIdx, closeIdx);
 
-		// the argument nodes in order (segment i corresponds to argNodes[i]), so a segment can be tested for
-		// a multi-line braced block that must not be tight-collapsed
+		// the argument nodes in order: segment i corresponds to argNodes[i]
 		final var argNodes = new ArrayList<DetailAST>();
 		for (var child = argList.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() != TokenTypes.COMMA)
@@ -118,8 +114,6 @@ public final class JavaArgListReformatter {
 					break;
 				}
 			}
-			// a multi-line braced block (lambda / anonymous-class / switch body) would be crammed onto one
-			// line by a collapse, so its argument is emitted verbatim instead, like the text-block handling
 			if (!verbatim[i] && i < argNodes.size() && ArgLayoutClassifier.containsMultilineBracedBlock(argNodes.get(i))) {
 				verbatim[i] = true;
 				anyVerbatim = true;
@@ -132,11 +126,6 @@ public final class JavaArgListReformatter {
 			final var b = boundaries.get(i + 1);
 			segments.add(SpanReformat.slice(lines, a[0], a[1] + 1, b[0], b[1]));
 		}
-		// a `//` comment that leads a segment leaked past the previous separator (it is a trailing comment on
-		// that line, not this argument's own code): lift it out so it re-attaches to the previous argument's
-		// line (or the `(` head), then let the argument itself collapse/split. A `//` comment that stays
-		// mid-argument (code before it, more of the argument after) would be swallowed by a one-line collapse,
-		// so that argument is emitted verbatim while its siblings collapse/split around it
 		final var leadingComment = new String[segments.size()];
 		// physical line of an own-line leaked comment (fragment index > 0), so a verbatim re-emission can drop
 		// exactly that line rather than the first interior line whose text matches (which could be a distinct,
@@ -152,9 +141,6 @@ public final class JavaArgListReformatter {
 				for (var f = 0; f < segment.size(); ++f) {
 					if (!segment.get(f).isBlank()) {
 						leadingComment[i] = segment.get(f).strip();
-						// fragment f maps to physical line boundaries[i][0] + f; f == 0 trails the previous
-						// separator on its own line and is dropped by the firstLine guard, so only an own-line
-						// comment (f > 0) needs an interior line skipped in the verbatim re-emission
 						if (f > 0)
 							leadingCommentLine[i] = boundaries.get(i)[0] + f;
 						segment.set(f, "");
@@ -163,7 +149,8 @@ public final class JavaArgListReformatter {
 					}
 				}
 			}
-			if (!verbatim[i] && SpanReformat.swallowsComment(segment)) {
+			// every segment starts just past a `(` or `,`, which is code, so it begins in NONE
+			if (!verbatim[i] && SpanReformat.swallowsComment(segment, LexerState.NONE)) {
 				verbatim[i] = true;
 				anyVerbatim = true;
 			}
@@ -186,8 +173,6 @@ public final class JavaArgListReformatter {
 		final var baseTabs = SpanReformat.leadingTabs(lines.get(openIdx));
 		final var suffix = lines.get(closeIdx).substring(closeCol);
 
-		// the whole call collapses onto one line only when no argument must stay multi-line (a text block /
-		// block comment cannot be one-lined) and no argument carries a trailing or leaked `//` comment
 		if (!anyVerbatim && !anyTrailingComment && !anyLeadingComment) {
 			final var head = lines.get(openIdx).substring(0, openCol + 1).strip();
 			final var oneLine = "\t".repeat(baseTabs) + head + String.join(", ", arguments) + suffix;
@@ -202,20 +187,22 @@ public final class JavaArgListReformatter {
 		broken.add(leadingComment[0] != null ? head + " " + leadingComment[0] : head);
 		for (var i = 0; i < arguments.size(); ++i) {
 			final var comma = i + 1 < arguments.size() ? "," : "";
-			// a `//` comment that leaked to the NEXT segment belongs on this argument's line, after its `,`
 			final var trailing = i + 1 < leadingComment.length && leadingComment[i + 1] != null
 					? " " + leadingComment[i + 1] : "";
 			if (verbatim[i]) {
-				// re-emit the argument's raw source lines; JavaSpanReindenter keeps text-block / block-comment
-				// interiors verbatim, so the literal's value is preserved. The trailing separator attaches to
-				// the argument's last real line (the `,`/`)` boundary may sit on a later, whitespace-only line)
 				final var a = boundaries.get(i);
 				final var b = boundaries.get(i + 1);
 				final var segLines = new ArrayList<String>();
+				// the physical line each kept entry came from, so the separator guard below can look up the true
+				// lexer state at the last one; -1 marks a partial line that starts at a code boundary, where
+				// LexerState.NONE is already correct and no lookup is needed
+				final var segLineIdx = new ArrayList<Integer>();
 				final var firstLine = lines.get(a[0]).substring(a[1] + 1);
 				// skip the first line when it is only the leaked comment already lifted to the previous line
-				if (leadingComment[i] == null && !firstLine.isBlank())
+				if (leadingComment[i] == null && !firstLine.isBlank()) {
 					segLines.add(firstLine);
+					segLineIdx.add(-1);
+				}
 				var interiorStart = a[0] + 1;
 				// an own-line leaked `//` comment was lifted to the previous line; the interior lines before it are
 				// all blank (it is the segment's first non-blank fragment), so resume just past it and drop any
@@ -225,19 +212,40 @@ public final class JavaArgListReformatter {
 					while (interiorStart < b[0] && lines.get(interiorStart).isBlank())
 						++interiorStart;
 				}
-				for (var ln = interiorStart; ln < b[0]; ++ln)
+				for (var ln = interiorStart; ln < b[0]; ++ln) {
 					segLines.add(lines.get(ln));
+					segLineIdx.add(ln);
+				}
 				// the literal has closed before the ,/) boundary; drop any non-significant trailing whitespace
 				final var lastPart = lines.get(b[0]).substring(0, b[1]).stripTrailing();
-				if (!lastPart.isBlank())
+				if (!lastPart.isBlank()) {
 					segLines.add(lastPart);
+					segLineIdx.add(b[0]);
+				}
 				// blank lines between the argument's last real line and the ,/) boundary must not steal the
 				// separator (a text block's closing delimiter is its last line, so this only drops layout blanks)
-				while (!segLines.isEmpty() && segLines.getLast().isBlank())
+				while (!segLines.isEmpty() && segLines.getLast().isBlank()) {
 					segLines.removeLast();
+					segLineIdx.removeLast();
+				}
 				if (segLines.isEmpty())
 					return new CannotReformat(Reason.STALE);
-				segLines.set(segLines.size() - 1, segLines.getLast() + comma + trailing);
+
+				// the insert scans from LexerState.NONE, which is wrong on a line that begins inside a literal:
+				// it reads the prose as code, so a `//` in a URL becomes a phantom comment, and a real trailing
+				// `//` behind an apostrophe or a text-block delimiter is masked. Both are only untrustworthy
+				// when the NONE scan actually disagrees with the line's true entry state (a `*/` is invisible to
+				// a NONE scan, so a block comment closing mid-line re-synchronises and its position is exact),
+				// so compare the two and decline only on a disagreement. Threading the state into the insert, so
+				// these fix rather than decline, is TODO-arglist-separator-lexer-state.md
+				final var lastLineIdx = segLineIdx.getLast();
+				if ((!comma.isEmpty() || !trailing.isEmpty()) && lastLineIdx >= 0
+						&& JavaLineScanner.firstLineComment(segLines.getLast(), LexerState.NONE)
+								!= JavaLineScanner.firstLineComment(segLines.getLast(), SpanReformat.lexerStateAt(lines, lastLineIdx)))
+					return new CannotReformat(Reason.MULTILINE_LITERAL);
+				// the separator goes on the code, not after a trailing `//`: a verbatim argument's last kept
+				// line can itself be an own-line comment sitting between the argument and its `,`
+				segLines.set(segLines.size() - 1, SpanReformat.insertBeforeTrailingComment(segLines.getLast(), comma) + trailing);
 				broken.addAll(segLines);
 			}
 			else

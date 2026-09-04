@@ -1,5 +1,24 @@
 # PreferMathMethodCheck auto-fix coverage
 
+Every rewrite is anchored to the reported violation. The if-else form is reported under its own
+message key (`prefer.math.method.if`) at the `if`, which is not a call position, so the fixer goes
+straight to the if-else rewrite rather than trying the expression rewrites there. A clamp is
+reported at the call's `(`, so `Math.max(` / `Math.min(` must end exactly at the reported column
+and the character before the match must not continue a name: a qualified receiver such as
+`MyMath.max(` carries `Math.max(` as a suffix and is not taken for one.
+
+The ternary search is anchored at the reported column, column 0 included, and runs over a comment-
+and literal-masked copy of the buffer threaded from its top, so comment and literal content can
+neither supply a match nor be rewritten. A match that covers masked content is refused rather than
+rewritten: the replacement splices the original line, so it would delete the comment the mask stood
+in for.
+
+| Pattern | Replacement | Auto-fix |
+| --- | --- | --- |
+| Multiline ternary (`?` or `:` opening its own line) | `Math.max(a, b)` | No (skipped: `parenthesized or multiline ternary`), at every column |
+| Ternary-shaped text in a comment or string literal on the reported line | n/a | No, never matched |
+| Ternary split by a comment between its operands (`a /* n */ > b ? a : b`) | `Math.max(a, b)` | No, refused so the comment survives |
+
 ## Ternary (max/min/abs)
 
 | Pattern | Replacement | Auto-fix |
@@ -8,8 +27,12 @@
 | `a < b ? a : b` (4 operator variants) | `Math.min(a, b)` | Yes |
 | `a < 0 ? -a : a` (8 variants) | `Math.abs(a)` | Yes |
 | `--a > b ? a : b` (prefix mutation) | `Math.max(--a, b)` | Yes |
-| `(a) > (b) ? (a) : (b)` (parenthesized) | `Math.max(a, b)` | No (regex limitation) |
-| Multiline ternary | `Math.max(a, b)` | No (single-line fixer) |
+| `(a) > (b) ? (a) : (b)` (parenthesized) | `Math.max(a, b)` | No, the operand scan admits no parenthesis |
+| `a > ++b ? a : b` (mutation on either operand) | `Math.max(a, ++b)` | Yes |
+| `a > -b ? a : -b` (signed operand) | `Math.max(a, -b)` | Yes |
+| `aB_1 > b ? aB_1 : b` (uppercase, underscore) | `Math.max(aB_1, b)` | Yes |
+| Operand with a non-ASCII identifier character | `Math.max(α, b)` | No, the operand scan is ASCII, matching the old `\w` |
+| Chained `a > b ? a : b > c ? b : c`, inner ternary reported | `Math.max(b, c)` | No, the inner span overlaps the outer one |
 
 ## Clamp (minSdk >= 35)
 

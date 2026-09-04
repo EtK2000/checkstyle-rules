@@ -13,6 +13,14 @@ Hook is invocation-level (option A): it blocks if the required agent has not
 been invoked since the edit. It does not inspect audit findings or severity —
 that's the user's judgment call.
 
+A block can be cleared without auditing by running `.claude/hooks/ack-skip.py`,
+but only when the user picked the "Skip the audit" option in an AskUserQuestion
+— in this session, not yet spent on an earlier ack-skip, and since the last
+relevant edit. Claude Code writes that answer text, so it is an approval the
+model cannot issue itself — and unlike a permission prompt, a
+refusal comes back as an ordinary tool result instead of aborting the turn,
+which lets the model go straight on to running the audits.
+
 On a re-fired stop (`stop_hook_active=true`), the hook still re-blocks if the
 pending audit set has materially changed since the last block (e.g. deslop
 just satisfied, coverage/security newly visible). A pending-signature cache
@@ -28,6 +36,15 @@ import time
 import audit_lock
 import audit_stamp
 
+# Bash commands name paths relative to the repo, unlike the Edit tool's absolute ones.
+_PROJECT_ROOT = os.environ.get("CLAUDE_PROJECT_DIR") or os.path.join(
+	os.path.dirname(os.path.abspath(__file__)), "..", ".."
+)
+
+
+def _resolve_repo_path(raw):
+	return os.path.realpath(raw if os.path.isabs(raw) else os.path.join(_PROJECT_ROOT, raw))
+
 # Cache: memoize the last decision keyed by transcript fingerprint (size, mtime_ns).
 # If the transcript hasn't been written since the last run, reuse the cached
 # decision instead of re-walking the whole JSONL.
@@ -37,7 +54,7 @@ _CACHE_FILE = os.path.join(_STATE_DIR, "audit-reminder-cache.json")
 # Bump this when the hook's logic changes in a way that could produce a
 # different decision from the same transcript (e.g. new patterns, new guards).
 # Bumping invalidates all cached entries.
-_CACHE_VERSION = 7
+_CACHE_VERSION = 12
 
 _STAMPS_FILE = os.path.join(_STATE_DIR, "audit-stamps.json")
 _PERMISSIONS_FILE = os.path.join(_STATE_DIR, "audit-permissions.json")
@@ -148,15 +165,24 @@ SOURCE_PATTERNS = [
 	# Production fixers: src/main/java/com/etk2000/checkstyle/gradle/fix/*Fixer.java
 	re.compile(r"/src/main/java/com/etk2000/checkstyle/gradle/fix/[^/]*Fixer\.java$"),
 	# Shared utilities that both checks and fixers depend on
-	re.compile(r"/src/main/java/com/etk2000/checkstyle/(AstUtil|ReflectionUtil)\.java$"),
-	re.compile(r"/src/main/java/com/etk2000/checkstyle/gradle/fix/(AnnotationFixerUtil|CheckstyleFix(Task|Action|er)|FixResult)\.java$"),
+	re.compile(r"/src/main/java/com/etk2000/checkstyle/ReflectionUtil\.java$"),
+	re.compile(r"/src/main/java/com/etk2000/checkstyle/ast/Ast(Display|Query|Resolve|Text)\.java$"),
+	# Check logic lifted out of MultilineCallFormattingCheck (item 2.1 of the consolidation doc)
+	re.compile(r"/src/main/java/com/etk2000/checkstyle/(ContextReceiverIndex|JsonObjectPutCollapse|LineCollapse|MultilineCallMoves)\.java$"),
+	re.compile(r"/src/main/java/com/etk2000/checkstyle/gradle/fix/(AnnotationFixerUtil|CheckstyleFix(Task|Action|er)|FixResult|LambdaCallParser)\.java$"),
 	re.compile(r"/src/main/java/com/etk2000/checkstyle/gradle/FixableCheckNames\.java$"),
+	# Every reformatter/classifier in the format package: fixers delegate their re-emission to these, so
+	# an edit here rewrites source exactly as a fixer edit does. Matched by package rather than by name,
+	# because hand-listing is what let the whole package fall through the gate in the first place
+	re.compile(r"/src/main/java/com/etk2000/checkstyle/format/(?!package-info)[^/]*\.java$"),
 ]
 
 # Patterns that require COVERAGE-auditor only (tests, fixtures, test infra)
 COVERAGE_ONLY_PATTERNS = [
 	# Check tests: src/test/java/com/etk2000/checkstyle/*Check*Test.java
 	re.compile(r"/src/test/java/com/etk2000/checkstyle/[^/]*Check[^/]*Test\.java$"),
+	# Tests for the classes split out of a check, which no longer carry "Check" in the name
+	re.compile(r"/src/test/java/com/etk2000/checkstyle/MultilineCallMovesTest\.java$"),
 	# Fixer tests: src/test/java/com/etk2000/checkstyle/gradle/fix/*FixerTest.java
 	re.compile(r"/src/test/java/com/etk2000/checkstyle/gradle/fix/[^/]*FixerTest\.java$"),
 	# Integration tests for the fixer pipeline
@@ -166,14 +192,80 @@ COVERAGE_ONLY_PATTERNS = [
 	# Test input resources: .../inputs/<dir>/Input*.java
 	re.compile(r"/inputs/[^/]+/Input[^/]*\.java$"),
 	# Test infra
-	re.compile(r"/src/test/java/com/etk2000/checkstyle/(BaseCheckTest|RegexRulesTest|MessagesFileSortedTest|AstUtilTest|ReflectionUtilTest)\.java$"),
+	re.compile(r"/src/test/java/com/etk2000/checkstyle/(BaseCheckTest|RegexRulesTest|MessagesFileSortedTest|ReflectionUtilTest)\.java$"),
+	re.compile(r"/src/test/java/com/etk2000/checkstyle/ast/Ast[A-Za-z]*\.java$"),
 ]
 
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 
+# A Bash command counts as an edit when a write construct names an audit-relevant path
+# as its TARGET. Auto mode routes file changes through `sed -i`, redirects and python
+# heredocs instead of the Edit tool, so without this a session that did all its work in
+# Bash raises no audit at all — which is exactly how the item 2.1 split shipped unaudited.
+#
+# Only the target counts. Matching any write-looking token against any path in the same
+# command flagged a heredoc that wrote a fixture elsewhere while quoting a source path as
+# a string constant. The cost of the precision is a write whose target is a VARIABLE
+# (`open(p, "w")`, then `f.write(...)`): it names no path here and is invisible to this
+# heuristic, which is one more reason file changes go through the Edit tool.
+_PATH = r"[\w./-]*src/(?:main|test)/(?:java|resources)/[\w./-]+"
+
+# Write constructs whose own match captures the path(s) they write.
+BASH_WRITE_TARGET_RES = [
+	# `> path`, `>> path`, `2> path`
+	re.compile(r"\d?>>?\s*['\"]?(" + _PATH + r")"),
+	# `tee path`, `tee -a path`
+	re.compile(r"\btee\b\s+(?:-a\s+)?['\"]?(" + _PATH + r")"),
+	# `open('path', 'w')`, `open("path", mode="a")`, and the `\"path\"` spelling
+	# a nested double-quoted command produces
+	re.compile(
+		r"open\(\s*\\?['\"](" + _PATH + r")\\?['\"]\s*,\s*(?:mode\s*=\s*)?\\?['\"][wax]"
+	),
+	# `Files.writeString(Path.of("path"), ...)` — the path is the FIRST argument,
+	# so a quoted path elsewhere in the call is content, not a target
+	re.compile(r"writeString\(\s*(?:Path\.of\(|Paths\.get\()?\s*['\"](" + _PATH + r")['\"]"),
+	# `git mv a b`, `cp a b`, `mv a b` — source and destination both change
+	re.compile(
+		r"(?:git\s+mv|\b(?:cp|mv))\s+['\"]?(" + _PATH + r")['\"]?"
+		r"(?:\s+['\"]?(" + _PATH + r")['\"]?)?"
+	),
+]
+
+# Write constructs whose targets are the standalone arguments that follow them,
+# up to the next command separator.
+BASH_WRITE_ARG_RES = [re.compile(r"sed\s+-i\b")]
+
+_ARG_PATH_RE = re.compile(r"(?:^|(?<=\s))['\"]?(" + _PATH + r")['\"]?(?=\s|$)")
+_SEPARATOR_RE = re.compile(r"[;|&\n]")
+
+# Where an ack-skip.py invocation's arguments end: a redirect, a pipe or a
+# command separator, in any of their glued spellings (`2>&1`, `>out`, `;`).
+_SHELL_NOISE_RE = re.compile(r"^\d*[<>|&;]")
+
+_ACK_SKIP_SCRIPT = "ack-skip.py"
+
+# The script counts as RUN only where it sits in command position: the start of
+# the command or just after a separator, behind nothing but env assignments. A
+# command that merely names it - a quoted path inside a heredoc, a grep pattern -
+# used to parse as a real invocation, and since it exits 0 it silently spent the
+# user's standing approval and denied the call that followed.
+_ACK_SKIP_INVOCATION_RE = re.compile(
+	r"(?:^|[;&|(){}\n])\s*(?:[A-Za-z_]\w*=\S*\s+)*(?:\S*/)?" + re.escape(_ACK_SKIP_SCRIPT) + r"(?=\s|$)"
+)
+
 COVERAGE_AGENT = "test-coverage-auditor"
 DESLOP_AGENT = "deslop-fixer"
 SECURITY_AGENT = "security-auditor"
+
+# How a skip is approved: the user PICKS this option label in an AskUserQuestion.
+# Claude Code writes the answer text, not the model, so a chosen label is the one
+# approval signal that cannot be self-issued — and unlike a permission prompt,
+# a refusal comes back as an ordinary tool result instead of aborting the turn.
+SKIP_APPROVAL_LABEL = "Skip the audit"
+SKIP_QUESTION_TOOL = "AskUserQuestion"
+
+# Chosen labels in an answered result: `..."<question>"="<label>[, <label>...]"`.
+_ANSWER_RE = re.compile(r'="(.*?)"')
 
 
 def _pending_signature(pending):
@@ -204,6 +296,93 @@ def _wait_notice(target_desc, blockers, agents_to_run):
 		f".claude/hooks/wait-for-audit-lock.py {agents_arg}",
 		"  Run it via Bash first (exits 0 when clear); non-zero = timed-out leaked "
 		"lock, report it.",
+	]
+
+
+def _ack_notices(unapproved):
+	"""Note for ack-skip invocations that ran unapproved since the last edit, so
+	their cheerful "acknowledging skip" output isn't read as success.
+
+	Only reachable when require-skip-approval.py is absent or failed open — it
+	denies these at call time, with a fuller reason than this could carry. A
+	DENIED ack needs no note at all for the same reason."""
+	if not unapproved:
+		return []
+	return [
+		"",
+		f"NOTE: {unapproved} unapproved ack-skip run(s) ignored — the approval is the user "
+		f"picking \"{SKIP_APPROVAL_LABEL}\", not the run. See Option 2.",
+	]
+
+
+def _protocol(already_printed):
+	"""The two ways out of an audit block.
+
+	Printed in full on a transcript's first block and in short form after: the
+	protocol never changes, so repeating ~3.4k characters every cycle is pure
+	context cost. The short form keeps what cannot be reconstructed — the exact
+	option label and the ack-skip modes — and drops the prose around them.
+
+	What to do with a returned audit report is NOT here: it belongs with the
+	report, and each auditor's own output format carries it."""
+	if already_printed:
+		return [
+			"",
+			"Option 1 — run the audits: invoke the Agent tool with subagent_type set "
+			"to each missing agent, passing the file paths above explicitly.",
+			"Option 2 — ask to skip (no-behavioral-impact edits only), all in ONE "
+			"turn: state the case, then AskUserQuestion with options labeled exactly "
+			f"\"{SKIP_APPROVAL_LABEL}\" and \"Run the audits\". On "
+			f"\"{SKIP_APPROVAL_LABEL}\": `.claude/hooks/ack-skip.py` "
+			"[--coverage|--security|--files <path>...]. On anything else, including "
+			"a typed reply: re-ask once for a picked option, or run the audits.",
+			"(Full protocol was printed with this session's first audit block.)",
+		]
+	return [
+		"",
+		"Option 1 — run the audits:",
+		"  Invoke the Agent tool with subagent_type set to each missing agent, "
+		"passing the relevant source / test / input file paths explicitly. Each "
+		"auditor's report ends with a Handling section — follow it when the report "
+		"returns.",
+		"  Detection note: pending is determined by file content hashes, not "
+		"by transcript events. After an agent runs, the file's current state "
+		"is stamped. If the file still hashes to that value at stop time, it's "
+		"considered audited. If it has changed (or you reverted to a previously-"
+		"audited state), the hash comparison handles it correctly.",
+		"",
+		"Option 2 — ask to skip, inline (ONLY for edits with no behavioral impact "
+		"— e.g. a slop-comment removal, a reverted change, a typo fix). It all "
+		"happens in ONE turn: never end your turn on the question.",
+		"  Step (a): state the case for the skip in your message — what you "
+		"edited, and why it cannot change behavior. Keep it to a few lines.",
+		"  Step (b): in the SAME turn, call the AskUserQuestion tool with exactly "
+		f"two options: one labeled exactly \"{SKIP_APPROVAL_LABEL}\", one labeled "
+		"\"Run the audits\". Do not append \"(Recommended)\" or any other text to "
+		"the skip label — the hook matches it exactly. Your Step (a) text is what "
+		"the user is deciding on.",
+		"  Step (c): the answer returns as an ordinary tool result, so your turn "
+		"keeps running. Act on it immediately, in the same turn:",
+		f"    - \"{SKIP_APPROVAL_LABEL}\" picked: run `.claude/hooks/ack-skip.py` "
+		"(modes below) and carry on.",
+		"    - \"Run the audits\" picked: go straight to Option 1. Do NOT re-ask, "
+		"and do NOT run ack-skip.py.",
+		"    - A free-typed reply or no option selected — including one that "
+		"plainly means yes: only a picked label is recorded, so it cannot be the "
+		"approval. Re-ask ONCE, saying you need the button because that is what "
+		"the hook reads, and act on that answer. Never treat the typed text as "
+		"approval, and never silently run the audits against what they said.",
+		"  Available modes:",
+		"    - `.claude/hooks/ack-skip.py`            (default: skip ALL pending)",
+		"    - `.claude/hooks/ack-skip.py --coverage` (skip only the coverage audit)",
+		"    - `.claude/hooks/ack-skip.py --security` (skip only the security audit)",
+		"    - `.claude/hooks/ack-skip.py --files <path> [<path>...]`  (skip specific files)",
+		"",
+		f"  What the hook honors: an ack-skip that ran with a \"{SKIP_APPROVAL_LABEL}\" "
+		"answer recorded since the last audit-relevant edit, in this session, not "
+		"already spent on an earlier ack-skip. Running the script is not the "
+		"approval — the recorded answer is, and Claude Code writes that text, not "
+		"you. Any edit afterwards voids it: later edits need their own question.",
 	]
 
 
@@ -301,38 +480,47 @@ def extract_edited_paths(tool_input):
 	return paths
 
 
-def audit_agent_name(tool_name, tool_input):
-	"""Return the audit agent name if this tool use is an audit invocation, else None."""
-	if tool_name != "Agent" or not isinstance(tool_input, dict):
-		return None
-	sub = tool_input.get("subagent_type")
-	if sub in (COVERAGE_AGENT, SECURITY_AGENT):
-		return sub
-	return None
+def bash_edited_paths(command):
+	"""Audit-relevant existing files a Bash command writes, as the target of a
+	write construct. A path the command merely mentions — a string constant, a
+	path inside a sed script, a grep argument — is not an edit.
 
-
-def parse_ack_skip(tool_name, tool_input):
-	"""If this tool use is an ack-skip.py invocation, return ("all"|"coverage"|"security"|"files", [paths]).
-
-	Otherwise return None. Args parsing is crude (shell split) because we only
-	need to recognize a few known flags.
+	Requiring the path to resolve to a real file also filters captures that were
+	never a target, such as a path appearing inside a regex or a log message.
 	"""
-	if tool_name != "Bash" or not isinstance(tool_input, dict):
-		return None
-	command = tool_input.get("command", "")
-	if not isinstance(command, str) or "ack-skip.py" not in command:
-		return None
-	# Isolate the tokens after the script name.
-	tokens = command.split()
-	try:
-		idx = next(i for i, t in enumerate(tokens) if t.endswith("ack-skip.py"))
-	except StopIteration:
-		return None
-	args = tokens[idx + 1 :]
-	# Strip trailing shell noise (redirects, pipes) — stop at first non-flag, non-path token.
+	if not isinstance(command, str):
+		return []
+	raw_paths = []
+	for pattern in BASH_WRITE_TARGET_RES:
+		for match in pattern.finditer(command):
+			raw_paths.extend(group for group in match.groups() if group)
+	for pattern in BASH_WRITE_ARG_RES:
+		for match in pattern.finditer(command):
+			tail = command[match.end():]
+			separator = _SEPARATOR_RE.search(tail)
+			raw_paths.extend(_ARG_PATH_RE.findall(tail[:separator.start()] if separator else tail))
+	found = []
+	for raw in raw_paths:
+		path = _resolve_repo_path(raw)
+		if path not in found and os.path.isfile(path) and required_audits(path):
+			found.append(path)
+	return found
+
+
+def _ack_mode(args):
+	"""Map ack-skip's argument tokens to ("all"|"coverage"|"security"|"files", [paths]).
+
+	None for an unrecognized combination, so neither caller acts on a command
+	the script itself would reject. Parsing is crude (shell split) because we
+	only need to recognize a few known flags.
+	"""
+	# Stop at the first shell-noise token. Matching by leading character rather
+	# than by an exact list so glued forms (`2>&1`, `>out.txt`, `&&foo`) end the
+	# args too — an unlisted `2>&1` used to land in `args` and turn the whole
+	# invocation into an unrecognized no-op.
 	clean = []
 	for t in args:
-		if t in (">", ">>", "2>", "2>>", "|", "&&", "||", ";"):
+		if _SHELL_NOISE_RE.match(t):
 			break
 		clean.append(t)
 	args = clean
@@ -345,15 +533,52 @@ def parse_ack_skip(tool_name, tool_input):
 		return ("security", [])
 	if args and args[0] == "--files" and len(args) > 1:
 		return ("files", args[1:])
-	# Unknown flag combination — treat as no-op so the hook doesn't silently clear.
 	return None
 
 
-def walk_transcript(path):
-	"""Yield tagged events in chronological order:
-	- ("user_msg", None, None)                  — a genuine user turn (not a tool_result)
-	- ("tool_use", tool_name, tool_input)       — an assistant tool invocation
+def names_ack_skip(tool_name, tool_input):
+	"""The command NAMES ack-skip.py anywhere, disguised spellings included.
+
+	What the PreToolUse gate asks, because its two error directions are not
+	equal: denying a command that merely mentions the script costs a retry,
+	while letting a disguised call through spends the approval the gate exists
+	to protect.
 	"""
+	if tool_name != "Bash" or not isinstance(tool_input, dict):
+		return None
+	command = tool_input.get("command", "")
+	if not isinstance(command, str) or _ACK_SKIP_SCRIPT not in command:
+		return None
+	tokens = command.split()
+	try:
+		idx = next(i for i, t in enumerate(tokens) if t.endswith(_ACK_SKIP_SCRIPT))
+	except StopIteration:
+		return None
+	return _ack_mode(tokens[idx + 1:])
+
+
+def parse_ack_skip(tool_name, tool_input):
+	"""The command RAN ack-skip.py, with the script in command position.
+
+	What the Stop hook asks, where the directions reverse: counting a mere
+	mention spends the standing approval and clears pending that nobody
+	acknowledged, so this one demands a real invocation.
+	"""
+	if tool_name != "Bash" or not isinstance(tool_input, dict):
+		return None
+	command = tool_input.get("command", "")
+	if not isinstance(command, str):
+		return None
+	match = _ACK_SKIP_INVOCATION_RE.search(command)
+	if match is None:
+		return None
+	return _ack_mode(command[match.end():].split())
+
+
+def _iter_messages(path):
+	"""Yield (role, content, session_id) for every transcript line that carries
+	a message. The session id is what scopes a skip approval to the session it
+	was given in."""
 	with open(path, encoding="utf-8") as f:
 		for raw in f:
 			raw = raw.strip()
@@ -364,38 +589,112 @@ def walk_transcript(path):
 			except json.JSONDecodeError:
 				continue
 			msg = event.get("message")
-			if not isinstance(msg, dict):
-				continue
-			role = msg.get("role")
-			content = msg.get("content")
+			if isinstance(msg, dict):
+				yield msg.get("role"), msg.get("content"), event.get("sessionId")
 
-			# Detect genuine user messages. Tool results also have role="user"
-			# but their content is a list of {type: "tool_result", ...}.
-			# A genuine user turn has at least one text block (or string content).
-			if role == "user":
-				is_genuine = False
-				if isinstance(content, str) and content.strip():
-					is_genuine = True
-				elif isinstance(content, list):
-					for block in content:
-						if not isinstance(block, dict):
-							continue
-						if block.get("type") == "text" and block.get("text", "").strip():
-							is_genuine = True
-							break
-				if is_genuine:
-					yield ("user_msg", None, None)
-				continue
 
-			# Assistant tool_use events.
-			if not isinstance(content, list):
+def tool_results(path):
+	"""Map tool_use_id -> (is_error, result_text).
+
+	An id missing from this map has no recorded result at all — the call never
+	completed, so it is never one we act on. is_error covers a refusal by the
+	user, by the auto-mode classifier, and by a PreToolUse hook alike."""
+	results = {}
+	for role, content, _ in _iter_messages(path):
+		if role != "user" or not isinstance(content, list):
+			continue
+		for block in content:
+			if not isinstance(block, dict) or block.get("type") != "tool_result":
 				continue
-			for block in content:
-				if not isinstance(block, dict):
-					continue
-				if block.get("type") != "tool_use":
-					continue
-				yield ("tool_use", block.get("name", ""), block.get("input") or {})
+			uid = block.get("tool_use_id")
+			if uid:
+				text = block.get("content")
+				results[uid] = (bool(block.get("is_error")), text if isinstance(text, str) else "")
+	return results
+
+
+def chose_skip(result_text):
+	"""True when SKIP_APPROVAL_LABEL is among the options the user picked in an
+	AskUserQuestion result. A free-typed answer records `(no option selected)`
+	and deliberately does not count — only a click is mechanically verifiable."""
+	for answer in _ANSWER_RE.findall(result_text or ""):
+		for label in answer.split(","):
+			if label.strip().strip('"').lower() == SKIP_APPROVAL_LABEL.lower():
+				return True
+	return False
+
+
+def edited_audit_paths(tool_name, tool_input):
+	"""Audit-relevant paths this tool use writes. Empty for everything else,
+	including an edit to a file no audit covers."""
+	if tool_name in EDIT_TOOLS:
+		paths = extract_edited_paths(tool_input)
+	elif tool_name == "Bash":
+		paths = bash_edited_paths(tool_input.get("command")) if isinstance(tool_input, dict) else []
+	else:
+		return []
+	return [p for p in paths if required_audits(p)]
+
+
+def is_skip_approval(tool_name, tool_use_id, results, event_session=None, session=None):
+	"""True when this tool use is an AskUserQuestion whose recorded answer
+	picked SKIP_APPROVAL_LABEL.
+
+	`session` scopes the grant: an approval counts only when the event naming it
+	belongs to the session now asking. Strict on purpose — an approval with no
+	session on it grants nothing — so a grant can never be read, or consumed, by
+	a session other than the one the user gave it in. `session=None` (a hook that
+	passed no session id) turns the scoping off, not the approval itself."""
+	if tool_name != SKIP_QUESTION_TOOL:
+		return False
+	if session is not None and event_session != session:
+		return False
+	error, text = results.get(tool_use_id, (True, ""))
+	return not error and chose_skip(text)
+
+
+def ack_consumed_approval(tool_name, tool_input, tool_use_id, results):
+	"""True when this tool use is an ack-skip that RAN, so it spends the standing
+	approval: one approval authorizes one skip. A denied or never-completed
+	invocation spends nothing."""
+	if parse_ack_skip(tool_name, tool_input) is None:
+		return False
+	status = results.get(tool_use_id)
+	return status is not None and not status[0]
+
+
+def skip_approval_on_record(transcript_path, session=None):
+	"""Whether a skip approval stands as of the end of the transcript: picked by
+	this session, not yet spent on an ack-skip, and with no audit-relevant edit
+	after it. The require-skip-approval PreToolUse gate asks this before letting
+	ack-skip.py run, so a call it allows is one this hook would go on to honor.
+
+	A write voids a standing approval whoever made it, while only this session's
+	own grants count — lenient about voiding, strict about granting."""
+	results = tool_results(transcript_path)
+	approved = False
+	for tool_name, tool_input, tool_use_id, event_session in walk_transcript(transcript_path):
+		if is_skip_approval(tool_name, tool_use_id, results, event_session, session):
+			approved = True
+		elif ack_consumed_approval(tool_name, tool_input, tool_use_id, results):
+			approved = False
+		elif edited_audit_paths(tool_name, tool_input):
+			approved = False
+	return approved
+
+
+def walk_transcript(path):
+	"""Yield (tool_name, tool_input, tool_use_id, session_id) for each assistant
+	tool invocation, in chronological order."""
+	for role, content, session in _iter_messages(path):
+		if role != "assistant" or not isinstance(content, list):
+			continue
+		for block in content:
+			if not isinstance(block, dict):
+				continue
+			if block.get("type") != "tool_use":
+				continue
+			yield block.get("name", ""), block.get("input") or {}, block.get("id"), session
 
 
 def main():
@@ -414,7 +713,8 @@ def main():
 
 	# Session that is stopping now. Used to tell whether a lock-holding agent is
 	# THIS session's own in-flight run (which wakes us on completion) or a foreign
-	# session's (which does not) — see the locked-message branches below.
+	# session's (which does not) — see the locked-message branches below — and to
+	# scope a skip approval to the session the user gave it in.
 	current_session = hook_input.get("session_id")
 
 	transcript_path = hook_input.get("transcript_path")
@@ -438,22 +738,23 @@ def main():
 			print(cached.get("reason", ""))
 		sys.exit(0)
 
+	results = tool_results(transcript_path)
+
 	# path -> set of still-required audit agents
 	pending = {}
-	# True if there has been a relevant edit with NO intervening user_msg since.
-	# An ack-skip is only honored when this is False (user had a chance to speak
-	# between the last edit and the skip approval).
-	edits_without_user_msg = False
-	# Count of ack-skip invocations rejected because no user message preceded them.
-	rejected_ack_skips = 0
+	# Whether the user picked SKIP_APPROVAL_LABEL since the last relevant edit.
+	# Reset by every audit-relevant edit, so an approval never covers work the
+	# user had not seen when they gave it.
+	skip_approved = False
+	# ack-skip invocations that ran unapproved since the last edit. Reset with
+	# the approval, so an old mistake stops being reported once it is moot.
+	unapproved_ack_skips = 0
 
-	for kind, name, inp in walk_transcript(transcript_path):
-		if kind == "user_msg":
-			edits_without_user_msg = False
+	for tool_name, tool_input, tool_use_id, event_session in walk_transcript(transcript_path):
+		if tool_name == SKIP_QUESTION_TOOL:
+			if is_skip_approval(tool_name, tool_use_id, results, event_session, current_session):
+				skip_approved = True
 			continue
-
-		# kind == "tool_use"
-		tool_name, tool_input = name, inp
 
 		# Note: Agent invocations no longer clear pending here. The SubagentStop
 		# hook (subagent-stop.py) records file hashes when an agent finishes.
@@ -465,12 +766,20 @@ def main():
 
 		ack = parse_ack_skip(tool_name, tool_input)
 		if ack is not None:
-			if edits_without_user_msg:
-				# Claude ran ack-skip without any intervening user turn since the
-				# last relevant edit. Treat as a protocol violation — do not clear
-				# pending. The rejection is surfaced in the block reason below.
-				rejected_ack_skips += 1
+			status = results.get(tool_use_id)
+			if status is None:
+				# No result recorded — the invocation never completed.
 				continue
+			if status[0]:
+				# Blocked before it ran — require-skip-approval.py already told
+				# the model why, at the call. Clears nothing, needs no note.
+				continue
+			if not skip_approved:
+				unapproved_ack_skips += 1
+				continue
+			# One approval authorizes one skip: spend it here, so a second
+			# ack-skip needs the user to be asked again.
+			skip_approved = False
 			mode, paths = ack
 			if mode == "all":
 				pending.clear()
@@ -491,16 +800,20 @@ def main():
 				for p in to_drop:
 					del pending[p]
 			elif mode == "files":
+				# ack-skip is run from the repo root, so its paths are usually
+				# relative while `pending` is keyed absolute. Matching on the
+				# resolved path rather than the spelling keeps a relative call
+				# from clearing nothing while still spending the approval
 				for p in paths:
-					pending.pop(p, None)
+					target = _resolve_repo_path(p)
+					for key in [k for k in pending if _resolve_repo_path(k) == target]:
+						del pending[key]
 			continue
 
-		if tool_name in EDIT_TOOLS:
-			for p in extract_edited_paths(tool_input):
-				reqs = required_audits(p)
-				if reqs:
-					pending[p] = set(reqs)
-					edits_without_user_msg = True
+		for p in edited_audit_paths(tool_name, tool_input):
+			pending[p] = set(required_audits(p))
+			skip_approved = False
+			unapproved_ack_skips = 0
 
 	# Fingerprint clearing: for each pending file, drop required agents whose
 	# stamps match the file's current hash. The stamps were written by
@@ -520,7 +833,12 @@ def main():
 	for p in to_drop_paths:
 		del pending[p]
 
-	def _update_cache(blocked, reason, signature):
+	# The audit protocol is long and identical every time, so it is printed in
+	# full once per transcript and in short form afterwards. Carried in the
+	# cache, which is already per-transcript.
+	protocol_printed_before = bool(cached.get("protocol_printed")) if isinstance(cached, dict) else False
+
+	def _update_cache(blocked, reason, signature, printed_protocol=False):
 		if fingerprint is None:
 			return
 		by_transcript = cache.get("by_transcript") if isinstance(cache.get("by_transcript"), dict) else {}
@@ -530,6 +848,7 @@ def main():
 			"blocked": blocked,
 			"reason": reason if blocked else "",
 			"pending_signature": signature,
+			"protocol_printed": printed_protocol or protocol_printed_before,
 		}
 		# Limit cache size: keep at most the last 50 transcripts to avoid
 		# unbounded growth across many sessions.
@@ -617,6 +936,12 @@ def main():
 			print(block_output)
 			sys.exit(0)
 		deslop_files_list = "\n".join(f"  - {p}" for p in deslop_files_sorted)
+		# What deslop is hiding. Reported but not actionable: the audits stay
+		# suppressed until deslop clears. Saying it here is what lets a skip
+		# request cover the whole set in one ask instead of one ask per cycle.
+		also_stale = sorted(
+			{a for p in deslop_files_sorted for a in pending[p] if a != DESLOP_AGENT}
+		)
 		reason_parts = [
 			"Stop blocked by audit-reminder hook: deslop sweep pending.",
 			"",
@@ -631,6 +956,17 @@ def main():
 			"",
 			"Files needing deslop:",
 			deslop_files_list,
+		]
+		if also_stale:
+			reason_parts += [
+				"",
+				"Also stale for these files, reported once deslop clears: "
+				+ ", ".join(also_stale)
+				+ ". Not actionable yet — deslop's edits can change what they see. "
+				"Named here so a skip request covers the whole set in one ask "
+				"instead of one ask per cycle.",
+			]
+		reason_parts += [
 			"",
 			"What to do — invoke the deslop-fixer Agent on these files:",
 			"  Tool: Agent",
@@ -651,6 +987,7 @@ def main():
 			"that were already audited stay audited. New audit requirements "
 			"only appear for files that already needed them before deslop ran.",
 		]
+		reason_parts += _ack_notices(unapproved_ack_skips)
 		# Deslop is not in GATED_AGENTS, so audit-gate.py does not require a
 		# permission entry for it. Do NOT call _grant_permissions for the
 		# auditors here either — grant only when we actually report them.
@@ -715,65 +1052,9 @@ def main():
 		agents_list,
 	]
 
-	if rejected_ack_skips > 0:
-		reason_parts += [
-			"",
-			f"NOTE: {rejected_ack_skips} ack-skip invocation(s) were REJECTED because no "
-			"user message appeared between the most recent edit and the ack-skip call. "
-			"This is the anti-abuse guard — skip approval must come FROM THE USER in a "
-			"fresh turn after seeing a summary of the edits. An ack-skip with no "
-			"intervening user turn looks like an auto-skip and is ignored.",
-		]
+	reason_parts += _ack_notices(unapproved_ack_skips)
 
-	reason_parts += [
-		"",
-		"Option 1 — run the audits:",
-		"  Invoke the Agent tool with subagent_type set to each missing agent, "
-		"passing the relevant source / test / input file paths explicitly. When "
-		"the agent returns its report:",
-		"    - Show the report to the user.",
-		"    - For HIGH-severity findings, propose a concrete fix (file:line "
-		"diff sketch) but DO NOT apply it.",
-		"    - For MED and LOW findings, list them and ask which the user wants "
-		"addressed.",
-		"    - If a finding includes a `Patch:` block, the auditor has pre-typed "
-		"the exact edit. List those patches in the user-facing summary so the user "
-		"knows what would be applied. Do NOT re-type the fix or restate it in your "
-		"own words. Once the user approves, apply each patch via Edit (one Edit "
-		"per anchor, batched in a single turn). Patch-bearing findings still wait "
-		"for explicit user approval — patches do not authorize auto-apply.",
-		"  WAIT for the user to instruct you which fixes to apply. Do NOT "
-		"auto-apply fixes between the audit returning and stopping. If you do "
-		"apply fixes, those edits will create new pending entries that require "
-		"another audit cycle (correct behavior, but avoidable churn).",
-		"  Detection note: pending is determined by file content hashes, not "
-		"by transcript events. After an agent runs, the file's current state "
-		"is stamped. If the file still hashes to that value at stop time, it's "
-		"considered audited. If it has changed (or you reverted to a previously-"
-		"audited state), the hash comparison handles it correctly.",
-		"",
-		"Option 2 — request explicit skip approval (ONLY for edits with no "
-		"behavioral impact — e.g. a slop-comment removal, a reverted change, a "
-		"typo fix). The correct order is IMPORTANT:",
-		"  Step (a): present a one-paragraph summary of what you edited to the "
-		"user. Ask for explicit approval to skip. STOP and wait for the user to "
-		"respond.",
-		"  Step (b): AFTER the user responds with approval, run "
-		"`.claude/hooks/ack-skip.py` via the Bash tool. The hook enforces this "
-		"ordering: it requires a user message in the transcript between the last "
-		"relevant edit and the ack-skip invocation. A skip request from the PREVIOUS "
-		"turn does NOT carry over to new edits. Each batch of edits needs its own "
-		"fresh approval.",
-		"  Available modes:",
-		"    - `.claude/hooks/ack-skip.py`            (default: skip ALL pending)",
-		"    - `.claude/hooks/ack-skip.py --coverage` (skip only the coverage audit)",
-		"    - `.claude/hooks/ack-skip.py --security` (skip only the security audit)",
-		"    - `.claude/hooks/ack-skip.py --files <path> [<path>...]`  (skip specific files)",
-		"",
-		"  Running ack-skip.py without prior user approval (or before the user "
-		"responds in THIS turn) is a protocol violation and will be mechanically "
-		"rejected by the hook.",
-	]
+	reason_parts += _protocol(protocol_printed_before)
 
 	if audits_foreign:
 		target = "the audit(s)" if len(missing_sorted) != 1 else missing_sorted[0]
@@ -781,7 +1062,7 @@ def main():
 
 	_grant_permissions(missing_sorted)
 	block_output = json.dumps({"decision": "block", "reason": "\n".join(reason_parts)})
-	_update_cache(blocked=True, reason=block_output, signature=signature)
+	_update_cache(blocked=True, reason=block_output, signature=signature, printed_protocol=True)
 	print(block_output)
 	sys.exit(0)
 

@@ -110,6 +110,16 @@ class InputPreferDoWhileChainedAssignmentBodySliceViolation {
 }
 // === end ===
 
+// === case: chained_call_body ===
+class InputPreferDoWhileChainedCallBodySliceViolation {
+	void m(StringBuilder sb, int i) {
+		sb.append("a").append("b");
+		while (--i > 0) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+			sb.append("a").append("b");
+	}
+}
+// === end ===
+
 // === case: comment_on_body_line_skipped ===
 // skip-reason: comment on body line
 class InputPreferDoWhileCommentOnBodyLineSkippedSliceViolation {
@@ -205,6 +215,17 @@ class InputPreferDoWhileNestedInForBodySliceViolation {
 			while (i < n) // violation: Replace pre-loop statement and 'while' with 'do-while'.
 				++i;
 		}
+	}
+}
+// === end ===
+
+// === case: new_expression_body ===
+class InputPreferDoWhileNewExpressionBodySliceViolation {
+	void m(int i) {
+		StringBuilder sb;
+		sb = new StringBuilder();
+		while (--i > 0) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+			sb = new StringBuilder();
 	}
 }
 // === end ===

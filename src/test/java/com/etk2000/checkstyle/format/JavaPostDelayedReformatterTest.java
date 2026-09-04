@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-import com.etk2000.checkstyle.MultilineCallFormattingCheck;
+import com.etk2000.checkstyle.MultilineCallMoves;
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FileContents;
@@ -54,6 +54,22 @@ public class JavaPostDelayedReformatterTest {
 		finally {
 			tmp.delete();
 		}
+	}
+
+	/**
+	 * The span's comment scan must seed its lexer from the start of the file. Seeded per line, the
+	 * {@code postDelayed(} line is lexed as code even though it begins inside a block comment, the
+	 * apostrophe in {@code it's} opens a char literal that masks the rest of it, and the real trailing
+	 * {@code //} goes unseen. The literal guard does not backstop that line, because it advances before
+	 * testing and so never reports on the span's own first line; the unwrap then emits everything after
+	 * the {@code //} inside that comment, leaving the call unterminated and the file uncompilable.
+	 */
+	@Test
+	public void reformatDeclinesLineCommentHiddenByABlockCommentOnTheOpeningLine() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\t/* disabled for now:\n\t\t   it's flaky */ handler.postDelayed( // FIXME restore\n\t\t\t\t() -> {\n\t\t\t\t\tdoThing();\n\t\t\t\t},\n\t\t\t\t1000\n\t\t);\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaPostDelayedReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findPostDelayed(root), 120, 4);
+		assertEquals(SpanReformat.Reason.COMMENT_ON_JOINED_LINE, assertInstanceOf(SpanReformat.CannotReformat.class, result).reason());
 	}
 
 	@Test
@@ -140,8 +156,8 @@ public class JavaPostDelayedReformatterTest {
 		final var root = parse(source);
 		final var call = findPostDelayed(root);
 		final var rparen = call.findFirstToken(TokenTypes.RPAREN);
-		assertSame(call, MultilineCallFormattingCheck.resolvablePostDelayed(root, call.getLineNo() - 1, call.getColumnNo()));
-		assertSame(call, MultilineCallFormattingCheck.resolvablePostDelayed(root, rparen.getLineNo() - 1, rparen.getColumnNo()));
+		assertSame(call, MultilineCallMoves.resolvablePostDelayed(root, call.getLineNo() - 1, call.getColumnNo()));
+		assertSame(call, MultilineCallMoves.resolvablePostDelayed(root, rparen.getLineNo() - 1, rparen.getColumnNo()));
 	}
 
 	@Test
@@ -149,6 +165,6 @@ public class JavaPostDelayedReformatterTest {
 		final var source = "class C {\n\tvoid m() {\n\t\thandler.postDelayed(() -> { doThing(); }, 1000);\n\t}\n}";
 		final var root = parse(source);
 		final var call = findPostDelayed(root);
-		assertNull(MultilineCallFormattingCheck.resolvablePostDelayed(root, call.getLineNo() - 1, call.getColumnNo()));
+		assertNull(MultilineCallMoves.resolvablePostDelayed(root, call.getLineNo() - 1, call.getColumnNo()));
 	}
 }

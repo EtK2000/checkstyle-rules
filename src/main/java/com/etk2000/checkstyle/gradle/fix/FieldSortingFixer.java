@@ -2,6 +2,7 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import com.etk2000.checkstyle.FieldSortingCheck;
 import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.JavaLineScanner.LexerState;
 import com.etk2000.checkstyle.LineText;
 
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
@@ -117,6 +118,25 @@ class FieldSortingFixer implements CheckstyleFixer {
 					+ "\\s++(\\w++)"
 	);
 	private static final Pattern NEWLINE = Pattern.compile("\n");
+
+	/**
+	 * Index of the line that opens the block comment covering {@code from}, or
+	 * -1 when that {@code /*} sits after code on its line. A comment opened
+	 * beside code belongs to that code's declaration, so its continuation lines
+	 * are not leading trivia for whatever follows them.
+	 */
+	@CheckReturnValue
+	private static int blockCommentOpener(
+			@Nonnull List<String> lines,
+			@Nonnull String[] stripped,
+			@Nonnull LexerState[] entryState,
+			int from
+	) {
+		var opener = from;
+		while (opener > 0 && entryState[opener].inBlockComment())
+			--opener;
+		return entryState[opener].inBlockComment() || !isWholeLineComment(lines, stripped, opener) ? -1 : opener;
+	}
 
 	@CheckReturnValue
 	@Nonnull
@@ -310,7 +330,8 @@ class FieldSortingFixer implements CheckstyleFixer {
 	@Nullable
 	private static FixAttempt fixFieldOrder(@Nonnull List<String> lines, @Nonnull DetailAST objBlock, int lineIndex) {
 		final var stripped = precomputeStrippedLines(lines);
-		final var fields = parseFieldsFromAst(lines, stripped, objBlock);
+		final var entryState = precomputeLexerStates(lines);
+		final var fields = parseFieldsFromAst(lines, stripped, entryState, objBlock);
 		if (fields.isEmpty())
 			return null;
 
@@ -349,6 +370,11 @@ class FieldSortingFixer implements CheckstyleFixer {
 			for (var k = 1; k < f.names.size(); ++k)
 				multiVarSecondaryNames.add(f.names.get(k));
 		}
+
+		final var spanStart = group.getFirst().startLineIndex;
+		final var spanEnd = group.getLast().startLineIndex + group.getLast().lines.size() - 1;
+		if (hasOrphanedCommentLine(lines, stripped, fields, spanStart, spanEnd))
+			return new SkipResult(SkipMessages.FIELD_SORTING_SKIP_ORPHANED_COMMENT);
 
 		final var sorted = orderGroup(group);
 		if (sorted == null)
@@ -437,6 +463,38 @@ class FieldSortingFixer implements CheckstyleFixer {
 		return false;
 	}
 
+	/**
+	 * Whether any line in {@code [startIdx, endIdx]} is a comment that no field
+	 * in {@code fields} owns. The rebuild replaces that whole span with the
+	 * entries' own lines, so such a line would be deleted outright, and
+	 * {@link #hasUnaccountedLines} cannot see it because it skips every line
+	 * that reads as a comment. Ownership is taken over all fields, not just the
+	 * group being sorted, so a comment belonging to an interleaved field of the
+	 * other staticness still counts as owned.
+	 */
+	@CheckReturnValue
+	private static boolean hasOrphanedCommentLine(
+			@Nonnull List<String> lines,
+			@Nonnull String[] stripped,
+			@Nonnull List<FieldEntry> fields,
+			int startIdx,
+			int endIdx
+	) {
+		final var owned = new boolean[endIdx - startIdx + 1];
+		for (var f : fields) {
+			for (var k = 0; k < f.lines.size(); ++k) {
+				final var idx = f.startLineIndex + k - startIdx;
+				if (idx >= 0 && idx < owned.length)
+					owned[idx] = true;
+			}
+		}
+		for (var i = 0; i < owned.length; ++i) {
+			if (!owned[i] && isWholeLineComment(lines, stripped, startIdx + i))
+				return true;
+		}
+		return false;
+	}
+
 	@CheckReturnValue
 	private static boolean hasUnaccountedLines(@Nonnull List<String> original, @Nonnull List<String> replacement) {
 		final var replacementSet = new HashSet<>(replacement);
@@ -472,6 +530,18 @@ class FieldSortingFixer implements CheckstyleFixer {
 				return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Whether line {@code j} is comment text end to end: the mask blanked it but
+	 * the raw line carries characters. Blank lines and code lines both answer
+	 * false. Text-block content also masks to blank, so callers that must tell
+	 * trivia from string content pair this with the line's entry
+	 * {@link LexerState}.
+	 */
+	@CheckReturnValue
+	private static boolean isWholeLineComment(@Nonnull List<String> lines, @Nonnull String[] stripped, int j) {
+		return stripped[j].isBlank() && !lines.get(j).isBlank();
 	}
 
 	/**
@@ -530,27 +600,38 @@ class FieldSortingFixer implements CheckstyleFixer {
 	}
 
 	/**
-	 * Extends upward from the declaration's first source line over any comment
-	 * or block-comment continuation lines directly above it (blanks and code
-	 * stop the walk), returning the 0-based index the field's line span should
-	 * start at. Annotations are already part of the AST node span, so only
-	 * comments are gathered here.
+	 * Extends upward from the declaration's first source line over the comment
+	 * lines directly above it (blanks and code stop the walk), returning the
+	 * 0-based index the field's line span should start at. Annotations are
+	 * already part of the AST node span, so only comments are gathered here.
+	 *
+	 * <p>A line qualifies only when {@code stripped} agrees it is entirely
+	 * comment, so a text block's content line that reads as {@code // ...} is
+	 * string content rather than trivia. A block comment's continuation lines are
+	 * claimed only together with the {@code /*} that opens them: claiming a
+	 * closing {@code *}{@code /} without its opener would move the closer above
+	 * the opener and comment the following field out while still compiling.
 	 */
 	@CheckReturnValue
-	private static int leadingLookback(@Nonnull List<String> lines, @Nonnull String[] stripped, int declFirstLine) {
+	private static int leadingLookback(
+			@Nonnull List<String> lines,
+			@Nonnull String[] stripped,
+			@Nonnull LexerState[] entryState,
+			int declFirstLine
+	) {
 		var start = declFirstLine;
 		for (var j = declFirstLine - 1; j >= 0; --j) {
-			final var raw = lines.get(j).stripLeading();
-			if (raw.startsWith("//")) {
+			if (!isWholeLineComment(lines, stripped, j) || entryState[j].inTextBlock())
+				break;
+			if (!entryState[j].inBlockComment()) {
 				start = j;
 				continue;
 			}
-			if (stripped[j].isBlank() && !lines.get(j).isBlank()
-					&& (raw.startsWith("/*") || raw.startsWith("*"))) {
-				start = j;
-				continue;
-			}
-			break;
+			final var opener = blockCommentOpener(lines, stripped, entryState, j);
+			if (opener < 0)
+				break;
+			start = opener;
+			j = opener;
 		}
 		return start;
 	}
@@ -699,7 +780,12 @@ class FieldSortingFixer implements CheckstyleFixer {
 	 */
 	@CheckReturnValue
 	@Nonnull
-	private static List<FieldEntry> parseFieldsFromAst(@Nonnull List<String> lines, @Nonnull String[] stripped, @Nonnull DetailAST objBlock) {
+	private static List<FieldEntry> parseFieldsFromAst(
+			@Nonnull List<String> lines,
+			@Nonnull String[] stripped,
+			@Nonnull LexerState[] entryState,
+			@Nonnull DetailAST objBlock
+	) {
 		final var groups = new ArrayList<List<DetailAST>>();
 		for (var child = objBlock.getFirstChild(); child != null; child = child.getNextSibling()) {
 			if (child.getType() != TokenTypes.VARIABLE_DEF)
@@ -756,7 +842,7 @@ class FieldSortingFixer implements CheckstyleFixer {
 				declLastLine = Math.max(declLastLine, nodeLastLine(d));
 			--declLastLine;
 
-			final var startLineIndex = leadingLookback(lines, stripped, declFirstLine);
+			final var startLineIndex = leadingLookback(lines, stripped, entryState, declFirstLine);
 
 			final var deps = new HashSet<String>();
 			for (var d : g) {
@@ -792,6 +878,25 @@ class FieldSortingFixer implements CheckstyleFixer {
 			));
 		}
 		return fields;
+	}
+
+	/**
+	 * Precomputes the entry {@link LexerState} of every line: element {@code i}
+	 * is the state in effect at the start of line {@code i}, so a caller can ask
+	 * whether a line is covered by a block comment or text block that opened
+	 * above it. {@link #precomputeStrippedLines} answers what a line's characters
+	 * mean; this answers what construct they belong to.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static LexerState[] precomputeLexerStates(@Nonnull List<String> lines) {
+		final var result = new LexerState[lines.size()];
+		var state = LexerState.NONE;
+		for (var i = 0; i < lines.size(); ++i) {
+			result[i] = state;
+			state = JavaLineScanner.stateAfter(lines.get(i), state);
+		}
+		return result;
 	}
 
 	/**

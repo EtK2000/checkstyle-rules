@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -115,8 +116,8 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 		final var end = bodyEnd(keyword, body);
 		return new ControlBody(
 				body.getType() == TokenTypes.SLIST,
-				AstUtil.firstLine(body) - 1,
-				AstUtil.firstColumn(body),
+				AstQuery.firstLine(body) - 1,
+				AstQuery.firstColumn(body),
 				(closeParen == null ? keyword.getLineNo() : closeParen.getLineNo()) - 1,
 				end.endLine(),
 				end.endColumn(),
@@ -136,7 +137,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	@Nullable
 	private static DetailAST bodyKeywordAt(@Nonnull DetailAST root, int line, int column) {
-		final var keyword = AstUtil.findNodeAt(root, line, column, ControlFlowBracesCheck::isControlFlowKeyword);
+		final var keyword = AstQuery.findNodeAt(root, line, column, ControlFlowBracesCheck::isControlFlowKeyword);
 		if (keyword == null)
 			return null;
 		final var body = getBody(keyword);
@@ -151,7 +152,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 	 */
 	@CheckReturnValue
 	private static int bodyLineCount(@Nonnull DetailAST body) {
-		return statementLastLine(body) - AstUtil.firstLine(body) + 1;
+		return statementLastLine(body) - AstQuery.firstLine(body) + 1;
 	}
 
 	@CheckReturnValue
@@ -208,7 +209,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 	private static int endColumnOf(@Nullable DetailAST semi, @Nullable DetailAST trailer) {
 		if (semi != null)
 			return semi.getColumnNo() + 1;
-		return trailer == null ? -1 : AstUtil.firstColumn(trailer);
+		return trailer == null ? -1 : AstQuery.firstColumn(trailer);
 	}
 
 	@CheckReturnValue
@@ -276,7 +277,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 			return false;
 
 		var lines = close.getLineNo() - slist.getLineNo() - 1;
-		if (close.getLineNo() > slist.getLineNo() && AstUtil.firstLine(first) == slist.getLineNo())
+		if (close.getLineNo() > slist.getLineNo() && AstQuery.firstLine(first) == slist.getLineNo())
 			++lines;
 		return lines == 1 && statementCount(slist) == 1;
 	}
@@ -344,7 +345,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 
 	@CheckReturnValue
 	private static boolean isOneLiner(@Nonnull DetailAST keyword, @Nonnull DetailAST body) {
-		return body.getType() != TokenTypes.SLIST && AstUtil.firstLine(body) == keyword.getLineNo();
+		return body.getType() != TokenTypes.SLIST && AstQuery.firstLine(body) == keyword.getLineNo();
 	}
 
 	/**
@@ -394,7 +395,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 		final var elseKeyword = elseOf(keyword);
 		final var end = bodyEnd(keyword, body);
 		return new OneLinerBody(
-				AstUtil.firstColumn(body),
+				AstQuery.firstColumn(body),
 				end.endLine(),
 				end.endColumn(),
 				elseKeyword != null && elseKeyword.getLineNo() == keyword.getLineNo()
@@ -414,7 +415,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	@Nullable
 	public static DoWhileShape shapeAt(@Nonnull DetailAST root, int line, int column) {
-		final var doNode = AstUtil.findNodeAt(root, line, column, n -> n.getType() == TokenTypes.LITERAL_DO);
+		final var doNode = AstQuery.findNodeAt(root, line, column, n -> n.getType() == TokenTypes.LITERAL_DO);
 		if (doNode == null)
 			return null;
 		final var body = doNode.getFirstChild();
@@ -451,7 +452,7 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	private static int statementLastLine(@Nonnull DetailAST body) {
 		final var semi = terminatingSemi(body);
-		return semi == null ? AstUtil.lastLine(body) : Math.max(AstUtil.lastLine(body), semi.getLineNo());
+		return semi == null ? AstQuery.lastLine(body) : Math.max(AstQuery.lastLine(body), semi.getLineNo());
 	}
 
 	/**
@@ -487,9 +488,31 @@ public class ControlFlowBracesCheck extends AbstractAstCheck {
 		final var statement = keyword.getType() == TokenTypes.LITERAL_ELSE ? keyword.getParent() : keyword;
 		final var trailer = elseKeyword != null ? elseKeyword : statement.getNextSibling();
 		// the enclosing block's own `}` is not something that resumes after the body
-		return trailer != null && trailer.getType() != TokenTypes.RCURLY && AstUtil.firstLine(trailer) == lastLine
+		return trailer != null && trailer.getType() != TokenTypes.RCURLY && AstQuery.firstLine(trailer) == lastLine
 				? trailer
 				: null;
+	}
+
+	/**
+	 * Whether dropping the braces around the body reported at {@code (line, column)} would let an
+	 * {@code else} that currently binds further out attach to an {@code if} inside the block
+	 * instead. The braces are the only thing keeping the two apart, and the re-bound code still
+	 * compiles, so the fixer has to refuse rather than rely on a downstream failure.
+	 */
+	@CheckReturnValue
+	public static boolean unwrapRebindsElse(@Nonnull DetailAST root, int line, int column) {
+		final var keyword = bodyKeywordAt(root, line, column);
+		if (keyword == null)
+			return false;
+
+		final var body = getBody(keyword);
+		if (body == null || body.getType() != TokenTypes.SLIST)
+			return false;
+
+		final var statement = AstQuery.unwrapSingleStatementBlock(body);
+		return statement != null
+				&& AstQuery.endsWithDanglingIf(statement)
+				&& AstQuery.rebindsAFollowingElse(body);
 	}
 
 	@CheckReturnValue

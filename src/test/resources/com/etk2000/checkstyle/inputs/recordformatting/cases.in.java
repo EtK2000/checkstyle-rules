@@ -138,6 +138,36 @@ class InputRecordFormattingFixBraceNewlineWithBodySliceViolation {
 }
 // === end ===
 
+// === case: fix_comment_before_brace_no_space ===
+class InputRecordFormattingFixCommentBeforeBraceNoSpaceSliceViolation {
+	record R(int a) /* c */{} // violation: Record opening brace must have exactly one space before it.
+}
+// === end ===
+
+// === case: fix_comment_before_brace_two_spaces ===
+class InputRecordFormattingFixCommentBeforeBraceTwoSpacesSliceViolation {
+	record R(int a) /* c */  {} // violation: Record opening brace must have exactly one space before it.
+}
+// === end ===
+
+// === case: fix_comment_only_body_same_line ===
+class InputRecordFormattingFixCommentOnlyBodySameLineSliceViolation {
+	record R(int a) { /* note */ } // violation: Non-empty record body must place '}' on its own line.
+}
+// === end ===
+
+// === case: fix_comment_only_body_same_line_javadoc ===
+class InputRecordFormattingFixCommentOnlyBodySameLineJavadocSliceViolation {
+	record R(int a) { /** note */ } // violation: Non-empty record body must place '}' on its own line.
+}
+// === end ===
+
+// === case: fix_comment_only_body_same_line_trailing_content ===
+class InputRecordFormattingFixCommentOnlyBodySameLineTrailingContentSliceViolation {
+	record R(int a) { /* note */ } // trailing // violation: Non-empty record body must place '}' on its own line.
+}
+// === end ===
+
 // === case: fix_component_bitshift_in_annotation ===
 class InputRecordFormattingFixComponentBitshiftInAnnotationSliceViolation {
 	@interface A { int value(); }
@@ -332,6 +362,16 @@ class InputRecordFormattingFixComponentWithStringContainingRecordOnPriorLineSlic
 }
 // === end ===
 
+// A column counts code points, so the fixer's brace dispatch converts before indexing the line.
+// Without that a supplementary character earlier on the line shifts the index onto the cuddled
+// inner brace, and the static block gets split instead of the record's own body. This pair is the
+// ASCII control; the astral twin is fix_supplementary_cuddled_inner_brace.
+// === case: fix_cuddled_inner_brace ===
+class InputRecordFormattingFixCuddledInnerBraceSliceViolation {
+	record R(int a) { static { init("x");}} // violation: Non-empty record body must place '}' on its own line.
+}
+// === end ===
+
 // === case: fix_empty_body_braces_split ===
 class InputRecordFormattingFixEmptyBodyBracesSplitSliceViolation {
 	record R(int a) {
@@ -342,14 +382,6 @@ class InputRecordFormattingFixEmptyBodyBracesSplitSliceViolation {
 // === case: fix_empty_body_braces_split_open_line_has_block_comment ===
 class InputRecordFormattingFixEmptyBodyBracesSplitOpenLineHasBlockCommentSliceViolation {
 	record R(int a) /* { */ {
-	} // violation: Empty record body must be '{}' on one line.
-}
-// === end ===
-
-// === case: fix_empty_body_braces_split_open_line_has_line_comment ===
-// skip-reason: cannot collapse empty record body without losing surrounding content
-class InputRecordFormattingFixEmptyBodyBracesSplitOpenLineHasLineCommentSliceViolation {
-	record R(int a) { // note
 	} // violation: Empty record body must be '{}' on one line.
 }
 // === end ===
@@ -422,6 +454,27 @@ class InputRecordFormattingFixOpenBraceAfterLineCommentSliceViolation {
 class InputRecordFormattingFixOpenBraceAfterTerminatedBlockCommentSliceViolation {
 	record R(int a) /* note */
 	{} // violation: Record opening brace must be on the same line as the closing paren (or implements clause).
+}
+// === end ===
+
+// The check's spacing read converts the column too, so these fire for the real reason (zero and
+// two spaces) rather than because the astral character shifted the index. Their clean partners are
+// SupplementaryCommentBeforeBraceA and friends in cases.clean.java.
+// === case: fix_supplementary_comment_no_space ===
+class InputRecordFormattingFixSupplementaryCommentNoSpaceSliceViolation {
+	record R(int a) /* 𝐀 */{} // violation: Record opening brace must have exactly one space before it.
+}
+// === end ===
+
+// === case: fix_supplementary_comment_two_spaces ===
+class InputRecordFormattingFixSupplementaryCommentTwoSpacesSliceViolation {
+	record R(int a) /* 𝐀 */  {} // violation: Record opening brace must have exactly one space before it.
+}
+// === end ===
+
+// === case: fix_supplementary_cuddled_inner_brace ===
+class InputRecordFormattingFixSupplementaryCuddledInnerBraceSliceViolation {
+	record R(int a) { static { init("𝐀");}} // violation: Non-empty record body must place '}' on its own line.
 }
 // === end ===
 
