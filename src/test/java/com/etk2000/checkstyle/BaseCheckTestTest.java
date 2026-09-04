@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -11,6 +12,7 @@ import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -50,6 +52,8 @@ public class BaseCheckTestTest {
 
 	private static class XMLParserCheck extends StubCheck {}
 
+	private static final String IMPORTS_DIRECTIVE = "// imports:";
+
 	@Nonnull
 	private static Stream<Arguments> deriveTopicCases() {
 		return Stream.of(
@@ -72,7 +76,7 @@ public class BaseCheckTestTest {
 
 	@Test
 	public void assertCheckMatchesMarkersInlineExtraMarkerFails() {
-		final var src = "class T {\n\tint x;\n\tvoid m() {\n\t\tSystem.out.println(this.x); // violation: Unnecessary 'this.x', only use when shadowing or in field assignment.\n\t\t// violation: extra unrelated marker\n\t}\n}";
+		final var src = "class T {\n\tint x;\n\tvoid m() {\n\t\tSystem.out.println(this.x); // violation: Remove the unnecessary 'this.' from 'this.x' (only needed when shadowing or assigning a field).\n\t\t// violation: extra unrelated marker\n\t}\n}";
 		final var ex = assertThrows(
 				AssertionError.class,
 				() -> BaseCheckTest.assertCheckMatchesMarkersInline(NoUnnecessaryThisCheck.class, src)
@@ -82,7 +86,7 @@ public class BaseCheckTestTest {
 
 	@Test
 	public void assertCheckMatchesMarkersInlineMatches() throws Exception {
-		final var src = "class T {\n\tint x;\n\tvoid m() {\n\t\tSystem.out.println(this.x); // violation: Unnecessary 'this.x', only use when shadowing or in field assignment.\n\t}\n}";
+		final var src = "class T {\n\tint x;\n\tvoid m() {\n\t\tSystem.out.println(this.x); // violation: Remove the unnecessary 'this.' from 'this.x' (only needed when shadowing or assigning a field).\n\t}\n}";
 		BaseCheckTest.assertCheckMatchesMarkersInline(NoUnnecessaryThisCheck.class, src);
 	}
 
@@ -103,7 +107,7 @@ public class BaseCheckTestTest {
 
 	@Test
 	public void assertCheckMatchesMarkersInlineWrongLineFails() {
-		final var src = "class T {\n\tint x; // violation: Unnecessary 'this.x', only use when shadowing or in field assignment.\n\tvoid m() {\n\t\tSystem.out.println(this.x);\n\t}\n}";
+		final var src = "class T {\n\tint x; // violation: Remove the unnecessary 'this.' from 'this.x' (only needed when shadowing or assigning a field).\n\tvoid m() {\n\t\tSystem.out.println(this.x);\n\t}\n}";
 		final var ex = assertThrows(
 				AssertionError.class,
 				() -> BaseCheckTest.assertCheckMatchesMarkersInline(NoUnnecessaryThisCheck.class, src)
@@ -123,7 +127,7 @@ public class BaseCheckTestTest {
 
 	@Test
 	public void assertCheckMatchesMarkersInlineWrongSeverityFails() {
-		final var src = "class T {\n\tint x;\n\tvoid m() {\n\t\tSystem.out.println(this.x); // violation: Unnecessary 'this.x', only use when shadowing or in field assignment.\n\t}\n}";
+		final var src = "class T {\n\tint x;\n\tvoid m() {\n\t\tSystem.out.println(this.x); // violation: Remove the unnecessary 'this.' from 'this.x' (only needed when shadowing or assigning a field).\n\t}\n}";
 		final var ex = assertThrows(
 				AssertionError.class,
 				() -> BaseCheckTest.assertCheckMatchesMarkersInline(NoUnnecessaryThisCheck.class, src, "severity", "warning")
@@ -161,7 +165,7 @@ public class BaseCheckTestTest {
 				"class T {",
 				"\tint x;",
 				"\tvoid m() {",
-				"\t\tSystem.out.println(this.x); // violation: Unnecessary 'this.x', only use when shadowing or in field assignment.",
+				"\t\tSystem.out.println(this.x); // violation: Remove the unnecessary 'this.' from 'this.x' (only needed when shadowing or assigning a field).",
 				"\t\t// violation: extra unrelated marker",
 				"\t}",
 				"}"
@@ -178,7 +182,7 @@ public class BaseCheckTestTest {
 		final var lines = List.of(
 				"class T {",
 				"\tint x;",
-				"\tvoid m() { System.out.println(this.x); }} // violation: Unnecessary 'this.x', only use when shadowing or in field assignment."
+				"\tvoid m() { System.out.println(this.x); }} // violation: Remove the unnecessary 'this.' from 'this.x' (only needed when shadowing or assigning a field)."
 		);
 		BaseCheckTest.assertCheckMatchesMarkers(NoUnnecessaryThisCheck.class, lines, "<test>");
 	}
@@ -189,7 +193,7 @@ public class BaseCheckTestTest {
 				"class T {",
 				"\tint x;",
 				"\tvoid m() {",
-				"\t\tSystem.out.println(this.x); // violation: Unnecessary 'this.x', only use when shadowing or in field assignment.",
+				"\t\tSystem.out.println(this.x); // violation: Remove the unnecessary 'this.' from 'this.x' (only needed when shadowing or assigning a field).",
 				"\t}",
 				"}"
 		);
@@ -198,7 +202,7 @@ public class BaseCheckTestTest {
 
 	@Test
 	public void assertCheckMatchesMarkersLinesMatchesInlineForSameContent() throws Exception {
-		final var src = "class T {\n\tint x;\n\tvoid m() {\n\t\tSystem.out.println(this.x); // violation: Unnecessary 'this.x', only use when shadowing or in field assignment.\n\t}\n}";
+		final var src = "class T {\n\tint x;\n\tvoid m() {\n\t\tSystem.out.println(this.x); // violation: Remove the unnecessary 'this.' from 'this.x' (only needed when shadowing or assigning a field).\n\t}\n}";
 		BaseCheckTest.assertCheckMatchesMarkersInline(NoUnnecessaryThisCheck.class, src);
 		BaseCheckTest.assertCheckMatchesMarkers(NoUnnecessaryThisCheck.class, List.of(src.split("\n", -1)), "<test>");
 	}
@@ -225,7 +229,7 @@ public class BaseCheckTestTest {
 		final var lines = List.of(
 				"class T {",
 				"\t@V({",
-				"// violation: No blank line inside annotation 'V'.",
+				"// violation: Annotation '@V' must not contain a blank line.",
 				"\t\t\"a\"",
 				"\t})",
 				"\tvoid f() {}",
@@ -241,10 +245,28 @@ public class BaseCheckTestTest {
 	}
 
 	@Test
+	public void assertCheckMatchesMarkersLinesWithImportsDirectiveKeepsMarkerLines() throws Exception {
+		final var lines = List.of(
+				"package x;",
+				"",
+				"// imports: java.util.List",
+				"// imports: java.util.Map",
+				"class T {",
+				"\tint x;",
+				"\tvoid m() {",
+				"\t\tthis.x = 1;",
+				"\t\tSystem.out.println(this.x); // violation: Remove the unnecessary 'this.' from 'this.x' (only needed when shadowing or assigning a field).",
+				"\t}",
+				"}"
+		);
+		BaseCheckTest.assertCheckMatchesMarkers(NoUnnecessaryThisCheck.class, lines, "<test>");
+	}
+
+	@Test
 	public void assertCheckMatchesMarkersLinesWrongLineFails() {
 		final var lines = List.of(
 				"class T {",
-				"\tint x; // violation: Unnecessary 'this.x', only use when shadowing or in field assignment.",
+				"\tint x; // violation: Remove the unnecessary 'this.' from 'this.x' (only needed when shadowing or assigning a field).",
 				"\tvoid m() {",
 				"\t\tSystem.out.println(this.x);",
 				"\t}",
@@ -274,6 +296,24 @@ public class BaseCheckTestTest {
 		);
 		assertTrue(ex.getMessage().contains("message mismatch"), "unexpected message: " + ex.getMessage());
 		assertTrue(ex.getMessage().contains("<test>"), "context missing: " + ex.getMessage());
+	}
+
+	@Test
+	public void assertCheckMatchesMarkersMatchesDirectiveBearingFixture() throws Exception {
+		BaseCheckTest.assertCheckMatchesMarkers(
+				RedundantNumericSuffixCheck.class,
+				"redundantnumericsuffix/cases.in.java"
+		);
+	}
+
+	@Test
+	public void assertCheckMatchesMarkersMatchesMultiDirectiveFixture() throws Exception {
+		BaseCheckTest.assertCheckMatchesMarkers(
+				PreferStandardCharsetsCheck.class,
+				"preferstandardcharsets/cases.in.java",
+				"minSdk",
+				"19"
+		);
 	}
 
 	@Test
@@ -329,10 +369,10 @@ public class BaseCheckTestTest {
 		assertTrue(ex.getMessage().contains("nounnecessarythis/cases.in.java"), "missing path: " + ex.getMessage());
 		assertTrue(ex.getMessage().contains("first at line 8"), "missing line number: " + ex.getMessage());
 		assertTrue(
-				ex.getMessage().contains("Unnecessary 'this.field'"),
+				ex.getMessage().contains("Remove the unnecessary 'this.' from 'this.field'"),
 				"missing first violation message text: " + ex.getMessage()
 		);
-		assertTrue(ex.getMessage().contains("9 violation(s)"), "missing violation count: " + ex.getMessage());
+		assertTrue(ex.getMessage().contains("22 violation(s)"), "missing violation count: " + ex.getMessage());
 	}
 
 	@Test
@@ -362,7 +402,38 @@ public class BaseCheckTestTest {
 	}
 
 	@Test
-	public void hoistImportsDirectivesDedupesRepeatedDirective() {
+	public void inlineImportsDirectivesBlockCommentContainingSlashesOnPackageLinePacksBeforeIt() {
+		final var input = List.of("package x; /* see http://e.com */", "// imports: java.util.List", "class T {}");
+		assertEquals(
+				List.of("package x; import java.util.List; /* see http://e.com */", "// imports: java.util.List", "class T {}"),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesBlockCommentOnPackageLinePacksBeforeIt() {
+		final var input = List.of("package x; /* note */", "// imports: java.util.List", "class T {}");
+		assertEquals(
+				List.of("package x; import java.util.List; /* note */", "// imports: java.util.List", "class T {}"),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesCommentedOutImportOnPackageLineDoesNotSuppressInlining() {
+		final var input = List.of("package x; /* import java.util.List; */", "// imports: java.util.List", "class T {}");
+		assertEquals(
+				List.of(
+						"package x; import java.util.List; /* import java.util.List; */",
+						"// imports: java.util.List",
+						"class T {}"
+				),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesDedupesRepeatedDirective() {
 		final var input = List.of(
 				"package x;",
 				"// imports: java.util.List",
@@ -370,37 +441,256 @@ public class BaseCheckTestTest {
 				"class T {}"
 		);
 		assertEquals(
-				List.of("package x;", "", "import java.util.List;", "// imports: java.util.List", "// imports: java.util.List", "class T {}"),
-				BaseCheckTest.hoistImportsDirectives(input)
+				List.of(
+						"package x; import java.util.List;",
+						"// imports: java.util.List",
+						"// imports: java.util.List",
+						"class T {}"
+				),
+				BaseCheckTest.inlineImportsDirectives(input)
 		);
 	}
 
 	@Test
-	public void hoistImportsDirectivesIgnoresEmptyFqn() {
-		final var input = List.of("package x;", "// imports:", "// imports: java.util.List", "class T {}");
+	public void inlineImportsDirectivesDirectiveBeforePackageLine() {
+		final var input = List.of("// imports: java.util.List", "package x;", "class T {}");
 		assertEquals(
-				List.of("package x;", "", "import java.util.List;", "// imports:", "// imports: java.util.List", "class T {}"),
-				BaseCheckTest.hoistImportsDirectives(input)
+				List.of("// imports: java.util.List", "package x; import java.util.List;", "class T {}"),
+				BaseCheckTest.inlineImportsDirectives(input)
 		);
 	}
 
 	@Test
-	public void hoistImportsDirectivesNoDirectiveReturnsRawLines() {
-		final var input = List.of("package x;", "", "class T {}");
-		assertEquals(input, BaseCheckTest.hoistImportsDirectives(input));
+	public void inlineImportsDirectivesDirectiveInsideClassBody() {
+		final var input = List.of("package x;", "class T {", "\t// imports: java.util.List", "}");
+		assertEquals(
+				List.of("package x; import java.util.List;", "class T {", "\t// imports: java.util.List", "}"),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
 	}
 
 	@Test
-	public void hoistImportsDirectivesNoPackagePrependsImports() {
+	public void inlineImportsDirectivesDirectiveOnLastLine() {
+		final var input = List.of("package x;", "class T {}", "// imports: java.util.List");
+		assertEquals(
+				List.of("package x; import java.util.List;", "class T {}", "// imports: java.util.List"),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesEmptyInputReturnsInput() {
+		assertEquals(List.of(), BaseCheckTest.inlineImportsDirectives(List.of()));
+	}
+
+	@Test
+	public void inlineImportsDirectivesIgnoresFalsePackageLines() {
+		final var input = List.of("// package x;", "packagex;", "package x;", "// imports: java.util.List");
+		assertEquals(
+				List.of("// package x;", "packagex;", "package x; import java.util.List;", "// imports: java.util.List"),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesIgnoresPackageLineInsideBlockComment() {
+		final var input = List.of(
+				"/*",
+				"package legacy.x;",
+				"*/",
+				"package real.x;",
+				"// imports: java.util.List",
+				"class T {}"
+		);
+		assertEquals(
+				List.of(
+						"/*",
+						"package legacy.x;",
+						"*/",
+						"package real.x; import java.util.List;",
+						"// imports: java.util.List",
+						"class T {}"
+				),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesIgnoresPackageLineInsideBlockCommentWithNoRealPackage() {
+		final var input = List.of("/*", "package legacy.x;", "*/", "// imports: java.util.List", "class T {}");
+		assertEquals(
+				List.of("import java.util.List; /*", "package legacy.x;", "*/", "// imports: java.util.List", "class T {}"),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesIgnoresPackageLineInsideTextBlock() {
+		final var input = List.of(
+				"class T {",
+				"\tString s = \"\"\"",
+				"\t\tpackage legacy.x;",
+				"\t\t\"\"\";",
+				"}",
+				"// imports: java.util.List"
+		);
+		assertEquals(
+				List.of(
+						"import java.util.List; class T {",
+						"\tString s = \"\"\"",
+						"\t\tpackage legacy.x;",
+						"\t\t\"\"\";",
+						"}",
+						"// imports: java.util.List"
+				),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesIndentedPackageLineIsAnchor() {
+		final var input = List.of("\tpackage x;", "// imports: java.util.List", "class T {}");
+		assertEquals(
+				List.of("\tpackage x; import java.util.List;", "// imports: java.util.List", "class T {}"),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesIsIdempotent() {
+		final var input = List.of("package x;", "// imports: java.util.List", "class T {}");
+		final var once = BaseCheckTest.inlineImportsDirectives(input);
+		assertEquals(once, BaseCheckTest.inlineImportsDirectives(once));
+	}
+
+	@Test
+	public void inlineImportsDirectivesIsIdempotentWhenAnchorOpensABlockComment() {
+		final var input = List.of("/*", "package legacy.x;", "*/", "// imports: java.util.List", "class T {}");
+		final var once = BaseCheckTest.inlineImportsDirectives(input);
+		assertEquals(once, BaseCheckTest.inlineImportsDirectives(once));
+	}
+
+	@Test
+	public void inlineImportsDirectivesIsIdempotentWithCommentedPackageLine() {
+		final var input = List.of("package x; // note", "// imports: java.util.List", "class T {}");
+		final var once = BaseCheckTest.inlineImportsDirectives(input);
+		assertEquals(once, BaseCheckTest.inlineImportsDirectives(once));
+	}
+
+	@Test
+	public void inlineImportsDirectivesIsIdempotentWithoutPackageLine() {
+		final var input = List.of("// imports: java.util.List", "class T {}");
+		final var once = BaseCheckTest.inlineImportsDirectives(input);
+		assertEquals(once, BaseCheckTest.inlineImportsDirectives(once));
+	}
+
+	@Test
+	public void inlineImportsDirectivesIsIdempotentWithoutPackageLineWhenAnchorIsAComment() {
+		final var input = List.of("// header", "// imports: java.util.List", "class T {}");
+		final var once = BaseCheckTest.inlineImportsDirectives(input);
+		assertEquals(
+				List.of("import java.util.List; // header", "// imports: java.util.List", "class T {}"),
+				once
+		);
+		assertEquals(once, BaseCheckTest.inlineImportsDirectives(once));
+	}
+
+	@Test
+	public void inlineImportsDirectivesMalformedDirectiveInsideBlockCommentIsIgnored() {
+		final var input = List.of(
+				"package x; /* note",
+				"// imports:java.util.List",
+				"still comment */",
+				"class T {}"
+		);
+		assertEquals(input, BaseCheckTest.inlineImportsDirectives(input));
+	}
+
+	@CsvSource(delimiter = '|', value = {
+			"// imports:|empty FQCN",
+			"// imports:java.util.List|malformed '// imports:' directive",
+			"// imports: import foo.Foo;|not a bare FQCN",
+			"// imports: import foo.Foo; // historical note|not a bare FQCN",
+			"// imports: /* legacy */ import foo.Foo;|not a bare FQCN",
+			"// imports: java.util.List // violation: Unused import.|not a bare FQCN",
+			"// imports: java.util.List /* note|not a bare FQCN"
+	})
+	@ParameterizedTest
+	public void inlineImportsDirectivesMalformedDirectiveThrows(@Nonnull String directive, @Nonnull String expectedFragment) {
+		final var input = List.of("package x;", directive, "class T {}");
+		final var ex = assertThrows(
+				IllegalStateException.class,
+				() -> BaseCheckTest.inlineImportsDirectives(input)
+		);
+		assertTrue(ex.getMessage().contains(expectedFragment), "unexpected message: " + ex.getMessage());
+		assertTrue(ex.getMessage().contains(directive), "message must quote the offending line: " + ex.getMessage());
+	}
+
+	@Test
+	public void inlineImportsDirectivesNearMissDirectiveFormsAreIgnored() {
+		final var input = List.of(
+				"package x;",
+				"//imports: java.util.List",
+				"// Imports: java.util.List",
+				"class T {}"
+		);
+		assertEquals(input, BaseCheckTest.inlineImportsDirectives(input));
+	}
+
+	@Test
+	public void inlineImportsDirectivesNoDirectiveReturnsRawLines() {
+		final var input = List.of("package x;", "", "class T {}");
+		assertEquals(input, BaseCheckTest.inlineImportsDirectives(input));
+	}
+
+	@Test
+	public void inlineImportsDirectivesNoPackagePacksOntoFirstLine() {
 		final var input = List.of("// imports: java.util.List", "class T {}");
 		assertEquals(
-				List.of("import java.util.List;", "", "// imports: java.util.List", "class T {}"),
-				BaseCheckTest.hoistImportsDirectives(input)
+				List.of("import java.util.List; // imports: java.util.List", "class T {}"),
+				BaseCheckTest.inlineImportsDirectives(input)
 		);
 	}
 
 	@Test
-	public void hoistImportsDirectivesSplicesAfterPackage() {
+	public void inlineImportsDirectivesPackageAfterHeaderComment() {
+		final var input = List.of("// header", "package x;", "// imports: java.util.List", "class T {}");
+		assertEquals(
+				List.of("// header", "package x; import java.util.List;", "// imports: java.util.List", "class T {}"),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesPackageDirectiveIsNotTranslated() {
+		final var input = List.of(
+				"package x;",
+				"// package: y",
+				"// imports: java.util.List",
+				"class T {}"
+		);
+		assertEquals(
+				List.of(
+						"package x; import java.util.List;",
+						"// package: y",
+						"// imports: java.util.List",
+						"class T {}"
+				),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesPacksBeforePackageLineComment() {
+		final var input = List.of("package x; // note", "// imports: java.util.List", "class T {}");
+		assertEquals(
+				List.of("package x; import java.util.List; // note", "// imports: java.util.List", "class T {}"),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesPacksOntoPackageLine() {
 		final var input = List.of(
 				"package x;",
 				"",
@@ -410,17 +700,165 @@ public class BaseCheckTestTest {
 		);
 		assertEquals(
 				List.of(
-						"package x;",
-						"",
-						"import java.util.List;",
-						"import java.util.Map;",
+						"package x; import java.util.List; import java.util.Map;",
 						"",
 						"// imports: java.util.List",
 						"// imports: java.util.Map",
 						"class T {}"
 				),
-				BaseCheckTest.hoistImportsDirectives(input)
+				BaseCheckTest.inlineImportsDirectives(input)
 		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesPreservesLineCountOnEveryFixture() throws Exception {
+		final var root = Path.of("src/test/resources/com/etk2000/checkstyle/inputs");
+		final var checked = new ArrayList<String>();
+		final var inlinedNothing = new ArrayList<String>();
+		final var unbalanced = new ArrayList<String>();
+		final var skipped = new ArrayList<String>();
+		try (var paths = Files.walk(root)) {
+			for (var path : paths.filter(p -> p.getFileName().toString().endsWith(".java")).sorted().toList()) {
+				final var raw = Files.readAllLines(path);
+				if (raw.stream().noneMatch(l -> l.strip().startsWith(IMPORTS_DIRECTIVE)))
+					continue;
+				final var relative = root.relativize(path).toString().replace('\\', '/');
+				// asking the production guard beats mirroring its condition: a narrowed guard would
+				// otherwise keep skipping a fixture that has become inlinable, silently and greenly
+				final List<String> out;
+				try {
+					out = BaseCheckTest.inlineImportsDirectives(raw);
+				}
+				catch (IllegalStateException rejected) {
+					assertTrue(
+							rejected.getMessage().contains("not a bare FQCN"),
+							"unexpected rejection reason for " + relative + ": " + rejected.getMessage()
+					);
+					skipped.add(relative);
+					continue;
+				}
+				if (out.equals(raw)) {
+					inlinedNothing.add(relative);
+					continue;
+				}
+				checked.add(relative);
+				assertEquals(raw.size(), out.size(), "line count changed for " + relative);
+				final var changed = new ArrayList<Integer>();
+				for (var i = 0; i < raw.size(); ++i) {
+					if (!raw.get(i).equals(out.get(i)))
+						changed.add(i);
+				}
+				assertEquals(1, changed.size(), "expected exactly one rewritten line in " + relative + ", got indices " + changed);
+				final var startStates = new ArrayList<JavaLineScanner.LexerState>(raw.size());
+				var folded = JavaLineScanner.LexerState.NONE;
+				for (var line : raw) {
+					startStates.add(folded);
+					folded = JavaLineScanner.stateAfter(line, folded);
+				}
+				if (folded.inMultilineLiteral())
+					unbalanced.add(relative);
+				var expectedAnchor = 0;
+				for (var i = 0; i < raw.size(); ++i) {
+					if (!startStates.get(i).inMultilineLiteral() && raw.get(i).strip().startsWith("package ")) {
+						expectedAnchor = i;
+						break;
+					}
+				}
+				assertEquals(
+						expectedAnchor,
+						changed.getFirst(),
+						"rewritten line " + (changed.getFirst() + 1) + " of " + relative + " is not the anchor"
+				);
+				final var anchorRaw = raw.get(expectedAnchor);
+				final var anchorCommentIdx = JavaLineScanner.firstCommentMarker(anchorRaw, JavaLineScanner.LexerState.NONE);
+				// only the package branch splits at the comment; on the no-package branch the whole
+				// line survives, and truncating there could leave an empty needle asserting nothing
+				final var anchorCode = anchorCommentIdx < 0 || !anchorRaw.strip().startsWith("package ")
+						? anchorRaw
+						: anchorRaw.substring(0, anchorCommentIdx);
+				assertTrue(
+						out.get(expectedAnchor).contains(anchorCode),
+						"rewrite dropped the anchor's own code in " + relative
+				);
+				// a missing import moves no violation, so only this assertion would notice a
+				// directive that reaches production but never lands on the anchor
+				for (var i = 0; i < raw.size(); ++i) {
+					final var trimmed = raw.get(i).strip();
+					if (startStates.get(i).inMultilineLiteral() || !trimmed.startsWith(IMPORTS_DIRECTIVE))
+						continue;
+					final var declared = "import " + trimmed.substring(IMPORTS_DIRECTIVE.length()).strip() + ';';
+					assertTrue(
+							out.get(expectedAnchor).contains(declared),
+							"directive '" + declared + "' never reached the anchor of " + relative
+					);
+				}
+			}
+		}
+		assertFalse(checked.isEmpty(), "swept no directive-bearing fixture, the corpus filter is wrong");
+		assertEquals(
+				List.of(),
+				unbalanced,
+				"fixture(s) end inside a text block or block comment; every directive below the opener is"
+						+ " silently skipped, and the sweep skips it too, so nothing else would catch it"
+		);
+		assertEquals(
+				List.of(),
+				inlinedNothing,
+				"fixture(s) inlined nothing, so the sweep asserted nothing about them; confirm that is intended and list them here"
+		);
+		assertEquals(
+				List.of(
+						"preferexactassertion/cases.commentimports.in.java",
+						"preferexactassertion/cases.commentimports.out.java",
+						"preferstaticimportconstant/cases.in.java",
+						"preferstaticimportconstant/cases.out.java",
+						"unusedimports/cases.in.java"
+				),
+				skipped,
+				"the set of fixtures the guard rejects drifted; one gaining such a directive drops out of this sweep"
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesTabIndentedDirectiveRecognized() {
+		final var input = List.of("package x;", "\t\t// imports: java.util.List", "class T {}");
+		assertEquals(
+				List.of("package x; import java.util.List;", "\t\t// imports: java.util.List", "class T {}"),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesTextBlockContentIsNotADirective() {
+		final var input = List.of(
+				"package x;",
+				"class T {",
+				"\tString s = \"\"\"",
+				"\t\t// imports: java.util.List",
+				"\t\t\"\"\";",
+				"}"
+		);
+		assertEquals(input, BaseCheckTest.inlineImportsDirectives(input));
+	}
+
+	@Test
+	public void inlineImportsDirectivesUnclosedBlockCommentOnPackageLinePacksBeforeIt() {
+		final var input = List.of("package x; /* note", "still comment */", "// imports: java.util.List", "class T {}");
+		assertEquals(
+				List.of(
+						"package x; import java.util.List; /* note",
+						"still comment */",
+						"// imports: java.util.List",
+						"class T {}"
+				),
+				BaseCheckTest.inlineImportsDirectives(input)
+		);
+	}
+
+	@Test
+	public void inlineImportsDirectivesUnterminatedBlockCommentSwallowsTheDirective() {
+		final var input = List.of("package x; /* note", "// imports: java.util.List", "class T {}");
+		assertEquals(input, BaseCheckTest.inlineImportsDirectives(input));
 	}
 
 	@Test
@@ -1194,13 +1632,23 @@ public class BaseCheckTestTest {
 	}
 
 	@Test
+	public void runCheckCommentCarryingDirectiveFixtureThrowsWithGuidance() {
+		final var ex = assertThrows(
+				IllegalStateException.class,
+				() -> BaseCheckTest.runCheck(PreferStaticImportConstantCheck.class, "unusedimports/cases.in.java")
+		);
+		assertTrue(ex.getMessage().contains("carries a comment"), "unexpected message: " + ex.getMessage());
+		assertTrue(ex.getMessage().contains("loadCaseSlice"), "message must point at the slice API: " + ex.getMessage());
+	}
+
+	@Test
 	public void runCheckInlineForwardsProperties() throws Exception {
-		final var source = "class T {\n\tvoid f(String s) {\n\t\tif (s.trim().isEmpty()) {\n\t\t\treturn;\n\t\t}\n\t}\n}";
+		final var source = "class T {\n\tvoid f(String s) {\n\t\tif (s.strip().isEmpty()) {\n\t\t\treturn;\n\t\t}\n\t}\n}";
 		final var below = BaseCheckTest.runCheckInline(PreferSpecificApiCheck.class, source, "minSdk", "32");
-		assertTrue(below.isEmpty(), "minSdk=32 should gate off trim-isBlank, got: " + below);
+		assertTrue(below.isEmpty(), "minSdk=32 should gate off strip-isBlank, got: " + below);
 		final var above = BaseCheckTest.runCheckInline(PreferSpecificApiCheck.class, source, "minSdk", "33");
 		assertEquals(1, above.size());
-		assertEquals("Use '.isBlank()' instead of '.trim().isEmpty()'.", above.getFirst().getMessage());
+		assertEquals("Use '.isBlank()' instead of '.strip().isEmpty()'.", above.getFirst().getMessage());
 	}
 
 	@Test
@@ -1246,8 +1694,8 @@ public class BaseCheckTestTest {
 	public void runCheckNoSlashForwardsProperties() throws Exception {
 		final var below = BaseCheckTest.runCheck(PreferStaticImportCheck.class, "cases.objects.in.java", "minSdk", "29");
 		final var above = BaseCheckTest.runCheck(PreferStaticImportCheck.class, "cases.objects.in.java", "minSdk", "30");
-		assertEquals(6, below.size());
-		assertEquals(10, above.size());
+		assertEquals(8, below.size());
+		assertEquals(12, above.size());
 	}
 
 	@Test
@@ -1260,14 +1708,6 @@ public class BaseCheckTestTest {
 				ex.getMessage().endsWith("Test input file not found: nounnecessarythis/does-not-exist.java"),
 				"unexpected message: " + ex.getMessage()
 		);
-	}
-
-	@Test
-	public void runCheckNoSlashPathDerivesTopicPrefix() throws Exception {
-		final var viaNoSlash = BaseCheckTest.runCheck(NoUnnecessaryThisCheck.class, "cases.clean.java");
-		final var viaSlash = BaseCheckTest.runCheck(NoUnnecessaryThisCheck.class, "nounnecessarythis/cases.clean.java");
-		assertTrue(viaNoSlash.isEmpty(), "clean fixture must produce no violations");
-		assertEquals(viaSlash.size(), viaNoSlash.size());
 	}
 
 	@Test
@@ -1287,8 +1727,48 @@ public class BaseCheckTestTest {
 	}
 
 	@Test
+	public void runCheckOnFilesDirectiveBearingFileIsTranslated() throws Exception {
+		final var violations = BaseCheckTest.runCheckOnFiles(
+				RedundantNumericSuffixCheck.class,
+				"redundantnumericsuffix/cases.in.java"
+		);
+		assertFalse(violations.isEmpty(), "fixture must fire for the file-name assertion to mean anything");
+		assertTrue(
+				violations.getFirst().getFileName().contains("checkstyle-translated"),
+				"directive-bearing fixture must be checked from a translated copy: " + violations.getFirst().getFileName()
+		);
+	}
+
+	@Test
 	public void runCheckOnFilesEmptyPathsReturnsEmpty() throws Exception {
 		assertTrue(BaseCheckTest.runCheckOnFiles(PreferSpecificApiCheck.class).isEmpty());
+	}
+
+	@Test
+	public void runCheckOnFilesLiteralEmbeddedDirectiveIsNotTranslated() throws Exception {
+		final var content = String.join(
+				"\n",
+				"package x;",
+				"class T {",
+				"\tint x;",
+				"\tString s = \"\"\"",
+				"\t\t// imports: java.util.List",
+				"\t\t\"\"\";",
+				"\tvoid m() { System.out.println(this.x); }",
+				"}"
+		);
+		final var violations = BaseCheckTest.runCheckInline(NoUnnecessaryThisCheck.class, content);
+		assertEquals(1, violations.size());
+		assertEquals(7, violations.getFirst().getLine());
+		assertEquals(SeverityLevel.ERROR, violations.getFirst().getSeverityLevel());
+		assertEquals(
+				"Remove the unnecessary 'this.' from 'this.x' (only needed when shadowing or assigning a field).",
+				violations.getFirst().getMessage()
+		);
+		assertFalse(
+				violations.getFirst().getFileName().contains("checkstyle-translated"),
+				"a literal-embedded directive must not trigger translation: " + violations.getFirst().getFileName()
+		);
 	}
 
 	@Test
@@ -1318,6 +1798,26 @@ public class BaseCheckTestTest {
 		final var actual = new ArrayList<>(toEventKeys(combined));
 		actual.sort(null);
 		assertEquals(expected, actual);
+	}
+
+	@Test
+	public void runCheckOnFilesNearMissDirectiveIsNotTranslated() throws Exception {
+		final var content = String.join(
+				"\n",
+				"package x;",
+				"//imports: java.util.List",
+				"// Imports: java.util.List",
+				"class T {",
+				"\tint x;",
+				"\tvoid m() { System.out.println(this.x); }",
+				"}"
+		);
+		final var violations = BaseCheckTest.runCheckInline(NoUnnecessaryThisCheck.class, content);
+		assertEquals(1, violations.size());
+		assertFalse(
+				violations.getFirst().getFileName().contains("checkstyle-translated"),
+				"near-miss directive must not trigger translation: " + violations.getFirst().getFileName()
+		);
 	}
 
 	@Test

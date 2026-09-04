@@ -3,7 +3,7 @@ package com.etk2000.checkstyle.inputs.preferprefixincrement;
 // === case: array_operand ===
 class InputPreferPrefixIncrementArrayOperandSliceViolation {
 	void m(int[] arr, int i) {
-		arr[i]++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		arr[i]++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -15,7 +15,7 @@ class InputPrefixBracelessElseSliceViolation {
 		if (flag)
 			++i;
 		else
-			i++; // violation: Use prefix increment (++x) instead of postfix (x++).
+			i++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -25,7 +25,7 @@ class InputPrefixBracelessForBodySliceViolation {
 	void m() {
 		var i = 0;
 		for (var j = 0; j < 10; ++j)
-			i++; // violation: Use prefix increment (++x) instead of postfix (x++).
+			i++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -35,7 +35,7 @@ class InputPreferPrefixIncrementBracelessForEachBodySliceViolation {
 	void m(int[] values) {
 		var i = 0;
 		for (var v : values)
-			i++; // violation: Use prefix increment (++x) instead of postfix (x++).
+			i++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 		System.out.println(i);
 	}
 }
@@ -46,7 +46,7 @@ class InputPrefixBracelessIfSliceViolation {
 	void m(boolean flag) {
 		var i = 0;
 		if (flag)
-			i++; // violation: Use prefix increment (++x) instead of postfix (x++).
+			i++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -56,7 +56,7 @@ class InputPrefixBracelessWhileSliceViolation {
 	void m(boolean flag) {
 		var i = 0;
 		while (flag)
-			i--; // violation: Use prefix decrement (--x) instead of postfix (x--).
+			i--; // violation: Use prefix decrement '--x' instead of postfix 'x--'.
 	}
 }
 // === end ===
@@ -72,7 +72,7 @@ class InputPreferPrefixIncrementCallQualifiedOperandSliceViolation {
 	}
 
 	void m() {
-		holder().count++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		holder().count++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -84,7 +84,7 @@ class InputPreferPrefixIncrementCastOperandSliceViolation {
 	}
 
 	void m(Object o) {
-		((Holder) o).count++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		((Holder) o).count++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -100,7 +100,7 @@ class InputPreferPrefixIncrementChainedQualifiedOperandSliceViolation {
 	}
 
 	void m(Outer o) {
-		o.inner.count++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		o.inner.count++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -109,7 +109,7 @@ class InputPreferPrefixIncrementChainedQualifiedOperandSliceViolation {
 class InputPreferPrefixIncrementCommentBeforeOperatorSliceViolation {
 	void m() {
 		var i = 0;
-		i /* keep */ ++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		i /* keep */ ++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -117,7 +117,7 @@ class InputPreferPrefixIncrementCommentBeforeOperatorSliceViolation {
 // === case: for_loop_update ===
 class InputPrefixForLoopUpdateSliceViolation {
 	void m() {
-		for (var i = 0; i < 10; i++) { // violation: Use prefix increment (++x) instead of postfix (x++).
+		for (var i = 0; i < 10; i++) { // violation: Use prefix increment '++x' instead of postfix 'x++'.
 			System.out.println(i);
 		}
 	}
@@ -128,7 +128,7 @@ class InputPrefixForLoopUpdateSliceViolation {
 class InputPreferPrefixIncrementForLoopUpdateMultiSliceViolation {
 	void m() {
 		var j = 0;
-		for (var i = 0; i < 2; i++, j++) // violation: Use prefix increment (++x) instead of postfix (x++). // violation: Use prefix increment (++x) instead of postfix (x++).
+		for (var i = 0; i < 2; i++, j++) // violation: Use prefix increment '++x' instead of postfix 'x++'. // violation: Use prefix increment '++x' instead of postfix 'x++'.
 			System.out.println(i + j);
 	}
 }
@@ -140,7 +140,7 @@ class InputPreferPrefixIncrementLambdaBodySliceViolation {
 
 	void m() {
 		final Runnable r = () -> {
-			count++; // violation: Use prefix increment (++x) instead of postfix (x++).
+			count++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 		};
 		r.run();
 	}
@@ -152,21 +152,21 @@ class InputPrefixViolation {
 	void bracedDoWhile(boolean flag) {
 		var i = 0;
 		do {
-			i++; // violation: Use prefix increment (++x) instead of postfix (x++).
+			i++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 		} while (flag);
 	}
 
 	void bracelessDoWhile(boolean flag) {
 		var i = 0;
 		do
-			i++; // violation: Use prefix increment (++x) instead of postfix (x++).
+			i++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 		while (flag);
 	}
 
 	void standaloneStatement() {
 		var i = 0;
-		i++; // violation: Use prefix increment (++x) instead of postfix (x++).
-		i--; // violation: Use prefix decrement (--x) instead of postfix (x--).
+		i++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
+		i--; // violation: Use prefix decrement '--x' instead of postfix 'x--'.
 	}
 }
 // === end ===
@@ -175,7 +175,7 @@ class InputPrefixViolation {
 class InputPrefixMultiCharIdentSliceViolation {
 	void m() {
 		var count = 0;
-		count++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		count++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -184,13 +184,13 @@ class InputPrefixMultiCharIdentSliceViolation {
 class InputPrefixMultiCharDecrementSliceViolation {
 	void m() {
 		var count = 0;
-		count--; // violation: Use prefix decrement (--x) instead of postfix (x--).
+		count--; // violation: Use prefix decrement '--x' instead of postfix 'x--'.
 	}
 }
 // === end ===
 
 // === case: multiline_operand ===
-// skip-reason: operand starts on an earlier line than its ++/--
+// skip-reason: cannot convert to prefix: the operand starts on an earlier line than its ++/--
 class InputPreferPrefixIncrementMultilineOperandSliceViolation {
 	static class Holder {
 		int count;
@@ -198,7 +198,7 @@ class InputPreferPrefixIncrementMultilineOperandSliceViolation {
 
 	void m(Holder h) {
 		h
-				.count++; // violation: Use prefix increment (++x) instead of postfix (x++).
+				.count++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -206,7 +206,7 @@ class InputPreferPrefixIncrementMultilineOperandSliceViolation {
 // === case: nested_postfix_operand ===
 class InputPreferPrefixIncrementNestedPostfixOperandSliceViolation {
 	void m(int[] arr, int i) {
-		arr[i++]++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		arr[i++]++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -215,7 +215,7 @@ class InputPreferPrefixIncrementNestedPostfixOperandSliceViolation {
 class InputPrefixOperatorAtEndOfLineSliceViolation {
 	void m() {
 		var i = 0;
-		i++ // violation: Use prefix increment (++x) instead of postfix (x++).
+		i++ // violation: Use prefix increment '++x' instead of postfix 'x++'.
 		;
 	}
 }
@@ -225,7 +225,7 @@ class InputPrefixOperatorAtEndOfLineSliceViolation {
 class InputPrefixPostfixDecrementSliceViolation {
 	void m() {
 		var i = 0;
-		i--; // violation: Use prefix decrement (--x) instead of postfix (x--).
+		i--; // violation: Use prefix decrement '--x' instead of postfix 'x--'.
 	}
 }
 // === end ===
@@ -234,7 +234,7 @@ class InputPrefixPostfixDecrementSliceViolation {
 class InputPrefixPostfixIncrementSliceViolation {
 	void m() {
 		var i = 0;
-		i++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		i++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -246,7 +246,7 @@ class InputPreferPrefixIncrementQualifiedOperandSliceViolation {
 	}
 
 	void m(Holder h) {
-		h.count++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		h.count++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -257,17 +257,17 @@ class InputPreferPrefixIncrementSlistContextsSliceViolation {
 	private static int total;
 
 	static {
-		total++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		total++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 
 	private int count;
 
 	{
-		count++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		count++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 
 	InputPreferPrefixIncrementSlistContextsSliceViolation() {
-		count++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		count++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 
 	void m() {
@@ -275,7 +275,7 @@ class InputPreferPrefixIncrementSlistContextsSliceViolation {
 			System.out.println(count);
 		}
 		catch (RuntimeException e) {
-			count--; // violation: Use prefix decrement (--x) instead of postfix (x--).
+			count--; // violation: Use prefix decrement '--x' instead of postfix 'x--'.
 		}
 	}
 }
@@ -285,7 +285,7 @@ class InputPreferPrefixIncrementSlistContextsSliceViolation {
 class InputPreferPrefixIncrementSpacedOperatorSliceViolation {
 	void m() {
 		var i = 0;
-		i ++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		i ++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -293,7 +293,7 @@ class InputPreferPrefixIncrementSpacedOperatorSliceViolation {
 // === case: supplementary_before_operand ===
 class InputPreferPrefixIncrementSupplementaryBeforeOperandSliceViolation {
 	void m() {
-		for (var 𝐀 = 0; 𝐀 < 2; 𝐀++) // violation: Use prefix increment (++x) instead of postfix (x++).
+		for (var 𝐀 = 0; 𝐀 < 2; 𝐀++) // violation: Use prefix increment '++x' instead of postfix 'x++'.
 			System.out.println(𝐀);
 	}
 }
@@ -303,7 +303,7 @@ class InputPreferPrefixIncrementSupplementaryBeforeOperandSliceViolation {
 class InputPreferPrefixIncrementSupplementaryOperandSliceViolation {
 	void m() {
 		var 𝐀count = 0;
-		𝐀count++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		𝐀count++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -314,7 +314,7 @@ class InputPreferPrefixIncrementSwitchCaseGroupBodySliceViolation {
 		var i = 0;
 		switch (k) {
 			case 1:
-				i++; // violation: Use prefix increment (++x) instead of postfix (x++).
+				i++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 				// falls through
 
 			case 2:
@@ -334,7 +334,7 @@ class InputPreferPrefixIncrementThisQualifiedOperandSliceViolation {
 
 	void m(int count) {
 		this.count = count;
-		this.count++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		this.count++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===
@@ -343,7 +343,7 @@ class InputPreferPrefixIncrementThisQualifiedOperandSliceViolation {
 class InputPrefixUnderscoreSliceViolation {
 	void m() {
 		var my_var = 0;
-		my_var++; // violation: Use prefix increment (++x) instead of postfix (x++).
+		my_var++; // violation: Use prefix increment '++x' instead of postfix 'x++'.
 	}
 }
 // === end ===

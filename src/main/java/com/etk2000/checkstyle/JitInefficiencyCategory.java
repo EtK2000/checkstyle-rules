@@ -26,10 +26,7 @@ public enum JitInefficiencyCategory {
 	TOARRAY_SIZED("jit.toarray.sized", "jit.toarray.sized.skip");
 
 	@Nonnull
-	private final String checkMessageKey;
-
-	@Nonnull
-	private final String skipReasonKey;
+	private final String checkMessageKey, skipReasonKey;
 
 	JitInefficiencyCategory(@Nonnull String checkMessageKey, @Nonnull String skipReasonKey) {
 		this.checkMessageKey = checkMessageKey;

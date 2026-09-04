@@ -9,3 +9,16 @@ class InputArrayCommaClean {
 	// nested arrays: no trailing commas
 	int[][] e = {{1, 2}, {3, 4}};
 }
+
+// an annotation's array value is an ANNOTATION_ARRAY_INIT, not an ARRAY_INIT
+class InputAnnotationArrayCommaClean {
+	@interface Anno {
+		int[] value();
+	}
+
+	@Anno({1, 2})
+	int f;
+
+	@Anno({})
+	int g;
+}

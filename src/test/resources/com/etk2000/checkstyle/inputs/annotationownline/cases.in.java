@@ -9,31 +9,31 @@ package com.etk2000.checkstyle.inputs.annotationownline;
 
 // === case: annotation_with_char_literal ===
 class InputAnnotationOwnLineAnnotationWithCharLiteralViolation {
-	@A('x') @B void f() {} // violation: Annotation 'A' must be on its own line.
+	@A('x') @B void f() {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: annotation_with_nested_annotation ===
 class InputAnnotationOwnLineAnnotationWithNestedAnnotationViolation {
-	@A(@B) @C void f() {} // violation: Annotation 'A' must be on its own line.
+	@A(@B) @C void f() {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: annotation_with_nested_parens ===
 class InputAnnotationOwnLineAnnotationWithNestedParensViolation {
-	@A(v = (1 + 2)) @B void f() {} // violation: Annotation 'A' must be on its own line.
+	@A(v = (1 + 2)) @B void f() {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: annotation_with_string_params ===
 class InputAnnotationOwnLineAnnotationWithStringParamsViolation {
-	@SuppressWarnings("unchecked") @Override void f() {} // violation: Annotation 'SuppressWarnings' must be on its own line. // violation: Annotation 'Override' must appear before 'SuppressWarnings' (alphabetical order).
+	@SuppressWarnings("unchecked") @Override void f() {} // violation: Annotation '@SuppressWarnings' must be on its own line. // violation: Annotation '@Override' must appear before '@SuppressWarnings' (alphabetical order).
 }
 // === end ===
 
 // === case: blank_line_after_block_comment_below ===
 class InputAnnotationOwnLineBlankLineAfterBlockCommentBelowViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 	/* block */
 
 	void f() {}
@@ -42,7 +42,7 @@ class InputAnnotationOwnLineBlankLineAfterBlockCommentBelowViolation {
 
 // === case: blank_line_after_javadoc_below ===
 class InputAnnotationOwnLineBlankLineAfterJavadocBelowViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 	/** Javadoc. */
 
 	void f() {}
@@ -51,7 +51,7 @@ class InputAnnotationOwnLineBlankLineAfterJavadocBelowViolation {
 
 // === case: blank_line_after_line_comment_below ===
 class InputAnnotationOwnLineBlankLineAfterLineCommentBelowViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 	// comment
 
 	void f() {}
@@ -60,7 +60,7 @@ class InputAnnotationOwnLineBlankLineAfterLineCommentBelowViolation {
 
 // === case: blank_line_after_multi_line_block_comment_below ===
 class InputAnnotationOwnLineBlankLineAfterMultiLineBlockCommentBelowViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 	/*
 	 * comment
 	 */
@@ -71,7 +71,7 @@ class InputAnnotationOwnLineBlankLineAfterMultiLineBlockCommentBelowViolation {
 
 // === case: blank_line_after_multi_line_block_comment_with_internal_blank_below ===
 class InputAnnotationOwnLineBlankLineAfterMultiLineBlockCommentWithInternalBlankBelowViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 	/*
 	 * comment
 	 *
@@ -84,7 +84,7 @@ class InputAnnotationOwnLineBlankLineAfterMultiLineBlockCommentWithInternalBlank
 
 // === case: blank_line_before_block_comment_below ===
 class InputAnnotationOwnLineBlankLineBeforeBlockCommentBelowViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 	/* block */
 	void f() {}
@@ -93,7 +93,7 @@ class InputAnnotationOwnLineBlankLineBeforeBlockCommentBelowViolation {
 
 // === case: blank_line_before_javadoc_below ===
 class InputAnnotationOwnLineBlankLineBeforeJavadocBelowViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 	/** Javadoc. */
 	void f() {}
@@ -102,7 +102,7 @@ class InputAnnotationOwnLineBlankLineBeforeJavadocBelowViolation {
 
 // === case: blank_line_before_line_comment_below ===
 class InputAnnotationOwnLineBlankLineBeforeLineCommentBelowViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 	// comment
 	void f() {}
@@ -111,7 +111,7 @@ class InputAnnotationOwnLineBlankLineBeforeLineCommentBelowViolation {
 
 // === case: blank_line_before_multi_line_block_comment_below ===
 class InputAnnotationOwnLineBlankLineBeforeMultiLineBlockCommentBelowViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 	/*
 	 * comment
@@ -122,7 +122,7 @@ class InputAnnotationOwnLineBlankLineBeforeMultiLineBlockCommentBelowViolation {
 
 // === case: blank_line_below ===
 class InputAnnotationOwnLineBlankLineBelowViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 	@B
 	void f() {}
@@ -133,7 +133,7 @@ class InputAnnotationOwnLineBlankLineBelowViolation {
 class InputAnnotationOwnLineBlankLineBelowMultiLineAnnotationViolation {
 	@V({
 		"a"
-	}) // violation: No blank line after annotation 'V'.
+	}) // violation: Annotation '@V' must not be followed by a blank line.
 
 	void f() {}
 }
@@ -142,7 +142,7 @@ class InputAnnotationOwnLineBlankLineBelowMultiLineAnnotationViolation {
 // === case: blank_line_inside_annotation ===
 class InputAnnotationOwnLineBlankLineInsideAnnotationSliceViolation {
 	@V({
-// violation: No blank line inside annotation 'V'.
+// violation: Annotation '@V' must not contain a blank line.
 		"a"
 	})
 	void f() {}
@@ -152,7 +152,7 @@ class InputAnnotationOwnLineBlankLineInsideAnnotationSliceViolation {
 // === case: blank_line_inside_block_comment_no_blank_after ===
 class InputAnnotationOwnLineBlankLineInsideBlockCommentNoBlankAfterViolation {
 	@B
-	@A // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+	@A // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 	/*
 
 	 */
@@ -162,7 +162,7 @@ class InputAnnotationOwnLineBlankLineInsideBlockCommentNoBlankAfterViolation {
 
 // === case: blankline_blank_before_field ===
 class InputAnnotationOwnLineBlanklineBlankBeforeFieldViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 	int f;
 }
@@ -170,7 +170,7 @@ class InputAnnotationOwnLineBlanklineBlankBeforeFieldViolation {
 
 // === case: blankline_blank_before_method ===
 class InputAnnotationOwnLineBlanklineBlankBeforeMethodViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 	void m() {}
 }
@@ -178,7 +178,7 @@ class InputAnnotationOwnLineBlanklineBlankBeforeMethodViolation {
 
 // === case: blankline_blank_between_annotations ===
 class InputAnnotationOwnLineBlanklineBlankBetweenAnnotationsViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 	@B
 	int f;
@@ -187,7 +187,7 @@ class InputAnnotationOwnLineBlanklineBlankBetweenAnnotationsViolation {
 
 // === case: blankline_blank_line_after_block_comment_between_annotation_and_decl ===
 class InputAnnotationOwnLineBlanklineAfterBlockCommentViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 	/* block comment */
 
 	void m() {}
@@ -196,7 +196,7 @@ class InputAnnotationOwnLineBlanklineAfterBlockCommentViolation {
 
 // === case: blankline_blank_line_after_javadoc_between_annotation_and_decl ===
 class InputAnnotationOwnLineBlanklineAfterJavadocViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 	/** Javadoc comment. */
 
 	void m() {}
@@ -205,7 +205,7 @@ class InputAnnotationOwnLineBlanklineAfterJavadocViolation {
 
 // === case: blankline_blank_line_after_line_comment_between_annotation_and_decl ===
 class InputAnnotationOwnLineBlanklineAfterLineCommentViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 	// line comment
 
 	void m() {}
@@ -214,7 +214,7 @@ class InputAnnotationOwnLineBlanklineAfterLineCommentViolation {
 
 // === case: blankline_blank_line_after_multi_line_block_comment_between_annotation_and_decl ===
 class InputAnnotationOwnLineBlanklineAfterMultiLineBlockCommentViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 	/*
 	 * multi-line
 	 * block comment
@@ -226,7 +226,7 @@ class InputAnnotationOwnLineBlanklineAfterMultiLineBlockCommentViolation {
 
 // === case: blankline_blank_line_before_block_comment_between_annotation_and_decl ===
 class InputAnnotationOwnLineBlanklineBeforeBlockCommentViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 	/* block comment */
 	void m() {}
@@ -235,7 +235,7 @@ class InputAnnotationOwnLineBlanklineBeforeBlockCommentViolation {
 
 // === case: blankline_blank_line_before_javadoc_between_annotation_and_decl ===
 class InputAnnotationOwnLineBlanklineBeforeJavadocViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 	/** Javadoc comment. */
 	void m() {}
@@ -244,7 +244,7 @@ class InputAnnotationOwnLineBlanklineBeforeJavadocViolation {
 
 // === case: blankline_blank_line_before_line_comment_between_annotation_and_decl ===
 class InputAnnotationOwnLineBlanklineBeforeLineCommentViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 	// line comment
 	void m() {}
@@ -253,7 +253,7 @@ class InputAnnotationOwnLineBlanklineBeforeLineCommentViolation {
 
 // === case: blankline_blank_line_before_multi_line_block_comment_between_annotation_and_decl ===
 class InputAnnotationOwnLineBlanklineBeforeMultiLineBlockCommentViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 	/*
 	 * multi-line
@@ -267,7 +267,7 @@ class InputAnnotationOwnLineBlanklineBeforeMultiLineBlockCommentViolation {
 class InputAnnotationOwnLineBlanklineMultiLineBlankBeforeMethodViolation {
 	@V({
 		"a"
-	}) // violation: No blank line after annotation 'V'.
+	}) // violation: Annotation '@V' must not be followed by a blank line.
 
 	void m() {}
 }
@@ -275,7 +275,7 @@ class InputAnnotationOwnLineBlanklineMultiLineBlankBeforeMethodViolation {
 
 // === case: blankline_multi_line_blank_between_annotations ===
 class InputAnnotationOwnLineBlanklineMultiLineBlankBetweenAnnotationsViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 	@V({
 		"b"
@@ -286,26 +286,26 @@ class InputAnnotationOwnLineBlanklineMultiLineBlankBetweenAnnotationsViolation {
 
 // === case: embedded_annotation_after_multiple_modifiers ===
 class InputAnnotationOwnLineEmbeddedAnnotationAfterMultipleModifiersViolation {
-	private final @A String field; // violation: Annotation 'A' must be on its own line.
+	private final @A String field; // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: embedded_annotation_after_static_final ===
 class InputAnnotationOwnLineEmbeddedAnnotationAfterStaticFinalViolation {
-	static final @A int CONST = 1; // violation: Annotation 'A' must be on its own line.
+	static final @A int CONST = 1; // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: embedded_annotation_between_modifiers ===
 class InputAnnotationOwnLineEmbeddedAnnotationBetweenModifiersViolation {
-	private @A final int x = 1; // violation: Annotation 'A' must be on its own line.
+	private @A final int x = 1; // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: embedded_annotation_with_array_of_annotations ===
 class InputAnnotationOwnLineEmbeddedAnnotationWithArrayOfAnnotationsViolation {
 	void m() {
-		final @A({@B, @C}) var x = 1; // violation: Annotation 'A' must be on its own line.
+		final @A({@B, @C}) var x = 1; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -313,7 +313,7 @@ class InputAnnotationOwnLineEmbeddedAnnotationWithArrayOfAnnotationsViolation {
 // === case: embedded_annotation_with_at_in_block_comment ===
 class InputAnnotationOwnLineEmbeddedAnnotationWithAtInBlockCommentViolation {
 	void m() {
-		final @A var x = /* @ignore */ 1; // violation: Annotation 'A' must be on its own line.
+		final @A var x = /* @ignore */ 1; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -321,7 +321,7 @@ class InputAnnotationOwnLineEmbeddedAnnotationWithAtInBlockCommentViolation {
 // === case: embedded_annotation_with_at_in_char ===
 class InputAnnotationOwnLineEmbeddedAnnotationWithAtInCharViolation {
 	void m() {
-		final @A var x = '@'; // violation: Annotation 'A' must be on its own line.
+		final @A var x = '@'; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -329,7 +329,7 @@ class InputAnnotationOwnLineEmbeddedAnnotationWithAtInCharViolation {
 // === case: embedded_annotation_with_at_in_line_comment ===
 class InputAnnotationOwnLineEmbeddedAnnotationWithAtInLineCommentViolation {
 	void m() {
-		final @A var x = 1; // @ignore // violation: Annotation 'A' must be on its own line.
+		final @A var x = 1; // @ignore // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -337,7 +337,7 @@ class InputAnnotationOwnLineEmbeddedAnnotationWithAtInLineCommentViolation {
 // === case: embedded_annotation_with_at_in_string ===
 class InputAnnotationOwnLineEmbeddedAnnotationWithAtInStringViolation {
 	void m() {
-		final @A var x = "@email"; // violation: Annotation 'A' must be on its own line.
+		final @A var x = "@email"; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -345,7 +345,7 @@ class InputAnnotationOwnLineEmbeddedAnnotationWithAtInStringViolation {
 // === case: embedded_annotation_with_deep_nested_annotation ===
 class InputAnnotationOwnLineEmbeddedAnnotationWithDeepNestedAnnotationViolation {
 	void m() {
-		final @A(value = @B("test")) var x = 1; // violation: Annotation 'A' must be on its own line.
+		final @A(value = @B("test")) var x = 1; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -353,7 +353,7 @@ class InputAnnotationOwnLineEmbeddedAnnotationWithDeepNestedAnnotationViolation 
 // === case: embedded_annotation_with_escaped_quotes ===
 class InputAnnotationOwnLineEmbeddedAnnotationWithEscapedQuotesViolation {
 	void m() {
-		final @A("he said \"hi\"") var x = 1; // violation: Annotation 'A' must be on its own line.
+		final @A("he said \"hi\"") var x = 1; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -361,7 +361,7 @@ class InputAnnotationOwnLineEmbeddedAnnotationWithEscapedQuotesViolation {
 // === case: embedded_annotation_with_nested_annotation ===
 class InputAnnotationOwnLineEmbeddedAnnotationWithNestedAnnotationViolation {
 	void m() {
-		final @A(@B) var x = 1; // violation: Annotation 'A' must be on its own line.
+		final @A(@B) var x = 1; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -369,7 +369,7 @@ class InputAnnotationOwnLineEmbeddedAnnotationWithNestedAnnotationViolation {
 // === case: embedded_annotation_with_nested_parens ===
 class InputAnnotationOwnLineEmbeddedAnnotationWithNestedParensViolation {
 	void m() {
-		final @A(v = (1 + 2)) var x = 1; // violation: Annotation 'A' must be on its own line.
+		final @A(v = (1 + 2)) var x = 1; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -377,7 +377,7 @@ class InputAnnotationOwnLineEmbeddedAnnotationWithNestedParensViolation {
 // === case: embedded_annotation_with_tab_separator ===
 class InputAnnotationOwnLineEmbeddedAnnotationWithTabSeparatorViolation {
 	void m() {
-		final	@A var x = 1; // violation: Annotation 'A' must be on its own line.
+		final	@A var x = 1; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -385,7 +385,7 @@ class InputAnnotationOwnLineEmbeddedAnnotationWithTabSeparatorViolation {
 // === case: embedded_annotation_with_value ===
 class InputAnnotationOwnLineEmbeddedAnnotationWithValueViolation {
 	void m() {
-		final @SuppressWarnings("unused") var x = 1; // violation: Annotation 'SuppressWarnings' must be on its own line.
+		final @SuppressWarnings("unused") var x = 1; // violation: Annotation '@SuppressWarnings' must be on its own line.
 	}
 }
 // === end ===
@@ -393,7 +393,7 @@ class InputAnnotationOwnLineEmbeddedAnnotationWithValueViolation {
 // === case: embedded_multiple_annotations_after_final ===
 class InputAnnotationOwnLineEmbeddedMultipleAnnotationsAfterFinalViolation {
 	void m() {
-		final @A @B var x = 1; // violation: Annotation 'A' must be on its own line.
+		final @A @B var x = 1; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -401,7 +401,7 @@ class InputAnnotationOwnLineEmbeddedMultipleAnnotationsAfterFinalViolation {
 // === case: embedded_qualified_annotation ===
 class InputAnnotationOwnLineEmbeddedQualifiedAnnotationViolation {
 	void m() {
-		final @javax.annotation.Nonnull var x = ""; // violation: Annotation 'Nonnull' must be on its own line.
+		final @javax.annotation.Nonnull var x = ""; // violation: Annotation '@Nonnull' must be on its own line.
 	}
 }
 // === end ===
@@ -409,34 +409,34 @@ class InputAnnotationOwnLineEmbeddedQualifiedAnnotationViolation {
 // === case: embedded_single_annotation_after_final ===
 class InputAnnotationOwnLineEmbeddedSingleAnnotationAfterFinalViolation {
 	void m() {
-		final @A var x = 1; // violation: Annotation 'A' must be on its own line.
+		final @A var x = 1; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
 
 // === case: escaped_quote_in_string_param ===
 class InputAnnotationOwnLineEscapedQuoteInStringParamViolation {
-	@A("he said \"hi\"") @B void f() {} // violation: Annotation 'A' must be on its own line.
+	@A("he said \"hi\"") @B void f() {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: leading_and_embedded_annotations ===
 class InputAnnotationOwnLineLeadingAndEmbeddedAnnotationsViolation {
 	void m() {
-		@C final @A var x = 1; // violation: Annotation 'C' must be on its own line. // violation: Annotation 'A' must appear before 'C' (alphabetical order).
+		@C final @A var x = 1; // violation: Annotation '@C' must be on its own line. // violation: Annotation '@A' must appear before '@C' (alphabetical order).
 	}
 }
 // === end ===
 
 // === case: leading_and_embedded_annotations_with_multiple_modifiers ===
 class InputAnnotationOwnLineLeadingAndEmbeddedAnnotationsWithMultipleModifiersViolation {
-	@B private final @A String x; // violation: Annotation 'B' must be on its own line. // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+	@B private final @A String x; // violation: Annotation '@B' must be on its own line. // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 }
 // === end ===
 
 // === case: multiple_blank_lines_below ===
 class InputAnnotationOwnLineMultipleBlankLinesBelowViolation {
-	@A // violation: No blank line after annotation 'A'.
+	@A // violation: Annotation '@A' must not be followed by a blank line.
 
 
 	@B
@@ -449,52 +449,52 @@ class InputAnnotationOwnLineMultipleLeadingAndEmbeddedAnnotationsViolation {
 	@interface D {}
 
 	void m() {
-		@D @C final @B @A var x = 1; // violation: Annotation 'D' must be on its own line. // violation: Annotation 'C' must appear before 'D' (alphabetical order). // violation: Annotation 'B' must appear before 'C' (alphabetical order). // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+		@D @C final @B @A var x = 1; // violation: Annotation '@D' must be on its own line. // violation: Annotation '@C' must appear before '@D' (alphabetical order). // violation: Annotation '@B' must appear before '@C' (alphabetical order). // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 	}
 }
 // === end ===
 
 // === case: multiple_positions_all_three ===
 class InputAnnotationOwnLineMultiplePositionsAllThreeViolation {
-	@A static @B final @C int v; // violation: Annotation 'A' must be on its own line.
+	@A static @B final @C int v; // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: multiple_positions_between_and_after ===
 class InputAnnotationOwnLineMultiplePositionsBetweenAndAfterViolation {
-	static @A final @B int v; // violation: Annotation 'A' must be on its own line.
+	static @A final @B int v; // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: multiple_positions_between_only ===
 class InputAnnotationOwnLineMultiplePositionsBetweenOnlyViolation {
-	static @A final int v; // violation: Annotation 'A' must be on its own line.
+	static @A final int v; // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: multiple_positions_leading_and_after ===
 class InputAnnotationOwnLineMultiplePositionsLeadingAndAfterViolation {
-	@A static final @B int v; // violation: Annotation 'A' must be on its own line.
+	@A static final @B int v; // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: multiple_positions_leading_and_between ===
 class InputAnnotationOwnLineMultiplePositionsLeadingAndBetweenViolation {
-	@A static @B final int v; // violation: Annotation 'A' must be on its own line.
+	@A static @B final int v; // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: multiple_spaces_between_annotations ===
 class InputAnnotationOwnLineMultipleSpacesBetweenAnnotationsViolation {
-	@A    @B void f() {} // violation: Annotation 'A' must be on its own line.
+	@A    @B void f() {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: order ===
 class InputAnnotationOwnLineOrderViolation {
 	@C
-	@B // violation: Annotation 'B' must appear before 'C' (alphabetical order).
-	@A // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+	@B // violation: Annotation '@B' must appear before '@C' (alphabetical order).
+	@A // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 	void reverseOrder() {}
 }
 // === end ===
@@ -502,7 +502,7 @@ class InputAnnotationOwnLineOrderViolation {
 // === case: order_field ===
 class InputAnnotationOwnLineOrderFieldViolation {
 	@B
-	@A // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+	@A // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 	int fieldOrder;
 }
 // === end ===
@@ -510,7 +510,7 @@ class InputAnnotationOwnLineOrderFieldViolation {
 // === case: order_method_with_three ===
 class InputAnnotationOwnLineOrderMethodWithThreeViolation {
 	@C
-	@A // violation: Annotation 'A' must appear before 'C' (alphabetical order).
+	@A // violation: Annotation '@A' must appear before '@C' (alphabetical order).
 	@B
 	void methodOrder() {}
 }
@@ -518,14 +518,14 @@ class InputAnnotationOwnLineOrderMethodWithThreeViolation {
 
 // === case: qualified_annotation ===
 class InputAnnotationOwnLineQualifiedAnnotationViolation {
-	@javax.annotation.Nonnull @Override void f() {} // violation: Annotation 'Nonnull' must be on its own line.
+	@javax.annotation.Nonnull @Override void f() {} // violation: Annotation '@Nonnull' must be on its own line.
 }
 // === end ===
 
 // === case: reorder_block ===
 class InputAnnotationOwnLineReorderBlockViolation {
 	@B
-	@A // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+	@A // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 	void f() {}
 }
 // === end ===
@@ -533,7 +533,7 @@ class InputAnnotationOwnLineReorderBlockViolation {
 // === case: reorder_block_comment_below_no_blank ===
 class InputAnnotationOwnLineReorderBlockCommentBelowNoBlankViolation {
 	@B
-	@A // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+	@A // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 	// comment
 	void f() {}
 }
@@ -542,7 +542,7 @@ class InputAnnotationOwnLineReorderBlockCommentBelowNoBlankViolation {
 // === case: reorder_three_annotations ===
 class InputAnnotationOwnLineReorderThreeAnnotationsViolation {
 	@C
-	@A // violation: Annotation 'A' must appear before 'C' (alphabetical order).
+	@A // violation: Annotation '@A' must appear before '@C' (alphabetical order).
 	@B
 	void f() {}
 }
@@ -551,21 +551,21 @@ class InputAnnotationOwnLineReorderThreeAnnotationsViolation {
 // === case: sameline_compact_constructor ===
 class InputAnnotationOwnLineSamelineCompactConstructorViolation {
 	record InlineCompact(int v) {
-		@A InlineCompact {} // violation: Annotation 'A' must be on its own line.
+		@A InlineCompact {} // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
 
 // === case: sameline_embedded_field_after_final ===
 class InputAnnotationOwnLineSamelineEmbeddedFieldAfterFinalViolation {
-	static final @A int embeddedField = 1; // violation: Annotation 'A' must be on its own line.
+	static final @A int embeddedField = 1; // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: sameline_enum_constant ===
 class InputAnnotationOwnLineSamelineEnumConstantViolation {
 	enum Status {
-		@A ACTIVE // violation: Annotation 'A' must be on its own line.
+		@A ACTIVE // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -573,65 +573,65 @@ class InputAnnotationOwnLineSamelineEnumConstantViolation {
 // === case: sameline_enum_constant_two_annotations ===
 class InputAnnotationOwnLineSamelineEnumConstantTwoAnnotationsViolation {
 	enum Status {
-		@A @B INACTIVE // violation: Annotation 'A' must be on its own line.
+		@A @B INACTIVE // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
 
 // === case: sameline_inline_constructor ===
 class InputAnnotationOwnLineSamelineInlineConstructorViolation {
-	@A InputAnnotationOwnLineSamelineInlineConstructorViolation() {} // violation: Annotation 'A' must be on its own line.
+	@A InputAnnotationOwnLineSamelineInlineConstructorViolation() {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: sameline_inline_enum ===
 class InputAnnotationOwnLineSamelineInlineEnumViolation {
-	@A enum InlineEnum {} // violation: Annotation 'A' must be on its own line.
+	@A enum InlineEnum {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: sameline_inline_field ===
 class InputAnnotationOwnLineSamelineInlineFieldViolation {
-	@A int inlineField; // violation: Annotation 'A' must be on its own line.
+	@A int inlineField; // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: sameline_inline_inner_annotation_method ===
 class InputAnnotationOwnLineSamelineInlineInnerAnnotationMethodViolation {
 	@interface InlineMeta {
-		@A String value(); // violation: Annotation 'A' must be on its own line.
+		@A String value(); // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
 
 // === case: sameline_inline_inner_annotation_type ===
 class InputAnnotationOwnLineSamelineInlineInnerAnnotationTypeViolation {
-	@A @interface InlineMeta {} // violation: Annotation 'A' must be on its own line.
+	@A @interface InlineMeta {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: sameline_inline_inner_interface ===
 class InputAnnotationOwnLineSamelineInlineInnerInterfaceViolation {
-	@A interface InlineInner {} // violation: Annotation 'A' must be on its own line.
+	@A interface InlineInner {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: sameline_inline_method ===
 class InputAnnotationOwnLineSamelineInlineMethodViolation {
-	@A void inlineMethod() {} // violation: Annotation 'A' must be on its own line.
+	@A void inlineMethod() {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: sameline_inline_record ===
 class InputAnnotationOwnLineSamelineInlineRecordViolation {
-	@A @B record InlineRec(int x) {} // violation: Annotation 'A' must be on its own line.
+	@A @B record InlineRec(int x) {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: sameline_local ===
 class InputAnnotationOwnLineSamelineLocalViolation {
 	void locals() {
-		@A final var x = "test"; // violation: Annotation 'A' must be on its own line.
+		@A final var x = "test"; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -639,7 +639,7 @@ class InputAnnotationOwnLineSamelineLocalViolation {
 // === case: sameline_local_after_final ===
 class InputAnnotationOwnLineSamelineLocalAfterFinalViolation {
 	void locals() {
-		final @A var afterFinal = 1; // violation: Annotation 'A' must be on its own line.
+		final @A var afterFinal = 1; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -647,7 +647,7 @@ class InputAnnotationOwnLineSamelineLocalAfterFinalViolation {
 // === case: sameline_local_after_final_two_annotations ===
 class InputAnnotationOwnLineSamelineLocalAfterFinalTwoAnnotationsViolation {
 	void locals() {
-		final @A @B var afterFinalMultiple = 2; // violation: Annotation 'A' must be on its own line.
+		final @A @B var afterFinalMultiple = 2; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
@@ -655,52 +655,52 @@ class InputAnnotationOwnLineSamelineLocalAfterFinalTwoAnnotationsViolation {
 // === case: sameline_local_two_annotations ===
 class InputAnnotationOwnLineSamelineLocalTwoAnnotationsViolation {
 	void locals() {
-		@A @B final var y = 42; // violation: Annotation 'A' must be on its own line.
+		@A @B final var y = 42; // violation: Annotation '@A' must be on its own line.
 	}
 }
 // === end ===
 
 // === case: sameline_three_annotation_field ===
 class InputAnnotationOwnLineSamelineThreeAnnotationFieldViolation {
-	@A @B @C int allInOne; // violation: Annotation 'A' must be on its own line.
+	@A @B @C int allInOne; // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: sameline_three_annotation_method ===
 class InputAnnotationOwnLineSamelineThreeAnnotationMethodViolation {
-	@A @B @C // violation: Annotation 'A' must be on its own line.
+	@A @B @C // violation: Annotation '@A' must be on its own line.
 	void threeAnnotationsMethod() {}
 }
 // === end ===
 
 // === case: sameline_top_level_class ===
-@A @B // violation: Annotation 'A' must be on its own line.
+@A @B // violation: Annotation '@A' must be on its own line.
 class InputAnnotationOwnLineSamelineTopLevelClassViolation {}
 // === end ===
 
 // === case: sameline_two_annotation_field ===
 class InputAnnotationOwnLineSamelineTwoAnnotationFieldViolation {
-	@A @B // violation: Annotation 'A' must be on its own line.
+	@A @B // violation: Annotation '@A' must be on its own line.
 	int twoAnnotationsField;
 }
 // === end ===
 
 // === case: sameline_two_annotation_method ===
 class InputAnnotationOwnLineSamelineTwoAnnotationMethodViolation {
-	@A @B // violation: Annotation 'A' must be on its own line.
+	@A @B // violation: Annotation '@A' must be on its own line.
 	void twoAnnotationsMethod() {}
 }
 // === end ===
 
 // === case: single_annotation_with_declaration ===
 class InputAnnotationOwnLineSingleAnnotationWithDeclarationViolation {
-	@A void f() {} // violation: Annotation 'A' must be on its own line.
+	@A void f() {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: sorts_alphabetically ===
 class InputAnnotationOwnLineSortsAlphabeticallyViolation {
-	@C @A @B void f() {} // violation: Annotation 'C' must be on its own line. // violation: Annotation 'A' must appear before 'C' (alphabetical order).
+	@C @A @B void f() {} // violation: Annotation '@C' must be on its own line. // violation: Annotation '@A' must appear before '@C' (alphabetical order).
 }
 // === end ===
 
@@ -708,18 +708,18 @@ class InputAnnotationOwnLineSortsAlphabeticallyViolation {
 class InputAnnotationOwnLineSplitSliceViolation {
 	@interface A {}
 
-	@A void foo() {} // violation: Annotation 'A' must be on its own line.
+	@A void foo() {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: split_multiple_annotations_and_declaration ===
 class InputAnnotationOwnLineSplitMultipleAnnotationsAndDeclarationViolation {
-	@A @B void foo() {} // violation: Annotation 'A' must be on its own line.
+	@A @B void foo() {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===
 
 // === case: tab_between_leading_annotations ===
 class InputAnnotationOwnLineTabBetweenLeadingAnnotationsViolation {
-	@A	@B void f() {} // violation: Annotation 'A' must be on its own line.
+	@A	@B void f() {} // violation: Annotation '@A' must be on its own line.
 }
 // === end ===

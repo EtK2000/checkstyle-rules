@@ -7,7 +7,21 @@ class InputPreferVarAllowedMethodTypeArgsExplicitTypeSliceViolation {
 	}
 
 	void m() {
-		final String s = InputPreferVarAllowedMethodTypeArgsExplicitTypeSliceViolation.<String>genericMethod(1); // violation (warning): Prefer explicit type over type arguments on 'genericMethod'.
+		final String s = InputPreferVarAllowedMethodTypeArgsExplicitTypeSliceViolation.<String>genericMethod(1); // violation (warning): Consider using an explicit type instead of type arguments on 'genericMethod'.
+	}
+}
+// === end ===
+
+// === case: allowed_method_type_args_resource ===
+class InputPreferVarAllowedMethodTypeArgsResourceSliceViolation {
+	static <T> T genericMethod(int id) {
+		return null;
+	}
+
+	void m() throws Exception {
+		try (java.io.BufferedReader reader = InputPreferVarAllowedMethodTypeArgsResourceSliceViolation.<java.io.BufferedReader>genericMethod(1)) { // violation (warning): Consider using an explicit type instead of type arguments on 'genericMethod'.
+			System.out.println(reader.readLine());
+		}
 	}
 }
 // === end ===
@@ -19,7 +33,7 @@ class InputPreferVarAllowedMethodTypeArgsVarSliceViolation {
 	}
 
 	void m() {
-		final var s = InputPreferVarAllowedMethodTypeArgsVarSliceViolation.<String>genericMethod(1); // violation (warning): Prefer explicit type over type arguments on 'genericMethod'.
+		final var s = InputPreferVarAllowedMethodTypeArgsVarSliceViolation.<String>genericMethod(1); // violation (warning): Consider using an explicit type instead of type arguments on 'genericMethod'.
 	}
 }
 // === end ===
@@ -31,7 +45,7 @@ class InputPreferVarAllowedMethodVarSliceViolation {
 	}
 
 	void m() {
-		final var s = genericMethod(1); // violation (warning): Using 'var' with 'genericMethod' loses generic type information, consider using an explicit type.
+		final var s = genericMethod(1); // violation (warning): Consider using an explicit type ('var' with 'genericMethod' loses generic type information).
 	}
 }
 // === end ===
@@ -51,7 +65,7 @@ class InputPreferVarParenWrappedAllowedMethodSliceViolation {
 	}
 
 	void m() {
-		final var s = (genericMethod(1)); // violation (warning): Using 'var' with 'genericMethod' loses generic type information, consider using an explicit type.
+		final var s = (genericMethod(1)); // violation (warning): Consider using an explicit type ('var' with 'genericMethod' loses generic type information).
 	}
 }
 // === end ===

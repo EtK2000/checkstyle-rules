@@ -51,6 +51,70 @@ class InputSpecificApiArraysAsListAsListTextBlockContinuationSliceViolation {
 }
 // === end ===
 
+// === case: assert_comment_before_kept_argument_rejected ===
+// skip-reason: cannot rewrite: unrecognized API pattern
+// imports: static org.junit.Assert.assertEquals
+class InputSpecificApiAssertCommentBeforeKeptArgumentRejectedSliceViolation {
+	void assertCommentBeforeKeptArgumentRejected(Object x) {
+		assertEquals(null, /* note */x);
+	}
+}
+// === end ===
+
+// === case: assert_comment_before_lparen_rejected ===
+// skip-reason: cannot rewrite: unrecognized API pattern
+// imports: static org.junit.Assert.assertEquals
+class InputSpecificApiAssertCommentBeforeLparenRejectedSliceViolation {
+	void assertCommentBeforeLparenRejected(Object x) {
+		assertEquals/* note */(null, x);
+	}
+}
+// === end ===
+
+// === case: assert_comment_inside_qualified_receiver ===
+class InputSpecificApiAssertCommentInsideQualifiedReceiverSliceViolation {
+	void assertCommentInsideQualifiedReceiver(Object x) {
+		org.junit./* note */Assert.assertNull(x);
+	}
+}
+// === end ===
+
+// === case: assert_donor_after_unrelated_wildcard ===
+// imports: static java.util.Map.*
+// imports: static org.junit.Assert.assertEquals
+// imports: static org.junit.Assert.assertNull
+class InputSpecificApiAssertDonorAfterUnrelatedWildcardSliceViolation {
+	void assertDonorAfterUnrelatedWildcard(Object value) {
+		assertNull(value);
+	}
+}
+// === end ===
+
+// === case: assert_donor_ignores_foreign_assertion_import ===
+// imports: static org.assertj.core.api.Assertions.assertThat
+// imports: static org.junit.Assert.assertEquals
+// imports: static org.junit.Assert.assertNull
+class InputSpecificApiAssertDonorIgnoresForeignAssertionImportSliceViolation {
+	void assertDonorIgnoresForeignAssertionImport(Object result) {
+		assertThat(result);
+		assertNull(result);
+	}
+}
+// === end ===
+
+// === case: assert_donor_scan_ignores_text_block ===
+// imports: static org.junit.Assert.*
+class InputSpecificApiAssertDonorScanIgnoresTextBlockSliceViolation {
+	static final String SNIPPET = """
+			import static com.evil.Fake.assertEquals;
+			""";
+
+	void assertDonorScanIgnoresTextBlock(Object x) {
+		assertNull(x);
+	}
+}
+// === end ===
+
 // === case: assert_equals_false ===
 // imports: static org.junit.Assert.assertEquals
 // imports: static org.junit.Assert.assertFalse
@@ -490,10 +554,31 @@ class InputSpecificApiAssertAssertSameWithTrailingMessageSliceViolation {
 }
 // === end ===
 
+// === case: assert_two_calls_in_lambdas ===
+// imports: static org.junit.jupiter.api.Assertions.assertAll
+// imports: static org.junit.jupiter.api.Assertions.assertEquals
+// imports: static org.junit.jupiter.api.Assertions.assertNull
+class InputSpecificApiAssertTwoCallsInLambdasSliceViolation {
+	void assertTwoCallsInLambdas(Object a, Object b, Object c) {
+		assertAll(() -> assertEquals(a, b), () -> assertNull(c));
+	}
+}
+// === end ===
+
 // === case: chained_call_get_zero ===
 class InputSpecificApiReflectionChainedCallGetZeroSliceViolation {
 	void chainedCallGetZero() {
 		System.out.println(getList().getFirst());
+	}
+}
+// === end ===
+
+// === case: chained_call_index_of_contains ===
+// skip-reason: cannot rewrite: unrecognized API pattern
+class InputSpecificApiIndexOfChainedCallIndexOfContainsSliceViolation {
+	void chainedCallIndexOfContains() {
+		if (getName().indexOf("foo") != -1)
+			System.out.println("found");
 	}
 }
 // === end ===
@@ -504,6 +589,25 @@ class InputSpecificApiReflectionChainedCallGetZeroSliceViolation {
 class InputSpecificApiReflectionChainedCallResolvedGetZeroSliceViolation {
 	void chainedCallResolvedGetZero(List<String> list) {
 		System.out.println(Collections.synchronizedList(list).getFirst());
+	}
+}
+// === end ===
+
+// === case: chained_call_resolved_index_of_char ===
+class InputSpecificApiIndexOfCharChainedCallResolvedIndexOfCharSliceViolation {
+	void chainedCallResolvedIndexOfChar(Object obj) {
+		final var i = obj.toString().indexOf('x');
+		System.out.println(i);
+	}
+}
+// === end ===
+
+// === case: chained_call_resolved_remove_first ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputSpecificApiReflectionChainedCallResolvedRemoveFirstSliceViolation {
+	void chainedCallResolvedRemoveFirst(List<String> list) {
+		Collections.synchronizedList(list).removeFirst();
 	}
 }
 // === end ===
@@ -588,6 +692,25 @@ class InputSpecificApiToListCollectToUnmodifiableListSliceViolation {
 }
 // === end ===
 
+// === case: compact_constructor_scope ===
+// skip-reason: cannot rewrite: unrecognized API pattern
+record InputSpecificApiIndexOfCompactConstructorScopeSliceViolation(String value) {
+	InputSpecificApiIndexOfCompactConstructorScopeSliceViolation {
+		if (value.indexOf("foo") != -1)
+			throw new IllegalArgumentException();
+	}
+}
+// === end ===
+
+// === case: constructor_scope ===
+class InputSpecificApiIsEmptyConstructorScopeSliceViolation {
+	InputSpecificApiIsEmptyConstructorScopeSliceViolation(String value) {
+		if (value.isEmpty())
+			throw new IllegalArgumentException();
+	}
+}
+// === end ===
+
 // === case: double_quote_escape ===
 class InputSpecificApiIndexOfCharDoubleQuoteEscapeSliceViolation {
 	void doubleQuoteEscape(String s) {
@@ -646,11 +769,49 @@ class InputSpecificApiStringMethodEqualsEmptySliceViolation {
 }
 // === end ===
 
+// === case: equals_empty_foreign_receiver_rejected ===
+class InputSpecificApiStringMethodEqualsEmptyForeignReceiverRejectedSliceViolation {
+	void m(Object o, String s) {
+		if (o.equals("") || s.isEmpty())
+			System.out.println("empty");
+	}
+}
+// === end ===
+
 // === case: equals_empty_pattern_in_comment_not_anchored ===
 class InputSpecificApiStringMethodEqualsEmptyPatternInCommentNotAnchoredSliceViolation {
 	void m(String s) {
 		if (/* .equals("") */ s.isEmpty())
 			System.out.println("x");
+	}
+}
+// === end ===
+
+// === case: equals_empty_qualified_string_parameter ===
+class InputSpecificApiStringMethodEqualsEmptyQualifiedStringParameterSliceViolation {
+	void m(java.lang.String s) {
+		if (s.isEmpty())
+			System.out.println("empty");
+	}
+}
+// === end ===
+
+// === case: equals_empty_string_builder_to_string ===
+class InputSpecificApiStringMethodEqualsEmptyStringBuilderToStringSliceViolation {
+	void m(StringBuilder sb) {
+		if (sb.toString().isEmpty())
+			System.out.println("empty");
+	}
+}
+// === end ===
+
+// === case: equals_empty_this_qualified_string_field ===
+class InputSpecificApiStringMethodEqualsEmptyThisQualifiedStringFieldSliceViolation {
+	String name = "";
+
+	void m(String name) {
+		if (this.name.isEmpty())
+			System.out.println("empty");
 	}
 }
 // === end ===
@@ -709,6 +870,14 @@ class InputSpecificApiStringFormatFormatNestedParensSliceViolation {
 }
 // === end ===
 
+// === case: format_non_literal_first_rejected ===
+class InputSpecificApiStringFormatNonLiteralFirstRejectedSliceViolation {
+	void m(String fmt, String a) {
+		final var s = String.format(fmt, a) + "%s".formatted(a);
+	}
+}
+// === end ===
+
 // === case: format_one_arg ===
 class InputSpecificApiStringFormatFormatOneArgSliceViolation {
 	void formatOneArg(String name) {
@@ -725,14 +894,6 @@ class InputSpecificApiStringFormatFormatPatternInStringNotAnchoredSliceViolation
 }
 // === end ===
 
-// === case: format_single_cast ===
-class InputSpecificApiStringFormatFormatSingleCastSliceViolation {
-	void formatSingleCast(Object obj) {
-		final var s = (String) obj;
-	}
-}
-// === end ===
-
 // === case: format_single_literal ===
 class InputSpecificApiStringFormatFormatSingleLiteralSliceViolation {
 	void formatSingleLiteral() {
@@ -741,26 +902,82 @@ class InputSpecificApiStringFormatFormatSingleLiteralSliceViolation {
 }
 // === end ===
 
-// === case: format_single_method_call ===
-class InputSpecificApiStringFormatFormatSingleMethodCallSliceViolation {
-	void formatSingleMethodCall(Object obj) {
-		final var s = obj.toString();
-	}
-}
-// === end ===
-
-// === case: format_single_variable ===
-class InputSpecificApiStringFormatFormatSingleVariableSliceViolation {
-	void formatSingleVariable(String fmt) {
-		final var s = fmt;
-	}
-}
-// === end ===
-
 // === case: format_string_literal_paren ===
 class InputSpecificApiStringFormatFormatStringLiteralParenSliceViolation {
 	void formatStringLiteralParen(String name) {
 		final var s = "Result (%s)".formatted(name);
+	}
+}
+// === end ===
+
+// === case: format_strip_empty_literal ===
+class InputSpecificApiStringFormatFormatStripEmptyLiteralSliceViolation {
+	void formatStripEmptyLiteral() {
+		final var s = "";
+	}
+}
+// === end ===
+
+// === case: format_strip_escape_backslash ===
+class InputSpecificApiStringFormatFormatStripEscapeBackslashSliceViolation {
+	void formatStripEscapeBackslash() {
+		final var s = "dir\\";
+	}
+}
+// === end ===
+
+// === case: format_strip_escape_newline ===
+class InputSpecificApiStringFormatFormatStripEscapeNewlineSliceViolation {
+	void formatStripEscapeNewline() {
+		final var s = "a\nb";
+	}
+}
+// === end ===
+
+// === case: format_strip_escape_space ===
+class InputSpecificApiStringFormatFormatStripEscapeSpaceSliceViolation {
+	void formatStripEscapeSpace() {
+		final var s = "\s";
+	}
+}
+// === end ===
+
+// === case: format_strip_escaped_apostrophe ===
+class InputSpecificApiStringFormatFormatStripEscapedApostropheSliceViolation {
+	void formatStripEscapedApostrophe() {
+		final var s = "it\'s";
+	}
+}
+// === end ===
+
+// === case: format_strip_escaped_quotes ===
+class InputSpecificApiStringFormatFormatStripEscapedQuotesSliceViolation {
+	void formatStripEscapedQuotes() {
+		final var s = "say \"hi\"";
+	}
+}
+// === end ===
+
+// === case: format_strip_octal_dollar ===
+class InputSpecificApiStringFormatFormatStripOctalDollarSliceViolation {
+	void formatStripOctalDollar() {
+		final var s = "\044";
+	}
+}
+// === end ===
+
+// === case: format_strip_unicode_dollar ===
+class InputSpecificApiStringFormatFormatStripUnicodeDollarSliceViolation {
+	void formatStripUnicodeDollar() {
+		final var s = "\u0024";
+	}
+}
+// === end ===
+
+// === case: format_strip_unicode_escaped_backslash_newline ===
+class InputSpecificApiStringFormatFormatStripUnicodeEscapedBackslashNewlineSliceViolation {
+	void m() {
+		final var s = "\u005cn";
 	}
 }
 // === end ===
@@ -777,6 +994,32 @@ class InputSpecificApiStringFormatFormatTrailingBackslashInLiteralSliceViolation
 class InputSpecificApiStringFormatFormatTwoArgsSliceViolation {
 	void formatTwoArgs(String name, int age) {
 		final var s = "Hello %s, age %d".formatted(name, age);
+	}
+}
+// === end ===
+
+// === case: get_last_foreign_receiver_rejected ===
+// imports: java.util.List
+// imports: java.util.Map
+class InputSpecificApiGetLastForeignReceiverRejectedSliceViolation {
+	Map<Integer, String> map;
+
+	boolean getLastForeignReceiverRejected(List<String> list) {
+		return map.get(map.size() - 1) == list.getLast();
+	}
+}
+// === end ===
+
+// === case: get_last_side_effect_receiver ===
+// imports: java.util.List
+// skip-reason: cannot rewrite: unrecognized API pattern
+class InputSpecificApiGetLastSideEffectReceiverSliceViolation {
+	String getLastSideEffectReceiver() {
+		return getList().get(getList().size() - 1);
+	}
+
+	List<String> getList() {
+		return List.of("a");
 	}
 }
 // === end ===
@@ -808,6 +1051,16 @@ class InputSpecificApiGetZeroSliceViolation {
 }
 // === end ===
 
+// === case: get_zero_foreign_receiver_rejected ===
+// imports: java.util.List
+// imports: java.util.Map
+class InputSpecificApiGetZeroForeignReceiverRejectedSliceViolation {
+	String m(List<String> list, Map<Integer, String> map) {
+		return map.get(0) + list.getFirst();
+	}
+}
+// === end ===
+
 // === case: get_zero_pattern_in_string_not_anchored ===
 // imports: java.util.List
 class InputSpecificApiGetZeroPatternInStringNotAnchoredSliceViolation {
@@ -817,8 +1070,35 @@ class InputSpecificApiGetZeroPatternInStringNotAnchoredSliceViolation {
 }
 // === end ===
 
+// === case: index_of_char_octal_apostrophe ===
+class InputSpecificApiIndexOfCharOctalApostropheSliceViolation {
+	void octalApostrophe(String s) {
+		final var i = s.indexOf('\47');
+		System.out.println(i);
+	}
+}
+// === end ===
+
+// === case: index_of_char_refuses_unicode_apostrophe ===
+class InputSpecificApiIndexOfCharRefusesUnicodeApostropheSliceViolation {
+	void refusesUnicodeApostrophe(String s) {
+		final var i = s.indexOf("\u0027");
+		System.out.println(i);
+	}
+}
+// === end ===
+
+// === case: index_of_char_unicode_escape ===
+class InputSpecificApiIndexOfCharUnicodeEscapeSliceViolation {
+	void unicodeEscape(String s) {
+		final var i = s.indexOf('\u0041');
+		System.out.println(i);
+	}
+}
+// === end ===
+
 // === case: index_of_equal_neg_one ===
-// skip-reason: unrecognized API pattern
+// skip-reason: cannot rewrite: unrecognized API pattern
 class InputSpecificApiIndexOfIndexOfEqualNegOneSliceViolation {
 	void indexOfEqualNegOne(String s) {
 		if (s.indexOf("baz") == -1)
@@ -837,7 +1117,7 @@ class InputSpecificApiIndexOfCharIndexOfFromIndexSliceViolation {
 // === end ===
 
 // === case: index_of_greater_equal_zero ===
-// skip-reason: unrecognized API pattern
+// skip-reason: cannot rewrite: unrecognized API pattern
 class InputSpecificApiIndexOfIndexOfGreaterEqualZeroSliceViolation {
 	void indexOfGreaterEqualZero(String s) {
 		if (s.indexOf("bar") >= 0)
@@ -847,7 +1127,7 @@ class InputSpecificApiIndexOfIndexOfGreaterEqualZeroSliceViolation {
 // === end ===
 
 // === case: index_of_greater_neg_one ===
-// skip-reason: unrecognized API pattern
+// skip-reason: cannot rewrite: unrecognized API pattern
 class InputSpecificApiIndexOfIndexOfGreaterNegOneSliceViolation {
 	void indexOfGreaterNegOne(String s) {
 		if (s.indexOf("ee") > -1)
@@ -857,7 +1137,7 @@ class InputSpecificApiIndexOfIndexOfGreaterNegOneSliceViolation {
 // === end ===
 
 // === case: index_of_less_equal_neg_one ===
-// skip-reason: unrecognized API pattern
+// skip-reason: cannot rewrite: unrecognized API pattern
 class InputSpecificApiIndexOfIndexOfLessEqualNegOneSliceViolation {
 	void indexOfLessEqualNegOne(String s) {
 		if (s.indexOf("ff") <= -1)
@@ -867,7 +1147,7 @@ class InputSpecificApiIndexOfIndexOfLessEqualNegOneSliceViolation {
 // === end ===
 
 // === case: index_of_less_than_zero ===
-// skip-reason: unrecognized API pattern
+// skip-reason: cannot rewrite: unrecognized API pattern
 class InputSpecificApiIndexOfIndexOfLessThanZeroSliceViolation {
 	void indexOfLessThanZero(String s) {
 		if (s.indexOf("qux") < 0)
@@ -877,7 +1157,7 @@ class InputSpecificApiIndexOfIndexOfLessThanZeroSliceViolation {
 // === end ===
 
 // === case: index_of_not_equal_neg_one ===
-// skip-reason: unrecognized API pattern
+// skip-reason: cannot rewrite: unrecognized API pattern
 class InputSpecificApiIndexOfIndexOfNotEqualNegOneSliceViolation {
 	void indexOfNotEqualNegOne(String s) {
 		if (s.indexOf("foo") != -1)
@@ -891,6 +1171,30 @@ class InputSpecificApiIndexOfCharIndexOfSingleCharSliceViolation {
 	void indexOfSingleChar(String s) {
 		final var i = s.indexOf('x');
 		System.out.println(i);
+	}
+}
+// === end ===
+
+// === case: inherited_list_field_get_zero ===
+// imports: java.util.List
+class InputSpecificApiReflectionInheritedListFieldGetZeroSliceViolation extends InputSpecificApiInheritedListBase {
+	void inheritedListFieldGetZero() {
+		System.out.println(inheritedList.getFirst());
+	}
+}
+
+class InputSpecificApiInheritedListBase {
+	List<String> inheritedList = List.of("a");
+}
+// === end ===
+
+// === case: instance_init_scope ===
+class InputSpecificApiIsEmptyInstanceInitScopeSliceViolation {
+	private final String value = "x";
+
+	{
+		if (value.isEmpty())
+			throw new IllegalArgumentException();
 	}
 }
 // === end ===
@@ -933,6 +1237,16 @@ class InputSpecificApiIsEmptyLengthEqualsZeroSliceViolation {
 }
 // === end ===
 
+// === case: length_equals_zero_foreign_receiver_rejected ===
+// imports: java.io.File
+// imports: java.util.List
+class InputSpecificApiIsEmptyLengthForeignReceiverRejectedSliceViolation {
+	boolean m(File file, List<String> list) {
+		return file.length() == 0 || list.isEmpty();
+	}
+}
+// === end ===
+
 // === case: length_greater_than_or_equal_one ===
 class InputSpecificApiIsEmptyLengthGreaterThanOrEqualOneSliceViolation {
 	void m(String s) {
@@ -960,6 +1274,15 @@ class InputSpecificApiIsEmptyLengthInCompoundReversedConditionSliceViolation {
 }
 // === end ===
 
+// === case: length_is_empty_multiple_occurrences_first_rejected ===
+class InputSpecificApiLengthIsEmptyMultipleOccurrencesFirstRejectedSliceViolation {
+	void lengthIsEmptyMultipleOccurrencesFirstRejected(String a, String b) {
+		if (a.length() == 0xF || b.isEmpty())
+			return;
+	}
+}
+// === end ===
+
 // === case: length_less_than_one ===
 class InputSpecificApiIsEmptyLengthLessThanOneSliceViolation {
 	void m(String s) {
@@ -983,6 +1306,14 @@ class InputSpecificApiIsEmptyLengthNotEqualsZeroSliceViolation {
 	void m(String s) {
 		if (!s.isEmpty())
 			System.out.println("not empty");
+	}
+}
+// === end ===
+
+// === case: length_not_equals_zero_already_negated ===
+class InputSpecificApiIsEmptyLengthNotEqualsZeroAlreadyNegatedSliceViolation {
+	boolean m(String s) {
+		return !(!s.isEmpty());
 	}
 }
 // === end ===
@@ -1025,7 +1356,7 @@ class InputSpecificApiReflectionListParamGetZeroSliceViolation {
 // === end ===
 
 // === case: neg_one_equal_index_of ===
-// skip-reason: unrecognized API pattern
+// skip-reason: cannot rewrite: unrecognized API pattern
 class InputSpecificApiIndexOfNegOneEqualIndexOfSliceViolation {
 	void negOneEqualIndexOf(String s) {
 		if (-1 == s.indexOf("bb"))
@@ -1035,7 +1366,7 @@ class InputSpecificApiIndexOfNegOneEqualIndexOfSliceViolation {
 // === end ===
 
 // === case: neg_one_greater_equal_index_of ===
-// skip-reason: unrecognized API pattern
+// skip-reason: cannot rewrite: unrecognized API pattern
 class InputSpecificApiIndexOfNegOneGreaterEqualIndexOfSliceViolation {
 	void negOneGreaterEqualIndexOf(String s) {
 		if (-1 >= s.indexOf("hh"))
@@ -1045,7 +1376,7 @@ class InputSpecificApiIndexOfNegOneGreaterEqualIndexOfSliceViolation {
 // === end ===
 
 // === case: neg_one_less_than_index_of ===
-// skip-reason: unrecognized API pattern
+// skip-reason: cannot rewrite: unrecognized API pattern
 class InputSpecificApiIndexOfNegOneLessThanIndexOfSliceViolation {
 	void negOneLessThanIndexOf(String s) {
 		if (-1 < s.indexOf("gg"))
@@ -1055,7 +1386,7 @@ class InputSpecificApiIndexOfNegOneLessThanIndexOfSliceViolation {
 // === end ===
 
 // === case: neg_one_not_equal_index_of ===
-// skip-reason: unrecognized API pattern
+// skip-reason: cannot rewrite: unrecognized API pattern
 class InputSpecificApiIndexOfNegOneNotEqualIndexOfSliceViolation {
 	void negOneNotEqualIndexOf(String s) {
 		if (-1 != s.indexOf("aa"))
@@ -1104,7 +1435,7 @@ class InputSpecificApiStripIsBlankOneGreaterThanStripLengthSliceViolation {
 // === case: one_greater_than_trim_length ===
 class InputSpecificApiTrimIsBlankOneGreaterThanTrimLengthSliceViolation {
 	void oneGreaterThanTrimLength(String s) {
-		if (s.isBlank())
+		if (s.trim().isEmpty())
 			System.out.println("blank");
 	}
 }
@@ -1122,7 +1453,7 @@ class InputSpecificApiStripIsBlankOneLessEqualStripLengthSliceViolation {
 // === case: one_less_equal_trim_length ===
 class InputSpecificApiTrimIsBlankOneLessEqualTrimLengthSliceViolation {
 	void oneLessEqualTrimLength(String s) {
-		if (!s.isBlank())
+		if (!s.trim().isEmpty())
 			System.out.println("not blank");
 	}
 }
@@ -1143,6 +1474,25 @@ class InputSpecificApiIsEmptyOneLessThanOrEqualSizeSliceViolation {
 	void m(List<String> list) {
 		if (!list.isEmpty())
 			System.out.println("not empty");
+	}
+}
+// === end ===
+
+// === case: paren_receiver_stream_find_first_rejected ===
+// skip-reason: cannot rewrite: unrecognized API pattern
+// imports: java.util.List
+class InputSpecificApiParenReceiverStreamFindFirstRejectedSliceViolation {
+	boolean parenReceiverStreamFindFirstRejected(Object o) {
+		return ((List<?>) o).stream().findFirst().isPresent();
+	}
+}
+// === end ===
+
+// === case: paren_receiver_strip_length_rejected ===
+// skip-reason: cannot rewrite: unrecognized API pattern
+class InputSpecificApiParenReceiverStripLengthRejectedSliceViolation {
+	boolean parenReceiverStripLengthRejected(String a, String b) {
+		return (a + b).strip().length() == 0;
 	}
 }
 // === end ===
@@ -1189,11 +1539,78 @@ class InputSpecificApiRemoveRemoveFirstSliceViolation {
 }
 // === end ===
 
+// === case: remove_first_field_shadowed_by_later_local ===
+// imports: java.awt.Container
+// imports: java.util.ArrayList
+class InputSpecificApiRemoveRemoveFirstFieldShadowedByLaterLocalSliceViolation {
+	private final Container items = new Container();
+
+	void removeFirstFieldShadowedByLaterLocal() {
+		items.remove(0);
+		final var items = new ArrayList<String>();
+		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: remove_first_later_local_does_not_hide_list_field ===
+// imports: java.awt.Container
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputSpecificApiRemoveRemoveFirstLaterLocalDoesNotHideListFieldSliceViolation {
+	private final List<String> items = new ArrayList<>();
+
+	void removeFirstLaterLocalDoesNotHideListField() {
+		items.removeFirst();
+		final var items = new Container();
+		System.out.println(items);
+	}
+}
+// === end ===
+
 // === case: remove_first_pattern_in_string_not_anchored ===
 // imports: java.util.List
 class InputSpecificApiRemoveRemoveFirstPatternInStringNotAnchoredSliceViolation {
 	void m(List<String> list) {
 		final var s = ".remove(0)" + list.removeFirst();
+	}
+}
+// === end ===
+
+// === case: remove_first_uppercase_container_parameter ===
+// imports: java.awt.Container
+// imports: java.util.List
+class InputSpecificApiRemoveRemoveFirstUppercaseContainerParameterSliceViolation {
+	void removeFirstUppercaseContainerParameter(Container List) {
+		List.remove(0);
+	}
+
+	int size(List<String> list) {
+		return list.size();
+	}
+}
+// === end ===
+
+// === case: remove_first_uppercase_list_parameter ===
+// imports: java.util.List
+class InputSpecificApiRemoveRemoveFirstUppercaseListParameterSliceViolation {
+	void removeFirstUppercaseListParameter(List<String> List) {
+		List.removeFirst();
+	}
+}
+// === end ===
+
+// === case: remove_first_uppercase_pattern_variable ===
+// imports: java.awt.Container
+// imports: java.util.List
+class InputSpecificApiRemoveRemoveFirstUppercasePatternVariableSliceViolation {
+	void removeFirstUppercasePatternVariable(Object o) {
+		if (o instanceof Container List)
+			List.remove(0);
+	}
+
+	int size(List<String> list) {
+		return list.size();
 	}
 }
 // === end ===
@@ -1216,6 +1633,14 @@ class InputSpecificApiRemoveRemoveLastPatternInStringNotAnchoredSliceViolation {
 }
 // === end ===
 
+// === case: replace_all_keeps_comment_in_arguments ===
+class InputSpecificApiReplaceAllKeepsCommentInArgumentsSliceViolation {
+	String replaceAllKeepsCommentInArguments(String s) {
+		return s.replace(/*c*/"x", "y");
+	}
+}
+// === end ===
+
 // === case: replace_all_literal ===
 class InputSpecificApiStringMethodReplaceAllLiteralSliceViolation {
 	void replaceAllLiteral(String s) {
@@ -1224,10 +1649,261 @@ class InputSpecificApiStringMethodReplaceAllLiteralSliceViolation {
 }
 // === end ===
 
+// === case: replace_all_non_literal_first_rejected ===
+class InputSpecificApiStringMethodReplaceAllNonLiteralFirstRejectedSliceViolation {
+	String m(String a, String b, String p) {
+		return a.replaceAll(p, b) + b.replace("y", "z");
+	}
+}
+// === end ===
+
 // === case: replace_all_pattern_in_string_not_anchored ===
 class InputSpecificApiStringMethodReplaceAllPatternInStringNotAnchoredSliceViolation {
 	void m(String s) {
 		final var r = ".replaceAll(" + s.replace("foo", "bar");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_comment_before_respelled_literal ===
+class InputSpecificApiStringMethodReplaceAllReplacementCommentBeforeRespelledLiteralSliceViolation {
+	String m(String s) {
+		return s.replace("x", /* c */ "a\\b");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_concatenation_plain ===
+class InputSpecificApiStringMethodReplaceAllReplacementConcatenationPlainSliceViolation {
+	String m(String s) {
+		return s.replace("x", "a" + "b");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_empty ===
+class InputSpecificApiStringMethodReplaceAllReplacementEmptySliceViolation {
+	String m(String s) {
+		return s.replace("x", "");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_escaped_backslash ===
+class InputSpecificApiStringMethodReplaceAllReplacementEscapedBackslashSliceViolation {
+	String m(String s) {
+		return s.replace("x", "a\\b");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_escaped_dollar ===
+class InputSpecificApiStringMethodReplaceAllReplacementEscapedDollarSliceViolation {
+	String m(String s) {
+		return s.replace("x", "$");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_escaped_dollar_digit ===
+class InputSpecificApiStringMethodReplaceAllReplacementEscapedDollarDigitSliceViolation {
+	String m(String s) {
+		return s.replace("x", "$1");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_escaped_letter ===
+class InputSpecificApiStringMethodReplaceAllReplacementEscapedLetterSliceViolation {
+	String m(String s) {
+		return s.replace("x", "ab");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_escaped_n ===
+class InputSpecificApiStringMethodReplaceAllReplacementEscapedNSliceViolation {
+	String m(String s) {
+		return s.replace("x", "n");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_escaped_quote ===
+class InputSpecificApiStringMethodReplaceAllReplacementEscapedQuoteSliceViolation {
+	String m(String s) {
+		return s.replace("x", "\"");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_escaped_u_text ===
+class InputSpecificApiStringMethodReplaceAllReplacementEscapedUTextSliceViolation {
+	String m(String s) {
+		return s.replace("x", "u0024");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_java_escape_only ===
+class InputSpecificApiStringMethodReplaceAllReplacementJavaEscapeOnlySliceViolation {
+	String m(String s) {
+		return s.replace("x", "a\nb");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_literal_text_elsewhere_on_line ===
+class InputSpecificApiStringMethodReplaceAllReplacementLiteralTextElsewhereOnLineSliceViolation {
+	String m(String s) {
+		return "a\\\\b" + s.replace("x", "a\\b");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_mixed_escapes ===
+class InputSpecificApiStringMethodReplaceAllReplacementMixedEscapesSliceViolation {
+	String m(String s) {
+		return s.replace("foo", "\\foo$");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_octal_dollar_zero ===
+class InputSpecificApiStringMethodReplaceAllReplacementOctalDollarZeroSliceViolation {
+	String m(String s) {
+		return s.replace("foo", "foo");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_octal_escaped_backslash ===
+class InputSpecificApiStringMethodReplaceAllReplacementOctalEscapedBackslashSliceViolation {
+	String m(String s) {
+		return s.replace("x", "\134");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_on_continuation_line ===
+class InputSpecificApiStringMethodReplaceAllReplacementOnContinuationLineSliceViolation {
+	String m(String s) {
+		return s.replace(
+				"x",
+				"a\\b"
+		);
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_text_block_plain ===
+class InputSpecificApiStringMethodReplaceAllReplacementTextBlockPlainSliceViolation {
+	String m(String s) {
+		return s.replace(
+				"x",
+				"""
+				y"""
+		);
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_unicode_dollar_zero ===
+class InputSpecificApiStringMethodReplaceAllReplacementUnicodeDollarZeroSliceViolation {
+	String m(String s) {
+		return s.replace("foo", "foo");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_unicode_escaped_backslash_pair ===
+class InputSpecificApiStringMethodReplaceAllReplacementUnicodeEscapedBackslashPairSliceViolation {
+	String m(String s) {
+		return s.replace("x", "\u005c\u005c");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_unicode_escaped_newline ===
+class InputSpecificApiStringMethodReplaceAllReplacementUnicodeEscapedNewlineSliceViolation {
+	String m(String s) {
+		return s.replace("x", "\u005cn");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_whole_match_double_zero ===
+class InputSpecificApiStringMethodReplaceAllReplacementWholeMatchDoubleZeroSliceViolation {
+	String m(String s) {
+		return s.replace("foo", "foo");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_whole_match_empty_pattern ===
+class InputSpecificApiStringMethodReplaceAllReplacementWholeMatchEmptyPatternSliceViolation {
+	String m(String s) {
+		return s.replace("", "[]");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_whole_match_mid ===
+class InputSpecificApiStringMethodReplaceAllReplacementWholeMatchMidSliceViolation {
+	String m(String s) {
+		return s.replace("foo", "[foo]");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_whole_match_only ===
+class InputSpecificApiStringMethodReplaceAllReplacementWholeMatchOnlySliceViolation {
+	String m(String s) {
+		return s.replace("foo", "foo");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_whole_match_repeated ===
+class InputSpecificApiStringMethodReplaceAllReplacementWholeMatchRepeatedSliceViolation {
+	String m(String s) {
+		return s.replace("foo", "foofoo");
+	}
+}
+// === end ===
+
+// === case: replace_all_replacement_whole_match_then_digit ===
+class InputSpecificApiStringMethodReplaceAllReplacementWholeMatchThenDigitSliceViolation {
+	String m(String s) {
+		return s.replace("foo", "foo1");
+	}
+}
+// === end ===
+
+// === case: replace_all_string_literal_receiver ===
+class InputSpecificApiStringMethodReplaceAllStringLiteralReceiverSliceViolation {
+	String m() {
+		return "abc".replace("b", "x");
+	}
+}
+// === end ===
+
+// === case: replace_all_two_respelled_calls_on_one_line ===
+class InputSpecificApiStringMethodReplaceAllTwoRespelledCallsOnOneLineSliceViolation {
+	String m(String s) {
+		return s.replace("x", "$").replace("y", "[y]");
+	}
+}
+// === end ===
+
+// === case: shadowing_inverse_get_zero ===
+// imports: java.util.List
+// imports: java.util.Map
+class InputSpecificApiReflectionShadowingInverseGetZeroSliceViolation {
+	private final Map<Integer, String> shared = Map.of();
+
+	void shadowingInverseGetZero(List<List<String>> lists) {
+		lists.forEach((List<String> shared) -> System.out.println(shared.getFirst()));
 	}
 }
 // === end ===
@@ -1331,6 +2007,25 @@ class InputSpecificApiIsEmptySizeNotEqualsZeroSliceViolation {
 }
 // === end ===
 
+// === case: size_zero_space_before_dot ===
+// imports: java.util.List
+class InputSpecificApiSizeZeroSpaceBeforeDotSliceViolation {
+	boolean sizeZeroSpaceBeforeDot(List<String> list) {
+		return list.isEmpty();
+	}
+}
+// === end ===
+
+// === case: sort_cast_argument_parenthesized ===
+// imports: java.util.Collections
+// imports: java.util.List
+class InputSpecificApiSortCastArgumentParenthesizedSliceViolation {
+	void sortCastArgumentParenthesized(Object o) {
+		((List<String>) o).sort(null);
+	}
+}
+// === end ===
+
 // === case: sort_no_comparator ===
 // imports: java.util.Collections
 // imports: java.util.List
@@ -1417,11 +2112,31 @@ class InputSpecificApiCollectionsSortSortWithStringLiteralParenSliceViolation {
 }
 // === end ===
 
+// === case: static_init_scope ===
+// imports: java.util.Arrays
+// imports: java.util.List
+class InputSpecificApiArraysAsListStaticInitScopeSliceViolation {
+	static {
+		final var list = List.of("a");
+	}
+}
+// === end ===
+
 // === case: stream_count ===
 // imports: java.util.List
 class InputSpecificApiStreamStreamCountSliceViolation {
 	void streamCount(List<String> list) {
 		final var count = list.size();
+	}
+}
+// === end ===
+
+// === case: stream_count_discarded_comment_rejected ===
+// skip-reason: cannot rewrite: unrecognized API pattern
+// imports: java.util.List
+class InputSpecificApiStreamCountDiscardedCommentRejectedSliceViolation {
+	long streamCountDiscardedCommentRejected(List<String> list) {
+		return list.stream()/*c*/.count();
 	}
 }
 // === end ===
@@ -1467,6 +2182,20 @@ class InputSpecificApiStreamStreamFindFirstIsPresentDottedReceiverSliceViolation
 }
 // === end ===
 
+// === case: stream_find_first_is_present_method_receiver ===
+// imports: java.util.List
+class InputSpecificApiStreamFindFirstIsPresentMethodReceiverSliceViolation {
+	List<String> getList() {
+		return List.of();
+	}
+
+	void streamFindFirstIsPresentMethodReceiver() {
+		if (!getList().isEmpty())
+			return;
+	}
+}
+// === end ===
+
 // === case: stream_find_first_is_present_pattern_in_string_not_anchored ===
 // imports: java.util.List
 class InputSpecificApiStreamStreamFindFirstIsPresentPatternInStringNotAnchoredSliceViolation {
@@ -1495,11 +2224,47 @@ class InputSpecificApiStreamStreamForEachPatternInCommentNotAnchoredSliceViolati
 }
 // === end ===
 
+// === case: strip_is_blank_dotted_receiver ===
+class InputSpecificApiStripIsBlankDottedReceiverSliceViolation {
+	static class Holder {
+		String name;
+	}
+
+	Holder obj;
+
+	void stripIsBlankDottedReceiver() {
+		if (obj.name.isBlank())
+			return;
+	}
+}
+// === end ===
+
+// === case: strip_is_blank_method_receiver ===
+class InputSpecificApiStripIsBlankMethodReceiverSliceViolation {
+	String getText() {
+		return "";
+	}
+
+	void stripIsBlankMethodReceiver() {
+		if (getText().isBlank())
+			return;
+	}
+}
+// === end ===
+
 // === case: strip_is_empty ===
 class InputSpecificApiStripIsBlankStripIsEmptySliceViolation {
 	void stripIsEmpty(String s) {
 		if (s.isBlank())
 			System.out.println("blank");
+	}
+}
+// === end ===
+
+// === case: strip_is_empty_already_negated ===
+class InputSpecificApiStripIsEmptyAlreadyNegatedSliceViolation {
+	boolean m(String s) {
+		return !s.isBlank();
 	}
 }
 // === end ===
@@ -1540,6 +2305,34 @@ class InputSpecificApiStripIsBlankStripLengthGreaterThanZeroSliceViolation {
 }
 // === end ===
 
+// === case: strip_length_greater_than_zero_dotted_receiver ===
+class InputSpecificApiStripLengthGreaterThanZeroDottedReceiverSliceViolation {
+	static class Holder {
+		String name;
+	}
+
+	Holder obj;
+
+	void stripLengthGreaterThanZeroDottedReceiver() {
+		if (!obj.name.isBlank())
+			return;
+	}
+}
+// === end ===
+
+// === case: strip_length_greater_than_zero_method_receiver ===
+class InputSpecificApiStripLengthGreaterThanZeroMethodReceiverSliceViolation {
+	String getText() {
+		return "";
+	}
+
+	void stripLengthGreaterThanZeroMethodReceiver() {
+		if (!getText().isBlank())
+			return;
+	}
+}
+// === end ===
+
 // === case: strip_length_in_compound_reversed_condition ===
 class InputSpecificApiStripIsBlankStripLengthInCompoundReversedConditionSliceViolation {
 	void m(String s, int x) {
@@ -1567,11 +2360,74 @@ class InputSpecificApiStripIsBlankStripLengthLessThanOneSliceViolation {
 }
 // === end ===
 
+// === case: strip_length_multiple_occurrences_first_rejected ===
+class InputSpecificApiStripLengthMultipleOccurrencesFirstRejectedSliceViolation {
+	void stripLengthMultipleOccurrencesFirstRejected(String a, String b) {
+		if (a.strip().length() == 0xF || b.isBlank())
+			return;
+	}
+}
+// === end ===
+
 // === case: strip_length_not_equals_zero ===
 class InputSpecificApiStripIsBlankStripLengthNotEqualsZeroSliceViolation {
 	void stripLengthNotEqualsZero(String s) {
 		if (!s.isBlank())
 			System.out.println("not blank");
+	}
+}
+// === end ===
+
+// === case: strip_length_reversed_first_rejected_second_accepted ===
+class InputSpecificApiStripLengthReversedFirstRejectedSecondAcceptedSliceViolation {
+	void stripLengthReversedFirstRejectedSecondAccepted(String s, int idx10) {
+		if (idx10 == 0 && s.isBlank())
+			return;
+	}
+}
+// === end ===
+
+// === case: strip_length_reversed_method_receiver ===
+class InputSpecificApiStripLengthReversedMethodReceiverSliceViolation {
+	String getText() {
+		return "";
+	}
+
+	void stripLengthReversedMethodReceiver() {
+		if (getText().isBlank())
+			return;
+	}
+}
+// === end ===
+
+// === case: strip_then_trim_length_equals_zero ===
+class InputSpecificApiTrimLengthStripThenTrimLengthEqualsZeroSliceViolation {
+	boolean m(String s) {
+		return s.strip().trim().isEmpty();
+	}
+}
+// === end ===
+
+// === case: this_qualified_field_get_zero ===
+// imports: java.util.List
+// imports: java.util.Map
+class InputSpecificApiReflectionThisQualifiedFieldGetZeroSliceViolation {
+	private final List<String> items = List.of("a");
+
+	void thisQualifiedFieldGetZero(Map<Integer, String> items) {
+		System.out.println(this.items.getFirst());
+	}
+}
+// === end ===
+
+// === case: this_qualified_field_size_zero ===
+// imports: java.util.Map
+class InputSpecificApiIsEmptyThisQualifiedFieldSizeZeroSliceViolation {
+	private final Map<Integer, String> byId = Map.of();
+
+	void thisQualifiedFieldSizeZero(String byId) {
+		if (this.byId.isEmpty())
+			System.out.println("empty");
 	}
 }
 // === end ===
@@ -1589,6 +2445,15 @@ class InputSpecificApiToArrayToArrayIntegerSliceViolation {
 class InputSpecificApiToArrayToArrayMethodReceiverSliceViolation {
 	void toArrayMethodReceiver() {
 		final var arr = getList().toArray(String[]::new);
+	}
+}
+// === end ===
+
+// === case: to_array_non_zero_first_rejected ===
+// imports: java.util.List
+class InputSpecificApiToArrayNonZeroFirstRejectedSliceViolation {
+	int m(List<String> a, List<String> b) {
+		return a.toArray(new String[5]).length + b.toArray(String[]::new).length;
 	}
 }
 // === end ===
@@ -1620,29 +2485,29 @@ class InputSpecificApiToArrayToArrayStringSliceViolation {
 }
 // === end ===
 
-// === case: trim_is_empty ===
-class InputSpecificApiTrimIsBlankTrimIsEmptySliceViolation {
-	void trimIsEmpty(String s) {
-		if (s.isBlank())
-			System.out.println("blank");
-	}
-}
-// === end ===
-
-// === case: trim_is_empty_pattern_in_string_not_anchored ===
-class InputSpecificApiTrimIsBlankTrimIsEmptyPatternInStringNotAnchoredSliceViolation {
-	void m(String s) {
-		if (".trim().isEmpty()".isEmpty() || s.isBlank())
-			System.out.println("x");
-	}
-}
-// === end ===
-
 // === case: trim_length_equals_zero ===
 class InputSpecificApiTrimIsBlankTrimLengthEqualsZeroSliceViolation {
 	void trimLengthEqualsZero(String s) {
-		if (s.isBlank())
+		if (s.trim().isEmpty())
 			System.out.println("blank");
+	}
+}
+// === end ===
+
+// === case: trim_length_equals_zero_chained_resolved_receiver ===
+class InputSpecificApiTrimLengthEqualsZeroChainedResolvedReceiverSliceViolation {
+	boolean m(Object obj) {
+		return obj.toString().trim().isEmpty();
+	}
+}
+// === end ===
+
+// === case: trim_length_equals_zero_this_qualified_receiver ===
+class InputSpecificApiTrimLengthEqualsZeroThisQualifiedReceiverSliceViolation {
+	String name = "";
+
+	boolean m(String name) {
+		return this.name.trim().isEmpty();
 	}
 }
 // === end ===
@@ -1650,7 +2515,7 @@ class InputSpecificApiTrimIsBlankTrimLengthEqualsZeroSliceViolation {
 // === case: trim_length_greater_equal_one ===
 class InputSpecificApiTrimIsBlankTrimLengthGreaterEqualOneSliceViolation {
 	void trimLengthGreaterEqualOne(String s) {
-		if (!s.isBlank())
+		if (!s.trim().isEmpty())
 			System.out.println("not blank");
 	}
 }
@@ -1659,7 +2524,7 @@ class InputSpecificApiTrimIsBlankTrimLengthGreaterEqualOneSliceViolation {
 // === case: trim_length_greater_than_zero ===
 class InputSpecificApiTrimIsBlankTrimLengthGreaterThanZeroSliceViolation {
 	void trimLengthGreaterThanZero(String s) {
-		if (!s.isBlank())
+		if (!s.trim().isEmpty())
 			System.out.println("not blank");
 	}
 }
@@ -1668,7 +2533,7 @@ class InputSpecificApiTrimIsBlankTrimLengthGreaterThanZeroSliceViolation {
 // === case: trim_length_in_compound_reversed_condition ===
 class InputSpecificApiTrimIsBlankTrimLengthInCompoundReversedConditionSliceViolation {
 	void m(String s, int x) {
-		if (0 != x && !s.isBlank())
+		if (0 != x && !s.trim().isEmpty())
 			System.out.println("not blank");
 	}
 }
@@ -1677,7 +2542,7 @@ class InputSpecificApiTrimIsBlankTrimLengthInCompoundReversedConditionSliceViola
 // === case: trim_length_less_equal_zero ===
 class InputSpecificApiTrimIsBlankTrimLengthLessEqualZeroSliceViolation {
 	void trimLengthLessEqualZero(String s) {
-		if (s.isBlank())
+		if (s.trim().isEmpty())
 			System.out.println("blank");
 	}
 }
@@ -1686,8 +2551,17 @@ class InputSpecificApiTrimIsBlankTrimLengthLessEqualZeroSliceViolation {
 // === case: trim_length_less_than_one ===
 class InputSpecificApiTrimIsBlankTrimLengthLessThanOneSliceViolation {
 	void trimLengthLessThanOne(String s) {
-		if (s.isBlank())
+		if (s.trim().isEmpty())
 			System.out.println("blank");
+	}
+}
+// === end ===
+
+// === case: trim_length_multiple_occurrences_first_rejected ===
+class InputSpecificApiTrimLengthMultipleOccurrencesFirstRejectedSliceViolation {
+	void trimLengthMultipleOccurrencesFirstRejected(String a, String b) {
+		if (a.trim().length() == 0xF || b.trim().isEmpty())
+			return;
 	}
 }
 // === end ===
@@ -1695,8 +2569,33 @@ class InputSpecificApiTrimIsBlankTrimLengthLessThanOneSliceViolation {
 // === case: trim_length_not_equals_zero ===
 class InputSpecificApiTrimIsBlankTrimLengthNotEqualsZeroSliceViolation {
 	void trimLengthNotEqualsZero(String s) {
-		if (!s.isBlank())
+		if (!s.trim().isEmpty())
 			System.out.println("not blank");
+	}
+}
+// === end ===
+
+// === case: trim_length_not_equals_zero_already_negated ===
+class InputSpecificApiTrimLengthNotEqualsZeroAlreadyNegatedSliceViolation {
+	boolean m(String s) {
+		return !(!s.trim().isEmpty());
+	}
+}
+// === end ===
+
+// === case: trim_length_reversed_first_rejected_second_accepted ===
+class InputSpecificApiTrimLengthReversedFirstRejectedSecondAcceptedSliceViolation {
+	void trimLengthReversedFirstRejectedSecondAccepted(String s, int idx10) {
+		if (idx10 == 0 && s.trim().isEmpty())
+			return;
+	}
+}
+// === end ===
+
+// === case: trim_then_strip_length_equals_zero ===
+class InputSpecificApiStripLengthTrimThenStripLengthEqualsZeroSliceViolation {
+	boolean m(String s) {
+		return s.trim().isBlank();
 	}
 }
 // === end ===
@@ -1806,6 +2705,18 @@ class InputSpecificApiCopyOfUnmodifiableSetSliceViolation {
 }
 // === end ===
 
+// === case: unresolvable_resource_receiver_index_of ===
+// skip-reason: cannot rewrite: unrecognized API pattern
+class InputSpecificApiIndexOfUnresolvableResourceReceiverIndexOfSliceViolation {
+	void unresolvableResourceReceiverIndexOf() throws Exception {
+		try (var buffer = Factory.make()) {
+			if (buffer.indexOf("xy") >= 0)
+				System.out.println("found");
+		}
+	}
+}
+// === end ===
+
 // === case: values_contains ===
 // imports: java.util.Map
 class InputSpecificApiMapChainValuesContainsSliceViolation {
@@ -1876,7 +2787,7 @@ class InputSpecificApiStripIsBlankZeroEqualsStripLengthSliceViolation {
 // === case: zero_equals_trim_length ===
 class InputSpecificApiTrimIsBlankZeroEqualsTrimLengthSliceViolation {
 	void zeroEqualsTrimLength(String s) {
-		if (s.isBlank())
+		if (s.trim().isEmpty())
 			System.out.println("blank");
 	}
 }
@@ -1894,14 +2805,14 @@ class InputSpecificApiStripIsBlankZeroGreaterEqualStripLengthSliceViolation {
 // === case: zero_greater_equal_trim_length ===
 class InputSpecificApiTrimIsBlankZeroGreaterEqualTrimLengthSliceViolation {
 	void zeroGreaterEqualTrimLength(String s) {
-		if (s.isBlank())
+		if (s.trim().isEmpty())
 			System.out.println("blank");
 	}
 }
 // === end ===
 
 // === case: zero_greater_index_of ===
-// skip-reason: unrecognized API pattern
+// skip-reason: cannot rewrite: unrecognized API pattern
 class InputSpecificApiIndexOfZeroGreaterIndexOfSliceViolation {
 	void zeroGreaterIndexOf(String s) {
 		if (0 > s.indexOf("dd"))
@@ -1930,7 +2841,7 @@ class InputSpecificApiIsEmptyZeroGreaterThanOrEqualSizeSliceViolation {
 // === end ===
 
 // === case: zero_less_equal_index_of ===
-// skip-reason: unrecognized API pattern
+// skip-reason: cannot rewrite: unrecognized API pattern
 class InputSpecificApiIndexOfZeroLessEqualIndexOfSliceViolation {
 	void zeroLessEqualIndexOf(String s) {
 		if (0 <= s.indexOf("cc"))
@@ -1970,7 +2881,7 @@ class InputSpecificApiStripIsBlankZeroLessThanStripLengthSliceViolation {
 // === case: zero_less_than_trim_length ===
 class InputSpecificApiTrimIsBlankZeroLessThanTrimLengthSliceViolation {
 	void zeroLessThanTrimLength(String s) {
-		if (!s.isBlank())
+		if (!s.trim().isEmpty())
 			System.out.println("not blank");
 	}
 }
@@ -2007,7 +2918,7 @@ class InputSpecificApiStripIsBlankZeroNotEqualsStripLengthSliceViolation {
 // === case: zero_not_equals_trim_length ===
 class InputSpecificApiTrimIsBlankZeroNotEqualsTrimLengthSliceViolation {
 	void zeroNotEqualsTrimLength(String s) {
-		if (!s.isBlank())
+		if (!s.trim().isEmpty())
 			System.out.println("not blank");
 	}
 }

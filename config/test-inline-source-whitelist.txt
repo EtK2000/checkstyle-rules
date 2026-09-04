@@ -28,7 +28,12 @@ CheckstyleFixUtilTest                # tests hint computation, mock AuditEvents
 CheckstylePluginMinSdkTest           # gradle end-to-end project files
 CheckstylePluginTest                 # gradle end-to-end project files
 FixContextTest                       # tests ThreadLocal context utility
+ExplicitInitializationFixerTest      # direct fixer calls on multi-statement lines and synthetic columns (a code-point column past supplementary characters, one past the '='), which no lint-clean slice can carry
 FinalLocalVariableFixerTest          # direct fixer-call tests for the declaration-start column scan (final-before-type on multi-statement lines); the scenarios are inherently multi-statement lines that can't live in a lint-clean slice
+FieldConsolidationFixerTest          # stale-event, column, long-run and interleaved-fold tests need parseable class-wrapped buffers no slice can hold (an already merged run, a column a sibling fixer moved, one fix() call folding several runs)
+FieldInitializersTest                # classifies one initializer per row and compares field orders of before/after bodies; the rows are one-line declarations naming undeclared helpers and an interface with an explicit static field, which no lint-clean slice can carry
+FieldRewriteVerifierTest             # tests the field-rewrite re-parse check; each case is a parseable before/after buffer pair
+FieldSortingFixerTest                # pins the not-fixable result on a buffer starting with a byte-order mark, which a slice file cannot start with, and the sort of an interface field with an explicit static among implicit ones, which no lint-clean slice can carry
 FixerAstTest                         # tests the shared parse firewall; needs a minimal parseable buffer
 FixerTestUtilTest                    # tests imports-directive helpers with inline import-line strings
 FqnResolverTest                      # tests the line-mask and comment-stripper helpers with inline line-fragment strings
@@ -53,11 +58,21 @@ TestResourcesTest                    # tests translateImportsDirectives with inl
 # (e.g. 2000-element chains), or (c) are regex/messages constants that
 # incidentally match the validator's heuristics.
 AnnotationOwnLineCheckTest           # direct AST mutation for Math.min clamp boundary test
-AstUtilTest                          # direct AST inspection on inline snippets
+AstDisplayTest                       # direct AST inspection on inline snippets
+AstTestSupportTest                   # tests the shared parse/navigate harness on inline snippets
+AstQueryTest                         # direct AST inspection on inline snippets
+AstResolveTest                       # direct AST inspection on inline snippets
+AstTextTest                          # direct AST inspection on inline snippets
+DocCommentsTest                      # direct AST inspection on inline snippets
+SourceCommentsTest                   # direct AST inspection on inline snippets: which comments lead one declarator
 ControlFlowBracesCheckTierTest       # direct AST inspection on inline snippets
+FieldConsolidationCheckTest          # an interface field with explicit modifiers is a RedundantModifier violation, so it cannot be a slice; the scaling and pin-oracle tests generate their input
+JsonObjectPutCollapseTest           # braceless control bodies are ControlFlowBraces violations, so they cannot be slices
 MessagesFileSortedTest               # validates messages.properties content
-MultilineCallFormattingCheckTest     # direct AST inspection on inline snippet (closingParenMove guard)
+MultilineCallMovesTest               # direct AST inspection on inline snippet (closingParenMove guard)
+NoUnnecessaryThisCheckTest           # a read of a later field is a FieldSorting violation, and a member or nested class above a field is a ClassStructureOrder violation, so neither can be a slice
 PreferDoWhileCheckTest               # direct AST inspection on inline snippets
+PreferExactAssertionCheckTest        # direct AST inspection on inline snippets: a two-boolean-argument assertTrue no real JUnit declares, a WITH_COMMENTS parse (the shared parse drops comments, so no fixture can carry one), and import sets a resource fixture would have to spell as directives
 PreferImportCheckTest                # generated fuzz input (2000-element name), a reflection-call-count assertion, and a generic-outer-nested type the fixer's line scan can't handle
 PreferPrefixIncrementCheckTest       # direct AST inspection on inline snippets
 PreferStaticImportConstantCheckTest  # fuzz inputs (2000-element dot chain)

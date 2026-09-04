@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -99,7 +101,7 @@ public class InstanceofBeforeCastCheck extends AbstractAstCheck {
 			final var instanceofInCondition = findInstanceof(condition);
 			if (instanceofInCondition == instanceofAst) {
 				for (var child = elseAst.getFirstChild(); child != null; child = child.getNextSibling()) {
-					if (AstUtil.containsCastTo(child, typeName, exprStr)) {
+					if (AstQuery.containsCastTo(child, typeName, exprStr)) {
 						log(child, MSG_WRONG_BRANCH, typeName);
 						return;
 					}
@@ -114,7 +116,7 @@ public class InstanceofBeforeCastCheck extends AbstractAstCheck {
 			if (rparen == null)
 				return;
 			final var thenBody = rparen.getNextSibling();
-			if (thenBody != null && AstUtil.containsCastTo(thenBody, typeName, exprStr))
+			if (thenBody != null && AstQuery.containsCastTo(thenBody, typeName, exprStr))
 				log(thenBody, MSG_WRONG_BRANCH, typeName);
 		}
 	}
@@ -125,7 +127,7 @@ public class InstanceofBeforeCastCheck extends AbstractAstCheck {
 		while (parent != null) {
 			if (parent.getType() == TokenTypes.LAND) {
 				if (parent.getFirstChild() != node) {
-					if (AstUtil.containsCastTo(parent.getFirstChild(), typeName, exprStr)) {
+					if (AstQuery.containsCastTo(parent.getFirstChild(), typeName, exprStr)) {
 						log(ast, MSG_KEY, typeName);
 						return true;
 					}
@@ -150,7 +152,7 @@ public class InstanceofBeforeCastCheck extends AbstractAstCheck {
 		final var falseBranch = colon.getNextSibling();
 		if (falseBranch == null)
 			return;
-		if (AstUtil.containsCastTo(falseBranch, typeName, exprStr))
+		if (AstQuery.containsCastTo(falseBranch, typeName, exprStr))
 			log(falseBranch, MSG_WRONG_BRANCH, typeName);
 	}
 
@@ -164,8 +166,8 @@ public class InstanceofBeforeCastCheck extends AbstractAstCheck {
 		if (expr == null || type == null)
 			return;
 
-		final var typeName = AstUtil.typeText(type);
-		final var exprStr = AstUtil.exprText(expr);
+		final var typeName = AstText.typeText(type);
+		final var exprStr = AstText.exprText(expr);
 		if (typeName.isEmpty())
 			return;
 

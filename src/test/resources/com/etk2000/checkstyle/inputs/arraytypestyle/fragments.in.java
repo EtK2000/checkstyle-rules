@@ -41,7 +41,7 @@ int m()[] foo;
 obj.bar()[]
 // === end ===
 
-// === case: field_init_call_ends_in_paren_multi_var_returns_null ===
+// === case: field_init_call_ends_in_paren_multi_var_skips ===
 // target: line=1 col=0
 int x = compute()
 [], y = 1;
@@ -82,7 +82,7 @@ int m()[] thrown;
 int m()[] throwsException;
 // === end ===
 
-// === case: method_return_with_type_use_annotation_returns_null ===
+// === case: method_return_with_type_use_annotation_skips ===
 // target: col=11
 int m() @A []
 // === end ===
@@ -141,13 +141,13 @@ super X
 		[];
 // === end ===
 
-// === case: multi_line_text_block_on_bracket_line_returns_null ===
+// === case: multi_line_text_block_on_bracket_line_skips ===
 // target: line=1 col=2
 String x
 		[] = """
 // === end ===
 
-// === case: multi_line_text_block_on_later_line_returns_null ===
+// === case: multi_line_text_block_on_later_line_skips ===
 // target: line=1 col=2
 int x
 		[] = a
@@ -234,12 +234,12 @@ int m() throws E[];
 try (int x[] = a, b) {}
 // === end ===
 
-// === case: type_use_annotation_in_parameter_returns_null ===
+// === case: type_use_annotation_in_parameter_skips ===
 // target: col=16
 void m(int x @A [])
 // === end ===
 
-// === case: type_use_annotation_in_record_returns_null ===
+// === case: type_use_annotation_in_record_skips ===
 // target: col=18
 record R(int x @A [])
 // === end ===

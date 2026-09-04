@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -10,6 +11,11 @@ import javax.annotation.Nonnull;
  * Checkstyle check that flags explicit infinite loops with empty bodies:
  * {@code for(;;);}, {@code while(true);}, and {@code do; while(true);}.
  * These are almost certainly bugs (the program will hang).
+ *
+ * <p>This check must never opt into comment nodes. A guaranteed hang is a bug whatever comment
+ * sits in the loop, and every node this check navigates by position breaks once comments are in
+ * the tree. This deliberately diverges from {@code EmptyBodyCheck}, which does treat a comment on
+ * a bare {@code ;} as marking the no-op intentional.
  */
 public class InfiniteEmptyLoopCheck extends AbstractAstCheck {
 	private static final String MSG_DO = "empty.infinite.do";
@@ -44,10 +50,8 @@ public class InfiniteEmptyLoopCheck extends AbstractAstCheck {
 			return false;
 		if (cond == null)
 			return false;
-		// for(;;) — empty condition
 		if (cond.getChildCount() == 0)
 			return true;
-		// for(;true;) — literal true condition
 		final var expr = cond.getFirstChild();
 		if (expr != null && expr.getType() == TokenTypes.EXPR) {
 			final var child = expr.getFirstChild();
@@ -83,14 +87,14 @@ public class InfiniteEmptyLoopCheck extends AbstractAstCheck {
 		switch (ast.getType()) {
 			case TokenTypes.LITERAL_DO -> {
 				final var body = ast.getFirstChild();
-				if (body != null && AstUtil.isEmptyBody(body) && isInfiniteDoWhile(ast))
+				if (body != null && AstQuery.isEmptyBody(body) && isInfiniteDoWhile(ast))
 					log(ast, MSG_DO);
 			}
 			case TokenTypes.LITERAL_FOR -> {
 				final var rparen = ast.findFirstToken(TokenTypes.RPAREN);
 				if (rparen != null) {
 					final var body = rparen.getNextSibling();
-					if (body != null && AstUtil.isEmptyBody(body) && isInfiniteFor(ast))
+					if (body != null && AstQuery.isEmptyBody(body) && isInfiniteFor(ast))
 						log(ast, MSG_FOR);
 				}
 			}
@@ -98,7 +102,7 @@ public class InfiniteEmptyLoopCheck extends AbstractAstCheck {
 				final var rparen = ast.findFirstToken(TokenTypes.RPAREN);
 				if (rparen != null) {
 					final var body = rparen.getNextSibling();
-					if (body != null && AstUtil.isEmptyBody(body) && isInfiniteWhile(ast))
+					if (body != null && AstQuery.isEmptyBody(body) && isInfiniteWhile(ast))
 						log(ast, MSG_WHILE);
 				}
 			}

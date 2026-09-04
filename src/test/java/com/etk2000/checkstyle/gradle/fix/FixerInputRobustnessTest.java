@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -31,9 +32,8 @@ import javax.annotation.Nonnull;
  */
 public class FixerInputRobustnessTest {
 	// Fixers that operate on the whole target line rather than locating a construct
-	// at the column, so an out-of-range column is not meaningful to them. FLAG
-	// (docs/TODO-fragment-migration.md): confirm these are intentionally
-	// column-independent, not silently ignoring a bad column.
+	// at the column, so an out-of-range column is not meaningful to them. TODO: confirm
+	// these are intentionally column-independent, not silently ignoring a bad column.
 	private static final Set<String> COLUMN_INDEPENDENT = Set.of(
 			RedundantImportCheck.class.getName()
 	);
@@ -65,21 +65,36 @@ public class FixerInputRobustnessTest {
 	}
 
 	@Test
-	public void fieldConsolidationInvalidColumnProducesNoFix() throws IOException {
-		// the shared probe drives lineIndex 0, which this fixer rejects outright (a merge
-		// needs a preceding field line), so the parameterized case never reaches its
-		// column guards; a two-line buffer is required to exercise them
-		final var lines = List.of("\tint alpha;", "\tint beta;");
-		for (var column : new int[]{-1, -100, 10, 11, 10_000})
-			assertNull(invoke(new FieldConsolidationFixer(), new ArrayList<>(lines), 1, column));
+	public void collectionInterfaceNonIdentifierColumnProducesNoFix() throws IOException {
+		// the shared probe drives only out-of-range columns, which bail at the bounds guard; the
+		// identifier guard is reachable only from a stale column landing inside the line
+		final var lines = List.of("\tvoid f(List<String> items) {}");
+		for (var column : new int[]{0, 5, 7, 12, 19})
+			assertNull(invoke(new PreferCollectionInterfaceFixer(), new ArrayList<>(lines), 0, column));
+	}
+
+	@Test
+	public void collectionInterfaceOutOfRangeColumnReturnsNull() throws IOException {
+		// the shared probe only asserts "not a FixResult"; this fixer's bounds guard returns a bare
+		// null, which the pipeline reports differently from a SkipResult
+		final var line = "\tvoid f(List<String> items) {}";
+		for (var column : new int[]{-1, -100, line.length(), line.length() + 1, 10_000})
+			assertNull(invoke(new PreferCollectionInterfaceFixer(), new ArrayList<>(List.of(line)), 0, column));
+	}
+
+	@Test
+	public void fieldConsolidationColumnAtOrPastLineEndFindsTheLinesDeclarator() throws IOException {
+		// the shared probe drives lineIndex 0, which holds no field here, so it never reaches the
+		// column handling; a parseable class with a run is needed. A column at or just past the
+		// end of the line (FieldConsolidationFixerTest covers the negative and far-out ones) still
+		// resolves to the line's only declarator
+		final var lines = List.of("class Robustness", "{", "\tint alpha;", "\tint beta;", "}");
+		for (var column : new int[]{10, 11})
+			assertEquals(new FixResult(2, 3, List.of("\tint alpha, beta;")), invoke(new FieldConsolidationFixer(), new ArrayList<>(lines), 3, column));
 	}
 
 	@Test
 	public void fieldSortingNoMemberAtPositionProducesNoFix() throws IOException {
-		// a parseable buffer with no VARIABLE_DEF/ENUM_CONSTANT_DEF at the reported
-		// position: FieldSortingCheck.objblockAt returns null, so the fixer must
-		// not attempt (or misapply) a fix. It returns null (pipeline treats that as
-		// not-fixable) rather than a FixResult.
 		final var result = invoke(new FieldSortingFixer(), new ArrayList<>(List.of("class Robustness", "{", "}")), 0, 0);
 		assertNull(result);
 	}
@@ -88,8 +103,7 @@ public class FixerInputRobustnessTest {
 	public void fieldSortingSingleConstantEnumProducesNoFix() throws IOException {
 		// a stale coordinate landing on the sole constant of a one-constant enum: the
 		// check can never report an ordering violation there, so the rebuild's
-		// fewer-than-two-constants guard is only reachable this way. It must return
-		// null rather than throw on the empty sort.
+		// fewer-than-two-constants guard is only reachable this way
 		final var result = invoke(
 				new FieldSortingFixer(), new ArrayList<>(List.of("enum Robustness", "{", "\tONLY", "}")), 2, 1
 		);

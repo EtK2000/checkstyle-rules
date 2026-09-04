@@ -1,11 +1,12 @@
 package com.etk2000.checkstyle.gradle.fix;
 
-import com.etk2000.checkstyle.AstUtil;
 import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck;
 import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck.Assignment;
 import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck.BodyClassification;
 import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck.LocalVar;
+import com.etk2000.checkstyle.LineText;
 
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -200,7 +201,8 @@ class ConstructorAssignmentOrderFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
+		final var column = LineText.columnOfCharIndex(lines.get(lineIndex), charColumn);
 		final var classified = FixerAst.withAst(
 				lines,
 				root -> {
@@ -282,7 +284,7 @@ class ConstructorAssignmentOrderFixer implements CheckstyleFixer {
 			// expression under it says whether evaluating the var can be moved
 			final var assign = regionVars.get(i).ast().findFirstToken(TokenTypes.ASSIGN);
 			final var initializer = assign == null ? null : assign.getFirstChild();
-			if (initializer != null && !AstUtil.isSideEffectFree(initializer))
+			if (initializer != null && !AstQuery.isSideEffectFree(initializer))
 				return new SkipResult(SkipMessages.CONSTRUCTOR_ASSIGN_SKIP_VAR_SIDE_EFFECT);
 		}
 

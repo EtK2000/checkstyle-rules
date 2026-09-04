@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -48,16 +49,21 @@ public class OverloadMethodOrderCheck extends AbstractAstCheck {
 		return String.join(", ", types);
 	}
 
+	/**
+	 * The simple name overload ordering compares, e.g. {@code List} for both
+	 * {@code List} and {@code java.util.List<String>}.
+	 *
+	 * <p>The qualified name is read through {@link AstText#dottedName}, which knows
+	 * that a generic segment hangs its {@code TYPE_ARGUMENTS} off the {@code DOT}
+	 * as a sibling of the segment's {@code IDENT}. Taking the {@code DOT}'s last
+	 * child instead would compare {@code java.util.List<String>} under the literal
+	 * name {@code "TYPE_ARGUMENTS"} and flag correctly-ordered overloads.
+	 */
 	@CheckReturnValue
 	@Nonnull
 	private static String getBaseTypeName(@Nonnull DetailAST firstChild) {
 		return switch (firstChild.getType()) {
-			case TokenTypes.DOT -> {
-				var last = firstChild.getFirstChild();
-				while (last.getNextSibling() != null)
-					last = last.getNextSibling();
-				yield last.getText();
-			}
+			case TokenTypes.DOT -> AstText.simpleName(AstText.dottedName(firstChild));
 			case TokenTypes.IDENT -> firstChild.getText();
 			case TokenTypes.LITERAL_BOOLEAN -> "boolean";
 			case TokenTypes.LITERAL_BYTE -> "byte";

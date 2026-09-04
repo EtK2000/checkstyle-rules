@@ -17,7 +17,7 @@ class InputArrayTypeStyleAnnotatedParamSliceViolation {
 // === end ===
 
 // === case: annotation_argument_parens_not_treated_as_method_parens ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleAnnotationArgumentParensNotTreatedAsMethodParensSliceViolation {
 	@interface Ann {
@@ -32,7 +32,7 @@ class InputArrayTypeStyleAnnotationArgumentParensNotTreatedAsMethodParensSliceVi
 // === end ===
 
 // === case: block_comment_after_brackets_multi_var_next_line ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleBlockCommentAfterBracketsMultiVarNextLineSliceViolation {
 	int x[] /* c
@@ -63,7 +63,7 @@ class InputArrayTypeStyleBoundedWildcardCStyleSliceViolation {
 // === end ===
 
 // === case: char_literal_comma_in_multi_var_init ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleCharLiteralCommaInMultiVarInitSliceViolation {
 	void m(char c, char a, char b) {
@@ -73,7 +73,7 @@ class InputArrayTypeStyleCharLiteralCommaInMultiVarInitSliceViolation {
 // === end ===
 
 // === case: char_literal_escaped_quote_multi_var ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleCharLiteralEscapedQuoteMultiVarSliceViolation {
 	char x[] = '\'', y = 'z';
@@ -120,7 +120,7 @@ class InputArrayTypeStyleCloseParenInStringLiteralOnMethodReturnSliceViolation {
 // === end ===
 
 // === case: comma_after_brackets_in_variable_decl ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleCommaAfterBracketsInVariableDeclSliceViolation {
 	int x[], y;
@@ -142,7 +142,7 @@ class InputArrayTypeStyleCommentAfterBracketBeforeAssignmentSliceViolation {
 // === end ===
 
 // === case: comment_between_comma_and_ident_multi_var ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleCommentBetweenCommaAndIdentMultiVarSliceViolation {
 	void m(int[] a) {
@@ -152,7 +152,7 @@ class InputArrayTypeStyleCommentBetweenCommaAndIdentMultiVarSliceViolation {
 // === end ===
 
 // === case: comment_between_ident_and_bracket ===
-// skip-reason: comment between the identifier and the array brackets
+// skip-reason: cannot move the brackets: a comment sits between the name and the brackets
 @SuppressWarnings("unused")
 class InputArrayTypeStyleCommentBetweenIdentAndBracketSliceViolation {
 	int x /* note */ [];
@@ -244,7 +244,7 @@ class InputArrayTypeStyleForEachMethodNotTreatedAsForKeywordSliceViolation {
 // === end ===
 
 // === case: for_loop_multi_var ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleForLoopMultiVarSliceViolation {
 	void m(int[] a, boolean cond) {
@@ -508,7 +508,7 @@ class InputArrayTypeStyleMultiLineAbstractMethodReturnSliceViolation {
 // === end ===
 
 // === case: multi_line_block_comment_spans_across_lines_followed_by_comma ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineBlockCommentSpansAcrossLinesFollowedByCommaSliceViolation {
 	int x
@@ -527,7 +527,7 @@ fake , */;
 // === end ===
 
 // === case: multi_line_block_comment_spans_lines_containing_comma ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineBlockCommentSpansLinesContainingCommaSliceViolation {
 	int x[] /*
@@ -578,7 +578,7 @@ class InputArrayTypeStyleMultiLineGenericMethodReturnSliceViolation {
 // === end ===
 
 // === case: multi_line_line_comment_before_comma_on_next_line ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineLineCommentBeforeCommaOnNextLineSliceViolation {
 	int x
@@ -621,7 +621,7 @@ class InputArrayTypeStyleMultiLineMethodReturnWithMultiThrowsSliceViolation {
 // === end ===
 
 // === case: multi_line_multi_var ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineMultiVarSliceViolation {
 	int alpha, beta
@@ -630,7 +630,7 @@ class InputArrayTypeStyleMultiLineMultiVarSliceViolation {
 // === end ===
 
 // === case: multi_line_multi_var_on_bracket_line ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineMultiVarOnBracketLineSliceViolation {
 	int x
@@ -639,7 +639,7 @@ class InputArrayTypeStyleMultiLineMultiVarOnBracketLineSliceViolation {
 // === end ===
 
 // === case: multi_line_multi_var_on_following_line ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineMultiVarOnFollowingLineSliceViolation {
 	int x
@@ -649,7 +649,7 @@ class InputArrayTypeStyleMultiLineMultiVarOnFollowingLineSliceViolation {
 // === end ===
 
 // === case: multi_line_multi_var_spanning_brace_init ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineMultiVarSpanningBraceInitSliceViolation {
 	int x
@@ -667,7 +667,7 @@ class InputArrayTypeStyleMultiLineSimpleVarSliceViolation {
 // === end ===
 
 // === case: multi_line_string_literal_init_with_comma ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineStringLiteralInitWithCommaSliceViolation {
 	String x
@@ -676,7 +676,7 @@ class InputArrayTypeStyleMultiLineStringLiteralInitWithCommaSliceViolation {
 // === end ===
 
 // === case: multi_line_type_use_annotation_on_prev_line ===
-// skip-reason: type-use annotation before the array brackets
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineTypeUseAnnotationOnPrevLineSliceViolation {
 	@interface Anno {}
@@ -746,7 +746,7 @@ class InputArrayTypeStyleMultiLineWithStringLiteralInitializerSliceViolation {
 // === end ===
 
 // === case: multi_var_brace_initializer ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarBraceInitializerSliceViolation {
 	int x[] = {1, 2}, y = 3;
@@ -754,7 +754,7 @@ class InputArrayTypeStyleMultiVarBraceInitializerSliceViolation {
 // === end ===
 
 // === case: multi_var_bracket_index_init ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarBracketIndexInitSliceViolation {
 	void m(int[] arr, int i) {
@@ -764,7 +764,7 @@ class InputArrayTypeStyleMultiVarBracketIndexInitSliceViolation {
 // === end ===
 
 // === case: multi_var_function_call_init ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarFunctionCallInitSliceViolation {
 	int[] foo(int a, int b) {
@@ -778,7 +778,7 @@ class InputArrayTypeStyleMultiVarFunctionCallInitSliceViolation {
 // === end ===
 
 // === case: multi_var_prev ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarPrevSliceViolation {
 	int alpha, beta[];
@@ -786,7 +786,7 @@ class InputArrayTypeStyleMultiVarPrevSliceViolation {
 // === end ===
 
 // === case: multi_var_spanning_brace_init_on_single_line ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarSpanningBraceInitOnSingleLineSliceViolation {
 	void m() {
@@ -797,7 +797,7 @@ class InputArrayTypeStyleMultiVarSpanningBraceInitOnSingleLineSliceViolation {
 // === end ===
 
 // === case: multi_var_string_escaped_quote ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarStringEscapedQuoteSliceViolation {
 	String x[] = "a\"b", y = "z";
@@ -805,7 +805,7 @@ class InputArrayTypeStyleMultiVarStringEscapedQuoteSliceViolation {
 // === end ===
 
 // === case: multi_var_string_literal_init ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarStringLiteralInitSliceViolation {
 	String x[] = ",", y = "z";
@@ -813,7 +813,7 @@ class InputArrayTypeStyleMultiVarStringLiteralInitSliceViolation {
 // === end ===
 
 // === case: multi_var_with_initializer ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarWithInitializerSliceViolation {
 	int gamma[] = {1}, delta = 2;
@@ -879,7 +879,7 @@ class InputArrayTypeStyleStaticArraySliceViolation {
 // === end ===
 
 // === case: string_literal_with_paren_before_bracket ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleStringLiteralWithParenBeforeBracketSliceViolation {
 	String s = "(", x[];
@@ -934,7 +934,7 @@ class InputArrayTypeStyleTypeUseAnnotationInTypeArgsCStyleSliceViolation {
 // === end ===
 
 // === case: type_use_annotation_on_bracket ===
-// skip-reason: type-use annotation before the array brackets
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
 @SuppressWarnings("unused")
 class InputArrayTypeStyleTypeUseAnnotationOnBracketSliceViolation {
 	@interface Anno {}

@@ -1,7 +1,7 @@
 // === case: all_fixable_multiple_violations ===
 class T {
 	int x = 0;
-	int y = 0;
+	String y = null;
 }
 // === end ===
 
@@ -37,7 +37,7 @@ class T {
 // === case: mixed_two_fixable_one_skipped ===
 class T {
 	int x = 0;
-	int y = 0;
+	String y = null;
 	void f(String s) {
 		do s = """
 				text
@@ -59,6 +59,18 @@ class T {
 		if (a
 				/* spanning
 				comment */ && b) return true;
+		return false;
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_text_block_condition ===
+class T {
+	boolean f(boolean flag) {
+		if (flag
+				|| """
+				text
+				""".isEmpty()) return true;
 		return false;
 	}
 }

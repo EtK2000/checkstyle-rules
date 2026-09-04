@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.format.SpanReformat;
 
 import java.util.List;
 
@@ -8,9 +9,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 class RedundantArrayCreationFixer implements CheckstyleFixer {
-	private static final String SKIP_MULTILINE_ARRAY = "multi-line array initializer";
-	private static final String SKIP_NESTED_ARRAY_INIT = "nested array initializer";
-
 	private static int findPrecedingComma(@Nonnull String beforeNew) {
 		for (var i = beforeNew.length() - 1; i >= 0; --i) {
 			final var c = beforeNew.charAt(i);
@@ -27,7 +25,7 @@ class RedundantArrayCreationFixer implements CheckstyleFixer {
 	 * with {@code &#123;}, i.e. the array is multi-dimensional with nested
 	 * brace-initializer elements ({@code &#123;&#123;"a"&#125;, &#123;"b"&#125;&#125;}).
 	 * Splicing those bare {@code &#123;...&#125;} into an argument list produces
-	 * invalid Java, so the caller bails. A leading {@code &#123;} at depth zero is
+	 * invalid Java. A leading {@code &#123;} at depth zero is
 	 * what distinguishes a brace-initializer element from a lambda body (whose
 	 * {@code &#123;} follows {@code ->}).
 	 */
@@ -56,22 +54,15 @@ class RedundantArrayCreationFixer implements CheckstyleFixer {
 		if (column < 0 || column >= line.length())
 			return null;
 
-		// Mask string/char/comment content (positions preserved) so braces inside
-		// literals or comments aren't counted. The incoming lexer state is folded
-		// from preceding lines so a line continuing a multi-line block comment or
-		// text block is masked correctly rather than assumed to start in code.
-		var state = JavaLineScanner.LexerState.NONE;
-		for (var i = 0; i < lineIndex; ++i)
-			state = JavaLineScanner.stateAfter(lines.get(i), state);
-		final var scan = JavaLineScanner.stripCommentsAndStrings(line, state);
+		final var scan = JavaLineScanner.stripCommentsAndStrings(line, SpanReformat.lexerStateAt(lines, lineIndex));
 
 		final var openBrace = scan.indexOf('{', column);
 		if (openBrace < 0)
-			return new SkipResult(SKIP_MULTILINE_ARRAY);
+			return new SkipResult(SkipMessages.REDUNDANT_ARRAY_CREATION_SKIP_MULTILINE);
 
 		final var closeBrace = JavaLineScanner.matchingClose(scan, openBrace);
 		if (closeBrace < 0)
-			return new SkipResult(SKIP_MULTILINE_ARRAY);
+			return new SkipResult(SkipMessages.REDUNDANT_ARRAY_CREATION_SKIP_MULTILINE);
 
 		final var elements = line.substring(openBrace + 1, closeBrace).strip();
 		final var beforeNew = line.substring(0, column);
@@ -88,7 +79,7 @@ class RedundantArrayCreationFixer implements CheckstyleFixer {
 		}
 
 		if (hasBraceInitElement(scan.substring(openBrace + 1, closeBrace)))
-			return new SkipResult(SKIP_NESTED_ARRAY_INIT);
+			return new SkipResult(SkipMessages.REDUNDANT_ARRAY_CREATION_SKIP_NESTED_INITIALIZER);
 
 		final var packed = elements.endsWith(",")
 				? elements.substring(0, elements.length() - 1).strip()

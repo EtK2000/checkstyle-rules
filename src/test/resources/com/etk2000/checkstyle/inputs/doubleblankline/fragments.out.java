@@ -1,3 +1,11 @@
+// === case: collapse_blank_inside_block_comment ===
+class T {
+	/* note
+
+	*/
+}
+// === end ===
+
 // === case: collapse_double_blank_to_single ===
 int x;
 

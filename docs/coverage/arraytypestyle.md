@@ -46,16 +46,12 @@ original comments and surrounding whitespace.
 
 | Pattern | Reason |
 | --- | --- |
-| Multi-variable single-line (`int a[], b;` / `int a, b[];`) | Moving the bracket would retype the sibling variable |
-| Multi-var with initializer (`int x[] = {1}, y = 0;`) | Multiple variables share the declaration; moving the bracket would retype a sibling |
-| Multi-var across lines (`int x\n[], y;` / `int x\n[]\n, y;`) | Multiple variables share the declaration across lines; moving the bracket would retype a sibling |
-| Multi-var spanning paren initializer (`int x[] = foo(a,\nb), y;`) | Multiple variables share the declaration; moving the bracket would retype a sibling |
+| Multi-variable declaration: single-line (`int a[], b;` / `int a, b[];`), with initializer (`int x[] = {1}, y = 0;`), across lines (`int x\n[], y;` / `int x\n[]\n, y;`), spanning a paren initializer (`int x[] = foo(a,\nb), y;`), or in a for-loop init (`for (int x[] = a, y = 1; ...)`) | Moving the bracket would retype a sibling variable |
 | C-style with type-use annotation on bracket (`int x @Anno []`) | Preserving the type-use annotation through the move is ambiguous |
 | Comment between the name and `[` (`int x /* note */ [];`) | Dropping or preserving the gap comment is ambiguous |
-| For-loop multi-var init (`for (int x[] = a, y = 1; ...)`) | Multiple variables share the for-loop init; moving the bracket would retype a sibling |
-| Method-return as expression-context bracket (`x = bar()[]`) | Not a type declaration (the brackets are an array-access expression, not a C-style type) |
+| Method-return as expression-context bracket (`x = bar()[]`) | Not a type declaration |
 | Method-return type-use annotation (`int m() @A []`) | Preserving the type-use annotation through the move is unsafe |
-| Declaration line containing a `"""` text-block delimiter in code | `possible text block prevents scanning the declaration`: a multi-line text block cannot be reliably scanned for the declaration's extent, so the fixer refuses conservatively. A `"""` inside a comment or string literal does not block the fix |
+| Declaration line containing a `"""` text-block delimiter in code | `cannot move the brackets: a possible text block prevents scanning the declaration`. A `"""` inside a comment or string literal does not block the fix |
 | Multi-line declaration first line (no prev line) | No preceding declaration line to attach the moved bracket to |
 | Multi-line with empty/whitespace-only prev line | No identifier on the previous line to attach the moved bracket to |
 | Multi-line with method-call argument list on prev line | Can't locate the type on the previous line to attach the moved bracket to |

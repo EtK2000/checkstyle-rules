@@ -1,14 +1,11 @@
 # Testing
 
-How tests work in this project, common pitfalls, and how to ensure coverage.
-
 ## Architecture
 
 ### Check tests
 
 Check tests are driven by `StandardCheckTests` / `StandardFixerCases`,
-which expand each `ENTRIES` row into per-case dynamic tests (see
-"`StandardCheckTests` and the per-case fixer pipeline" above). Every new
+which expand each `ENTRIES` row into per-case dynamic tests. Every new
 check should land in `ENTRIES`. Each check has:
 
 - **Clean file** (`cases.clean.java`): valid code that must produce zero violations. For a
@@ -26,7 +23,7 @@ which parses the file's `// violation:` markers (honouring `[minSdk>=N]`
 and other predicates) and asserts an exact 1:1 match against the check's
 output (count + line + severity + message). Do not call `runCheck()`
 directly in a new test to assert violation absence under a different
-property combination — register that combination as another `ENTRIES`
+property combination. Register that combination as another `ENTRIES`
 row instead, so the marker pipeline runs against it too.
 
 ### Regex tests
@@ -50,15 +47,48 @@ full output. Integration tests are split across three classes:
 - **`CheckstyleFixUtilTest`**: pure utility tests (hint message formatting, tab-column conversion,
   skip reason tracking) with no file I/O
 
+## Reading fixtures
+
+Fixture files are large (`jitinefficiency/cases.in.java` holds 465 cases in 6,180 lines), but
+every case is delimited:
+
+```java
+// === case: <name> ===
+...
+// === end ===
+```
+
+`tools/slice` reads one case instead of the whole file. Reach for it before any Read of a fixture.
+
+| Command | What it gives |
+| ------- | ------------- |
+| `tools/slice list` | every topic and its case count |
+| `tools/slice list <topic>` | case names + line numbers in the topic's canonical input |
+| `tools/slice list <topic> --all` | same, for every sliced file in the topic |
+| `tools/slice show <topic> <name>` | the case from each sliced file, with line ranges |
+| `tools/slice find <pattern>` | case names matching a regex, across all topics |
+
+`show` is the one to use when changing a case: it prints the `in`, `out` and `fixed` versions
+together, so a `.out` vs `.fixed` divergence is visible in one call rather than three file reads.
+Both a topic name and a direct file path work as the first argument.
+
+`find` answers "does a case for this exist already" without reading any fixture. Case names are
+descriptive, so a pattern search over names usually locates prior coverage on its own.
+
+`cases.clean.java` files carry no case markers, so `list` and `show` skip them; clean files are
+whole-file fixtures by design.
+
 ## Tab-expanded columns
 
 Checkstyle reports column numbers with tabs expanded to the configured `tabWidth`. This project
 sets `tabWidth=4` (see `LineLength.TAB_WIDTH`), so a tab at position 0 makes the next character
 report as column 4 instead of 1.
 
-`CheckstyleFixTask.tabColumnToCharIndex()` converts tab-expanded columns to character indices.
-Any code that uses `event.getColumn()` to index into a line string must convert first. This
-applies to all fixers since `applyFixes` does the conversion before calling `fix()`.
+`CheckstyleFixAction.eventCharIndex()` converts a tab-expanded column to an index into the line's
+chars, which is what `fix()` receives, in the pipeline and in the harness alike. A fixer matching
+it against an AST position, which counts code points, converts it back with
+`LineText.columnOfCharIndex`, which matters on any line containing a supplementary character. See
+the `getColumnNo()` note in `adding-a-check.md` for the full rule.
 
 **Diagnosis**: if a fixer works in unit tests (no tabs) but fails on real files (tabs), the column
 conversion is the first thing to check. Write integration tests with tab-indented files to catch
@@ -72,9 +102,10 @@ The fix task runs ALL fixable checks simultaneously. Multiple checks can fire on
 - `RedundantImport` and `UnusedImports` both fire on `import java.lang.String;`
 - `FinalLocalVariable` fires twice on `int x, y;` (once per variable)
 
-When two violations target the same line and one deletes/modifies it, the second violation operates
-on stale line indices. Bottom-to-top processing (sorting by line descending) handles most cases,
-but same-line violations can still interfere.
+When two violations target the same line and one deletes/modifies it, the second violation would
+operate on stale text. Bottom-to-top processing (sorting by line, then column, descending) handles
+most cases, and an event on a line an earlier fix in the pass changed is mostly held back to the
+next pass (see the second-pass triggers in `adding-a-fixer.md`).
 
 **Integration tests must account for this.** Use inputs that isolate a single check. For example,
 test UpperEll with `3000000000l` (exceeds int range, so RedundantNumericSuffix doesn't also fire)
@@ -158,8 +189,7 @@ line, tier 3 = body on own line). The matrix is:
 | **Tier 2**          | Clean     | Violation |
 | **Tier 3**          | Violation | Clean     |
 
-The diagonal is clean (correct format). Every off-diagonal cell is a violation. **Every cell needs
-three layers of coverage:**
+**Every cell needs three layers of coverage:**
 
 1. **Check test**: clean file for diagonal, violation file for off-diagonal, with exact
    line/severity/
@@ -210,7 +240,7 @@ write down:
 dedicated test (either in test resources or direct AST unit test). Do not rely on shared case arms
 as proof of coverage.
 
-**Step 3: Permutation matrix trace.** If the check has categories (step 5 above), verify every cell
+**Step 3: Permutation matrix trace.** If the check has categories (step 2 above), verify every cell
 has check test + fixer unit test + integration test.
 
 **Step 4: Boundary pair trace.** For every dimension that causes a category transition (e.g., "has
@@ -257,13 +287,8 @@ territory.
 
 ```java
 // AnnotationOwnLineCheck must not fire on any SameLine test files
-assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR +"Clean.java").
-
-isEmpty());
-
-assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR +"Violation.java").
-
-isEmpty());
+assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR + "cases.clean.java").isEmpty());
+assertTrue(BaseCheckTest.runCheck(AnnotationOwnLineCheck.class, SAME_DIR + "cases.in.java").isEmpty());
 // ... and vice versa for every file
 ```
 
@@ -278,7 +303,7 @@ exercises both the true and false paths.
 When a check processes multiple items in a group (e.g., multiple lambda params, multiple fields in
 a declaration, multiple annotations) and the check's behavior depends on the GROUP state (like
 "does any item have an annotation?"), test every permutation of per-item states. This is not the
-same as branch coverage -- the code paths are identical, but the data flows through different
+same as branch coverage: the code paths are identical, but the data flows through different
 iterations.
 
 Example: `LambdaParameterTypeCheck` has `anyAnnotated` logic that inspects ALL params to decide
@@ -291,10 +316,8 @@ whether to suggest `var` vs implicit. For a 2-param lambda, these cases are dist
 | `@A String x` | `@B String y` | Both MSG_VAR      |
 | `String x`    | `String y`    | Both MSG_IMPLICIT |
 
-The first three share the same code path (anyAnnotated=true), but testing only case 1 missed a
-fixer bug where non-annotated params in an annotated context were stripped to implicit instead of
-getting `var`. Case 2 caught it because the fixer iterated params left-to-right and handled the
-non-annotated first param differently.
+The first three share the same code path (anyAnnotated=true), but a fixer that iterates params
+left-to-right can still handle the non-annotated param differently depending on its position.
 
 **Rule**: when code loops over a group and sets a flag from any member, test the flag-setting member
 in every position (first, middle, last, all).
@@ -474,14 +497,13 @@ is non-zero).
 ### Negation insertion in fixers
 
 When a fixer needs to negate a result (e.g. `.stream().findFirst().isPresent()` -> `!receiver
-.isEmpty()`), the fixer must scan backwards to find the receiver start and insert `!` before it.
-This uses `findReceiverStart()` which only handles simple receivers (identifiers and dotted names)
-and returns -1 for complex receivers (method calls, casts, array access).
+.isEmpty()`), use `AstSplice.spliceNegated`, which replaces the call's AST span and puts `!`
+before it.
 
 **Critical edge case**: if the expression is ALREADY negated (`!list.stream().findFirst()
-.isPresent()`), the fixer must detect the existing `!` at `receiverStart - 1` and REMOVE it
-instead of adding another. Otherwise the output is `!!list.isEmpty()` (double negation). Check
-the character before `receiverStart` before inserting `!`.
+.isPresent()`), the existing `!` right before the span must be REMOVED instead of adding another.
+Otherwise the output is `!!list.isEmpty()` (double negation). `spliceNegated` handles this, so
+test the already-negated form for every negating rewrite.
 
 This applies to any fixer that inserts `!`: trim length comparisons (`!= 0`, `> 0`), reversed
 negated forms (`0 != ...`), and `stream().findFirst().isPresent()`.
@@ -495,17 +517,16 @@ Every fixable pattern needs three layers of tests:
    cases (nested parens, escaped quotes, complex receivers).
 2. **Integration test** (`CheckstyleFixIntegrationTest`): run the full pipeline (Checkstyle
    detection -> column conversion -> fixer application -> output verification -> re-check).
-   Assert exact full output, `fixCount`, and `needsSecondPass`. Every fix-producing test
+   Assert exact full output, `fixCount`, and `needsAnotherPass`. Every fix-producing test
    automatically re-checks the output via `verifyFixedOutputClean` (enforced by `@AfterEach`).
    If the fix makes an import unused, add a separate `runFixMultiPass` test to verify the
    unused import is cleaned up on the second pass.
 3. **Violation/clean test resources**: the check must have violation test cases for every pattern
    the fixer handles, and clean cases for every pattern it should NOT handle.
 
-When adding a new fixer, also check existing integration tests. A new fixer may change the
-behavior of tests that previously relied on the pattern being unfixable (e.g. adding a
-`Collections.sort` fixer broke `testPreferSpecificApiCollectionsFactoryRetainsUsedImport` because
-the sort call was the reason the `Collections` import was retained).
+When adding a new fixer, also check existing integration tests. A new fixer changes the behavior
+of any test that relied on the pattern being unfixable, including tests whose input keeps an
+import alive only through the now-fixable call.
 
 ### Fragment-migration guard
 
@@ -515,32 +536,31 @@ the sort call was the reason the `Collections` import was retained).
 the corpus honest: it wraps each fragment body in a minimal compilation unit (a bare
 `class {...}`, a method body, a constructor body, or a class with an appended `int __x;` so a body
 ending in a bare annotation parses), runs the topic's check, and flags any case that behaves like a
-slice — the check fires and the fixer either reproduces `.out` as a fixed point (a fix-slice) or
+slice: the check fires and the fixer either reproduces `.out` as a fixed point (a fix-slice) or
 returns a `SkipResult` at the reported site (a `// skip-reason:` skip-slice). It also flags a
 `// target:` that is *redundant* (points at a position the check already reports): the directive is
 only justified for a synthetic position the check never reports.
 
-The migration is complete, so the guard simply fails on any flagged case: migrate it to a slice, or
-delete it if an existing slice already covers the behavior. (There is no whitelist; the ratchet
-reached zero and it was removed.)
+The guard fails on any flagged case: migrate it to a slice, or delete it if an existing slice
+already covers the behavior.
 
 A case is legitimately fragment-only (and correctly NOT flagged) when it is:
 
-- **non-compilable** — a body no wrapper can parse (`@B(` at EOF, a bare `value = x;`);
-- **synthetic-target** — the `// target:` is an out-of-bounds/negative/past-end column or line the
+- **non-compilable**: a body no wrapper can parse (`@B(` at EOF, a bare `value = x;`);
+- **synthetic-target**: the `// target:` is an out-of-bounds/negative/past-end column or line the
   check never reports, exercising the fixer's positional robustness at a site a slice (which
   derives the position from the check) cannot reproduce;
-- **null-returning** — the fixer returns bare `null` rather than a `SkipResult`; `assertCaseSkip`
+- **null-returning**: the fixer returns bare `null` rather than a `SkipResult`; `assertCaseSkip`
   requires a `SkipResult` and `assertCaseFix` would leave the violation unfixed, so neither slice
   form can express it;
-- **style-invariant** — the body trips a non-suppressible formatting invariant (`NoSpaceIndent`,
+- **style-invariant**: the body trips a non-suppressible formatting invariant (`NoSpaceIndent`,
   `NoTrailingWhitespace`) that a linted slice cannot carry and the migration policy refuses to
   suppress.
 
 To migrate a flagged case: author the `cases.in.java`/`cases.out.java` slice (a `// skip-reason:`
 slice for a skip case, `.out == .in` minus markers), add a per-topic cross-check suppression if a
-non-topic check fires on it, then delete the fragment (both `.in` and `.out` entries), its whitelist
-line, and its dedicated fixer-test method. If the flagged case is already covered by an existing
+non-topic check fires on it, then delete the fragment (both `.in` and `.out` entries) and its
+dedicated fixer-test method. If the flagged case is already covered by an existing
 slice (the fragment is a leftover duplicate), delete it outright instead of creating a second copy.
 
 ### Comparison operator coverage
@@ -601,19 +621,17 @@ New test resource files must comply with the project's formatting rules:
 
 ### Hardcoded value sets instead of parsing
 
-The original `ExplicitInitializationFixer` used `Set.of("0", "0L", "0.0f", ...)` to match default
-values. This missed `0.000`, `0x0`, `0_0`, `0.0e0`, and many other valid zero representations. The
-fix was to parse the value (strip suffix, underscores, prefix, then verify all remaining chars are
-zero).
+A `Set.of("0", "0L", "0.0f", ...)` of default values misses `0.000`, `0x0`, `0_0`, `0.0e0`, and
+many other valid zero representations. Parse the value instead: strip suffix, underscores and
+prefix, then verify every remaining char is zero.
 
 When matching against a set of known values, ask: "is this set exhaustive, or should I parse the
 structure instead?"
 
 ### Missing lowercase `l` suffix
 
-`RedundantNumericSuffixFixer` originally checked `D/F/L/d/f` but not `l`. The boundary pairing
-audit caught it: adding a test for `100l` revealed the bug. This is why boundary pairing matters,
-it catches omissions that look correct at a glance.
+A suffix check covering `D/F/L/d/f` but not `l` looks correct at a glance. Boundary pairing is what
+catches that class of omission: a test for `100l` beside the `100L` one.
 
 ### Method ordering in test resource files
 
@@ -647,6 +665,32 @@ Never use shorthand, paraphrases, or descriptions. The comment IS the expected m
 Every test assertion on a violation MUST check all three: line number, severity level, AND message.
 Never assert just line + count. Never assert line without severity. Never skip message validation
 on "obvious" cases. Every single violation gets all three checks, no exceptions.
+
+## Parallel execution
+
+Test classes run concurrently in one JVM (`build.gradle` turns on JUnit's parallel mode); the methods
+of one class run in sequence, except the `@TestFactory` harnesses (`StandardCheckTests`,
+`FullPipelineRegressionTest`, `CheckstyleFixIntegrationCasesTest`), whose dynamic tests also run
+concurrently. A new test must not share mutable state across threads:
+
+- **Timing**: a class that measures its own code (`assertScalesLinearly`, `assertTimeoutPreemptively`
+  on real work) is `@Isolated`, so no other class competes for the CPU while it measures
+- **JVM-wide state**: a class that swaps `Locale`, `System.out`/`System.err`, or resets
+  `ReflectionUtil.classForNameCallCount` or its cache is `@Isolated`
+- **Gradle `ProjectBuilder`**: hold `@ResourceLock(CheckstylePluginTest.PROJECT_BUILDER)`
+- **Files**: write under `@TempDir` or `Files.createTempFile`, never a fixed path that another thread
+  could read while it is being written
+- **Caches**: per-thread (`ThreadLocal`, as `CheckerCache` and `FixerAst` do) or concurrent
+  (`ConcurrentHashMap`)
+
+### Scaling tests
+
+`ScalingAssertions.assertScalesLinearly` builds each size's input once, outside the timing, and
+repeats the timed run as often as the smallest size needs to take a measurable 20 ms, so every
+doubling is asserted (under 3x, a quadratic takes 4x). Keep sizes small: checkstyle's own parse grows
+quadratically in a long sibling list (`DetailAstImpl.addChild` walks to the last child), so a large
+input spends seconds in setup without making the ratio any more telling. Any cache the code under
+measure fills must be dropped at the start of each timed run, or later runs time the cache hit.
 
 ## Running tests
 

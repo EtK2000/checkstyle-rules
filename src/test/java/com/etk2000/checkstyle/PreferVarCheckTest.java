@@ -1,13 +1,16 @@
 package com.etk2000.checkstyle;
 
 import static java.util.Objects.requireNonNull;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.puppycrawl.tools.checkstyle.DetailAstImpl;
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import org.junit.jupiter.api.Test;
@@ -83,6 +86,17 @@ public class PreferVarCheckTest {
 	}
 
 	@Test
+	public void testChildlessStaticImportDoesNotThrow() {
+		final var node = new DetailAstImpl();
+		node.setType(TokenTypes.STATIC_IMPORT);
+		node.setText("import");
+
+		final var check = new PreferVarCheck();
+		check.beginTree(null);
+		assertDoesNotThrow(() -> check.visitToken(node));
+	}
+
+	@Test
 	public void testDeclaredArgumentsMoveToDiamondAtBareAssignment() throws Exception {
 		final var root = parseFixture();
 		final Predicate<DetailAST> isStatementAssign =
@@ -132,6 +146,13 @@ public class PreferVarCheckTest {
 		final var root = parseFixture();
 		final var at = typePosition(locate(root, node -> varDefNamed(node, "everyArmSwitch")));
 		assertTrue(PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, at[0], at[1]));
+	}
+
+	@Test
+	public void testDeclaredArgumentsMoveToDiamondAtSwitchWithNonNewArm() throws Exception {
+		final var root = parseFixture();
+		final var at = typePosition(locate(root, node -> varDefNamed(node, "switched")));
+		assertFalse(PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, at[0], at[1]));
 	}
 
 	@Test
@@ -273,5 +294,37 @@ public class PreferVarCheckTest {
 	public void testIsMultiVarDeclarationAtUnresolvedPosition() throws Exception {
 		final var root = parseFixture();
 		assertNull(PreferVarCheck.isMultiVarDeclarationAt(root, 0, 0));
+	}
+
+	@Test
+	public void testPathlessStaticImportDoesNotThrow() {
+		final var node = new DetailAstImpl();
+		node.setType(TokenTypes.STATIC_IMPORT);
+		node.setText("import");
+		final var literalStatic = new DetailAstImpl();
+		literalStatic.setType(TokenTypes.LITERAL_STATIC);
+		node.addChild(literalStatic);
+
+		final var check = new PreferVarCheck();
+		check.beginTree(null);
+		assertDoesNotThrow(() -> check.visitToken(node));
+	}
+
+	@Test
+	public void testStaticImportOwnersDoNotLeakBetweenFiles() throws Exception {
+		// the recipient calls asList(...) with no static import of its own, so it is only
+		// resolvable, and only reported, if the donor's owners survive into the next file
+		final var events = BaseCheckTest.runCheckOnFiles(
+				PreferVarCheck.class,
+				"prefervar/InputStaticImportOwnersDonor.java",
+				"prefervar/InputStaticImportOwnersRecipient.java"
+		);
+
+		assertEquals(1, events.size(), "expected only the donor's violation, got " + events);
+		final var event = events.getFirst();
+		assertTrue(event.getFileName().endsWith("InputStaticImportOwnersDonor.java"), event.getFileName());
+		assertEquals(9, event.getLine());
+		assertEquals(SeverityLevel.ERROR, event.getSeverityLevel());
+		assertEquals("Local variable must use 'var' instead of an explicit type.", event.getMessage());
 	}
 }

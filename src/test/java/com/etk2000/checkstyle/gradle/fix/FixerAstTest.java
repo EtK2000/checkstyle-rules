@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.etk2000.checkstyle.gradle.fix.FixerAst.AstFunction;
 import com.etk2000.checkstyle.gradle.fix.FixerAst.ThrowingParser;
@@ -68,6 +69,69 @@ public class FixerAstTest {
 		assertNull(FixerAst.parseOrNull(VALID, parser));
 	}
 
+	@Test
+	public void testBufferVersionBumpedAfterAnEditReparses() {
+		final var lines = new ArrayList<>(VALID);
+		try {
+			FixContext.setBufferVersion(0);
+			final var first = FixerAst.parseOrNull(lines);
+			lines.set(1, "\tint y;");
+			FixContext.setBufferVersion(1);
+			final var second = FixerAst.parseOrNull(lines);
+			assertNotNull(second);
+			assertNotSame(first, second);
+			assertEquals("y", fieldName(second));
+		}
+		finally {
+			FixContext.clearBufferVersion();
+		}
+	}
+
+	@Test
+	public void testBufferVersionBumpedWithoutAnEditReuses() {
+		final var lines = new ArrayList<>(VALID);
+		try {
+			FixContext.setBufferVersion(0);
+			final var first = FixerAst.parseOrNull(lines);
+			FixContext.setBufferVersion(1);
+			assertSame(first, FixerAst.parseOrNull(lines));
+		}
+		finally {
+			FixContext.clearBufferVersion();
+		}
+	}
+
+	@Test
+	public void testBufferVersionEqualCopyAtTheSameVersionReuses() {
+		try {
+			FixContext.setBufferVersion(0);
+			final var first = FixerAst.parseOrNull(new ArrayList<>(VALID));
+			assertSame(first, FixerAst.parseOrNull(new ArrayList<>(VALID)));
+		}
+		finally {
+			FixContext.clearBufferVersion();
+		}
+	}
+
+	/**
+	 * Inside {@code applyFixes} the buffer changes only through applied fixes, each of which bumps
+	 * the version, so the same list at the same version is taken as unchanged without comparing its
+	 * lines: an edit the version does not record is served the root parsed before it.
+	 */
+	@Test
+	public void testBufferVersionSameListAtTheSameVersionSettlesWithoutComparing() {
+		final var lines = new ArrayList<>(VALID);
+		try {
+			FixContext.setBufferVersion(3);
+			final var first = FixerAst.parseOrNull(lines);
+			lines.set(1, "\tint y;");
+			assertSame(first, FixerAst.parseOrNull(lines));
+		}
+		finally {
+			FixContext.clearBufferVersion();
+		}
+	}
+
 	/**
 	 * The cache is keyed on buffer content, so an in-place edit (which is how the
 	 * pipeline applies a fix) must not be served the pre-edit AST.
@@ -124,10 +188,6 @@ public class FixerAstTest {
 		assertNull(FixerAst.parseOrNull(VALID, parser));
 	}
 
-	/**
-	 * A re-parse the pipeline pays for on every retried violation is exactly what
-	 * the cache exists to avoid, so a failure has to be cached like a success.
-	 */
 	@Test
 	public void testClearCacheForcesReparse() {
 		final var first = FixerAst.parseOrNull(VALID);
@@ -136,6 +196,10 @@ public class FixerAstTest {
 		assertNotSame(first, FixerAst.parseOrNull(VALID));
 	}
 
+	/**
+	 * A re-parse the pipeline pays for on every retried violation is exactly what
+	 * the cache exists to avoid, so a failure has to be cached like a success.
+	 */
 	@Test
 	public void testFailedParseIsCached() {
 		final var calls = new AtomicInteger();
@@ -146,6 +210,44 @@ public class FixerAstTest {
 		assertNull(FixerAst.parseOrNull(List.copyOf(UNPARSEABLE), counting));
 		assertNull(FixerAst.parseOrNull(List.copyOf(UNPARSEABLE), counting));
 		assertEquals(1, calls.get());
+	}
+
+	@Test
+	public void testMaskCachedForUnchangedBuffer() {
+		final var lines = new ArrayList<>(VALID);
+		final var first = FixerAst.maskAll(lines);
+		assertSame(first, FixerAst.maskAll(lines));
+	}
+
+	@Test
+	public void testMaskClearedByClearCache() {
+		final var first = FixerAst.maskAll(VALID);
+		FixerAst.clearCache();
+		assertNotSame(first, FixerAst.maskAll(VALID));
+	}
+
+	@Test
+	public void testMaskIsImmutable() {
+		assertThrows(UnsupportedOperationException.class, () -> FixerAst.maskAll(VALID).set(0, "x"));
+	}
+
+	@Test
+	public void testMaskIsThreadConfined() throws Exception {
+		final var mine = FixerAst.maskAll(VALID);
+		final var theirs = new AtomicReference<List<String>>();
+		final var thread = new Thread(() -> theirs.set(FixerAst.maskAll(VALID)));
+		thread.start();
+		thread.join();
+		assertNotNull(theirs.get());
+		assertNotSame(mine, theirs.get());
+	}
+
+	@Test
+	public void testMaskNotReusedAfterInPlaceEdit() {
+		final var lines = new ArrayList<>(List.of("var s = \"ab\";"));
+		assertEquals(List.of("var s = \"  \";"), FixerAst.maskAll(lines));
+		lines.set(0, "var s = \"abcd\";");
+		assertEquals(List.of("var s = \"    \";"), FixerAst.maskAll(lines));
 	}
 
 	@Test

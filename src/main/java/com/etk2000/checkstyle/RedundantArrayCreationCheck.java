@@ -1,11 +1,9 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
-import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-
-import java.util.HashSet;
-import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -21,7 +19,7 @@ import javax.annotation.Nullable;
  * are skipped because removing the array wrapper would change autoboxing
  * behavior.
  */
-public class RedundantArrayCreationCheck extends AbstractAstCheck {
+public class RedundantArrayCreationCheck extends AbstractResolvingCheck {
 	private static final String MSG = "redundant.array.creation";
 
 	@CheckReturnValue
@@ -66,34 +64,19 @@ public class RedundantArrayCreationCheck extends AbstractAstCheck {
 		return false;
 	}
 
-	private final Set<String> imports = new HashSet<>();
-
-	private String packageName;
-
-	@Override
-	public void beginTree(@Nonnull DetailAST rootAST) {
-		imports.clear();
-		packageName = null;
-	}
-
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
-		return new int[]{
-				TokenTypes.IMPORT,
-				TokenTypes.LITERAL_NEW,
-				TokenTypes.METHOD_CALL,
-				TokenTypes.PACKAGE_DEF
-		};
+		return new int[]{TokenTypes.LITERAL_NEW, TokenTypes.METHOD_CALL};
 	}
 
 	@CheckReturnValue
 	@Nullable
 	private String getReceiverClassName(@Nonnull DetailAST methodCall) {
-		final var receiverTypeName = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
+		final var receiverTypeName = receiverTypeName(methodCall);
 		if (receiverTypeName == null)
 			return null;
-		return ReflectionUtil.resolveClassName(receiverTypeName, packageName, imports);
+		return resolve(receiverTypeName);
 	}
 
 	private void visitConstructorCall(@Nonnull DetailAST ast) {
@@ -105,15 +88,15 @@ public class RedundantArrayCreationCheck extends AbstractAstCheck {
 		if (arrayNew == null)
 			return;
 
-		final var className = AstUtil.findNewClassName(ast);
+		final var className = AstText.findNewClassName(ast);
 		if (className == null)
 			return;
 
-		final var fqcn = ReflectionUtil.resolveClassName(className, packageName, imports);
+		final var fqcn = resolve(className);
 		if (fqcn == null)
 			return;
 
-		final var argCount = AstUtil.countArguments(elist);
+		final var argCount = AstQuery.countArguments(elist);
 		final var componentType = ReflectionUtil.getVarArgsComponentType(fqcn, "new", argCount);
 		if (componentType == null)
 			return;
@@ -133,7 +116,7 @@ public class RedundantArrayCreationCheck extends AbstractAstCheck {
 		if (arrayNew == null)
 			return;
 
-		final var methodName = AstUtil.getMethodName(ast);
+		final var methodName = AstQuery.getMethodName(ast);
 		if (methodName == null)
 			return;
 
@@ -141,7 +124,7 @@ public class RedundantArrayCreationCheck extends AbstractAstCheck {
 		if (fqcn == null)
 			return;
 
-		final var argCount = AstUtil.countArguments(elist);
+		final var argCount = AstQuery.countArguments(elist);
 		final var componentType = ReflectionUtil.getVarArgsComponentType(fqcn, methodName, argCount);
 		if (componentType == null)
 			return;
@@ -153,15 +136,10 @@ public class RedundantArrayCreationCheck extends AbstractAstCheck {
 	}
 
 	@Override
-	public void visitToken(@Nonnull DetailAST ast) {
+	protected void visitScopedToken(@Nonnull DetailAST ast) {
 		switch (ast.getType()) {
-			case TokenTypes.IMPORT -> imports.add(FullIdent.createFullIdentBelow(ast).getText());
 			case TokenTypes.LITERAL_NEW -> visitConstructorCall(ast);
 			case TokenTypes.METHOD_CALL -> visitMethodCall(ast);
-			case TokenTypes.PACKAGE_DEF -> {
-				final var ident = ast.getLastChild().getPreviousSibling();
-				packageName = FullIdent.createFullIdent(ident).getText();
-			}
 		}
 	}
 }

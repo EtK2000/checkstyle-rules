@@ -26,8 +26,7 @@ shifted by a prior same-line fixer.
 
 - Stale column landing on a *different* valid modifier than the one the upstream check intended. The
   whitelist confirms "*a* modifier" but cannot confirm "*the* modifier flagged."
-- Non-ASCII Unicode letters at the violation column flow through `Character.isLetter` and form
-  letter runs; the whitelist closes the corruption path (since the run never matches a JLS keyword),
-  but the precondition is undocumented.
+- Non-ASCII Unicode letters at the violation column form letter runs like any other; the whitelist
+  closes the corruption path, since such a run never matches a JLS keyword.
 
 Part of [auto-fix coverage](../auto-fix-coverage.md).

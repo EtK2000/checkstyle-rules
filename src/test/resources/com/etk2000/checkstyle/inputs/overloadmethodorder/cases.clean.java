@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle.inputs.overload;
 
+import java.util.Map;
+
 class InputOverloadClean {
 	void method() {}
 
@@ -56,4 +58,21 @@ class InputOverloadClean {
 	void vararg(int a) {}
 
 	void vararg(int... a) {}
+}
+
+// a qualified generic type sorts under its simple name, not under the TYPE_ARGUMENTS
+// node that hangs off its DOT
+class InputOverloadQualifiedGenericClean {
+	void nested(QualifiedOuter.Inner<String> a) {}
+
+	void nested(Map<String, String> a) {}
+
+	void nestedArray(QualifiedOuter.Inner<String>[] a) {}
+
+	void nestedArray(Map<String, String> a) {}
+}
+
+class QualifiedOuter {
+	static class Inner<T> {
+	}
 }

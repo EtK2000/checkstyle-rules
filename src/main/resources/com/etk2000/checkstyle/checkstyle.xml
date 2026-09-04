@@ -18,28 +18,28 @@
 	<module name="RegexpSingleline">
 		<property name="id" value="NoSpaceIndent" />
 		<property name="format" value="^ (?!\*)(?!@)" />
-		<property name="message" value="Use TABs for indentation, not spaces." />
+		<property name="message" value="Indentation must use tabs, not spaces." />
 	</module>
 
 	<!-- No blank line after class/interface/enum/record opening brace -->
 	<module name="RegexpMultiline">
 		<property name="id" value="NoBlankLineAfterClassBrace" />
 		<property name="format" value="(class|interface|enum|record)\s+\w[^{]*\{\s*\n\s*\n" />
-		<property name="message" value="No blank line at start of a class/interface/enum/record." />
+		<property name="message" value="Class/interface/enum/record body must not start with a blank line." />
 	</module>
 
 	<!-- No blank line before closing brace -->
 	<module name="RegexpMultiline">
 		<property name="id" value="NoBlankLineBeforeClosingBrace" />
 		<property name="format" value="\n[^\S\n]*\n[^\S\n]*\}" />
-		<property name="message" value="No blank line before closing brace." />
+		<property name="message" value="Closing brace must not be preceded by a blank line." />
 	</module>
 
 	<!-- No double blank lines -->
 	<module name="RegexpMultiline">
 		<property name="id" value="NoDoubleBlankLines" />
 		<property name="format" value="\n\s*\n\s*\n" />
-		<property name="message" value="No double blank lines." />
+		<property name="message" value="File must not contain consecutive blank lines." />
 	</module>
 
 	<!-- Blank line after break; before next case/default.
@@ -57,7 +57,7 @@
 	<module name="RegexpSingleline">
 		<property name="id" value="NoTrailingWhitespace" />
 		<property name="format" value="[ \t]+$" />
-		<property name="message" value="No trailing whitespace." />
+		<property name="message" value="Line must not end with whitespace." />
 	</module>
 
 	<!-- No trailing newline at end of file -->

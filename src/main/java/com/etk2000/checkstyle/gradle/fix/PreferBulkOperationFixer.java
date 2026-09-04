@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import com.etk2000.checkstyle.LineText;
 import com.etk2000.checkstyle.PreferBulkOperationCheck;
-import com.etk2000.checkstyle.PreferBulkOperationCheck.BulkKind;
 import com.etk2000.checkstyle.PreferBulkOperationCheck.BulkOp;
 
 import java.util.ArrayList;
@@ -15,11 +15,12 @@ import javax.annotation.Nullable;
 /**
  * Fixer for {@code PreferBulkOperationCheck}. Reuses the check's
  * {@link PreferBulkOperationCheck#classifyAt AST classifier} to read the flagged one-at-a-time loop
- * or {@code forEach} call, then rewrites the reported span into the bulk operation
- * ({@code addAll}/{@code putAll}/{@code System.arraycopy}/{@code Arrays.fill}). For a loop the whole
- * statement is replaced; for a {@code forEach} call only the call expression is replaced, so any
- * leading or trailing text on the span's lines (a guarding {@code if}, an enclosing block, a
- * following statement) is preserved. The receiver/operand text is sliced verbatim from the source.
+ * or {@code forEach} call, then rewrites the reported span into the bulk operation ({@code addAll},
+ * {@code Collections.addAll}, {@code putAll}, {@code System.arraycopy}, {@code Arrays.fill}). For a
+ * loop the whole statement is replaced; for a {@code forEach} call only the call expression is
+ * replaced, so any leading or trailing text on the span's lines (a guarding {@code if}, an enclosing
+ * block, a following statement) is preserved. The receiver/operand text is sliced verbatim from the
+ * source.
  */
 class PreferBulkOperationFixer implements CheckstyleFixer {
 	@CheckReturnValue
@@ -28,14 +29,26 @@ class PreferBulkOperationFixer implements CheckstyleFixer {
 		return switch (op.kind()) {
 			case ADD_ALL -> op.first() + ".addAll(" + op.second() + ")";
 			case ARRAY_COPY -> "System.arraycopy(" + op.first() + ", 0, " + op.second() + ", 0, " + op.first() + ".length)";
+			case COLLECTIONS_ADD_ALL -> "Collections.addAll(" + op.first() + ", " + op.second() + ")";
 			case FILL -> "Arrays.fill(" + op.first() + ", " + op.second() + ")";
 			case PUT_ALL -> op.first() + ".putAll(" + op.second() + ")";
 		};
 	}
 
+	@CheckReturnValue
+	@Nonnull
+	private static Set<String> requiredImports(@Nonnull BulkOp op) {
+		return switch (op.kind()) {
+			case COLLECTIONS_ADD_ALL -> Set.of("java.util.Collections");
+			case FILL -> Set.of("java.util.Arrays");
+			default -> Set.of();
+		};
+	}
+
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
+		final var column = LineText.columnOfCharIndex(lines.get(lineIndex), charColumn);
 		final var op = FixerAst.withAst(lines, root -> PreferBulkOperationCheck.classifyAt(root, lines, lineIndex, column));
 		if (op == null)
 			return null;
@@ -44,12 +57,13 @@ class PreferBulkOperationFixer implements CheckstyleFixer {
 
 		final var startText = lines.get(op.startLine());
 		final var endText = lines.get(op.endLine());
-		if (op.startCol() < 0 || op.startCol() > startText.length()
-				|| op.endCol() < 0 || op.endCol() > endText.length())
+		if (op.startIndex() < 0 || op.startIndex() > startText.length()
+				|| op.endIndex() < 0 || op.endIndex() > endText.length()
+				|| (op.startLine() == op.endLine() && op.startIndex() > op.endIndex()))
 			return null;
 
-		final var leading = startText.substring(0, op.startCol());
-		final var trailing = endText.substring(op.endCol());
+		final var leading = startText.substring(0, op.startIndex());
+		final var trailing = endText.substring(op.endIndex());
 		final var call = buildCall(op);
 		final var replacement = op.statementForm()
 				? leading + call + ";" + trailing
@@ -59,8 +73,9 @@ class PreferBulkOperationFixer implements CheckstyleFixer {
 		if (original.size() == 1 && original.getFirst().equals(replacement))
 			return null;
 
-		return op.kind() == BulkKind.FILL
-				? new FixResult(op.startLine(), op.endLine(), List.of(replacement), Set.of("java.util.Arrays"))
-				: new FixResult(op.startLine(), op.endLine(), List.of(replacement));
+		final var imports = requiredImports(op);
+		return imports.isEmpty()
+				? new FixResult(op.startLine(), op.endLine(), List.of(replacement))
+				: new FixResult(op.startLine(), op.endLine(), List.of(replacement), imports);
 	}
 }

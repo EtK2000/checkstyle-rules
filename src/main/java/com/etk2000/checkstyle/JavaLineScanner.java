@@ -372,6 +372,12 @@ public final class JavaLineScanner {
 	 * preserved and structural punctuation outside literals/comments is left
 	 * intact, so callers can index/search the result with the same column offsets
 	 * as the original line. The literal delimiter quotes themselves are kept.
+	 *
+	 * <p>The length guarantee is load-bearing, not incidental: {@link TopLevelScan#indexOf}
+	 * and {@link TopLevelScan#split} locate positions here and then index or slice the
+	 * <em>unmasked</em> text at them, so a change that made this grow or shrink a line
+	 * (expanding {@code \\u} escapes, normalizing line endings, expanding tabs) would make
+	 * them mis-slice silently rather than fail.</p>
 	 */
 	@CheckReturnValue
 	@Nonnull

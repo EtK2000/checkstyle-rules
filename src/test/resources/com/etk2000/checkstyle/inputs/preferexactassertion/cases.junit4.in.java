@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.inputs.preferexactassertion;
 
 // === case: junit4_assert_false_equal ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.Assert.assertFalse
 class Junit4AssertFalseEqualSlice {
 	void m() {
@@ -11,7 +11,7 @@ class Junit4AssertFalseEqualSlice {
 // === end ===
 
 // === case: junit4_assert_false_gt ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.Assert.assertFalse
 class Junit4AssertFalseGtSlice {
 	void m() {
@@ -30,7 +30,7 @@ class Junit4AssertFalseNegatedUnqualifiedSlice {
 // === end ===
 
 // === case: junit4_assert_true_equal ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.Assert.assertTrue
 class Junit4AssertTrueEqualSlice {
 	void m() {
@@ -40,7 +40,7 @@ class Junit4AssertTrueEqualSlice {
 // === end ===
 
 // === case: junit4_assert_true_gt ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.Assert.assertTrue
 class Junit4AssertTrueGtSlice {
 	void m() {
@@ -50,7 +50,7 @@ class Junit4AssertTrueGtSlice {
 // === end ===
 
 // === case: junit4_assert_true_lt ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.Assert.assertTrue
 class Junit4AssertTrueLtSlice {
 	void m() {
@@ -69,7 +69,7 @@ class Junit4AssertTrueNegatedUnqualifiedSlice {
 // === end ===
 
 // === case: junit4_assert_true_not_equal ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.Assert.assertTrue
 class Junit4AssertTrueNotEqualSlice {
 	void m() {
@@ -79,7 +79,7 @@ class Junit4AssertTrueNotEqualSlice {
 // === end ===
 
 // === case: junit4_message_first_assert_false_comparison_fires ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.Assert.assertFalse
 class Junit4MessageFirstAssertFalseComparisonFiresSlice {
 	void m() {
@@ -89,11 +89,22 @@ class Junit4MessageFirstAssertFalseComparisonFiresSlice {
 // === end ===
 
 // === case: junit4_message_first_comparison_fires ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.Assert.assertTrue
 class Junit4MessageFirstComparisonFiresSlice {
 	void m() {
 		assertTrue("should be positive", 1 > 0); // violation: Use 'assertEquals' instead of 'assertTrue' with '>'.
+	}
+}
+// === end ===
+
+// === case: junit4_message_first_negated_message_skipped ===
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
+// imports: static org.junit.Assert.assertTrue
+class Junit4MessageFirstNegatedMessageSkippedSlice {
+	void m(int count, boolean quiet) {
+		// the JUnit 4 mirror of the inversion case: the `!` leads the message, which comes first here
+		assertTrue(!quiet ? "a" : "b", count > 0); // violation: Use 'assertEquals' instead of 'assertTrue' with '>'.
 	}
 }
 // === end ===

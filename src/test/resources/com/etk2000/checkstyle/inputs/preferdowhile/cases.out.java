@@ -12,7 +12,8 @@ class InputPreferDoWhileArrayAssignSliceViolation {
 // === case: assignment_body ===
 class InputPreferDoWhileAssignmentBodySliceViolation {
 	void m(int i) {
-		do i = i + 1;
+		do
+			i = i + 1;
 		while (i < 10);
 	}
 }
@@ -44,7 +45,7 @@ class InputPreferDoWhileBareMethodCallSliceViolation {
 // === end ===
 
 // === case: body_formatting_skipped ===
-// skip-reason: body formatting
+// skip-reason: cannot convert to do-while: the loop body does not end in a semicolon
 class InputPreferDoWhileBodyFormattingSkippedSliceViolation {
 	void m(int x, int a, int b, int i) {
 		x = a + b;
@@ -65,7 +66,7 @@ class InputPreferDoWhileBracedBodySliceViolation {
 // === end ===
 
 // === case: braced_closing_indent_mismatch_skipped ===
-// skip-reason: braced body multi-statement or unusual closing
+// skip-reason: cannot convert to do-while: the braced body has more than one statement or an unusual closing brace
 class InputPreferDoWhileBracedClosingIndentMismatchSkippedSliceViolation {
 	void m(int i) {
 		++i;
@@ -77,7 +78,7 @@ class InputPreferDoWhileBracedClosingIndentMismatchSkippedSliceViolation {
 // === end ===
 
 // === case: braced_closing_trailing_content_skipped ===
-// skip-reason: braced body multi-statement or unusual closing
+// skip-reason: cannot convert to do-while: the braced body has more than one statement or an unusual closing brace
 class InputPreferDoWhileBracedClosingTrailingContentSkippedSliceViolation {
 	void m(int i) {
 		++i;
@@ -103,8 +104,18 @@ class InputPreferDoWhileChainedAssignmentBodySliceViolation {
 }
 // === end ===
 
+// === case: chained_call_body ===
+class InputPreferDoWhileChainedCallBodySliceViolation {
+	void m(StringBuilder sb, int i) {
+		do
+			sb.append("a").append("b");
+		while (--i > 0);
+	}
+}
+// === end ===
+
 // === case: comment_on_body_line_skipped ===
-// skip-reason: comment on body line
+// skip-reason: cannot convert to do-while: the loop body line has a comment
 class InputPreferDoWhileCommentOnBodyLineSkippedSliceViolation {
 	void m(int i) {
 		++i;
@@ -115,7 +126,7 @@ class InputPreferDoWhileCommentOnBodyLineSkippedSliceViolation {
 // === end ===
 
 // === case: comment_on_pre_line_skipped ===
-// skip-reason: comment on pre-statement line
+// skip-reason: cannot convert to do-while: the statement before the loop has a comment
 class InputPreferDoWhileCommentOnPreLineSkippedSliceViolation {
 	void m(int i) {
 		++i; // comment
@@ -148,7 +159,7 @@ class InputPreferDoWhileConditionWithNestedParensSliceViolation {
 // === end ===
 
 // === case: indent_mismatch_skipped ===
-// skip-reason: pre-statement indent mismatch
+// skip-reason: cannot convert to do-while: the statement before the loop is not at the loop's indent
 class InputPreferDoWhileIndentMismatchSkippedSliceViolation {
 	void m(int i) {
 	++i;
@@ -196,8 +207,19 @@ class InputPreferDoWhileNestedInForBodySliceViolation {
 }
 // === end ===
 
+// === case: new_expression_body ===
+class InputPreferDoWhileNewExpressionBodySliceViolation {
+	void m(int i) {
+		StringBuilder sb;
+		do
+			sb = new StringBuilder();
+		while (--i > 0);
+	}
+}
+// === end ===
+
 // === case: pre_stmt_extra_whitespace_after_indent_skipped ===
-// skip-reason: pre-statement formatting
+// skip-reason: cannot convert to do-while: the statement before the loop is not a single statement ending in a semicolon
 class InputPreferDoWhilePreStmtExtraWhitespaceAfterIndentSkippedSliceViolation {
 	void m(int i) {
 		 	++i;
@@ -235,7 +257,7 @@ class InputPreferDoWhilePrefixIncrementSliceViolation {
 // === end ===
 
 // === case: textual_mismatch_whitespace_skipped ===
-// skip-reason: textual mismatch between pre-statement and body
+// skip-reason: cannot convert to do-while: the loop body does not repeat the statement before the loop
 class InputPreferDoWhileTextualMismatchWhitespaceSkippedSliceViolation {
 	void m(int i) {
 		i +=2;
@@ -246,7 +268,7 @@ class InputPreferDoWhileTextualMismatchWhitespaceSkippedSliceViolation {
 // === end ===
 
 // === case: while_line_has_trailing_comment ===
-// skip-reason: while line not in expected format (multi-line cond, trailing content, or comment)
+// skip-reason: cannot convert to do-while: the while line has a multi-line condition, trailing content or a comment
 class InputPreferDoWhileWhileLineHasTrailingCommentSliceViolation {
 	void m(int i) {
 		++i;

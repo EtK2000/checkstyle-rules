@@ -119,6 +119,42 @@ class InputRecordFormattingFixBraceNewlineWithBodySliceViolation {
 }
 // === end ===
 
+// === case: fix_comment_before_brace_no_space ===
+class InputRecordFormattingFixCommentBeforeBraceNoSpaceSliceViolation {
+	record R(int a) /* c */ {}
+}
+// === end ===
+
+// === case: fix_comment_before_brace_two_spaces ===
+class InputRecordFormattingFixCommentBeforeBraceTwoSpacesSliceViolation {
+	record R(int a) /* c */ {}
+}
+// === end ===
+
+// === case: fix_comment_only_body_same_line ===
+class InputRecordFormattingFixCommentOnlyBodySameLineSliceViolation {
+	record R(int a) {
+		/* note */
+	}
+}
+// === end ===
+
+// === case: fix_comment_only_body_same_line_javadoc ===
+class InputRecordFormattingFixCommentOnlyBodySameLineJavadocSliceViolation {
+	record R(int a) {
+		/** note */
+	}
+}
+// === end ===
+
+// === case: fix_comment_only_body_same_line_trailing_content ===
+class InputRecordFormattingFixCommentOnlyBodySameLineTrailingContentSliceViolation {
+	record R(int a) {
+		/* note */
+	} // trailing
+}
+// === end ===
+
 // === case: fix_component_bitshift_in_annotation ===
 class InputRecordFormattingFixComponentBitshiftInAnnotationSliceViolation {
 	@interface A { int value(); }
@@ -210,7 +246,7 @@ class InputRecordFormattingFixComponentLessThanInAnnotationSliceViolation {
 // === end ===
 
 // === case: fix_component_middle_line_comment_in_header_skipped ===
-// skip-reason: cannot reformat a record header that contains a line comment
+// skip-reason: cannot reformat the record header: it contains a line comment
 class InputRecordFormattingFixComponentMiddleLineCommentInHeaderSliceViolation {
 	record R(
 		int a, // note
@@ -231,7 +267,7 @@ class InputRecordFormattingFixComponentNestedGenericsSliceViolation {
 // === end ===
 
 // === case: fix_component_opening_line_comment_in_header_skipped ===
-// skip-reason: cannot reformat a record header that contains a line comment
+// skip-reason: cannot reformat the record header: it contains a line comment
 class InputRecordFormattingFixComponentOpeningLineCommentInHeaderSliceViolation {
 	record R( // note
 		int a,
@@ -248,7 +284,7 @@ class InputRecordFormattingFixComponentRightShiftInAnnotationSliceViolation {
 // === end ===
 
 // === case: fix_component_text_block_in_annotation_spans_lines_skipped ===
-// skip-reason: cannot reformat a record header that spans a multi-line comment or text block
+// skip-reason: cannot reformat the record header: it spans a multi-line comment or text block
 class InputRecordFormattingFixComponentTextBlockInAnnotationSliceViolation {
 	@interface A { String value(); }
 
@@ -301,6 +337,14 @@ class InputRecordFormattingFixComponentWithStringContainingRecordOnPriorLineSlic
 }
 // === end ===
 
+// === case: fix_cuddled_inner_brace ===
+class InputRecordFormattingFixCuddledInnerBraceSliceViolation {
+	record R(int a) {
+		static { init("x");}
+	}
+}
+// === end ===
+
 // === case: fix_empty_body_braces_split ===
 class InputRecordFormattingFixEmptyBodyBracesSplitSliceViolation {
 	record R(int a) {}
@@ -313,16 +357,8 @@ class InputRecordFormattingFixEmptyBodyBracesSplitOpenLineHasBlockCommentSliceVi
 }
 // === end ===
 
-// === case: fix_empty_body_braces_split_open_line_has_line_comment ===
-// skip-reason: cannot collapse empty record body without losing surrounding content
-class InputRecordFormattingFixEmptyBodyBracesSplitOpenLineHasLineCommentSliceViolation {
-	record R(int a) { // note
-	}
-}
-// === end ===
-
 // === case: fix_empty_body_braces_split_trailing_content ===
-// skip-reason: cannot collapse empty record body without losing surrounding content
+// skip-reason: cannot collapse the empty record body: content around its braces would be lost
 class InputRecordFormattingFixEmptyBodyBracesSplitTrailingContentSliceViolation {
 	record R(int a) {
 	} // note
@@ -385,7 +421,7 @@ class InputRecordFormattingFixNonEmptyBodyStringContainingBraceSliceViolation {
 // === end ===
 
 // === case: fix_open_brace_after_line_comment ===
-// skip-reason: anchor line ends in a comment or unterminated literal
+// skip-reason: cannot move the opening brace: its anchor line ends in a comment or an unterminated literal
 class InputRecordFormattingFixOpenBraceAfterLineCommentSliceViolation {
 	record R(int a) // note
 	{}
@@ -395,6 +431,26 @@ class InputRecordFormattingFixOpenBraceAfterLineCommentSliceViolation {
 // === case: fix_open_brace_after_terminated_block_comment ===
 class InputRecordFormattingFixOpenBraceAfterTerminatedBlockCommentSliceViolation {
 	record R(int a) /* note */ {}
+}
+// === end ===
+
+// === case: fix_supplementary_comment_no_space ===
+class InputRecordFormattingFixSupplementaryCommentNoSpaceSliceViolation {
+	record R(int a) /* 𝐀 */ {}
+}
+// === end ===
+
+// === case: fix_supplementary_comment_two_spaces ===
+class InputRecordFormattingFixSupplementaryCommentTwoSpacesSliceViolation {
+	record R(int a) /* 𝐀 */ {}
+}
+// === end ===
+
+// === case: fix_supplementary_cuddled_inner_brace ===
+class InputRecordFormattingFixSupplementaryCuddledInnerBraceSliceViolation {
+	record R(int a) {
+		static { init("𝐀");}
+	}
 }
 // === end ===
 

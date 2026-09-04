@@ -14,9 +14,21 @@ Usage:
   ack-skip.py --files path [path...]   # skip all audits for listed files only
 
 Protocol (important):
-  Only run this AFTER the user has explicitly approved the skip in the
-  conversation. The hook cannot verify approval — that is your
-  responsibility. Running this without approval is a protocol violation.
+  Running this does NOT approve anything. The Stop hook honors it only when the
+  user picked the option labeled exactly "Skip the audit" in an AskUserQuestion
+  since the last audit-relevant edit. So: state the case for the skip, ask with
+  AskUserQuestion ("Skip the audit" / "Run the audits"), and run this only if
+  they picked the first. All in one turn — the answer arrives as an ordinary
+  tool result, so nothing stops.
+
+  If they picked "Run the audits", run them in that same turn. If they typed a
+  reply instead of picking — even one that plainly means yes — re-ask ONCE with
+  the buttons; only a picked label is recorded, so the text can neither approve
+  the skip nor be overridden by running the audits anyway.
+
+  Don't run this hoping it clears: require-skip-approval.py denies the call
+  outright when no approval is on record, and the Stop hook ignores any that
+  slips past and names it in the next block message.
 """
 import sys
 

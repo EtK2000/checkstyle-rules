@@ -157,6 +157,7 @@ public class CheckstylePlugin implements Plugin<Project> {
 			@Nonnull String extractTaskName,
 			@Nonnull Configuration checkstyleConfig
 	) {
+		final var configDirectory = project.getExtensions().getByType(CheckstyleExtension.class).getConfigDirectory();
 		project.getTasks().register(
 				"checkstyleFix",
 				CheckstyleFixTask.class,
@@ -164,6 +165,7 @@ public class CheckstylePlugin implements Plugin<Project> {
 					task.setDescription("Auto-fix simple checkstyle violations in main sources.");
 					task.setGroup("verification");
 					task.getCheckstyleClasspath().from(checkstyleConfig);
+					task.getConfigDirectory().set(configDirectory);
 					task.getMinSdk().set(project.provider(() -> resolveMinSdk(project)));
 					task.getSource().set(project.file("src/main/java"));
 				}
@@ -187,13 +189,13 @@ public class CheckstylePlugin implements Plugin<Project> {
 					task.setDescription("Auto-fix simple checkstyle violations in test sources.");
 					task.setGroup("verification");
 					task.getCheckstyleClasspath().from(checkstyleConfig);
+					task.getConfigDirectory().set(configDirectory);
 					task.getMinSdk().set(project.provider(() -> resolveMinSdk(project)));
 					task.onlyIf(t -> testDir.exists());
 					task.getSource().set(testDir);
 				}
 		);
 
-		// hint task: after checkstyle runs, dry-run fixers to count truly fixable violations
 		final var reportsDir = new File(project.getLayout().getBuildDirectory().getAsFile().get(), "reports/checkstyle");
 		project.getTasks().register(
 				"checkstyleFixHint",
@@ -203,6 +205,7 @@ public class CheckstylePlugin implements Plugin<Project> {
 					task.getOutputs().upToDateWhen(t -> false);
 					task.getCheckstyleClasspath().from(checkstyleConfig);
 					task.getDryRun().set(true);
+					task.getConfigDirectory().set(configDirectory);
 					task.getMinSdk().set(project.provider(() -> resolveMinSdk(project)));
 					task.getSource().set(project.file("src/main/java"));
 					final var testSrcDir = project.file("src/test/java");
@@ -257,7 +260,6 @@ public class CheckstylePlugin implements Plugin<Project> {
 
 	@VisibleForTesting
 	static String resolveMinSdk(@Nonnull Project project) {
-		// try Android plugin's minSdk from build.gradle
 		try {
 			final var android = project.getExtensions().findByName("android");
 			if (android != null) {
@@ -270,7 +272,6 @@ public class CheckstylePlugin implements Plugin<Project> {
 		catch (Exception ignored) {
 		}
 
-		// fallback: try AndroidManifest.xml
 		final var manifestMinSdk = readMinSdkFromManifest(project);
 		if (manifestMinSdk != null)
 			return manifestMinSdk;

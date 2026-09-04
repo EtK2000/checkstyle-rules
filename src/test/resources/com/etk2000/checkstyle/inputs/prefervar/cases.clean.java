@@ -1,6 +1,8 @@
 package com.etk2000.checkstyle.inputs.prefervar;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.Closeable;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.Serializable;
@@ -159,7 +161,6 @@ class InputPreferVarClean {
 	}
 
 	void declaredTypeArgumentsExceedConstructedClassArity() {
-		// Properties declares no type parameters, so the two supplied have no diamond to move to
 		final Map<Object, Object> props = new Properties();
 		System.out.println(props.size());
 	}
@@ -180,7 +181,6 @@ class InputPreferVarClean {
 	}
 
 	void diamondWhoseClassCannotTakeTheDeclaredArguments() {
-		// MyFunc declares one type parameter, Function supplies two
 		final Function<String, Integer> converter = new MyFunc<>();
 		System.out.println(converter);
 	}
@@ -479,20 +479,17 @@ class InputPreferVarClean {
 	}
 
 	void qualifiedNewWhoseSameFileClassRemapsItsTypeParameters() {
-		// Swapped takes two parameters like Pairing, but passes them up reversed
 		final Pairing<String, Integer> remapped = new Remap.Swapped<>();
 		System.out.println(remapped);
 	}
 
 	void qualifiedNewWhoseSameFileClassTakesADifferentArity() {
-		// Holder.Slot declares two parameters, and Absent.Slot is not declared here at all
 		final Slot<String> collided = new Holder.Slot<>();
 		final Slot<String> offFile = new Absent.Slot<>();
 		System.out.println(collided + "" + offFile);
 	}
 
 	void qualifiedNewWhoseSimpleNameCollidesWithTheDeclaredType() {
-		// Impl.Cache takes one parameter, not two, despite the matching simple names
 		final Api.Cache<String, Integer> cache = new Impl.Cache<>();
 		System.out.println(cache);
 	}
@@ -578,7 +575,6 @@ class InputPreferVarClean {
 	}
 
 	void tryWithResourcesWhoseClassCannotTakeTheDeclaredArguments() throws Exception {
-		// MyPair declares one type parameter, so both declared arguments cannot move
 		try (Src<String, Integer> pair = new MyPair<>()) {
 			System.out.println(pair);
 		}
@@ -593,6 +589,44 @@ class InputPreferVarClean {
 	void tryWithResourcesWildcardTypeArgument() throws Exception {
 		try (Src<?, ?> pair = new MyPair<String>()) {
 			System.out.println(pair);
+		}
+	}
+}
+
+class InputPreferVarTryResourceClean {
+	static <T extends AutoCloseable> T acquire() {
+		return null;
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void existingVariablePassedToAnOverload(@Nonnull Closeable existing) throws Exception {
+		try (existing) {
+			System.out.println(use(existing));
+		}
+	}
+
+	void targetTypedGenericCall() throws Exception {
+		try (BufferedReader reader = acquire()) {
+			System.out.println(reader.readLine());
+		}
+	}
+
+	void unresolvableBareCall() throws Exception {
+		try (ByteArrayInputStream in = absentFactory()) {
+			System.out.println(in.read());
+		}
+	}
+
+	void unresolvableQualifiedCall() throws Exception {
+		try (InputStream in = com.example.Missing.open()) {
+			System.out.println(in.read());
 		}
 	}
 }

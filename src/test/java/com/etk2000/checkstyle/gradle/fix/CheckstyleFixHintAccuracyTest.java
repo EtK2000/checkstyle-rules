@@ -20,12 +20,9 @@ import javax.annotation.Nullable;
 
 /**
  * Verifies the hint message ("auto-fix N of M violations") reflects what
- * {@code checkstyleFix} would actually fix. Each row exercises a distinct
- * skip-source in {@code applyFixes} and asserts both {@code result[1]}
- * (totalFixed, the value the hint uses) and the post-fix
- * {@code formatHintMessage} output.
+ * {@code checkstyleFix} would actually fix.
  *
- * <p>FIX_BOUNDS (applyFixes lines 220-222) is not exercised here. Checkstyle
+ * <p>FIX_BOUNDS is not exercised here. Checkstyle
  * bounds-checks events to the file, so {@code lineIndex} out-of-range cannot
  * be reached through {@code doExecute}. Direct {@code applyFixes} unit-style
  * coverage of that branch lives in {@link CheckstyleFixUtilTest}.
@@ -38,13 +35,24 @@ public class CheckstyleFixHintAccuracyTest {
 
 	private static Stream<Arguments> hintScenarios() {
 		return Stream.of(
-				Arguments.of("prefer_direct_boolean_return_multiline_condition", 0, 1, null),
-				Arguments.of("prefer_direct_boolean_return_unicode_escape", 0, 1, null),
+				Arguments.of("prefer_direct_boolean_return_text_block_condition", 0, 1, null),
+				Arguments.of(
+						"prefer_direct_boolean_return_multiline_condition",
+						1,
+						1,
+						"Run ./gradlew checkstyleFix to auto-fix all 1 violations."
+				),
+				Arguments.of(
+						"prefer_direct_boolean_return_unicode_escape",
+						1,
+						1,
+						"Run ./gradlew checkstyleFix to auto-fix all 1 violations."
+				),
 				Arguments.of(
 						"prefer_direct_boolean_return_two_statements_on_if_line",
+						1,
 						2,
-						2,
-						"Run ./gradlew checkstyleFix to auto-fix all 2 violations."
+						"Run ./gradlew checkstyleFix to auto-fix 1 of 2 violations."
 				),
 				Arguments.of("control_flow_braces_text_block_body", 0, 1, null),
 				Arguments.of("prefer_math_method_multiline_ternary", 0, 1, null),

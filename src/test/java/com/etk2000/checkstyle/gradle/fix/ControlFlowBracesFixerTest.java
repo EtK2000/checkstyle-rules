@@ -11,41 +11,41 @@ public class ControlFlowBracesFixerTest {
 
 	@Test
 	public void testCuddledElseUnparseableBufferRefused() throws Exception {
-		assertSkipResult(fixer, TOPIC, "cuddled_else_unparseable_buffer_refused", "cannot locate the control-flow body without a parse");
+		assertSkipResult(fixer, TOPIC, "cuddled_else_unparseable_buffer_refused", "cannot reshape the body: it cannot be located without a parse");
 	}
 
 	@Test
 	public void testForKeywordUnparseableBufferRefused() throws Exception {
-		assertSkipResult(fixer, TOPIC, "for_keyword_unparseable_buffer_refused", "cannot locate the control-flow body without a parse");
+		assertSkipResult(fixer, TOPIC, "for_keyword_unparseable_buffer_refused", "cannot reshape the body: it cannot be located without a parse");
 	}
 
 	@Test
 	public void testKeywordPrefixedIdentifiersRefused() throws Exception {
-		assertSkipResult(fixer, TOPIC, "keyword_prefixed_identifiers_refused", "no control-flow keyword at the violation site");
+		assertSkipResult(fixer, TOPIC, "keyword_prefixed_identifiers_refused", "cannot reshape the body: no control flow keyword at the violation site");
 	}
 
 	@Test
 	public void testNoControlFlowKeywordRefused() throws Exception {
-		assertSkipResult(fixer, TOPIC, "no_control_flow_keyword_refused", "no control-flow keyword at the violation site");
+		assertSkipResult(fixer, TOPIC, "no_control_flow_keyword_refused", "cannot reshape the body: no control flow keyword at the violation site");
 	}
 
 	@Test
 	public void testNonDoWhileStalePositionRefused() throws Exception {
-		assertSkipResult(fixer, TOPIC, "non_do_while_stale_position_refused", "no control-flow body at the reported position; an earlier fix in this pass moved it");
+		assertSkipResult(fixer, TOPIC, "non_do_while_stale_position_refused", "cannot reshape the body: an earlier fix in this pass moved it");
 	}
 
 	@Test
 	public void testNonDoWhileUnparseableBufferRefused() throws Exception {
-		assertSkipResult(fixer, TOPIC, "non_do_while_unparseable_buffer_refused", "cannot locate the control-flow body without a parse");
+		assertSkipResult(fixer, TOPIC, "non_do_while_unparseable_buffer_refused", "cannot reshape the body: it cannot be located without a parse");
 	}
 
 	@Test
 	public void testUnparseableBufferRefused() throws Exception {
-		assertSkipResult(fixer, TOPIC, "unparseable_buffer_refused", "cannot tell which do-while form the body needs without a parse");
+		assertSkipResult(fixer, TOPIC, "unparseable_buffer_refused", "cannot reshape the do-while body: its required form cannot be determined without a parse");
 	}
 
 	@Test
 	public void testWhileKeywordUnparseableBufferRefused() throws Exception {
-		assertSkipResult(fixer, TOPIC, "while_keyword_unparseable_buffer_refused", "cannot locate the control-flow body without a parse");
+		assertSkipResult(fixer, TOPIC, "while_keyword_unparseable_buffer_refused", "cannot reshape the body: it cannot be located without a parse");
 	}
 }

@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -87,12 +88,12 @@ public class PreferPrefixIncrementCheck extends AbstractAstCheck {
 		while (top.getParent() != null)
 			top = top.getParent();
 		PostfixSpan byOperand = null;
-		for (var node : AstUtil.collectMatching(top, PreferPrefixIncrementCheck::isPostfix)) {
+		for (var node : AstQuery.collectMatching(top, PreferPrefixIncrementCheck::isPostfix)) {
 			final var operand = node.getFirstChild();
 			if (operand == null || node.getLineNo() != line + 1 || !isValueDiscarded(node))
 				continue;
-			final var operandLine = AstUtil.firstLine(operand) - 1;
-			final var operandColumn = AstUtil.firstColumn(operand);
+			final var operandLine = AstQuery.firstLine(operand) - 1;
+			final var operandColumn = AstQuery.firstColumn(operand);
 			final var increment = node.getType() == TokenTypes.POST_INC;
 			if (node.getColumnNo() == column)
 				return new PostfixSpan(operandLine, operandColumn, line, node.getColumnNo(), increment);

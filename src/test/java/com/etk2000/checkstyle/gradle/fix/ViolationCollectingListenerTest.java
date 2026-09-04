@@ -11,6 +11,7 @@ import com.puppycrawl.tools.checkstyle.api.Violation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -19,6 +20,7 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
+@Isolated
 public class ViolationCollectingListenerTest {
 	@Nonnull
 	private static AuditEvent event(@Nonnull String fileName, @Nonnull String message) {
@@ -57,15 +59,6 @@ public class ViolationCollectingListenerTest {
 		final var out = capturedErr.toString(StandardCharsets.UTF_8);
 		assertTrue(out.contains("X.java"), "stderr should mention file: " + out);
 		assertTrue(out.contains("boom"), "stderr should include throwable message: " + out);
-	}
-
-	@Test
-	public void addExceptionWritesToStderrWithFileNameAndMessage() {
-		final var listener = new ViolationCollectingListener();
-		listener.addException(event("Foo.java", "ignored"), new RuntimeException("kaboom"));
-		final var out = capturedErr.toString(StandardCharsets.UTF_8);
-		assertTrue(out.contains("Foo.java"), "stderr should mention file: " + out);
-		assertTrue(out.contains("kaboom"), "stderr should include throwable message: " + out);
 	}
 
 	@Test

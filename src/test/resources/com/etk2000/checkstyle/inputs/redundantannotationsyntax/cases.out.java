@@ -333,7 +333,7 @@ class InputRedundantAnnotationSyntaxMultiLineEmptyParensLineCommentOpenSliceViol
 // === end ===
 
 // === case: multi_line_empty_parens_line_comment_open_then_block ===
-// skip-reason: complex multiline annotation
+// skip-reason: cannot simplify the annotation: it is a complex multi-line annotation
 class InputRedundantAnnotationSyntaxMultiLineEmptyParensLineCommentOpenThenBlockSliceViolation {
 	@B( // note
 	/* d */)
@@ -342,7 +342,7 @@ class InputRedundantAnnotationSyntaxMultiLineEmptyParensLineCommentOpenThenBlock
 // === end ===
 
 // === case: multi_line_empty_parens_line_comment_open_then_code ===
-// skip-reason: complex multiline annotation
+// skip-reason: cannot simplify the annotation: it is a complex multi-line annotation
 class InputRedundantAnnotationSyntaxMultiLineEmptyParensLineCommentOpenThenCodeSliceViolation {
 	@B( // note
 	) int field;
@@ -350,7 +350,7 @@ class InputRedundantAnnotationSyntaxMultiLineEmptyParensLineCommentOpenThenCodeS
 // === end ===
 
 // === case: multi_line_empty_parens_multiline_block_comment_between ===
-// skip-reason: complex multiline annotation
+// skip-reason: cannot simplify the annotation: it is a complex multi-line annotation
 class InputRedundantAnnotationSyntaxMultiLineEmptyParensMultilineBlockCommentBetweenSliceViolation {
 	@B(
 	/*

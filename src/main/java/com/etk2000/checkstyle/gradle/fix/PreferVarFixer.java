@@ -1,8 +1,8 @@
 package com.etk2000.checkstyle.gradle.fix;
 
-import com.etk2000.checkstyle.JavaLineScanner;
 import com.etk2000.checkstyle.LineText;
 import com.etk2000.checkstyle.PreferVarCheck;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,13 +30,30 @@ class PreferVarFixer implements CheckstyleFixer {
 		return after < line.length() && !Character.isJavaIdentifierPart(line.charAt(after));
 	}
 
+	/**
+	 * Whether the call whose diamond ends at {@code from} takes no arguments. The scan follows the
+	 * masked source onto continuation lines: a call split after its diamond has just as little to
+	 * infer from as one written on a single line, and stopping at the line end would splice the
+	 * declared arguments in only for another pass to strip them back out. Masking blanks comment
+	 * and literal content, so whitespace is the only thing to skip.
+	 */
 	@CheckReturnValue
-	private static boolean emptyArgumentsFollow(@Nonnull String line, int from) {
-		final var open = skipToCode(line, from);
-		if (open < 0 || open >= line.length() || line.charAt(open) != '(')
-			return false;
-		final var close = skipToCode(line, open + 1);
-		return close >= 0 && close < line.length() && line.charAt(close) == ')';
+	private static boolean emptyArgumentsFollow(@Nonnull List<String> masked, int lineIndex, int from) {
+		var wantOpen = true;
+		for (var index = lineIndex; index < masked.size(); ++index) {
+			final var scan = masked.get(index);
+			for (var pos = index == lineIndex ? from : 0; pos < scan.length(); ++pos) {
+				final var ch = scan.charAt(pos);
+				if (Character.isWhitespace(ch))
+					continue;
+				if (!wantOpen)
+					return ch == ')';
+				if (ch != '(')
+					return false;
+				wantOpen = false;
+			}
+		}
+		return false;
 	}
 
 	@CheckReturnValue
@@ -298,7 +315,6 @@ class PreferVarFixer implements CheckstyleFixer {
 		var ternaryDepth = 0;
 		var nestedDiamond = false;
 		var diamondBelow = false;
-		var terminated = false;
 		scan:
 		for (var scanLineIndex = lineIndex; scanLineIndex < masked.size(); ++scanLineIndex) {
 			final var scan = masked.get(scanLineIndex);
@@ -309,10 +325,8 @@ class PreferVarFixer implements CheckstyleFixer {
 				else if (ch == ')') {
 					// the declaration's own closing paren (a try-with-resources head or a
 					// for-each clause) ends it just as a ';' does
-					if (--parenDepth < 0) {
-						terminated = true;
+					if (--parenDepth < 0)
 						break scan;
-					}
 				}
 				else if (ch == '{')
 					++braceDepth;
@@ -342,15 +356,11 @@ class PreferVarFixer implements CheckstyleFixer {
 					if (textMultiVarBail)
 						return UNRECOGNIZED;
 				}
-				else if (ch == ';') {
-					terminated = true;
+				else if (ch == ';')
 					break scan;
-				}
 				else if (ch == ':') {
-					if (ternaryDepth == 0) {
-						terminated = true;
+					if (ternaryDepth == 0)
 						break scan;
-					}
 					--ternaryDepth;
 				}
 			}
@@ -372,9 +382,6 @@ class PreferVarFixer implements CheckstyleFixer {
 			// a diamond on a continuation line would need a multi-line edit to receive them
 			if (diamondBelow)
 				return new VarConversion(null, SkipMessages.PREFER_VAR_SKIP_UNREACHABLE_DIAMOND);
-			// the declaration never ends, so the scan cannot prove no diamond follows
-			if (!terminated)
-				return new VarConversion(null, SkipMessages.PREFER_VAR_SKIP_UNREACHABLE_DIAMOND);
 		}
 
 		if (typeArgs.isEmpty() || diamonds.isEmpty())
@@ -384,7 +391,7 @@ class PreferVarFixer implements CheckstyleFixer {
 		// carrying constructor arguments infers from them instead, so `List<Object> l =
 		// new ArrayList<>(strings)` would silently rebind to ArrayList<String>
 		if (isAllObjectTypeArgs(typeArgs.substring(1, typeArgs.length() - 1))
-				&& diamonds.stream().allMatch(diamond -> emptyArgumentsFollow(line, diamond + 2)))
+				&& diamonds.stream().allMatch(diamond -> emptyArgumentsFollow(masked, lineIndex, diamond + 2)))
 			return new VarConversion(line.substring(0, typeStart) + "var" + line.substring(pos), null);
 
 		// right-to-left so each splice leaves the earlier indices valid; the type itself is
@@ -486,21 +493,17 @@ class PreferVarFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
 		final var line = lines.get(lineIndex);
-		// the reported column counts code points while every scan below indexes chars, so a
-		// supplementary character earlier on the line would otherwise shift the splice into
-		// the middle of an identifier and emit a mangled type
-		final var charColumn = LineText.charIndexOfColumn(line, column);
 		// a column that no longer names a position on this line (a sibling fixer shifted the
-		// line earlier in the pass) cannot identify the reported violation, and the -1 LineText
-		// returns for it would throw inside the scans below
+		// line earlier in the pass) cannot identify the reported violation
 		if (charColumn < 0 || charColumn >= line.length())
 			return new SkipResult(SkipMessages.PREFER_VAR_SKIP_STALE_COLUMN);
+		final var column = LineText.columnOfCharIndex(line, charColumn);
 
 		// one mask per fix, threaded into every helper: the per-line variant seeds
 		// LexerState.NONE, which misreads a line continuing a text block
-		final var maskedLines = JavaLineScanner.maskAll(lines);
+		final var maskedLines = FixerAst.maskAll(lines);
 		final var maskedLine = maskedLines.get(lineIndex);
 
 		// only an explicit false refuses, so an unparseable buffer still runs
@@ -531,6 +534,12 @@ class PreferVarFixer implements CheckstyleFixer {
 		);
 		if (Boolean.TRUE.equals(multiVar))
 			return new SkipResult(SkipMessages.PREFER_VAR_SKIP);
+
+		// a "must" rested on the check's type decision, so it is re-read on the current text
+		if (FixContext.getViolationSeverity() == SeverityLevel.ERROR && Boolean.TRUE.equals(FixerAst.withAst(
+				lines, root -> PreferVarCheck.primitiveTypeUnpinnedAt(root, lineIndex, column)
+		)))
+			return new SkipResult(SkipMessages.PREFER_VAR_SKIP_TYPE_UNPINNED);
 
 		final var spliceIntoDiamonds = !Boolean.FALSE.equals(FixerAst.withAst(
 				lines, root -> PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, lineIndex, column)

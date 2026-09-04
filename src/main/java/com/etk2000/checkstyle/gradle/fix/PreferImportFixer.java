@@ -2,7 +2,6 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import static com.etk2000.checkstyle.gradle.fix.FqnResolver.stripCommentsAndBom;
 
-import com.etk2000.checkstyle.LineText;
 import com.etk2000.checkstyle.PreferImportCheck;
 import com.etk2000.checkstyle.ReflectionUtil;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
@@ -82,10 +81,8 @@ final class PreferImportFixer implements CheckstyleFixer {
 
 	@CheckReturnValue
 	@Nullable
-	private static int[] findQualifiedName(@Nonnull String line, int fromColumn) {
-		// the reported column counts code points; used raw it starts the scan early on
-		// a line with a supplementary character and can latch onto an earlier dotted run
-		var i = LineText.charIndexOfColumn(line, Math.clamp(fromColumn, 0, line.codePointCount(0, line.length())));
+	private static int[] findQualifiedName(@Nonnull String line, int from) {
+		var i = Math.clamp(from, 0, line.length());
 		// the check reports the column at the dotted run's first token for a
 		// plain type, but at a preceding keyword/operator (`new`, `@`) for
 		// others; if it lands inside a dotted run, rewind to that run's start

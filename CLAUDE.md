@@ -4,7 +4,7 @@
 
 - All classes must have a thread annotation (`@MainThread`, `@AnyThread`, etc.)
 - All non-primitive fields and parameters must be annotated with `@NonNull`/`@Nullable`, except
-  final fields initialized inline (at definition) — those don't need `@NonNull`. Final fields set in
+  final fields initialized inline (at definition), which don't need `@NonNull`. Final fields set in
   constructors DO need it
 - Always add `@CheckResult` on methods that return a value without side effects
 - Always add `@Override` on overriding methods, including explicitly declared record accessors
@@ -31,7 +31,7 @@
   multiple sub-packages, place it in the shared parent package with `public` visibility instead of
   duplicating it
 - Consolidate similar classes into one (e.g. via overloaded constructors, generics, or extra
-  parameters) rather than keeping near-duplicates — same principle as consolidating correlated
+  parameters) rather than keeping near-duplicates, the same principle as consolidating correlated
   constants across classes. This applies to inner classes too: when multiple classes share the same
   inner class pattern, extract a parameterized standalone class
 - `var` whenever possible, especially in for-each and try-with-resource. With `var`, omit `<Object>`
@@ -64,11 +64,19 @@
    applies within each category (primitive arrays stay with primitives, reference arrays stay
    with reference types).
    Visibility (public/private) does NOT affect ordering.
-3. Multiple fields of the same type on a single line if not setting a value, sorted alphabetically
-   by field name
+3. Multiple fields of the same type and modifiers on a single line, sorted alphabetically by field
+   name (initialized or not). Annotations must match too. The fields don't need to be adjacent, but
+   a merge never crosses the `final` split in item 1 (finals with inline values stay apart from
+   finals without) or a dependency (item 4). A Javadoc (`/** */` or `///`) keeps its field apart.
+   Only short fields merge: no value, or name + value (as written, comments included) at most 30
+   characters on one line. A field with a longer or multi-line value keeps its own declaration.
+   When a merged declaration exceeds the line length, it wraps after a comma, never inside
+   `name = value`. Constants (a field with a value written `static final`, and any field of an
+   interface or annotation type) are exempt: on their own lines or merged by hand, both are fine,
+   and they are never merged automatically. A multi-name declaration sorts among the other fields by its first name
 4. Exception: when a field's value depends on another field, keep the dependency order instead of
    alphabetical. This applies to all fields (static finals, instance fields, locals, etc.).
-   Example: `NOW` before `FUTURE = NOW + ...` before `PAST = NOW - ...` — `FUTURE` and `PAST`
+   Example: `NOW` before `FUTURE = NOW + ...` before `PAST = NOW - ...`. `FUTURE` and `PAST`
    depend on `NOW`, so `NOW` must come first despite alphabetical order
 
 ## Method Sorting
@@ -89,7 +97,7 @@
 - Never double blank lines
 - Blank line separating the groups in class structure and between functions
 - No braces around single-line ifs/whiles/fors/do-whiles, but if the body spans multiple lines (even
-  if it's a single expression), use braces. Each level is evaluated independently — only the levels
+  if it's a single expression), use braces. Each level is evaluated independently: only the levels
   whose own body is multi-line need braces. Example:
   ```java
   for (...) {
@@ -179,9 +187,19 @@
   `getString` is only recognized with a known Context receiver (parameter typed as `Context`,
   variable assigned from `requireContext()`/`getContext()`/`requireActivity()`/`getActivity()`, or
   calling directly on one of those)
-- No empty switch statements, if bodies, or else bodies. Remove them, but preserve any side effects
-  in the condition/expression. Example: `if (++i < 5);` becomes `++i;`,
-  `switch (a.mutate()) {}` becomes `a.mutate();`
+- No empty switch statements, if bodies, else bodies, loop bodies, or stray `;` statements. Remove
+  them, but preserve any side effects in the condition/expression. Example: `if (++i < 5);` becomes
+  `++i;`, `switch (a.mutate()) {}` becomes `a.mutate();`
+  - Exception: a clause body written as a bare `;` is fine when a comment sits on the semicolon's
+    own line, because the `;` is load-bearing (the clause cannot be written without it) and the
+    comment is what marks the no-op deliberate. Applies to `if`, `else`, `while`, `for` and `do`:
+    `if (x > 0)` / newline / tab / `; // handled by the caller`. A block comment on that line
+    (`; /* handled by the caller */`) counts too; a comment on the line *above* does not
+  - The exception does not exist for `{ }`: `;` plus a comment is the sanctioned form, so an empty
+    braced body is a violation commented or not. It does not exist for a `switch`, a `static`
+    initializer or an instance initializer either, since none of them has a `;` spelling
+  - It also does not apply to a stray `;` (one that is not a required clause body). That semicolon
+    is not needed at all, so it goes and any comment on its line stays
 - Early returns and guard clauses preferred over deep nesting
 
 ## Naming & Comments
@@ -218,7 +236,12 @@
 - Always think about weird input or edge cases
 - Tests should cover all such cases
 - Check `docs/` for project-specific testing guides. If a `docs/testing.md` exists, read it before
-  writing any code and follow it as a driving process, not a post-hoc audit
+  writing any code and follow it as a driving process, not a post-hoc audit. Use `docs/README.md`
+  (the index) to find the right doc instead of globbing and reading blind
+- Never Read a whole fixture file to inspect a case. `tools/slice show <topic> <case>` prints the
+  in/out/fixed versions with line ranges, `tools/slice list <topic>` inventories a topic, and
+  `tools/slice find <pattern>` searches case names across all topics. Full Reads are for when you
+  genuinely need the whole file (e.g. reordering cases)
 - Before writing code: list every input category, plan clean/violation/boundary tests for each, and
   write the coverage matrix. Every cell must be filled before declaring done
 - While writing code: test each branch immediately after writing it, not after finishing all code

@@ -24,7 +24,7 @@ class InputControlFlowBracesBraceOnOwnLineDoBlockCommentBlankLineBeforeBraceSlic
 // === end ===
 
 // === case: brace_on_own_line_do_body_on_brace_line ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineDoBodyOnBraceLineSliceViolation {
 	void m(int x) {
 		do
@@ -54,7 +54,7 @@ class InputControlFlowBracesBraceOnOwnLineDoCommentBeforeBraceSliceViolation {
 // === end ===
 
 // === case: brace_on_own_line_do_comment_on_brace_line ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineDoCommentOnBraceLineSliceViolation {
 	void m(int x) {
 		do
@@ -105,7 +105,7 @@ class InputControlFlowBracesBraceOnOwnLineDoWithCommentOnDoSliceViolation {
 // === end ===
 
 // === case: brace_on_own_line_do_with_comment_on_do_and_body ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineDoWithCommentOnDoAndBodySliceViolation {
 	void m(int x) {
 		do // note
@@ -118,7 +118,7 @@ class InputControlFlowBracesBraceOnOwnLineDoWithCommentOnDoAndBodySliceViolation
 // === end ===
 
 // === case: brace_on_own_line_do_with_comment_on_do_and_brace ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineDoWithCommentOnDoAndBraceSliceViolation {
 	void m(int x) {
 		do // note
@@ -170,7 +170,7 @@ class InputControlFlowBracesBraceOnOwnLineIfSliceViolation {
 // === end ===
 
 // === case: brace_on_own_line_if_close_brace_after_text_block ===
-// skip-reason: the block does not end where the body does
+// skip-reason: cannot reshape the body: the block does not end where the body does
 class InputControlFlowBracesBraceOnOwnLineIfCloseBraceAfterTextBlockSliceViolation {
 	void m(int x) {
 		var s = "";
@@ -194,7 +194,7 @@ class InputControlFlowBracesBraceOnOwnLineIfCommentBeforeBraceSliceViolation {
 // === end ===
 
 // === case: brace_on_own_line_if_comment_before_close_brace ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineIfCommentBeforeCloseBraceSliceViolation {
 	void m(int x) {
 		if (x > 0)
@@ -206,7 +206,7 @@ class InputControlFlowBracesBraceOnOwnLineIfCommentBeforeCloseBraceSliceViolatio
 // === end ===
 
 // === case: brace_on_own_line_if_comment_on_brace_line ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineIfCommentOnBraceLineSliceViolation {
 	void m(int x) {
 		if (x > 0)
@@ -240,7 +240,7 @@ class InputControlFlowBracesBraceOnOwnLineWhileSliceViolation {
 // === end ===
 
 // === case: brace_on_own_line_with_block_comment_on_brace ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineWithBlockCommentOnBraceSliceViolation {
 	void m(int x) {
 		if (x > 0)
@@ -262,7 +262,7 @@ class InputControlFlowBracesBracedBodyBlockCommentBeforeWhileSliceViolation {
 // === end ===
 
 // === case: braced_body_block_comment_opens_on_close_brace_line ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesBracedBodyBlockCommentOpensOnCloseBraceLineSliceViolation {
 	void m(int x) {
 		do {
@@ -275,7 +275,7 @@ class InputControlFlowBracesBracedBodyBlockCommentOpensOnCloseBraceLineSliceViol
 // === end ===
 
 // === case: braced_body_block_comment_opens_on_do_brace_line ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesBracedBodyBlockCommentOpensOnDoBraceLineSliceViolation {
 	void m(int x) {
 		do { /* multi
@@ -286,7 +286,7 @@ class InputControlFlowBracesBracedBodyBlockCommentOpensOnDoBraceLineSliceViolati
 // === end ===
 
 // === case: braced_body_comment_before_close_brace ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBracedBodyCommentBeforeCloseBraceSliceViolation {
 	void m(int x) {
 		do {
@@ -324,7 +324,7 @@ class InputControlFlowBracesBracedBodyNoSpaceAfterDoSliceViolation {
 // === end ===
 
 // === case: braced_body_on_open_brace_line ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBracedBodyOnOpenBraceLineSliceViolation {
 	void m(int x) {
 		if (x > 0) { --x;
@@ -1090,7 +1090,7 @@ class InputControlFlowBracesMissingBracesIfForBodyWithOuterElseSliceViolation {
 // === end ===
 
 // === case: missing_braces_if_keyword_line_unterminated_block_comment ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesMissingBracesIfKeywordLineUnterminatedBlockCommentSliceViolation {
 	void m(int x) {
 		if (x > 0) /* multi
@@ -1102,7 +1102,7 @@ class InputControlFlowBracesMissingBracesIfKeywordLineUnterminatedBlockCommentSl
 // === end ===
 
 // === case: missing_braces_if_with_block_comment_after_body_terminator ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesMissingBracesIfWithBlockCommentAfterBodyTerminatorSliceViolation {
 	void m(int x) {
 		if (x > 0)
@@ -1647,7 +1647,7 @@ class InputControlFlowBracesMissingBracesWhileWithSupplementaryLabelSliceViolati
 // === end ===
 
 // === case: multiline_header_missing_braces ===
-// skip-reason: control-flow header spans lines
+// skip-reason: cannot reshape the body: the control flow header spans multiple lines
 class InputControlFlowBracesMultilineHeaderMissingBracesSliceViolation {
 	void m(boolean a, boolean b, int x) {
 		if (a
@@ -1659,7 +1659,7 @@ class InputControlFlowBracesMultilineHeaderMissingBracesSliceViolation {
 // === end ===
 
 // === case: multiline_header_unnecessary_braces ===
-// skip-reason: control-flow header spans lines
+// skip-reason: cannot reshape the body: the control flow header spans multiple lines
 class InputControlFlowBracesMultilineHeaderUnnecessaryBracesSliceViolation {
 	void m(boolean a, boolean b) {
 		if (a
@@ -1717,7 +1717,7 @@ class InputControlFlowBracesNonDoWhileOneLinersSliceViolation {
 // === end ===
 
 // === case: on_do_line_block_comment_opens ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesOnDoLineBlockCommentOpensSliceViolation {
 	void m(int x) {
 		do /* multi
@@ -1773,7 +1773,7 @@ class InputControlFlowBracesOnDoLineBodyCallSupplementaryBeforeDoWordSliceViolat
 // === end ===
 
 // === case: on_do_line_body_runs_onto_while_line ===
-// skip-reason: do-while body runs onto the line its closing while shares
+// skip-reason: cannot reshape the do-while body: it runs onto the line its closing while shares
 // imports: java.util.List
 class InputControlFlowBracesOnDoLineBodyRunsOntoWhileLineSliceViolation {
 	void m(List<Integer> list) {
@@ -1784,7 +1784,7 @@ class InputControlFlowBracesOnDoLineBodyRunsOntoWhileLineSliceViolation {
 // === end ===
 
 // === case: on_do_line_body_spans_lines ===
-// skip-reason: do-while body does not end in a semicolon
+// skip-reason: cannot reshape the do-while body: it does not end in a semicolon
 class InputControlFlowBracesOnDoLineBodySpansLinesSliceViolation {
 	void m(int x) {
 		do x = x
@@ -1838,7 +1838,7 @@ class InputControlFlowBracesOnDoLineNestedDoWhileTerminatorSliceViolation {
 // === end ===
 
 // === case: on_do_line_preceded_by_sibling_do_while ===
-// skip-reason: do-while shares its line with another do-while
+// skip-reason: cannot reshape the do-while: it shares its line with another do-while
 class InputControlFlowBracesOnDoLinePrecededBySiblingDoWhileSliceViolation {
 	void m(int x, int y) {
 		do; while (x > 0); do --y; while (y > 0);
@@ -2151,7 +2151,7 @@ class InputControlFlowBracesOneLinerMultiLineBodyThenStatementSliceViolation {
 // === end ===
 
 // === case: one_liner_multi_line_body_unterminated_block_comment ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesOneLinerMultiLineBodyUnterminatedBlockCommentSliceViolation {
 	void m(int x) {
 		if (x > 0) x = x
@@ -2369,7 +2369,7 @@ class InputControlFlowBracesOwnLineStatementWithTrailingCommentSliceViolation {
 // === end ===
 
 // === case: own_line_while_on_block_comment_close_line ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesOwnLineWhileOnBlockCommentCloseLineSliceViolation {
 	void m(int x) {
 		do
@@ -2389,7 +2389,7 @@ class InputControlFlowBracesOwnLineWithCommentOnDoSliceViolation {
 // === end ===
 
 // === case: text_block_body_refused ===
-// skip-reason: do-while body contains a text block the fixer cannot reformat
+// skip-reason: cannot reshape the do-while body: it contains a text block
 class InputControlFlowTextBlockBodySliceViolation {
 	void m(String s) {
 		do s = """
@@ -2434,7 +2434,7 @@ class InputControlFlowBracesTierSimpleBodyOnOwnLineMethodCallSliceViolation {
 // === end ===
 
 // === case: unnecessary_braces_close_brace_after_text_block ===
-// skip-reason: the block does not end where the body does
+// skip-reason: cannot reshape the body: the block does not end where the body does
 class InputControlFlowBracesUnnecessaryBracesCloseBraceAfterTextBlockSliceViolation {
 	void m(int x) {
 		var s = "";
@@ -2447,7 +2447,7 @@ class InputControlFlowBracesUnnecessaryBracesCloseBraceAfterTextBlockSliceViolat
 // === end ===
 
 // === case: unnecessary_braces_close_brace_in_block_comment ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesUnnecessaryBracesCloseBraceInBlockCommentSliceViolation {
 	void m(int x) {
 		if (x > 0) {
@@ -2458,7 +2458,7 @@ class InputControlFlowBracesUnnecessaryBracesCloseBraceInBlockCommentSliceViolat
 // === end ===
 
 // === case: unnecessary_braces_comment_before_close_brace ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesUnnecessaryBracesCommentBeforeCloseBraceSliceViolation {
 	void m(int x) {
 		if (x > 0) {
@@ -2484,6 +2484,96 @@ class InputControlFlowBracesUnnecessaryBracesElseSliceViolation {
 			++x;
 		else
 			--x;
+	}
+}
+// === end ===
+
+// === case: unnecessary_braces_else_rebind_boundary_no_dangling_if ===
+class InputControlFlowBracesUnnecessaryBracesElseRebindBoundaryNoDanglingIfSliceViolation {
+	void m(boolean a) {
+		if (a)
+			x();
+		else
+			y();
+	}
+
+	void x() {
+	}
+
+	void y() {
+	}
+}
+// === end ===
+
+// === case: unnecessary_braces_else_rebind_boundary_no_enclosing_else ===
+class InputControlFlowBracesUnnecessaryBracesElseRebindBoundaryNoEnclosingElseSliceViolation {
+	boolean advance() {
+		return true;
+	}
+
+	void m(int x, boolean a) {
+		if (a)
+			if (x > 0 && advance());
+	}
+}
+// === end ===
+
+// === case: unnecessary_braces_else_rebind_dangling_if ===
+// skip-reason: cannot remove the braces: a following else would bind to an if inside them
+class InputControlFlowBracesUnnecessaryBracesElseRebindDanglingIfSliceViolation {
+	boolean advance() {
+		return true;
+	}
+
+	void m(int x, boolean a) {
+		if (a) {
+			if (x > 0 && advance());
+		}
+		else
+			y();
+	}
+
+	void y() {
+	}
+}
+// === end ===
+
+// === case: unnecessary_braces_else_rebind_labeled_statement ===
+// skip-reason: cannot remove the braces: a following else would bind to an if inside them
+class InputControlFlowBracesUnnecessaryBracesElseRebindLabeledStatementSliceViolation {
+	boolean advance() {
+		return true;
+	}
+
+	void m(int x, boolean a) {
+		if (a) {
+			skip: if (x > 0 && advance());
+		}
+		else
+			y();
+	}
+
+	void y() {
+	}
+}
+// === end ===
+
+// === case: unnecessary_braces_else_rebind_through_while ===
+class InputControlFlowBracesUnnecessaryBracesElseRebindThroughWhileSliceViolation {
+	boolean advance() {
+		return true;
+	}
+
+	void m(int x, boolean a, boolean c) {
+		if (a) {
+			while (c)
+				if (x > 0 && advance());
+		}
+		else
+			y();
+	}
+
+	void y() {
 	}
 }
 // === end ===
@@ -2607,7 +2697,7 @@ class InputControlFlowBracesUnnecessaryBracesWhileSliceViolation {
 // === end ===
 
 // === case: unnecessary_braces_with_block_comment_on_brace ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesUnnecessaryBracesWithBlockCommentOnBraceSliceViolation {
 	void m(int x) {
 		if (x > 0) { /* guard */

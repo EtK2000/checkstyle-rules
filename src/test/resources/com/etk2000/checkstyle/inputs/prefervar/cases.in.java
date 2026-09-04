@@ -1,5 +1,71 @@
 package com.etk2000.checkstyle.inputs.prefervar;
 
+// === case: all_object_arguments_drop_across_a_block_comment ===
+// imports: java.util.ArrayList
+class InputPreferVarAllObjectDropAcrossBlockCommentSliceViolation {
+	void m() {
+		final ArrayList<Object> items = new ArrayList<> /* keep // violation: Local variable must use 'var' instead of an explicit type.
+				*/ ();
+		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: all_object_arguments_drop_across_a_comment_inside_the_parens ===
+// imports: java.util.ArrayList
+class InputPreferVarCommentInsideParensSliceViolation {
+	void m() {
+		final ArrayList<Object> items = new ArrayList<>( /* keep */ ); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: all_object_arguments_drop_across_a_line_break ===
+// imports: java.util.ArrayList
+class InputPreferVarAllObjectDropAcrossLineBreakSliceViolation {
+	void m() {
+		final ArrayList<Object> items = new ArrayList<> // violation: Local variable must use 'var' instead of an explicit type.
+				();
+		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: all_object_arguments_drop_across_a_line_comment ===
+// imports: java.util.ArrayList
+class InputPreferVarAllObjectDropAcrossLineCommentSliceViolation {
+	void m() {
+		final ArrayList<Object> items = new ArrayList<> // keep // violation: Local variable must use 'var' instead of an explicit type.
+				();
+		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: all_object_arguments_drop_across_a_paren_line_break ===
+// imports: java.util.ArrayList
+class InputPreferVarParenLineBreakSliceViolation {
+	void m() {
+		final ArrayList<Object> items = new ArrayList<> // violation: Local variable must use 'var' instead of an explicit type.
+				(
+				);
+		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: all_object_arguments_survive_an_argument_on_the_next_line ===
+// imports: java.util.ArrayList
+class InputPreferVarAllObjectArgumentOnNextLineSliceViolation {
+	void m() {
+		final ArrayList<Object> items = new ArrayList<> // violation: Local variable must use 'var' instead of an explicit type.
+				(4);
+		System.out.println(items);
+	}
+}
+// === end ===
+
 // === case: all_primitive_same_type_literals ===
 class InputPreferVarLiteralMismatchAllPrimitiveSameTypeLiteralsSliceViolation {
 	void m() {
@@ -31,7 +97,7 @@ class InputPreferVarAnnotatedLocalVariableViolation {
 class InputPreferVarAnnotationMultipleSliceViolation {
 	void m() {
 		final var l = List.of("a", "b");
-		for (@Deprecated @Nonnull String i : l) // violation: For-each loop must use 'var' instead of an explicit type.
+		for (@Deprecated @Nonnull String i : l) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(i);
 	}
 }
@@ -43,7 +109,7 @@ class InputPreferVarAnnotationMultipleSliceViolation {
 class InputPreferVarAnnotationPlusFinalSliceViolation {
 	void m() {
 		final var l = List.of("a", "b");
-		for (@Nonnull final String i : l) // violation: For-each loop must use 'var' instead of an explicit type.
+		for (@Nonnull final String i : l) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(i);
 	}
 }
@@ -69,7 +135,7 @@ class InputPreferVarAnnotationWithArgsSliceViolation {
 // imports: java.util.Comparator
 class InputPreferVarDiamondAnonymousClassWithObjectTypeArgSliceViolation {
 	void m() {
-		final var cmp = new Comparator<Object>() { // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		final var cmp = new Comparator<Object>() { // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 			@Override
 			public int compare(Object a, Object b) {
 				return 0;
@@ -87,15 +153,46 @@ class InputPreferVarArrayTypeSliceViolation {
 }
 // === end ===
 
-// === case: auto_detected_generic_var ===
-// skip-reason: declaration already uses 'var'
+// === case: auto_detected_generic_var_warns ===
 class InputPreferVarGenericReturnAutoDetectedGenericVarSliceViolation {
 	static <T> T cast(Object obj) {
 		return (T) obj;
 	}
 
 	void m() {
-		final var s = cast("hello"); // violation (warning): Using 'var' with 'cast' loses generic type information, consider using an explicit type.
+		final var s = cast("hello"); // violation (warning): Consider using an explicit type ('var' with 'cast' loses generic type information).
+	}
+}
+// === end ===
+
+// === case: bare_call_resolution_survives_cyclic_inheritance ===
+// imports: java.util.List
+class InputPreferVarCycleBareCallSliceViolation extends InputPreferVarCycleBareCallPartner {
+	void m() {
+		final List<String> items = build(); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(items);
+	}
+}
+
+class InputPreferVarCycleBareCallPartner extends InputPreferVarCycleBareCallSliceViolation {
+	List<String> build() {
+		return List.of();
+	}
+}
+// === end ===
+
+// === case: boolean_bitwise_operator_warns ===
+class InputPreferVarBooleanBitwiseOperatorSliceViolation {
+	void m(boolean flag, int x, int y) {
+		final boolean b = flag & x < y; // violation (warning): Local variable should use 'var' instead of an explicit type.
+	}
+}
+// === end ===
+
+// === case: boolean_logical_operators ===
+class InputPreferVarBooleanLogicalOperatorsSliceViolation {
+	void m(boolean flag, Object o, int x, int y) {
+		final boolean b = !flag && (o instanceof String || x < y); // violation: Local variable must use 'var' instead of an explicit type.
 	}
 }
 // === end ===
@@ -234,8 +331,7 @@ class InputPreferVarLiteralMismatchCastToMatchingTypeSliceViolation {
 }
 // === end ===
 
-// === case: chained_generic_return ===
-// skip-reason: declaration already uses 'var'
+// === case: chained_generic_return_warns ===
 // imports: com.etk2000.checkstyle.testhelpers.GenericReturnHelper
 class InputPreferVarChainViolation {
 	void chainedGenericReturnExplicitType() {
@@ -243,7 +339,7 @@ class InputPreferVarChainViolation {
 	}
 
 	void chainedGenericReturnVar() {
-		final var s = GenericReturnHelper.create().find(1); // violation (warning): Using 'var' with 'find' loses generic type information, consider using an explicit type.
+		final var s = GenericReturnHelper.create().find(1); // violation (warning): Consider using an explicit type ('var' with 'find' loses generic type information).
 	}
 }
 // === end ===
@@ -308,7 +404,7 @@ class InputPreferVarCommaInStringNotMultiVarSliceViolation {
 // === end ===
 
 // === case: comment_between_name_and_assignment_unterminated ===
-// skip-reason: reported position is not a declaration this fixer recognises
+// skip-reason: cannot rewrite the declaration: the reported position is not a declaration this fixer recognizes
 // imports: java.util.List
 class InputPreferVarCommentBetweenNameAndAssignmentUnterminatedSliceViolation {
 	void m(List<String> x) {
@@ -329,7 +425,7 @@ class InputPreferVarCommentBetweenTypeAndNameSliceViolation {
 // === end ===
 
 // === case: comment_between_type_and_name_unterminated ===
-// skip-reason: reported position is not a declaration this fixer recognises
+// skip-reason: cannot rewrite the declaration: the reported position is not a declaration this fixer recognizes
 // imports: java.util.List
 class InputPreferVarCommentBetweenTypeAndNameUnterminatedSliceViolation {
 	void m(List<String> x) {
@@ -352,7 +448,7 @@ class InputPreferVarCommentEndingInOpenParenAboveDeclarationSliceViolation {
 }
 // === end ===
 
-// === case: conditional_initializer_reassigned_beyond_the_arm_type ===
+// === case: conditional_initializer_reassigned_beyond_the_arm_type_warns ===
 // imports: java.util.ArrayList
 // imports: java.util.LinkedList
 // imports: java.util.List
@@ -384,7 +480,7 @@ class InputPreferVarConditionalInitializerWithANonNewArmAndNoTypeArgumentsSliceV
 }
 // === end ===
 
-// === case: conditional_initializer_with_differing_arms_reassigned ===
+// === case: conditional_initializer_with_differing_arms_reassigned_warns ===
 // imports: java.util.ArrayList
 // imports: java.util.LinkedList
 // imports: java.util.List
@@ -450,7 +546,7 @@ class InputPreferVarDiamondAnnotationEndingInVarSliceViolation {
 	@interface Autovar {}
 
 	void m() {
-		@Autovar var x = new ArrayList<Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		@Autovar var x = new ArrayList<Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 	}
 }
 // === end ===
@@ -459,7 +555,7 @@ class InputPreferVarDiamondAnnotationEndingInVarSliceViolation {
 // imports: java.util.ArrayList
 class InputPreferVarDiamondAnnotationEqualSignSliceViolation {
 	void m() {
-		@SuppressWarnings(value = "unchecked") var x = new ArrayList<Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		@SuppressWarnings(value = "unchecked") var x = new ArrayList<Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 	}
 }
 // === end ===
@@ -470,7 +566,7 @@ class InputPreferVarDiamondAnnotationEqualSignSliceViolation {
 class InputPreferVarDiamondAnnotationOnPreviousLineSliceViolation {
 	void m() {
 		@Nonnull
-		final var map = new HashMap<Object, Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		final var map = new HashMap<Object, Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 	}
 }
 // === end ===
@@ -491,7 +587,7 @@ class InputPreferVarDiamondCarriesDeclaredTypeArgumentsSliceViolation {
 // === end ===
 
 // === case: diamond_in_nested_call_only ===
-// skip-reason: declared type arguments belong to a diamond this fixer cannot reach
+// skip-reason: cannot use a diamond: the declared type arguments belong to a diamond this fixer cannot reach
 // imports: java.util.ArrayList
 // imports: java.util.List
 class InputPreferVarDiamondInNestedCallOnlySliceViolation {
@@ -510,7 +606,7 @@ class InputPreferVarDiamondInNestedCallOnlySliceViolation {
 // imports: java.util.ArrayList
 class InputPreferVarDiamondNewInCommentSliceViolation {
 	void m() {
-		final var values = /* new ArrayList<Object>() */ new ArrayList<Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		final var values = /* new ArrayList<Object>() */ new ArrayList<Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 		System.out.println(values);
 	}
 }
@@ -533,7 +629,7 @@ class InputPreferVarDiamondOnChainReceiverSliceViolation {
 // === end ===
 
 // === case: diamond_on_continuation_line ===
-// skip-reason: declared type arguments belong to a diamond this fixer cannot reach
+// skip-reason: cannot use a diamond: the declared type arguments belong to a diamond this fixer cannot reach
 // imports: java.util.HashMap
 // imports: java.util.Map
 class InputPreferVarDiamondOnContinuationLineSliceViolation {
@@ -546,7 +642,7 @@ class InputPreferVarDiamondOnContinuationLineSliceViolation {
 // === end ===
 
 // === case: diamond_on_continuation_line_type_wrapped ===
-// skip-reason: declared type arguments belong to a diamond this fixer cannot reach
+// skip-reason: cannot use a diamond: the declared type arguments belong to a diamond this fixer cannot reach
 // imports: java.util.HashMap
 // imports: java.util.Map
 class InputPreferVarDiamondOnContinuationLineTypeWrappedSliceViolation {
@@ -563,7 +659,7 @@ class InputPreferVarDiamondOnContinuationLineTypeWrappedSliceViolation {
 // imports: java.util.ArrayList
 class InputPreferVarDiamondSingleObjectArgWithWhitespaceSliceViolation {
 	void m() {
-		var a = new ArrayList< Object >(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		var a = new ArrayList< Object >(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 	}
 }
 // === end ===
@@ -573,7 +669,7 @@ class InputPreferVarDiamondSupplementaryTypeNameSliceViolation {
 	static class Fo𝛼o<T> {}
 
 	void m() {
-		final var x = new Fo𝛼o<Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		final var x = new Fo𝛼o<Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 		System.out.println(x);
 	}
 }
@@ -640,7 +736,7 @@ class InputPreferVarDiamondTernaryNestedTrueArmSliceViolation {
 // === end ===
 
 // === case: diamond_ternary_second_arm_below ===
-// skip-reason: declared type arguments belong to a diamond this fixer cannot reach
+// skip-reason: cannot use a diamond: the declared type arguments belong to a diamond this fixer cannot reach
 // imports: java.util.ArrayList
 // imports: java.util.LinkedList
 // imports: java.util.List
@@ -658,7 +754,7 @@ class InputPreferVarDiamondThreeObjectArgsSliceViolation {
 	static class Triple<A, B, C> {}
 
 	void m() {
-		var t = new Triple<Object, Object, Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		var t = new Triple<Object, Object, Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 	}
 }
 // === end ===
@@ -682,7 +778,7 @@ class InputPreferVarDiamondTopLevelAndNestedSliceViolation {
 // imports: java.util.ArrayList
 class InputPreferVarDiamondVarInVariableNameSliceViolation {
 	void m() {
-		var myvar = new ArrayList<Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		var myvar = new ArrayList<Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 	}
 }
 // === end ===
@@ -691,13 +787,12 @@ class InputPreferVarDiamondVarInVariableNameSliceViolation {
 // imports: java.util.LinkedHashSet
 class InputPreferVarDiamondWithFinalSliceViolation {
 	void m() {
-		final var s = new LinkedHashSet<Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		final var s = new LinkedHashSet<Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 	}
 }
 // === end ===
 
-// === case: double_escaped_backslash_not_multi_var ===
-// skip-reason: multi-variable declaration
+// === case: double_escaped_backslash_not_multi_var_warns ===
 class InputPreferVarDoubleEscapedBackslashSliceViolation {
 	void m() {
 		final String x = "\\", y = "z"; // violation (warning): Local variable should use 'var' instead of an explicit type.
@@ -708,7 +803,7 @@ class InputPreferVarDoubleEscapedBackslashSliceViolation {
 // === case: equals_comparison_not_assignment ===
 class InputPreferVarEqualsComparisonNotAssignmentSliceViolation {
 	void m(int x, int y) {
-		final boolean b = x == y; // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final boolean b = x == y; // violation: Local variable must use 'var' instead of an explicit type.
 	}
 }
 // === end ===
@@ -716,7 +811,7 @@ class InputPreferVarEqualsComparisonNotAssignmentSliceViolation {
 // === case: explicit_array_init_annotation_equal_sign ===
 class InputPreferVarExplicitArrayInitAnnotationEqualSignSliceViolation {
 	void m() {
-		@SuppressWarnings(value = "x") String[] arr = new String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		@SuppressWarnings(value = "x") String[] arr = new String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -724,7 +819,7 @@ class InputPreferVarExplicitArrayInitAnnotationEqualSignSliceViolation {
 // === case: explicit_array_init_annotation_equal_sign_var ===
 class InputPreferVarExplicitArrayInitAnnotationEqualSignVarSliceViolation {
 	void m() {
-		@SuppressWarnings(value = "x") var arr = new String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		@SuppressWarnings(value = "x") var arr = new String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -741,7 +836,7 @@ class InputPreferVarExplicitArrayInitAnnotationNestedEqualSignSliceViolation {
 	}
 
 	void m() {
-		@Anno(a = "x", b = @Inner(c = "y")) String[] arr = new String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		@Anno(a = "x", b = @Inner(c = "y")) String[] arr = new String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -758,7 +853,7 @@ class InputPreferVarExplicitArrayInitAnnotationNestedEqualSignVarSliceViolation 
 	}
 
 	void m() {
-		@Anno(a = "x", b = @Inner(c = "y")) var arr = new String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		@Anno(a = "x", b = @Inner(c = "y")) var arr = new String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -768,7 +863,7 @@ class InputPreferVarExplicitArrayInitAnnotationNestedEqualSignVarSliceViolation 
 class InputPreferVarExplicitArrayAnnotationOnPreviousLineSliceViolation {
 	void m() {
 		@Nonnull
-		final String[] names = new String[]{"a", "b"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final String[] names = new String[]{"a", "b"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -776,16 +871,16 @@ class InputPreferVarExplicitArrayAnnotationOnPreviousLineSliceViolation {
 // === case: explicit_array_init_annotation_paren_in_string ===
 class InputPreferVarExplicitArrayInitAnnotationParenInStringSliceViolation {
 	void m() {
-		@SuppressWarnings("(") String[] arr = new String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		@SuppressWarnings("(") String[] arr = new String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
 
 // === case: explicit_array_init_brace_in_comment ===
-// skip-reason: explicit array initializer could not be resolved on the reported line
+// skip-reason: cannot rewrite the declaration: the explicit array initializer does not resolve on the reported line
 class InputPreferVarExplicitArrayInitBraceInCommentSliceViolation {
 	void m() {
-		final var values = new String[] /* {"z"} */ {"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final var values = new String[] /* {"z"} */ {"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 		System.out.println(values.length);
 	}
 }
@@ -794,7 +889,7 @@ class InputPreferVarExplicitArrayInitBraceInCommentSliceViolation {
 // === case: explicit_array_init_c_style_name_spelled_var ===
 class InputPreferVarExplicitArrayInitCStyleNameSpelledVarSliceViolation {
 	void m() {
-		String var[] = new String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		String var[] = new String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 		System.out.println(var.length);
 	}
 }
@@ -803,7 +898,7 @@ class InputPreferVarExplicitArrayInitCStyleNameSpelledVarSliceViolation {
 // === case: explicit_array_init_comment_before_name_explicit_type ===
 class InputPreferVarExplicitArrayInitCommentBeforeNameExplicitTypeSliceViolation {
 	void m() {
-		final String[] /* keep */ arr = new String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final String[] /* keep */ arr = new String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 		System.out.println(arr.length);
 	}
 }
@@ -812,7 +907,7 @@ class InputPreferVarExplicitArrayInitCommentBeforeNameExplicitTypeSliceViolation
 // === case: explicit_array_init_comment_before_name_var ===
 class InputPreferVarExplicitArrayInitCommentBeforeNameVarSliceViolation {
 	void m() {
-		final var /* keep */ arr = new String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final var /* keep */ arr = new String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 		System.out.println(arr.length);
 	}
 }
@@ -821,7 +916,7 @@ class InputPreferVarExplicitArrayInitCommentBeforeNameVarSliceViolation {
 // === case: explicit_array_init_comment_equals_before_assignment ===
 class InputPreferVarExplicitArrayInitCommentEqualsBeforeAssignmentSliceViolation {
 	void m() {
-		String[] /* = */ arr = new String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		String[] /* = */ arr = new String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -829,7 +924,7 @@ class InputPreferVarExplicitArrayInitCommentEqualsBeforeAssignmentSliceViolation
 // === case: explicit_array_init_empty_typed ===
 class InputPreferVarExplicitArrayInitEmptyTypedSliceViolation {
 	void m() {
-		final String[] a = new String[]{}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final String[] a = new String[]{}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -837,7 +932,7 @@ class InputPreferVarExplicitArrayInitEmptyTypedSliceViolation {
 // === case: explicit_array_init_empty_var ===
 class InputPreferVarExplicitArrayInitEmptyVarSliceViolation {
 	void m() {
-		final var a = new String[]{}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final var a = new String[]{}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -846,7 +941,7 @@ class InputPreferVarExplicitArrayInitEmptyVarSliceViolation {
 // imports: java.util.List
 class InputPreferVarExplicitArrayInitGenericDeclaredTypeSliceViolation {
 	void m(List<String> list) {
-		final List<String>[] arr = new List<String>[]{list}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final List<String>[] arr = new List<String>[]{list}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -856,7 +951,7 @@ class InputPreferVarExplicitArrayInitGenericDeclaredTypeSliceViolation {
 // imports: java.util.Map
 class InputPreferVarExplicitArrayInitGenericDeclaredTypeNestedSliceViolation {
 	void m(Map<String, List<Integer>> map) {
-		final Map<String, List<Integer>>[] arr = new Map<String, List<Integer>>[]{map}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final Map<String, List<Integer>>[] arr = new Map<String, List<Integer>>[]{map}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -865,7 +960,7 @@ class InputPreferVarExplicitArrayInitGenericDeclaredTypeNestedSliceViolation {
 // imports: java.util.List
 class InputPreferVarExplicitArrayInitGenericTypeSliceViolation {
 	void m(List<String> list) {
-		final var a = new List<String>[]{list}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final var a = new List<String>[]{list}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -899,7 +994,7 @@ class InputPreferVarExplicitArrayInitMultiArgMethodCallSliceViolation {
 // === case: explicit_array_init_multi_dim ===
 class InputPreferVarExplicitArrayInitMultiDimSliceViolation {
 	void m() {
-		final int[][] m = new int[][]{{1}}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final int[][] m = new int[][]{{1}}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -907,7 +1002,7 @@ class InputPreferVarExplicitArrayInitMultiDimSliceViolation {
 // === case: explicit_array_init_multi_space ===
 class InputPreferVarExplicitArrayInitMultiSpaceSliceViolation {
 	void m() {
-		final String[] a =   new String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final String[] a =   new String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -915,7 +1010,7 @@ class InputPreferVarExplicitArrayInitMultiSpaceSliceViolation {
 // === case: explicit_array_init_qualified_new_type ===
 class InputPreferVarExplicitArrayInitQualifiedNewTypeSliceViolation {
 	void m() {
-		final var a = new java.lang.String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final var a = new java.lang.String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -923,17 +1018,17 @@ class InputPreferVarExplicitArrayInitQualifiedNewTypeSliceViolation {
 // === case: explicit_array_init_space_before_brace ===
 class InputPreferVarExplicitArrayInitSpaceBeforeBraceSliceViolation {
 	void m() {
-		final String[] values = new String[] {"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final String[] values = new String[] {"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 		System.out.println(values.length);
 	}
 }
 // === end ===
 
 // === case: explicit_array_init_split_across_lines ===
-// skip-reason: explicit array initializer could not be resolved on the reported line
+// skip-reason: cannot rewrite the declaration: the explicit array initializer does not resolve on the reported line
 class InputPreferVarExplicitArrayInitSplitAcrossLinesSliceViolation {
 	void m() {
-		final int[] values = new int[] // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final int[] values = new int[] // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 				{1, 2, 3};
 		System.out.println(values.length);
 	}
@@ -945,7 +1040,7 @@ class InputPreferVarExplicitArrayInitSupplementaryTypeNameSliceViolation {
 	static class Fo𝛼o {}
 
 	void m() {
-		final var a = new Fo𝛼o[]{new Fo𝛼o()}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final var a = new Fo𝛼o[]{new Fo𝛼o()}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 		System.out.println(a.length);
 	}
 }
@@ -954,7 +1049,7 @@ class InputPreferVarExplicitArrayInitSupplementaryTypeNameSliceViolation {
 // === case: explicit_array_init_supplementary_var_name ===
 class InputPreferVarExplicitArrayInitSupplementaryVarNameSliceViolation {
 	void m() {
-		final var 𝛼a = new String[]{"x"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final var 𝛼a = new String[]{"x"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 		System.out.println(𝛼a.length);
 	}
 }
@@ -963,7 +1058,7 @@ class InputPreferVarExplicitArrayInitSupplementaryVarNameSliceViolation {
 // === case: explicit_array_init_ternary ===
 class InputPreferVarExplicitArrayInitTernarySliceViolation {
 	void m(boolean cond) {
-		final int[] a = cond ? new int[]{1} : new int[]{2}; // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final int[] a = cond ? new int[]{1} : new int[]{2}; // violation: Local variable must use 'var' instead of an explicit type.
 	}
 }
 // === end ===
@@ -971,7 +1066,7 @@ class InputPreferVarExplicitArrayInitTernarySliceViolation {
 // === case: explicit_array_init_typed_matching ===
 class InputPreferVarExplicitArrayInitTypedMatchingSliceViolation {
 	void m() {
-		final String[] a = new String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final String[] a = new String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -979,7 +1074,7 @@ class InputPreferVarExplicitArrayInitTypedMatchingSliceViolation {
 // === case: explicit_array_init_var_separated_by_a_comment ===
 class InputPreferVarExplicitArrayInitVarSeparatedByACommentSliceViolation {
 	void m() {
-		final var/* keep */arr = new String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final var/* keep */arr = new String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 		System.out.println(arr.length);
 	}
 }
@@ -988,7 +1083,7 @@ class InputPreferVarExplicitArrayInitVarSeparatedByACommentSliceViolation {
 // === case: explicit_array_init_var_to_primitive ===
 class InputPreferVarExplicitArrayInitVarToPrimitiveSliceViolation {
 	void m() {
-		final var a = new int[]{1, 2}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final var a = new int[]{1, 2}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -996,7 +1091,7 @@ class InputPreferVarExplicitArrayInitVarToPrimitiveSliceViolation {
 // === case: explicit_array_init_var_to_string ===
 class InputPreferVarExplicitArrayInitVarToStringSliceViolation {
 	void m() {
-		final var a = new String[]{"a"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final var a = new String[]{"a"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -1012,7 +1107,7 @@ class InputPreferVarExplicitTypeArgumentsInInitializerSliceViolation {
 }
 // === end ===
 
-// === case: factory_initializer_reassigned_beyond_the_returned_type ===
+// === case: factory_initializer_reassigned_beyond_the_returned_type_warns ===
 class InputPreferVarFactoryInitializerReassignedBeyondTheReturnedTypeSliceViolation {
 	static class Base {
 	}
@@ -1103,7 +1198,7 @@ class InputPreferVarFinalColumnAtFinalSliceViolation {
 class InputPreferVarForEachSliceViolation {
 	void m() {
 		final var list = List.of("a", "b");
-		for (String item : list) // violation: For-each loop must use 'var' instead of an explicit type.
+		for (String item : list) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(item);
 	}
 }
@@ -1115,7 +1210,7 @@ class InputPreferVarForEachSliceViolation {
 class InputPreferVarForEachAnnotatedSliceViolation {
 	void m() {
 		final var list = List.of("a", "b");
-		for (@Nonnull String item : list) // violation: For-each loop must use 'var' instead of an explicit type.
+		for (@Nonnull String item : list) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(item);
 	}
 }
@@ -1129,7 +1224,7 @@ class InputPreferVarForEachAnnotationAndFinalOnPrevLineSliceViolation {
 		final var list = List.of("a", "b");
 		for (
 				@Nonnull final
-				String item : list) // violation: For-each loop must use 'var' instead of an explicit type.
+				String item : list) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(item);
 	}
 }
@@ -1143,7 +1238,7 @@ class InputPreferVarForEachAnnotationAndFinalOnVarLineSliceViolation {
 		final var list = List.of("a", "b");
 		for (
 				@Nonnull
-				final String item : list) // violation: For-each loop must use 'var' instead of an explicit type.
+				final String item : list) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(item);
 	}
 }
@@ -1157,7 +1252,7 @@ class InputPreferVarForEachAnnotationOnPreviousLineSliceViolation {
 		final var list = List.of("a", "b");
 		for (
 				@Nonnull
-				String item : list) // violation: For-each loop must use 'var' instead of an explicit type.
+				String item : list) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(item);
 	}
 }
@@ -1170,7 +1265,7 @@ class InputPreferVarForEachBlankBetweenParenAndDeclSliceViolation {
 		final var list = List.of("a", "b");
 		for (
 
-				String item : list) // violation: For-each loop must use 'var' instead of an explicit type.
+				String item : list) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(item);
 	}
 }
@@ -1184,7 +1279,7 @@ class InputPreferVarForEachBodyAssignsAnArrayOnTheSameLineSliceViolation {
 	}
 
 	void m(List<String> list, String[] a) {
-		for (String s : list) { consume(a = new String[]{"b"}); } // violation: For-each loop must use 'var' instead of an explicit type.
+		for (String s : list) { consume(a = new String[]{"b"}); } // violation: For-each variable must use 'var' instead of an explicit type.
 	}
 }
 // === end ===
@@ -1192,7 +1287,7 @@ class InputPreferVarForEachBodyAssignsAnArrayOnTheSameLineSliceViolation {
 // === case: for_each_boxed_element_type_over_a_matching_array ===
 class InputPreferVarForEachBoxedElementTypeOverAMatchingArraySliceViolation {
 	void m(Integer[] counts) {
-		for (Integer count : counts) // violation: For-each loop must use 'var' instead of an explicit type.
+		for (Integer count : counts) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(count);
 	}
 }
@@ -1203,7 +1298,7 @@ class InputPreferVarForEachBoxedElementTypeOverAMatchingArraySliceViolation {
 class InputPreferVarForEachFinalSliceViolation {
 	void m() {
 		final var l = List.of("a", "b");
-		for (final String i : l) // violation: For-each loop must use 'var' instead of an explicit type.
+		for (final String i : l) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(i);
 	}
 }
@@ -1216,7 +1311,7 @@ class InputPreferVarForEachFinalOnlyPrevLineSliceViolation {
 		final var list = List.of("a", "b");
 		for (
 				final
-				String item : list) // violation: For-each loop must use 'var' instead of an explicit type.
+				String item : list) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(item);
 	}
 }
@@ -1228,7 +1323,7 @@ class InputPreferVarForEachFinalOnlyPrevLineSliceViolation {
 class InputPreferVarForEachGenericTypeSliceViolation {
 	void m() {
 		final var map = Map.of("a", 1);
-		for (Entry<String, Integer> entry : map.entrySet()) // violation: For-each loop must use 'var' instead of an explicit type.
+		for (Entry<String, Integer> entry : map.entrySet()) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(entry);
 	}
 }
@@ -1240,7 +1335,7 @@ class InputPreferVarForEachOpenParenPrevLineSliceViolation {
 	void m() {
 		final var list = List.of("a", "b");
 		for (
-				String item : list) // violation: For-each loop must use 'var' instead of an explicit type.
+				String item : list) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(item);
 	}
 }
@@ -1252,7 +1347,7 @@ class InputPreferVarForEachOpenParenWithTrailingCommentSliceViolation {
 	void m() {
 		final var list = List.of("a", "b");
 		for ( // header
-				String item : list) // violation: For-each loop must use 'var' instead of an explicit type.
+				String item : list) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(item);
 	}
 }
@@ -1262,7 +1357,7 @@ class InputPreferVarForEachOpenParenWithTrailingCommentSliceViolation {
 // imports: java.util.List
 class InputPreferVarForEachPrimitiveArrayElementTypeSliceViolation {
 	void m(List<int[]> intRows) {
-		for (int[] row : intRows) // violation: For-each loop must use 'var' instead of an explicit type.
+		for (int[] row : intRows) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(row.length);
 	}
 }
@@ -1271,7 +1366,7 @@ class InputPreferVarForEachPrimitiveArrayElementTypeSliceViolation {
 // === case: for_each_primitive_element_type_over_an_array ===
 class InputPreferVarForEachPrimitiveElementTypeOverAnArraySliceViolation {
 	void m(int[] sizes) {
-		for (int size : sizes) // violation: For-each loop must use 'var' instead of an explicit type.
+		for (int size : sizes) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(size);
 	}
 }
@@ -1281,7 +1376,7 @@ class InputPreferVarForEachPrimitiveElementTypeOverAnArraySliceViolation {
 // imports: java.util.List
 class InputPreferVarForEachReferenceArrayElementTypeSliceViolation {
 	void m(List<String[]> rows) {
-		for (String[] row : rows) // violation: For-each loop must use 'var' instead of an explicit type.
+		for (String[] row : rows) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(row.length);
 	}
 }
@@ -1296,13 +1391,13 @@ class InputPreferVarForEachTwoAnnotationsPrevLinesSliceViolation {
 		for (
 				@Nonnull
 				@SuppressWarnings("unused")
-				String item : list) // violation: For-each loop must use 'var' instead of an explicit type.
+				String item : list) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(item);
 	}
 }
 // === end ===
 
-// === case: for_init_reassigned_beyond_the_constructed_type ===
+// === case: for_init_reassigned_beyond_the_constructed_type_warns ===
 // imports: java.util.ArrayList
 // imports: java.util.LinkedList
 // imports: java.util.List
@@ -1359,8 +1454,7 @@ class InputPreferVarGenericFactoryWithLambdaArgumentsSliceViolation {
 }
 // === end ===
 
-// === case: generic_return_declared_on_an_enclosing_class ===
-// skip-reason: declaration already uses 'var'
+// === case: generic_return_declared_on_an_enclosing_class_warns ===
 class InputPreferVarGenericReturnDeclaredOnAnEnclosingClassSliceViolation {
 	static <T> T make() {
 		return null;
@@ -1370,7 +1464,7 @@ class InputPreferVarGenericReturnDeclaredOnAnEnclosingClassSliceViolation {
 		final Runnable task = new Runnable() {
 			@Override
 			public void run() {
-				final var value = make(); // violation (warning): Using 'var' with 'make' loses generic type information, consider using an explicit type.
+				final var value = make(); // violation (warning): Consider using an explicit type ('var' with 'make' loses generic type information).
 				System.out.println(value);
 			}
 		};
@@ -1379,8 +1473,7 @@ class InputPreferVarGenericReturnDeclaredOnAnEnclosingClassSliceViolation {
 }
 // === end ===
 
-// === case: generic_return_inherited_from_a_same_file_interface ===
-// skip-reason: declaration already uses 'var'
+// === case: generic_return_inherited_from_a_same_file_interface_warns ===
 interface InputPreferVarGenericReturnInheritedSliceSource {
 	default <T> T make() {
 		return null;
@@ -1389,14 +1482,13 @@ interface InputPreferVarGenericReturnInheritedSliceSource {
 
 class InputPreferVarGenericReturnInheritedFromASameFileInterfaceSliceViolation implements InputPreferVarGenericReturnInheritedSliceSource {
 	void m() {
-		final var value = make(); // violation (warning): Using 'var' with 'make' loses generic type information, consider using an explicit type.
+		final var value = make(); // violation (warning): Consider using an explicit type ('var' with 'make' loses generic type information).
 		System.out.println(value);
 	}
 }
 // === end ===
 
-// === case: generic_return_inherited_from_a_same_file_superclass ===
-// skip-reason: declaration already uses 'var'
+// === case: generic_return_inherited_from_a_same_file_superclass_warns ===
 class InputPreferVarGenericReturnInheritedSliceBase {
 	static <T> T pick() {
 		return null;
@@ -1405,42 +1497,39 @@ class InputPreferVarGenericReturnInheritedSliceBase {
 
 class InputPreferVarGenericReturnInheritedFromASameFileSuperclassSliceViolation extends InputPreferVarGenericReturnInheritedSliceBase {
 	void m() {
-		final var value = pick(); // violation (warning): Using 'var' with 'pick' loses generic type information, consider using an explicit type.
+		final var value = pick(); // violation (warning): Consider using an explicit type ('var' with 'pick' loses generic type information).
 		System.out.println(value);
 	}
 }
 // === end ===
 
-// === case: generic_return_no_parameters ===
-// skip-reason: declaration already uses 'var'
+// === case: generic_return_no_parameters_warns ===
 class InputPreferVarGenericReturnNoParametersSliceViolation {
 	static <T> T make() {
 		return null;
 	}
 
 	void m() {
-		final var value = make(); // violation (warning): Using 'var' with 'make' loses generic type information, consider using an explicit type.
+		final var value = make(); // violation (warning): Consider using an explicit type ('var' with 'make' loses generic type information).
 		System.out.println(value);
 	}
 }
 // === end ===
 
-// === case: generic_return_second_type_parameter ===
-// skip-reason: declaration already uses 'var'
+// === case: generic_return_second_type_parameter_warns ===
 class InputPreferVarGenericReturnSecondTypeParameterSliceViolation {
 	static <K, V> V get(K key) {
 		return null;
 	}
 
 	void m() {
-		final var value = get("a"); // violation (warning): Using 'var' with 'get' loses generic type information, consider using an explicit type.
+		final var value = get("a"); // violation (warning): Consider using an explicit type ('var' with 'get' loses generic type information).
 		System.out.println(value);
 	}
 }
 // === end ===
 
-// === case: generic_var_with_diamond_new ===
-// skip-reason: declaration already uses 'var'
+// === case: generic_var_with_diamond_new_warns ===
 // imports: java.util.ArrayList
 class InputPreferVarGenericVarWithDiamondNewSliceViolation {
 	static <T> T cast(Object obj) {
@@ -1448,14 +1537,13 @@ class InputPreferVarGenericVarWithDiamondNewSliceViolation {
 	}
 
 	void m() {
-		final var value = cast(new ArrayList<>()); // violation (warning): Using 'var' with 'cast' loses generic type information, consider using an explicit type.
+		final var value = cast(new ArrayList<>()); // violation (warning): Consider using an explicit type ('var' with 'cast' loses generic type information).
 		System.out.println(value);
 	}
 }
 // === end ===
 
-// === case: generic_var_with_non_object_new ===
-// skip-reason: declaration already uses 'var'
+// === case: generic_var_with_non_object_new_warns ===
 // imports: java.util.ArrayList
 class InputPreferVarGenericVarWithNonObjectNewSliceViolation {
 	static <T> T cast(Object obj) {
@@ -1463,7 +1551,7 @@ class InputPreferVarGenericVarWithNonObjectNewSliceViolation {
 	}
 
 	void m() {
-		final var value = cast(new ArrayList<String>()); // violation (warning): Using 'var' with 'cast' loses generic type information, consider using an explicit type.
+		final var value = cast(new ArrayList<String>()); // violation (warning): Consider using an explicit type ('var' with 'cast' loses generic type information).
 		System.out.println(value);
 	}
 }
@@ -1515,10 +1603,10 @@ class InputPreferVarLocalVariablesSliceViolation {
 		final int x = 42; // violation: Local variable must use 'var' instead of an explicit type.
 		final String s = "hello"; // violation: Local variable must use 'var' instead of an explicit type.
 		final List<Integer> list = List.of(1, 2, 3); // violation: Local variable must use 'var' instead of an explicit type.
-		final var names = new String[]{"a", "b"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
-		final String[] numbers = new String[]{"1"}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
-		final int[][] matrix = new int[][]{{1}, {2}}; // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
-		final var parenArr = (new String[]{"x"}); // violation: Use implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final var names = new String[]{"a", "b"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final String[] numbers = new String[]{"1"}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final int[][] matrix = new int[][]{{1}, {2}}; // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
+		final var parenArr = (new String[]{"x"}); // violation: Use an implicit array initializer ('Type[] x = {...}') instead of 'new Type[]{...}'.
 	}
 }
 // === end ===
@@ -1536,7 +1624,7 @@ class InputPreferVarMethodCallAndChainSliceViolation {
 // imports: java.util.HashMap
 class InputPreferVarDiamondMixedQualifiedAndBareObjectTypeArgsSliceViolation {
 	void m() {
-		final var map = new HashMap<Object, java.lang.Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		final var map = new HashMap<Object, java.lang.Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 	}
 }
 // === end ===
@@ -1544,22 +1632,12 @@ class InputPreferVarDiamondMixedQualifiedAndBareObjectTypeArgsSliceViolation {
 // === case: multi_dim_array ===
 class InputPreferVarMultiDimArraySliceViolation {
 	void m() {
-		int[][] m = new int[3][3]; // violation (warning): Local variable should use 'var' instead of an explicit type.
+		int[][] m = new int[3][3]; // violation: Local variable must use 'var' instead of an explicit type.
 	}
 }
 // === end ===
 
-// === case: multi_var ===
-// skip-reason: multi-variable declaration
-class InputPreferVarMultiVarSliceViolation {
-	void m() {
-		final int x = 1, y = 2; // violation (warning): Local variable should use 'var' instead of an explicit type.
-	}
-}
-// === end ===
-
-// === case: multi_var_supplementary_before_type ===
-// skip-reason: multi-variable declaration
+// === case: multi_var_supplementary_before_type_warns ===
 class InputPreferVarMultiVarSupplementaryBeforeTypeSliceViolation {
 	void m() {
 		/* 𝛼 */ final int x = 1, y = 2; // violation (warning): Local variable should use 'var' instead of an explicit type.
@@ -1568,11 +1646,18 @@ class InputPreferVarMultiVarSupplementaryBeforeTypeSliceViolation {
 }
 // === end ===
 
-// === case: multi_var_ternary_initializer ===
-// skip-reason: multi-variable declaration
+// === case: multi_var_ternary_initializer_warns ===
 class InputPreferVarMultiVarTernaryInitializerSliceViolation {
 	void m(boolean cond, int a, int b, int d) {
 		final int x = cond ? a : b, y = d; // violation (warning): Local variable should use 'var' instead of an explicit type.
+	}
+}
+// === end ===
+
+// === case: multi_var_warns ===
+class InputPreferVarMultiVarSliceViolation {
+	void m() {
+		final int x = 1, y = 2; // violation (warning): Local variable should use 'var' instead of an explicit type.
 	}
 }
 // === end ===
@@ -1622,7 +1707,7 @@ class InputPreferVarMultiVarViolation {
 // imports: java.util.HashMap
 class InputPreferVarDiamondMultipleObjectTypeArgsSliceViolation {
 	void m() {
-		final var map = new HashMap<Object, Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		final var map = new HashMap<Object, Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 	}
 }
 // === end ===
@@ -1651,8 +1736,7 @@ class InputPreferVarNestedTernaryInitializerSliceViolation {
 }
 // === end ===
 
-// === case: nested_ternary_multi_var ===
-// skip-reason: multi-variable declaration
+// === case: nested_ternary_multi_var_warns ===
 class InputPreferVarNestedTernaryMultiVarSliceViolation {
 	void m(boolean cond, boolean flag, int a, int b, int c, int d) {
 		final int x = cond ? a : flag ? b : c, y = d; // violation (warning): Local variable should use 'var' instead of an explicit type.
@@ -1673,7 +1757,51 @@ class InputPreferVarGenericReturnNonGenericMethodSliceViolation {
 }
 // === end ===
 
-// === case: overload_selection_changes_on_a_constructor_argument ===
+// === case: overload_selection_changes_from_an_enclosing_class_warns ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionChangesFromAnEnclosingClassSliceViolation {
+	static class Inner {
+		void m() {
+			final List<String> items = new ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+			take(items);
+		}
+	}
+
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+}
+// === end ===
+
+// === case: overload_selection_changes_on_a_classpath_array_warns ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+class InputPreferVarOverloadSelectionChangesOnAClasspathArrayWarnsSliceViolation {
+	static BufferedReader[] create() {
+		return new BufferedReader[0];
+	}
+
+	static String take(BufferedReader[] value) {
+		return "BufferedReaders";
+	}
+
+	static String take(Closeable[] value) {
+		return "Closeables";
+	}
+
+	void m() {
+		final Closeable[] value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: overload_selection_changes_on_a_constructor_argument_warns ===
 // imports: java.util.ArrayList
 // imports: java.util.List
 class InputPreferVarOverloadSelectionChangesOnAConstructorArgumentSliceViolation {
@@ -1692,7 +1820,54 @@ class InputPreferVarOverloadSelectionChangesOnAConstructorArgumentSliceViolation
 }
 // === end ===
 
-// === case: overload_selection_changes_on_a_super_qualified_call ===
+// === case: overload_selection_changes_on_a_local_class_constructor_warns ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionChangesOnALocalClassConstructorWarnsSliceViolation {
+	void m(boolean flag) {
+		class LocalSink {
+			LocalSink(ArrayList<String> values) {
+			}
+
+			LocalSink(List<String> values) {
+			}
+		}
+
+		final List<String> value = flag ? new ArrayList<>() : new ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(new LocalSink(value));
+	}
+}
+// === end ===
+
+// === case: overload_selection_changes_on_a_parameter_of_fewer_dimensions_warns ===
+// imports: java.io.Closeable
+class InputPreferVarOverloadSelectionChangesOnAParameterOfFewerDimensionsWarnsSliceViolation {
+	static class FooStream implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static FooStream[][] create() {
+		return new FooStream[0][];
+	}
+
+	static String take(Closeable[][] value) {
+		return "Closeabless";
+	}
+
+	static String take(Object[] value) {
+		return "Objects";
+	}
+
+	void m() {
+		final Object[] value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: overload_selection_changes_on_a_super_qualified_call_warns ===
 // imports: java.util.ArrayList
 // imports: java.util.List
 class InputPreferVarOverloadSelectionSuperQualifiedBase {
@@ -1713,7 +1888,7 @@ class InputPreferVarOverloadSelectionChangesOnASuperQualifiedCallSliceViolation 
 }
 // === end ===
 
-// === case: overload_selection_changes_under_var ===
+// === case: overload_selection_changes_under_var_warns ===
 // imports: java.util.ArrayList
 // imports: java.util.List
 class InputPreferVarOverloadSelectionChangesUnderVarSliceViolation {
@@ -1732,7 +1907,45 @@ class InputPreferVarOverloadSelectionChangesUnderVarSliceViolation {
 }
 // === end ===
 
-// === case: overload_selection_differs_at_a_later_argument ===
+// === case: overload_selection_changes_via_an_inherited_overload_warns ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadInheritedBase {
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+}
+
+class InputPreferVarOverloadSelectionChangesViaAnInheritedOverloadSliceViolation extends InputPreferVarOverloadInheritedBase {
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m() {
+		final List<String> items = new ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		take(items);
+	}
+}
+// === end ===
+
+// === case: overload_selection_changes_with_qualified_types_warns ===
+class InputPreferVarOverloadSelectionChangesWithQualifiedTypesSliceViolation {
+	static void take(java.util.ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(java.util.List<String> values) {
+		System.out.println(values);
+	}
+
+	void m() {
+		final java.util.List<String> items = new java.util.ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		take(items);
+	}
+}
+// === end ===
+
+// === case: overload_selection_differs_at_a_later_argument_warns ===
 // imports: java.util.ArrayList
 // imports: java.util.List
 class InputPreferVarOverloadSelectionDiffersAtALaterArgumentSliceViolation {
@@ -1790,6 +2003,225 @@ class InputPreferVarOverloadSelectionIgnoresAForeignReceiverSliceViolation {
 }
 // === end ===
 
+// === case: overload_selection_ignores_a_nested_parameter_of_the_same_name ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarNestedParameterShadowSliceViolation {
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m() {
+		final List<String> items = new ArrayList<>(); // violation: Local variable must use 'var' instead of an explicit type.
+		final Object nested = new Object() {
+			void consume(List<String> items) {
+				take(items);
+			}
+		};
+		System.out.println(items);
+		System.out.println(nested);
+	}
+}
+// === end ===
+
+// === case: overload_selection_ignores_a_sibling_block_use ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionIgnoresASiblingBlockUseSliceViolation {
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m(boolean flag) {
+		if (flag) {
+			final List<String> items = new ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+			take(items);
+		}
+		final List<String> items = new ArrayList<>(); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: overload_selection_ignores_a_varargs_overload ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionIgnoresAVarargsOverloadSliceViolation {
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(ArrayList<String> values, Object... rest) {
+		System.out.println(values.size() + rest.length);
+	}
+
+	void m() {
+		final List<String> items = new ArrayList<>(); // violation: Local variable must use 'var' instead of an explicit type.
+		take(items);
+	}
+}
+// === end ===
+
+// === case: overload_selection_ignores_an_unrelated_same_file_parameter_type ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionIgnoresAnUnrelatedSameFileParameterTypeSliceViolation {
+	static class Bag {
+	}
+
+	static void take(Bag values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m() {
+		final List<String> items = new ArrayList<>(); // violation: Local variable must use 'var' instead of an explicit type.
+		take(items);
+	}
+}
+// === end ===
+
+// === case: overload_selection_on_a_type_variable_parameter_converts ===
+// imports: java.io.Closeable
+class InputPreferVarOverloadSelectionOnATypeVariableParameterConvertsSliceViolation {
+	static class Box<T> implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static Box<String> create() {
+		return new Box<>();
+	}
+
+	static String take(String value) {
+		return "String";
+	}
+
+	static <T extends Closeable> String take(T value) {
+		return "T";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: overload_selection_on_an_array_accepting_both_converts ===
+// imports: java.io.Closeable
+class InputPreferVarOverloadSelectionOnAnArrayAcceptingBothConvertsSliceViolation {
+	static class FooStream implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static FooStream[] create() {
+		return new FooStream[0];
+	}
+
+	static String take(Closeable[] value) {
+		return "Closeables";
+	}
+
+	static String take(Object value) {
+		return "Object";
+	}
+
+	void m() {
+		final Closeable[] value = create(); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: overload_selection_sees_a_captured_use_warns ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarOverloadSelectionSeesACapturedUseSliceViolation {
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m() {
+		final List<String> items = new ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		final Runnable task = new Runnable() {
+			@Override
+			public void run() {
+				take(items);
+			}
+		};
+		System.out.println(task);
+	}
+}
+// === end ===
+
+// === case: overload_selection_skips_a_genuinely_unresolvable_parameter_type ===
+// imports: java.io.Closeable
+class InputPreferVarOverloadSelectionSkipsAGenuinelyUnresolvableParameterTypeSliceViolation {
+	static class Box<T> implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static Box<String> create() {
+		return new Box<>();
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(MissingType value) {
+		return "MissingType";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: overload_selection_survives_cyclic_inheritance_warns ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+class InputPreferVarCyclicInheritanceSliceViolation extends InputPreferVarCyclicInheritancePartner {
+	void m() {
+		final List<String> items = new ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		take(items);
+	}
+
+	void take(List<String> values) {
+		System.out.println(values);
+	}
+}
+
+class InputPreferVarCyclicInheritancePartner extends InputPreferVarCyclicInheritanceSliceViolation {
+	void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+}
+// === end ===
+
 // === case: overload_selection_unchanged_on_a_constructor_argument ===
 // imports: java.util.ArrayList
 // imports: java.util.List
@@ -1828,15 +2260,14 @@ class InputPreferVarOverloadSelectionUnchangedUnderVarSliceViolation {
 }
 // === end ===
 
-// === case: paren_wrapped_generic_method ===
-// skip-reason: declaration already uses 'var'
+// === case: paren_wrapped_generic_method_warns ===
 class InputPreferVarGenericReturnParenWrappedGenericMethodSliceViolation {
 	static <T> T cast(Object obj) {
 		return (T) obj;
 	}
 
 	void m() {
-		final var s = (cast("hello")); // violation (warning): Using 'var' with 'cast' loses generic type information, consider using an explicit type.
+		final var s = (cast("hello")); // violation (warning): Consider using an explicit type ('var' with 'cast' loses generic type information).
 	}
 }
 // === end ===
@@ -1930,7 +2361,7 @@ class InputPreferVarLiteralMismatchPrimitiveWithNonLiteralExpressionSliceViolati
 // imports: java.util.ArrayList
 class InputPreferVarDiamondQualifiedConstructorNameSliceViolation {
 	void m() {
-		final var list = new java.util.ArrayList<Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		final var list = new java.util.ArrayList<Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 	}
 }
 // === end ===
@@ -1975,16 +2406,15 @@ class InputPreferVarQualifiedNewResolvableDiamondSliceViolation {
 // imports: java.util.ArrayList
 class InputPreferVarDiamondQualifiedObjectTypeArgSliceViolation {
 	void m() {
-		final var list = new ArrayList<java.lang.Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		final var list = new ArrayList<java.lang.Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 	}
 }
 // === end ===
 
-// === case: qualified_static_call_generic_var ===
-// skip-reason: declaration already uses 'var'
+// === case: qualified_static_call_generic_var_warns ===
 class InputPreferVarQualifiedStaticCallGenericVarSliceViolation {
 	void m() {
-		final var values = java.util.Collections.emptyList(); // violation (warning): Using 'var' with 'emptyList' loses generic type information, consider using an explicit type.
+		final var values = java.util.Collections.emptyList(); // violation (warning): Consider using an explicit type ('var' with 'emptyList' loses generic type information).
 		System.out.println(values);
 	}
 }
@@ -2044,7 +2474,29 @@ class InputPreferVarQualifiedTypeFinalSliceViolation {
 }
 // === end ===
 
-// === case: reassigned_between_two_unresolvable_names ===
+// === case: reassigned_and_overload_selection_changes_warns ===
+// imports: java.util.ArrayList
+// imports: java.util.List
+// imports: java.util.LinkedList
+class InputPreferVarReassignedAndOverloadSelectionChangesSliceViolation {
+	static void take(ArrayList<String> values) {
+		System.out.println(values);
+	}
+
+	static void take(List<String> values) {
+		System.out.println(values);
+	}
+
+	void m(boolean flag) {
+		List<String> items = new ArrayList<>(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		if (flag)
+			items = new LinkedList<>();
+		take(items);
+	}
+}
+// === end ===
+
+// === case: reassigned_between_two_unresolvable_names_warns ===
 // imports: java.util.ArrayList
 // imports: java.util.List
 class InputPreferVarReassignedBetweenTwoUnresolvableNamesSliceViolation {
@@ -2078,7 +2530,7 @@ class InputPreferVarReassignedNameShadowedByANestedClassSliceViolation {
 }
 // === end ===
 
-// === case: reassigned_to_a_different_type ===
+// === case: reassigned_to_a_different_type_warns ===
 // imports: java.util.ArrayList
 // imports: java.util.LinkedList
 // imports: java.util.List
@@ -2092,7 +2544,7 @@ class InputPreferVarReassignedToADifferentTypeSliceViolation {
 }
 // === end ===
 
-// === case: reassigned_to_a_non_constructed_value ===
+// === case: reassigned_to_a_non_constructed_value_warns ===
 // imports: java.util.ArrayList
 // imports: java.util.List
 class InputPreferVarReassignedToANonConstructedValueSliceViolation {
@@ -2105,7 +2557,7 @@ class InputPreferVarReassignedToANonConstructedValueSliceViolation {
 }
 // === end ===
 
-// === case: reassigned_to_a_same_simple_name_different_package ===
+// === case: reassigned_to_a_same_simple_name_different_package_warns ===
 // imports: java.util.List
 class InputPreferVarReassignedToASameSimpleNameDifferentPackageSliceViolation {
 	void m(boolean flag) {
@@ -2152,6 +2604,697 @@ class InputPreferVarReassignedToTheSameTypeSliceViolation {
 		if (flag)
 			items = new ArrayList<>();
 		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: same_file_array_narrowing_overload_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileArrayNarrowingOverloadWarnsSliceViolation {
+	static class FooStream implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static FooStream[] create() {
+		return new FooStream[0];
+	}
+
+	static String take(Closeable[] value) {
+		return "Closeables";
+	}
+
+	static String take(FooStream[] value) {
+		return "FooStreams";
+	}
+
+	void m() {
+		final Closeable[] value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_constructor_overload_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileConstructorOverloadWarnsSliceViolation {
+	static class Box<T> implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static class Sink {
+		Sink(Closeable value) {
+		}
+
+		Sink(Box<?> value) {
+		}
+	}
+
+	static Box<String> create() {
+		return new Box<>();
+	}
+
+	void m() {
+		final Closeable value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(new Sink(value));
+	}
+}
+// === end ===
+
+// === case: same_file_cyclic_type_hierarchy_terminates ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileCyclicTypeHierarchyTerminatesSliceViolation {
+	interface Shape {
+	}
+
+	static class CycA extends CycB implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static class CycB extends CycA {
+	}
+
+	static CycA create() {
+		return new CycA();
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(Shape value) {
+		return "Shape";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_double_nested_qualified_parameter_overload_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileDoubleNestedQualifiedParameterOverloadWarnsSliceViolation {
+	static class Mid {
+		static class Deep implements Closeable {
+			@Override
+			public void close() {
+			}
+		}
+	}
+
+	static Mid.Deep create() {
+		return new Mid.Deep();
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(Mid.Deep value) {
+		return "MidDeep";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_enum_type_overload_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileEnumTypeOverloadWarnsSliceViolation {
+	enum Mode implements Closeable {
+		ON;
+
+		@Override
+		public void close() {
+		}
+	}
+
+	static Mode create() {
+		return Mode.ON;
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(Mode value) {
+		return "Mode";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_generic_declared_type_overload_warns ===
+class InputPreferVarSameFileGenericDeclaredTypeOverloadWarnsSliceViolation {
+	static class Holder<T> {
+	}
+
+	static class Sub<T> extends Holder<T> {
+	}
+
+	static Sub<String> create() {
+		return new Sub<>();
+	}
+
+	static String take(Holder<String> value) {
+		return "Holder";
+	}
+
+	static String take(Sub<String> value) {
+		return "Sub";
+	}
+
+	void m() {
+		final Holder<String> value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_generic_type_overload_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileGenericTypeOverloadWarnsSliceViolation {
+	static class Box<T> implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static Box<String> create() {
+		return new Box<>();
+	}
+
+	static String take(Box<?> value) {
+		return "Box";
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_inner_non_static_class_overload_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileInnerNonStaticClassOverloadWarnsSliceViolation {
+	class InnerStream implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(InnerStream value) {
+		return "InnerStream";
+	}
+
+	InnerStream create() {
+		return new InnerStream();
+	}
+
+	void m() {
+		final Closeable value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_narrowing_classpath_parameter_not_accepting_converts ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+class InputPreferVarSameFileNarrowingClasspathParameterNotAcceptingConvertsSliceViolation {
+	static class Box<T> implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static Box<String> create() {
+		return new Box<>();
+	}
+
+	static String take(BufferedReader value) {
+		return "BufferedReader";
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_narrowing_local_class_constructor_overload_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileNarrowingLocalClassConstructorOverloadWarnsSliceViolation {
+	void m(boolean flag) {
+		class LocalStream implements Closeable {
+			@Override
+			public void close() {
+			}
+		}
+
+		class LocalSink {
+			LocalSink(Closeable value) {
+			}
+
+			LocalSink(LocalStream value) {
+			}
+		}
+
+		final Closeable value = flag ? new LocalStream() : new LocalStream(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(new LocalSink(value));
+	}
+}
+// === end ===
+
+// === case: same_file_narrowing_nested_class_overload_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileNarrowingNestedClassOverloadWarnsSliceViolation {
+	static class FooStream implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static FooStream create() {
+		return new FooStream();
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(FooStream value) {
+		return "FooStream";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_narrowing_supertype_parameter_accepting_both_converts ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileNarrowingSupertypeParameterAcceptingBothConvertsSliceViolation {
+	static class Box<T> implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static Box<String> create() {
+		return new Box<>();
+	}
+
+	static String take(AutoCloseable value) {
+		return "AutoCloseable";
+	}
+
+	static String take(String value) {
+		return "String";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_narrowing_top_level_class_overload_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileNarrowingTopLevelClassOverloadWarnsSliceViolation {
+	static InputPreferVarSameFileTopLevelStream create() {
+		return new InputPreferVarSameFileTopLevelStream();
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(InputPreferVarSameFileTopLevelStream value) {
+		return "InputPreferVarSameFileTopLevelStream";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+
+	class InputPreferVarSameFileTopLevelStream implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+// === end ===
+
+// === case: same_file_narrowing_unrelated_same_file_parameter_converts ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileNarrowingUnrelatedSameFileParameterConvertsSliceViolation {
+	interface Shape {
+	}
+
+	static class Box<T> implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static Box<String> create() {
+		return new Box<>();
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(Shape value) {
+		return "Shape";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_narrowing_unresolvable_supertype_identity_parameter_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileNarrowingUnresolvableSupertypeIdentityParameterWarnsSliceViolation {
+	static class Weird extends MissingBase implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static Weird create() {
+		return new Weird();
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(Weird value) {
+		return "Weird";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_narrowing_unresolvable_supertype_parameter_converts ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileNarrowingUnresolvableSupertypeParameterConvertsSliceViolation {
+	interface Shape {
+	}
+
+	static class Weird extends MissingBase implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static Weird create() {
+		return new Weird();
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(Shape value) {
+		return "Shape";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation: Local variable must use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_narrowing_via_extends_overload_warns ===
+class InputPreferVarSameFileNarrowingViaExtendsOverloadWarnsSliceViolation {
+	static class Base {
+	}
+
+	static class Derived extends Base {
+	}
+
+	static Derived create() {
+		return new Derived();
+	}
+
+	static String take(Base value) {
+		return "Base";
+	}
+
+	static String take(Derived value) {
+		return "Derived";
+	}
+
+	void m() {
+		final Base value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_narrowing_via_interface_extends_overload_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileNarrowingViaInterfaceExtendsOverloadWarnsSliceViolation {
+	interface Lockable extends Closeable {
+	}
+
+	static class LockImpl implements Lockable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static LockImpl create() {
+		return new LockImpl();
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(Lockable value) {
+		return "Lockable";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_narrowing_via_interface_overload_warns ===
+class InputPreferVarSameFileNarrowingViaInterfaceOverloadWarnsSliceViolation {
+	interface Shape {
+	}
+
+	static class Circle implements Shape {
+	}
+
+	static Circle create() {
+		return new Circle();
+	}
+
+	static String take(Circle value) {
+		return "Circle";
+	}
+
+	static String take(Shape value) {
+		return "Shape";
+	}
+
+	void m() {
+		final Shape value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_narrowing_via_transitive_supertype_overload_warns ===
+class InputPreferVarSameFileNarrowingViaTransitiveSupertypeOverloadWarnsSliceViolation {
+	interface Shape {
+	}
+
+	static class Leaf extends Middle {
+	}
+
+	static class Middle implements Shape {
+	}
+
+	static Leaf create() {
+		return new Leaf();
+	}
+
+	static String take(Middle value) {
+		return "Middle";
+	}
+
+	static String take(Shape value) {
+		return "Shape";
+	}
+
+	void m() {
+		final Shape value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_record_type_overload_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileRecordTypeOverloadWarnsSliceViolation {
+	record Handle(int id) implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static Handle create() {
+		return new Handle(1);
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(Handle value) {
+		return "Handle";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_sealed_interface_overload_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileSealedInterfaceOverloadWarnsSliceViolation {
+	sealed interface Res extends Closeable permits ResImpl {
+	}
+
+	static final class ResImpl implements Res {
+		@Override
+		public void close() {
+		}
+	}
+
+	static ResImpl create() {
+		return new ResImpl();
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(Res value) {
+		return "Res";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_type_extending_a_classpath_type_overload_warns ===
+// imports: java.io.BufferedReader
+// imports: java.io.StringReader
+class InputPreferVarSameFileTypeExtendingAClasspathTypeOverloadWarnsSliceViolation {
+	static class MyReader extends BufferedReader {
+		MyReader() {
+			super(new StringReader(""));
+		}
+	}
+
+	static MyReader create() {
+		return new MyReader();
+	}
+
+	static String take(BufferedReader value) {
+		return "BufferedReader";
+	}
+
+	static String take(MyReader value) {
+		return "MyReader";
+	}
+
+	void m() {
+		final BufferedReader value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
+	}
+}
+// === end ===
+
+// === case: same_file_type_shadowing_a_classpath_name_overload_warns ===
+// imports: java.io.Closeable
+class InputPreferVarSameFileTypeShadowingAClasspathNameOverloadWarnsSliceViolation {
+	static class BufferedReader implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static BufferedReader create() {
+		return new BufferedReader();
+	}
+
+	static String take(BufferedReader value) {
+		return "BufferedReader";
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	void m() {
+		final Closeable value = create(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		System.out.println(take(value));
 	}
 }
 // === end ===
@@ -2206,9 +3349,9 @@ class InputPreferVarSimpleStringSliceViolation {
 // imports: java.util.LinkedHashSet
 class InputPreferVarDiamondSingleObjectTypeArgSliceViolation {
 	void m() {
-		final var list = new ArrayList<Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
-		final var set = new LinkedHashSet<Object>(); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
-		final var parenWrapped = (new ArrayList<Object>()); // violation: Use diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		final var list = new ArrayList<Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		final var set = new LinkedHashSet<Object>(); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
+		final var parenWrapped = (new ArrayList<Object>()); // violation: Use the diamond operator '<>' instead of explicit '<Object>' with 'var'.
 	}
 }
 // === end ===
@@ -2218,8 +3361,8 @@ class InputPreferVarDiamondSingleObjectTypeArgSliceViolation {
 // imports: java.util.Optional
 class InputPreferVarReflectionStaticCallGenericVarSliceViolation {
 	void m() {
-		final var list = Collections.emptyList(); // violation (warning): Using 'var' with 'emptyList' loses generic type information, consider using an explicit type.
-		final var opt = Optional.empty(); // violation (warning): Using 'var' with 'empty' loses generic type information, consider using an explicit type.
+		final var list = Collections.emptyList(); // violation (warning): Consider using an explicit type ('var' with 'emptyList' loses generic type information).
+		final var opt = Optional.empty(); // violation (warning): Consider using an explicit type ('var' with 'empty' loses generic type information).
 	}
 }
 // === end ===
@@ -2232,12 +3375,11 @@ class InputPreferVarReflectionStaticCallNonGenericSliceViolation {
 }
 // === end ===
 
-// === case: static_import_generic_return_var ===
-// skip-reason: declaration already uses 'var'
+// === case: static_import_generic_return_var_warns ===
 // imports: static java.util.Collections.emptyList
 class InputPreferVarStaticImportGenericReturnVarSliceViolation {
 	void m() {
-		final var values = emptyList(); // violation (warning): Using 'var' with 'emptyList' loses generic type information, consider using an explicit type.
+		final var values = emptyList(); // violation (warning): Consider using an explicit type ('var' with 'emptyList' loses generic type information).
 		System.out.println(values);
 	}
 }
@@ -2254,11 +3396,22 @@ class InputPreferVarStaticImportNonGenericCallSliceViolation {
 }
 // === end ===
 
+// === case: static_star_import_call_refused ===
+// imports: static java.util.Collections.*
+// imports: java.util.List
+class InputPreferVarStaticStarImportCallRefusedSliceViolation {
+	void m() {
+		final List<String> names = emptyList();
+		System.out.println(names);
+	}
+}
+// === end ===
+
 // === case: supplementary_char_before_type ===
 // imports: java.util.Map
 class InputPreferVarSupplementaryCharBeforeTypeSliceViolation {
 	void m(Map<String, String> map) {
-		/* 𝛼 */ for (Map.Entry<String, String> entry : map.entrySet()) // violation: For-each loop must use 'var' instead of an explicit type.
+		/* 𝛼 */ for (Map.Entry<String, String> entry : map.entrySet()) // violation: For-each variable must use 'var' instead of an explicit type.
 			System.out.println(entry);
 	}
 }
@@ -2281,11 +3434,523 @@ class InputPreferVarSupplementaryCharInTypeNameSliceViolation {
 }
 // === end ===
 
+// === case: try_existing_variable_narrowing_local_warns ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryExistingVariableNarrowingLocalWarnsSliceViolation {
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void m() throws IOException {
+		final Closeable existing = openReader(); // violation (warning): Local variable should use 'var' instead of an explicit type.
+		try (existing) {
+			System.out.println(use(existing));
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_annotated_warns ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceAnnotatedWarnsSliceViolation {
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void m() throws IOException {
+		try (@Deprecated Closeable c = openReader()) { // violation (warning): Try-with-resources variable should use 'var' instead of an explicit type.
+			System.out.println(use(c));
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_both_of_two_narrow_warn ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceBothOfTwoNarrowWarnSliceViolation {
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void m() throws IOException {
+		try (Closeable a = openReader(); Closeable b = openReader()) { // violation (warning): Try-with-resources variable should use 'var' instead of an explicit type. // violation (warning): Try-with-resources variable should use 'var' instead of an explicit type.
+			System.out.println(use(a) + use(b));
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_call_on_a_declared_variable_converts ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceCallOnADeclaredVariableConvertsSliceViolation {
+	static class Holder {
+		BufferedReader open() {
+			return new BufferedReader(new StringReader(""));
+		}
+	}
+
+	static Holder holder = new Holder();
+
+	void m() throws IOException {
+		try (BufferedReader reader = holder.open()) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
+			System.out.println(reader.read());
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_constructor_overload_warns ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceConstructorOverloadWarnsSliceViolation {
+	static class Sink {
+		Sink(BufferedReader reader) {
+		}
+
+		Sink(Closeable closeable) {
+		}
+	}
+
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	void m() throws IOException {
+		try (Closeable c = openReader()) { // violation (warning): Try-with-resources variable should use 'var' instead of an explicit type.
+			System.out.println(new Sink(c));
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_first_of_two_narrows_warns ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceFirstOfTwoNarrowsWarnsSliceViolation {
+	static class Wrapper implements Closeable {
+		Wrapper(Closeable inner) {
+		}
+
+		@Override
+		public void close() {
+		}
+	}
+
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void m() throws IOException {
+		try (Closeable a = openReader(); Wrapper b = new Wrapper(null)) { // violation (warning): Try-with-resources variable should use 'var' instead of an explicit type. // violation: Try-with-resources variable must use 'var' instead of an explicit type.
+			System.out.println(use(a) + b);
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_imported_classpath_call_converts ===
+// imports: java.io.IOException
+// imports: java.io.InputStream
+// imports: java.nio.file.Files
+// imports: java.nio.file.Path
+class InputPreferVarTryResourceImportedClasspathCallConvertsSliceViolation {
+	static Path path;
+
+	void m() throws IOException {
+		try (InputStream in = Files.newInputStream(path)) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
+			System.out.println(in.read());
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_narrowing_to_a_same_file_type_warns ===
+// imports: java.io.Closeable
+// imports: java.io.IOException
+class InputPreferVarTryResourceNarrowingToASameFileTypeWarnsSliceViolation {
+	static class FooStream implements Closeable {
+		@Override
+		public void close() {
+		}
+	}
+
+	static FooStream create() {
+		return new FooStream();
+	}
+
+	static String take(Closeable value) {
+		return "Closeable";
+	}
+
+	static String take(FooStream value) {
+		return "FooStream";
+	}
+
+	void m() throws IOException {
+		try (Closeable value = create()) { // violation (warning): Try-with-resources variable should use 'var' instead of an explicit type.
+			System.out.println(take(value));
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_overload_selection_changes_warns ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceOverloadSelectionChangesWarnsSliceViolation {
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void m() throws IOException {
+		try (Closeable c = openReader()) { // violation (warning): Try-with-resources variable should use 'var' instead of an explicit type.
+			System.out.println(use(c));
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_overload_selection_ignores_a_different_arity ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceOverloadSelectionIgnoresADifferentAritySliceViolation {
+	static String describe(Closeable closeable) {
+		return "closeable";
+	}
+
+	static String describe(BufferedReader reader, int limit) {
+		return "reader";
+	}
+
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	void m() throws IOException {
+		try (Closeable c = openReader()) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
+			System.out.println(describe(c));
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_overload_selection_unchanged_converts ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceOverloadSelectionUnchangedConvertsSliceViolation {
+	static String describe(Closeable closeable) {
+		return "closeable";
+	}
+
+	static String describe(String text) {
+		return text;
+	}
+
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	void m() throws IOException {
+		try (Closeable c = openReader()) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
+			System.out.println(describe(c));
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_qualified_classpath_call_converts ===
+// imports: java.io.IOException
+// imports: java.io.InputStream
+// imports: java.nio.file.Path
+class InputPreferVarTryResourceQualifiedClasspathCallConvertsSliceViolation {
+	static Path path;
+
+	void m() throws IOException {
+		try (InputStream in = java.nio.file.Files.newInputStream(path)) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
+			System.out.println(in.read());
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_qualified_type_warns ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceQualifiedTypeWarnsSliceViolation {
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void m() throws IOException {
+		try (java.io.Closeable c = openReader()) { // violation (warning): Try-with-resources variable should use 'var' instead of an explicit type.
+			System.out.println(use(c));
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_referenced_by_a_later_resource_constructor_warns ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceReferencedByALaterResourceConstructorWarnsSliceViolation {
+	static class SinkResource implements Closeable {
+		SinkResource(BufferedReader reader) {
+		}
+
+		SinkResource(Closeable closeable) {
+		}
+
+		@Override
+		public void close() {
+		}
+	}
+
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	void m() throws IOException {
+		try (Closeable a = openReader(); SinkResource sink = new SinkResource(a)) { // violation (warning): Try-with-resources variable should use 'var' instead of an explicit type. // violation: Try-with-resources variable must use 'var' instead of an explicit type.
+			System.out.println(sink);
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_referenced_by_a_nested_try_warns ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceReferencedByANestedTryWarnsSliceViolation {
+	static class Wrapper implements Closeable {
+		Wrapper(Closeable inner) {
+		}
+
+		@Override
+		public void close() {
+		}
+	}
+
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void m() throws IOException {
+		try (Closeable a = openReader()) { // violation (warning): Try-with-resources variable should use 'var' instead of an explicit type.
+			try (Wrapper b = new Wrapper(null)) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
+				System.out.println(use(a) + b);
+			}
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_use_after_the_try_is_another_variable ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceUseAfterTheTryIsAnotherVariableSliceViolation {
+	static Closeable c;
+
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void m() throws IOException {
+		try (Closeable c = openReader()) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
+			System.out.println(c);
+		}
+		System.out.println(use(c));
+	}
+}
+// === end ===
+
+// === case: try_resource_use_in_a_nested_lambda_warns ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceUseInANestedLambdaWarnsSliceViolation {
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void m() throws IOException {
+		try (Closeable c = openReader()) { // violation (warning): Try-with-resources variable should use 'var' instead of an explicit type.
+			final Runnable task = () -> System.out.println(use(c));
+			task.run();
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_use_in_catch_is_another_variable ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceUseInCatchIsAnotherVariableSliceViolation {
+	static Closeable c;
+
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void m() throws IOException {
+		try (Closeable c = openReader()) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
+			System.out.println(c);
+		}
+		catch (IOException e) {
+			System.out.println(use(c));
+		}
+	}
+}
+// === end ===
+
+// === case: try_resource_use_in_finally_is_another_variable ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceUseInFinallyIsAnotherVariableSliceViolation {
+	static Closeable c;
+
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void m() throws IOException {
+		try (Closeable c = openReader()) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
+			System.out.println(c);
+		}
+		finally {
+			System.out.println(use(c));
+		}
+	}
+}
+// === end ===
+
 // === case: try_with_resources ===
 // imports: java.io.ByteArrayInputStream
 class InputPreferVarTryWithResourcesSliceViolation {
 	void m() throws Exception {
-		try (ByteArrayInputStream in = new ByteArrayInputStream(new byte[0])) { // violation: Try-with-resources must use 'var' instead of an explicit type.
+		try (ByteArrayInputStream in = new ByteArrayInputStream(new byte[0])) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
 			System.out.println(in.read());
 		}
 	}
@@ -2297,7 +3962,7 @@ class InputPreferVarTryWithResourcesSliceViolation {
 // imports: javax.annotation.Nonnull
 class InputPreferVarTryWithResourcesAnnotatedSliceViolation {
 	void m() throws Exception {
-		try (@Nonnull ByteArrayInputStream in = new ByteArrayInputStream(new byte[0])) { // violation: Try-with-resources must use 'var' instead of an explicit type.
+		try (@Nonnull ByteArrayInputStream in = new ByteArrayInputStream(new byte[0])) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
 			System.out.println(in.read());
 		}
 	}
@@ -2311,7 +3976,7 @@ class InputPreferVarTryResAnnotationOnPreviousLineSliceViolation {
 	void m() throws Exception {
 		try (
 				@Nonnull
-				ByteArrayInputStream in = new ByteArrayInputStream(new byte[0])) { // violation: Try-with-resources must use 'var' instead of an explicit type.
+				ByteArrayInputStream in = new ByteArrayInputStream(new byte[0])) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
 			System.out.println(in.read());
 		}
 	}
@@ -2322,8 +3987,20 @@ class InputPreferVarTryResAnnotationOnPreviousLineSliceViolation {
 // imports: java.util.Scanner
 class InputPreferVarTryWithResourcesBodyAssignsAnArrayOnTheSameLineSliceViolation {
 	void m(Scanner in, String[] a) throws Exception {
-		try (Scanner sc = in) { a = new String[]{"b"}; } // violation: Try-with-resources must use 'var' instead of an explicit type.
+		try (Scanner sc = in) { a = new String[]{"b"}; } // violation: Try-with-resources variable must use 'var' instead of an explicit type.
 		System.out.println(a.length);
+	}
+}
+// === end ===
+
+// === case: try_with_resources_body_call_on_resource_receiver ===
+// imports: java.io.ByteArrayInputStream
+class InputPreferVarTryWithResourcesBodyCallOnResourceReceiverSliceViolation {
+	void m(byte[] data) throws Exception {
+		try (var in = new ByteArrayInputStream(data)) {
+			final byte[] all = in.readAllBytes(); // violation: Local variable must use 'var' instead of an explicit type.
+			System.out.println(all.length);
+		}
 	}
 }
 // === end ===
@@ -2337,7 +4014,7 @@ class InputPreferVarTryWithResourcesDiamondSliceViolation {
 	}
 
 	void m() throws Exception {
-		try (Pair<String, Integer> p = new Pair<>()) { // violation: Try-with-resources must use 'var' instead of an explicit type.
+		try (Pair<String, Integer> p = new Pair<>()) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
 			System.out.println(p);
 		}
 	}
@@ -2352,7 +4029,7 @@ class InputPreferVarTryWithResourcesFactoryInitializerSliceViolation {
 	}
 
 	void m() throws Exception {
-		try (ByteArrayInputStream in = open()) { // violation: Try-with-resources must use 'var' instead of an explicit type.
+		try (ByteArrayInputStream in = open()) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
 			System.out.println(in.read());
 		}
 	}
@@ -2368,7 +4045,7 @@ class InputPreferVarTryWithResourcesGenericTypeArgumentsSliceViolation {
 	}
 
 	void m() throws Exception {
-		try (Pair<String, Integer> p = new Pair<String, Integer>()) { // violation: Try-with-resources must use 'var' instead of an explicit type.
+		try (Pair<String, Integer> p = new Pair<String, Integer>()) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
 			System.out.println(p);
 		}
 	}
@@ -2379,7 +4056,7 @@ class InputPreferVarTryWithResourcesGenericTypeArgumentsSliceViolation {
 // imports: java.io.ByteArrayInputStream
 class InputPreferVarTryMixedRefAndDeclSliceViolation {
 	void m(ByteArrayInputStream existing) throws Exception {
-		try (existing; ByteArrayInputStream in = new ByteArrayInputStream(new byte[0])) { // violation: Try-with-resources must use 'var' instead of an explicit type.
+		try (existing; ByteArrayInputStream in = new ByteArrayInputStream(new byte[0])) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
 			System.out.println(existing.read() + in.read());
 		}
 	}
@@ -2389,7 +4066,7 @@ class InputPreferVarTryMixedRefAndDeclSliceViolation {
 // === case: try_with_resources_qualified_type ===
 class InputPreferVarTryWithResourcesQualifiedTypeSliceViolation {
 	void m() throws Exception {
-		try (java.io.ByteArrayInputStream s = new java.io.ByteArrayInputStream(new byte[0])) { // violation: Try-with-resources must use 'var' instead of an explicit type.
+		try (java.io.ByteArrayInputStream s = new java.io.ByteArrayInputStream(new byte[0])) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
 			s.read();
 		}
 	}
@@ -2402,8 +4079,8 @@ class InputPreferVarTryWithResourcesQualifiedTypeSliceViolation {
 class InputPreferVarTryTwoDeclarationsSliceViolation {
 	void m() throws Exception {
 		try (
-				ByteArrayInputStream a = new ByteArrayInputStream(new byte[0]); // violation: Try-with-resources must use 'var' instead of an explicit type.
-				ByteArrayInputStream b = new ByteArrayInputStream(new byte[0])) { // violation: Try-with-resources must use 'var' instead of an explicit type.
+				ByteArrayInputStream a = new ByteArrayInputStream(new byte[0]); // violation: Try-with-resources variable must use 'var' instead of an explicit type.
+				ByteArrayInputStream b = new ByteArrayInputStream(new byte[0])) { // violation: Try-with-resources variable must use 'var' instead of an explicit type.
 			System.out.println(a.read() + b.read());
 		}
 	}
@@ -2420,12 +4097,11 @@ class InputPreferVarTwoTabIndentSliceViolation {
 }
 // === end ===
 
-// === case: type_args_on_reflection_generic ===
-// skip-reason: declaration already uses 'var'
+// === case: type_args_on_reflection_generic_warns ===
 // imports: java.util.Collections
 class InputPreferVarReflectionTypeArgsOnReflectionGenericSliceViolation {
 	void m() {
-		final var list = Collections.<String>emptyList(); // violation (warning): Prefer explicit type over type arguments on 'emptyList'.
+		final var list = Collections.<String>emptyList(); // violation (warning): Consider using an explicit type instead of type arguments on 'emptyList'.
 	}
 }
 // === end ===
@@ -2452,7 +4128,7 @@ class InputPreferVarTypeOnOwnLineWithTrailingCommentSliceViolation {
 // === end ===
 
 // === case: wrapped_generic_type_does_not_close_on_line ===
-// skip-reason: declared type arguments do not close on the reported line
+// skip-reason: cannot rewrite the declaration: the declared type arguments do not close on the reported line
 // imports: java.util.Map
 class InputPreferVarWrappedGenericTypeDoesNotCloseOnLineSliceViolation {
 	void m(Map<String, Integer> src) {

@@ -8,14 +8,14 @@ import javax.annotation.Nullable;
 class NoUnnecessaryThisFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int dot) {
 		final var line = lines.get(lineIndex);
-		final var thisStart = column - 4;
-		if (thisStart < 0 || column >= line.length())
+		final var thisStart = dot - 4;
+		if (thisStart < 0 || dot >= line.length())
 			return null;
 		if (!line.startsWith("this.", thisStart))
 			return null;
-		final var fixed = line.substring(0, thisStart) + line.substring(column + 1);
+		final var fixed = line.substring(0, thisStart) + line.substring(dot + 1);
 		return new FixResult(lineIndex, lineIndex, List.of(fixed));
 	}
 }

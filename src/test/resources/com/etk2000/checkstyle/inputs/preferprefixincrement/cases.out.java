@@ -188,7 +188,7 @@ class InputPrefixMultiCharDecrementSliceViolation {
 // === end ===
 
 // === case: multiline_operand ===
-// skip-reason: operand starts on an earlier line than its ++/--
+// skip-reason: cannot convert to prefix: the operand starts on an earlier line than its ++/--
 class InputPreferPrefixIncrementMultilineOperandSliceViolation {
 	static class Holder {
 		int count;

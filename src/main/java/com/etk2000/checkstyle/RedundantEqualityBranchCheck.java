@@ -1,7 +1,11 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstDisplay;
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+
+import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -39,8 +43,12 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 	 * The classification of a redundant equality if-else. Lines are 0-based and inclusive.
 	 * {@code target} is the assignment target text for {@link BranchKind#ASSIGN} and
 	 * {@code null} for a return. When an uninitialized {@code T target;} declaration sits immediately
-	 * above the assign form and a bare {@code return target;} immediately below, {@code declLine} and
-	 * {@code collapseReturnLine} carry their 0-based lines (both {@code -1} otherwise).
+	 * above the assign form and a bare {@code return target;} immediately below, and the declaration
+	 * can go with them ({@link #isDeletable}), {@code declLine} and {@code collapseReturnLine} carry
+	 * their 0-based lines (both {@code -1} otherwise). {@code firstColumn} is the code-point column the
+	 * collapsed statements start at on the first line of the collapse, and {@code endColumn} the one
+	 * just past their last token on its last line. {@code leadLine} is the first line of the statement
+	 * holding the code ahead of the collapse on its first line, whose indent that code is laid out at.
 	 */
 	public record Redundancy(
 			@Nonnull BranchKind kind,
@@ -49,9 +57,19 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 			int startLine,
 			int endLine,
 			int declLine,
-			int collapseReturnLine
+			int collapseReturnLine,
+			int firstColumn,
+			int endColumn,
+			int leadLine
 	) {}
 
+	// the nodes whose children are statements or members, each laid out at its own first line's indent
+	private static final Set<Integer> STATEMENT_LISTS = Set.of(TokenTypes.OBJBLOCK, TokenTypes.SLIST);
+	// the bodies between a statement and its method that give a return no declared type
+	private static final Set<Integer> UNTYPED_BODIES = Set.of(
+			TokenTypes.COMPACT_CTOR_DEF, TokenTypes.CTOR_DEF, TokenTypes.INSTANCE_INIT, TokenTypes.LAMBDA,
+			TokenTypes.OBJBLOCK, TokenTypes.STATIC_INIT
+	);
 	private static final String MSG_KEY = "redundant.equality.branch";
 
 	/**
@@ -78,11 +96,11 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 		final var rightOp = leftOp != null ? leftOp.getNextSibling() : null;
 		if (leftOp == null || rightOp == null)
 			return null;
-		if (!AstUtil.isPureExpression(leftOp) || !AstUtil.isPureExpression(rightOp))
+		if (!AstQuery.isPureExpression(leftOp) || !AstQuery.isPureExpression(rightOp))
 			return null;
 
-		final var leftText = AstUtil.displayText(leftOp);
-		final var rightText = AstUtil.displayText(rightOp);
+		final var leftText = AstDisplay.displayText(leftOp);
+		final var rightText = AstDisplay.displayText(rightOp);
 
 		final var rparen = ifAst.findFirstToken(TokenTypes.RPAREN);
 		if (rparen == null)
@@ -96,7 +114,7 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 			return null;
 
 		final BranchInfo elseBranch;
-		final int endLine;
+		final DetailAST last;
 		final var elseAst = ifAst.findFirstToken(TokenTypes.LITERAL_ELSE);
 		if (elseAst != null) {
 			final var elseBody = elseAst.getFirstChild();
@@ -105,7 +123,7 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 			elseBranch = extractBranch(elseBody);
 			if (elseBranch == null)
 				return null;
-			endLine = AstUtil.lastLine(ifAst) - 1;
+			last = ifAst;
 		}
 		else {
 			if (thenBranch.kind() != BranchKind.RETURN)
@@ -120,20 +138,20 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 			if (nextValue == null)
 				return null;
 			elseBranch = new BranchInfo(BranchKind.RETURN, null, nextValue);
-			endLine = AstUtil.lastLine(nextStmt) - 1;
+			last = nextStmt;
 		}
 
 		if (thenBranch.kind() != elseBranch.kind())
 			return null;
 		if (thenBranch.kind() == BranchKind.ASSIGN
-				&& !AstUtil.displayText(thenBranch.target()).equals(AstUtil.displayText(elseBranch.target())))
+				&& !AstDisplay.displayText(thenBranch.target()).equals(AstDisplay.displayText(elseBranch.target())))
 			return null;
 
-		if (!AstUtil.isPureExpression(thenBranch.value()) || !AstUtil.isPureExpression(elseBranch.value()))
+		if (!AstQuery.isPureExpression(thenBranch.value()) || !AstQuery.isPureExpression(elseBranch.value()))
 			return null;
 
-		final var thenValueText = AstUtil.displayText(thenBranch.value());
-		final var elseValueText = AstUtil.displayText(elseBranch.value());
+		final var thenValueText = AstDisplay.displayText(thenBranch.value());
+		final var elseValueText = AstDisplay.displayText(elseBranch.value());
 		if (!leftText.equals(thenValueText) && !rightText.equals(thenValueText))
 			return null;
 		if (!leftText.equals(elseValueText) && !rightText.equals(elseValueText))
@@ -141,42 +159,76 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 
 		final var hint = condition.getType() == TokenTypes.EQUAL ? elseValueText : thenValueText;
 		final var kind = thenBranch.kind();
-		final var target = kind == BranchKind.ASSIGN ? AstUtil.displayText(thenBranch.target()) : null;
+		final var target = kind == BranchKind.ASSIGN ? AstDisplay.displayText(thenBranch.target()) : null;
 		final var startLine = ifAst.getLineNo() - 1;
+		final var endLine = AstQuery.lastLine(last) - 1;
 
-		var declLine = -1;
-		var collapseReturnLine = -1;
 		if (kind == BranchKind.ASSIGN && elseAst != null) {
 			final var decl = previousStatement(ifAst);
 			final var next = ifAst.getNextSibling();
 			if (decl != null && decl.getType() == TokenTypes.VARIABLE_DEF
 					&& next != null && next.getType() == TokenTypes.LITERAL_RETURN
 					&& isUninitializedDeclOf(decl, target)
-					&& returnsBareName(next, target)) {
-				declLine = decl.getLineNo() - 1;
-				collapseReturnLine = AstUtil.lastLine(next) - 1;
+					&& returnsBareName(next, target)
+					&& isDeletable(decl)) {
+				return new Redundancy(
+						kind,
+						target,
+						hint,
+						startLine,
+						endLine,
+						AstQuery.firstLine(decl) - 1,
+						AstQuery.lastLine(next) - 1,
+						AstQuery.firstColumn(decl),
+						endColumn(next),
+						leadLine(decl)
+				);
 			}
 		}
 
-		return new Redundancy(kind, target, hint, startLine, endLine, declLine, collapseReturnLine);
+		return new Redundancy(kind, target, hint, startLine, endLine, -1, -1, ifAst.getColumnNo(), endColumn(last), leadLine(ifAst));
 	}
 
 	/**
 	 * Locates the {@code LITERAL_IF} the check reported at {@code (line, column)} (0-based) in
-	 * {@code root} and classifies it, or {@code null} when no such if-node exists (the fixer's
-	 * parse produced no node at the reported site).
+	 * {@code root} and classifies it, or {@code null} when no such if-node exists.
 	 */
 	@CheckReturnValue
 	@Nullable
 	public static Redundancy classifyAt(@Nonnull DetailAST root, int line, int column) {
-		final var ifAst = AstUtil.findNodeAt(root, line, column, node -> node.getType() == TokenTypes.LITERAL_IF);
+		final var ifAst = AstQuery.findNodeAt(root, line, column, node -> node.getType() == TokenTypes.LITERAL_IF);
 		return ifAst == null ? null : classify(ifAst);
+	}
+
+	/**
+	 * The method whose body holds {@code node}, or {@code null} when a lambda, constructor,
+	 * initializer or type body comes first, whose {@code return} has no declared type to compare.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static DetailAST enclosingMethod(@Nonnull DetailAST node) {
+		for (var ancestor = node.getParent(); ancestor != null; ancestor = ancestor.getParent()) {
+			if (ancestor.getType() == TokenTypes.METHOD_DEF)
+				return ancestor;
+			if (UNTYPED_BODIES.contains(ancestor.getType()))
+				return null;
+		}
+		return null;
+	}
+
+	/** The code-point column just past the last token of {@code ast}. */
+	@CheckReturnValue
+	private static int endColumn(@Nonnull DetailAST ast) {
+		var last = ast;
+		for (var child = ast.getLastChild(); child != null; child = child.getLastChild())
+			last = child;
+		return last.getColumnNo() + last.getText().codePointCount(0, last.getText().length());
 	}
 
 	@CheckReturnValue
 	@Nullable
 	private static BranchInfo extractBranch(@Nonnull DetailAST body) {
-		final var stmt = AstUtil.unwrapSingleStatementBlock(body);
+		final var stmt = AstQuery.unwrapSingleStatementBlock(body);
 		if (stmt == null)
 			return null;
 
@@ -204,10 +256,58 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 		return null;
 	}
 
+	/**
+	 * Whether {@code decl}, the uninitialized declaration above an assign-form if-else that a
+	 * {@code return} of its name follows, can be deleted with them so that {@code return value;}
+	 * replaces all three. Only then does nothing else depend on it: it declares that one name (a
+	 * declarator beside it, {@code int s = compute(), r;}, would go too); it sits in a block of its
+	 * own, not straight in a {@code case} group, whose later cases share its scope
+	 * ({@code case 2: r = 5;}); it carries no annotation, which would be dropped; and its type is the
+	 * enclosing method's return type, so returning the value converts it exactly as assigning it did
+	 * ({@code double r = intValue; return r;} in a method returning {@code Object} returns a
+	 * {@code Double}, which {@code return intValue;} would not).
+	 */
+	@CheckReturnValue
+	private static boolean isDeletable(@Nonnull DetailAST decl) {
+		// the declaration ahead of the if is the last declarator of its statement, so only a COMMA can precede it
+		final var previous = decl.getPreviousSibling();
+		if (previous != null && previous.getType() == TokenTypes.COMMA)
+			return false;
+		final var block = decl.getParent();
+		if (block == null || block.getParent() == null || block.getParent().getType() == TokenTypes.CASE_GROUP)
+			return false;
+		final var modifiers = decl.findFirstToken(TokenTypes.MODIFIERS);
+		if (modifiers != null && modifiers.findFirstToken(TokenTypes.ANNOTATION) != null)
+			return false;
+		final var method = enclosingMethod(decl);
+		final var declaredType = decl.findFirstToken(TokenTypes.TYPE);
+		return method != null && declaredType != null
+				&& AstDisplay.displayText(declaredType).equals(AstDisplay.displayText(method.findFirstToken(TokenTypes.TYPE)));
+	}
+
 	@CheckReturnValue
 	private static boolean isUninitializedDeclOf(@Nonnull DetailAST varDef, @Nonnull String name) {
 		final var ident = varDef.findFirstToken(TokenTypes.IDENT);
 		return ident != null && ident.getText().equals(name) && varDef.findFirstToken(TokenTypes.ASSIGN) == null;
+	}
+
+	/**
+	 * The 0-based first line of the statement or member holding the token right before
+	 * {@code node}: the code ahead of {@code node} on its line ends that statement, so that line's
+	 * indent is the one the code is laid out at, even when the line itself starts elsewhere (a text
+	 * block's closing line, a wrapped argument list).
+	 */
+	@CheckReturnValue
+	private static int leadLine(@Nonnull DetailAST node) {
+		var statement = tokenBefore(node);
+		if (statement == null)
+			return AstQuery.firstLine(node) - 1;
+		while (statement.getParent() != null && !STATEMENT_LISTS.contains(statement.getParent().getType()))
+			statement = statement.getParent();
+		// an expression statement or a declaration hangs its `;` beside it rather than under it
+		if (statement.getType() == TokenTypes.SEMI && statement.getPreviousSibling() != null)
+			statement = statement.getPreviousSibling();
+		return AstQuery.firstLine(statement) - 1;
 	}
 
 	@CheckReturnValue
@@ -227,6 +327,18 @@ public class RedundantEqualityBranchCheck extends AbstractAstCheck {
 		final var value = expr.getFirstChild();
 		return value != null && value.getType() == TokenTypes.IDENT
 				&& value.getNextSibling() == null && value.getText().equals(name);
+	}
+
+	/** The last token ahead of {@code node} in its parent, or the parent itself when none is. */
+	@CheckReturnValue
+	@Nullable
+	private static DetailAST tokenBefore(@Nonnull DetailAST node) {
+		var before = node.getPreviousSibling();
+		if (before == null)
+			return node.getParent();
+		while (before.getLastChild() != null)
+			before = before.getLastChild();
+		return before;
 	}
 
 	@Nonnull

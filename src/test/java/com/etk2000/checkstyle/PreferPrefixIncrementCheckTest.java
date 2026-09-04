@@ -48,10 +48,10 @@ public class PreferPrefixIncrementCheckTest {
 
 	@Nonnull
 	private static DetailAST parse(@Nonnull String statement) throws Exception {
-		final var tmp = File.createTempFile("prefix", ".java");
-		tmp.deleteOnExit();
-		Files.writeString(tmp.toPath(), "class T {\n\tvoid m(int[] arr, int i, T t) {\n\t\t" + statement + "\n\t}\n}\n");
-		return JavaParser.parse(new FileContents(new FileText(tmp, StandardCharsets.UTF_8.name())));
+		final var tempFile = File.createTempFile("prefix", ".java");
+		tempFile.deleteOnExit();
+		Files.writeString(tempFile.toPath(), "class T {\n\tvoid m(int[] arr, int i, T t) {\n\t\t" + statement + "\n\t}\n}\n");
+		return JavaParser.parse(new FileContents(new FileText(tempFile, StandardCharsets.UTF_8.name())));
 	}
 
 	@Nonnull
@@ -74,7 +74,7 @@ public class PreferPrefixIncrementCheckTest {
 		final var violation = violations.getFirst();
 		assertEquals(4, violation.getLine());
 		assertEquals(SeverityLevel.ERROR, violation.getSeverityLevel());
-		assertEquals("Use prefix increment (++x) instead of postfix (x++).", violation.getMessage());
+		assertEquals("Use prefix increment '++x' instead of postfix 'x++'.", violation.getMessage());
 		assertEquals(10, violation.getColumn());
 	}
 
@@ -142,10 +142,10 @@ public class PreferPrefixIncrementCheckTest {
 	 */
 	@Test
 	public void testSpanFoundInSecondTopLevelClass() throws Exception {
-		final var tmp = File.createTempFile("prefix", ".java");
-		tmp.deleteOnExit();
-		Files.writeString(tmp.toPath(), "package p;\n\nclass A {\n}\n\nclass B {\n\tvoid m(int i) {\n\t\ti++;\n\t}\n}\n");
-		final var root = JavaParser.parse(new FileContents(new FileText(tmp, StandardCharsets.UTF_8.name())));
+		final var tempFile = File.createTempFile("prefix", ".java");
+		tempFile.deleteOnExit();
+		Files.writeString(tempFile.toPath(), "package p;\n\nclass A {\n}\n\nclass B {\n\tvoid m(int i) {\n\t\ti++;\n\t}\n}\n");
+		final var root = JavaParser.parse(new FileContents(new FileText(tempFile, StandardCharsets.UTF_8.name())));
 		assertNull(root.getNextSibling(), "parse root carries siblings; every locator must iterate them");
 		final var operator = postfixNode(root);
 		assertNotNull(PreferPrefixIncrementCheck.postfixSpanAt(root, operator.getLineNo() - 1, operator.getColumnNo()));

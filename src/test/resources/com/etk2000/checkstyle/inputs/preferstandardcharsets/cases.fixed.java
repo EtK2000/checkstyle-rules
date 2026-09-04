@@ -1,5 +1,5 @@
 // === case: fq_string_parameter ===
-// skip-reason: the violation names a String variable, not a charset literal
+// skip-reason: cannot replace the charset name: the violation names a String variable, not a charset literal
 // imports: java.net.URLDecoder
 class InputStandardCharsetsFqStringParameterSliceViolation {
 	void m(byte[] data, String encoding) throws Exception {

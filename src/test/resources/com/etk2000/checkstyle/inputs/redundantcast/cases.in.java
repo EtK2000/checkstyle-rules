@@ -7,7 +7,7 @@ class InputRedundantCastBlockCommentHidesCallSliceViolation {
 	}
 
 	int m(String s) {
-		return foo /* note */((String) s).length(); // violation: Remove redundant cast to 'String' (expression is already 'String').
+		return foo /* note */((String) s).length(); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -15,7 +15,7 @@ class InputRedundantCastBlockCommentHidesCallSliceViolation {
 // === case: block_comment_in_receiver_wrap ===
 class InputRedundantCastBlockCommentInReceiverSliceViolation {
 	int m(String s) {
-		return (/* note */ (String) s).length(); // violation: Remove redundant cast to 'String' (expression is already 'String').
+		return (/* note */ (String) s).length(); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -23,7 +23,7 @@ class InputRedundantCastBlockCommentInReceiverSliceViolation {
 // === case: cast_with_inline_block_comment ===
 class InputRedundantCastInlineBlockCommentSliceViolation {
 	void m() {
-		final String s = (String) /* preserved */ null; // violation: Remove redundant cast to 'String' (expression is already 'null').
+		final String s = (String) /* preserved */ null; // violation: Remove the redundant cast to 'String' (the expression is already 'null').
 	}
 }
 // === end ===
@@ -31,7 +31,7 @@ class InputRedundantCastInlineBlockCommentSliceViolation {
 // === case: cast_with_leading_block_comment ===
 class InputRedundantCastLeadingBlockCommentSliceViolation {
 	void m() {
-		/* leading */ final String s = (String) null; // violation: Remove redundant cast to 'String' (expression is already 'null').
+		/* leading */ final String s = (String) null; // violation: Remove the redundant cast to 'String' (the expression is already 'null').
 	}
 }
 // === end ===
@@ -39,7 +39,7 @@ class InputRedundantCastLeadingBlockCommentSliceViolation {
 // === case: compound_assignment_band ===
 class InputRedundantCastCompoundBandSliceViolation {
 	void m(long x, int y) {
-		x &= (long) y; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		x &= (long) y; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -47,7 +47,7 @@ class InputRedundantCastCompoundBandSliceViolation {
 // === case: compound_assignment_bor ===
 class InputRedundantCastCompoundBorSliceViolation {
 	void m(long x, int y) {
-		x |= (long) y; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		x |= (long) y; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -55,7 +55,7 @@ class InputRedundantCastCompoundBorSliceViolation {
 // === case: compound_assignment_bsr ===
 class InputRedundantCastCompoundBsrSliceViolation {
 	void m(long x, int y) {
-		x >>>= (long) y; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		x >>>= (long) y; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -63,7 +63,7 @@ class InputRedundantCastCompoundBsrSliceViolation {
 // === case: compound_assignment_bxor ===
 class InputRedundantCastCompoundBxorSliceViolation {
 	void m(long x, int y) {
-		x ^= (long) y; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		x ^= (long) y; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -71,7 +71,7 @@ class InputRedundantCastCompoundBxorSliceViolation {
 // === case: compound_assignment_div ===
 class InputRedundantCastCompoundDivSliceViolation {
 	void m(long x, int y) {
-		x /= (long) y; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		x /= (long) y; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -79,7 +79,7 @@ class InputRedundantCastCompoundDivSliceViolation {
 // === case: compound_assignment_minus ===
 class InputRedundantCastCompoundMinusSliceViolation {
 	void m(long x, int y) {
-		x -= (long) y; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		x -= (long) y; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -87,7 +87,7 @@ class InputRedundantCastCompoundMinusSliceViolation {
 // === case: compound_assignment_mod ===
 class InputRedundantCastCompoundModSliceViolation {
 	void m(long x, int y) {
-		x %= (long) y; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		x %= (long) y; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -95,7 +95,7 @@ class InputRedundantCastCompoundModSliceViolation {
 // === case: compound_assignment_plus ===
 class InputRedundantCastCompoundPlusSliceViolation {
 	void m(long x, int y) {
-		x += (long) y; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		x += (long) y; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -103,7 +103,7 @@ class InputRedundantCastCompoundPlusSliceViolation {
 // === case: compound_assignment_sl ===
 class InputRedundantCastCompoundSlSliceViolation {
 	void m(long x, int y) {
-		x <<= (long) y; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		x <<= (long) y; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -111,7 +111,7 @@ class InputRedundantCastCompoundSlSliceViolation {
 // === case: compound_assignment_sr ===
 class InputRedundantCastCompoundSrSliceViolation {
 	void m(long x, int y) {
-		x >>= (long) y; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		x >>= (long) y; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -119,7 +119,7 @@ class InputRedundantCastCompoundSrSliceViolation {
 // === case: compound_assignment_star ===
 class InputRedundantCastCompoundStarSliceViolation {
 	void m(long x, int y) {
-		x *= (long) y; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		x *= (long) y; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -127,7 +127,7 @@ class InputRedundantCastCompoundStarSliceViolation {
 // === case: null_cast_assignment ===
 class InputRedundantCastNullAssignmentSliceViolation {
 	void m() {
-		final String s = (String) null; // violation: Remove redundant cast to 'String' (expression is already 'null').
+		final String s = (String) null; // violation: Remove the redundant cast to 'String' (the expression is already 'null').
 	}
 }
 // === end ===
@@ -135,7 +135,7 @@ class InputRedundantCastNullAssignmentSliceViolation {
 // === case: null_cast_assignment_different_target ===
 class InputRedundantCastNullDifferentTargetSliceViolation {
 	void m() {
-		final Object o = (String) null; // violation: Remove redundant cast to 'String' (expression is already 'null').
+		final Object o = (String) null; // violation: Remove the redundant cast to 'String' (the expression is already 'null').
 	}
 }
 // === end ===
@@ -143,7 +143,7 @@ class InputRedundantCastNullDifferentTargetSliceViolation {
 // === case: null_cast_return ===
 class InputRedundantCastNullReturnSliceViolation {
 	String m() {
-		return (String) null; // violation: Remove redundant cast to 'String' (expression is already 'null').
+		return (String) null; // violation: Remove the redundant cast to 'String' (the expression is already 'null').
 	}
 }
 // === end ===
@@ -151,7 +151,7 @@ class InputRedundantCastNullReturnSliceViolation {
 // === case: null_cast_return_different ===
 class InputRedundantCastNullReturnDifferentSliceViolation {
 	Object m() {
-		return (String) null; // violation: Remove redundant cast to 'String' (expression is already 'null').
+		return (String) null; // violation: Remove the redundant cast to 'String' (the expression is already 'null').
 	}
 }
 // === end ===
@@ -159,7 +159,7 @@ class InputRedundantCastNullReturnDifferentSliceViolation {
 // === case: outer_paren_at_line_start ===
 class InputRedundantCastOuterParenLineStartSliceViolation {
 	void m(String s) {
-((String) s).length(); // violation: Remove redundant cast to 'String' (expression is already 'String').
+((String) s).length(); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -172,7 +172,7 @@ class InputRedundantCastPriorLineIdentSliceViolation {
 
 	int m(String s) {
 		return foo
-((String) s).length(); // violation: Remove redundant cast to 'String' (expression is already 'String').
+((String) s).length(); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -180,7 +180,7 @@ class InputRedundantCastPriorLineIdentSliceViolation {
 // === case: path_b_inner_string_literal ===
 class InputRedundantCastPathBInnerStringSliceViolation {
 	String m() {
-		return ((String) "x"); // violation: Remove redundant cast to 'String' (expression is already 'String').
+		return ((String) "x"); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -188,7 +188,7 @@ class InputRedundantCastPathBInnerStringSliceViolation {
 // === case: path_b_outer_not_adjacent ===
 class InputRedundantCastPathBOuterNotAdjacentSliceViolation {
 	String m(String s) {
-		return ( (String) s ); // violation: Remove redundant cast to 'String' (expression is already 'String').
+		return ( (String) s ); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -196,7 +196,7 @@ class InputRedundantCastPathBOuterNotAdjacentSliceViolation {
 // === case: return_with_trailing_block_comment ===
 class InputRedundantCastReturnTrailingCommentSliceViolation {
 	int m(String s) {
-		return /* note */((String) s).length(); // violation: Remove redundant cast to 'String' (expression is already 'String').
+		return /* note */((String) s).length(); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -206,7 +206,7 @@ class InputRedundantCastSameTypeFieldRefSliceViolation {
 	int sameField;
 
 	void m() {
-		final int x = (int) sameField; // violation: Remove redundant cast to 'int' (expression is already 'int').
+		final int x = (int) sameField; // violation: Remove the redundant cast to 'int' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -216,7 +216,7 @@ class InputRedundantCastSameTypeFieldRefSliceViolation {
 class InputRedundantCastSameTypeForeachSliceViolation {
 	void m(List<String> list) {
 		for (String s : list)
-			System.out.println((String) s); // violation: Remove redundant cast to 'String' (expression is already 'String').
+			System.out.println((String) s); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -225,7 +225,7 @@ class InputRedundantCastSameTypeForeachSliceViolation {
 class InputRedundantCastSameTypeForInitSliceViolation {
 	void m() {
 		for (int i = 0; i < 10; i++)
-			System.out.println((int) i); // violation: Remove redundant cast to 'int' (expression is already 'int').
+			System.out.println((int) i); // violation: Remove the redundant cast to 'int' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -233,7 +233,7 @@ class InputRedundantCastSameTypeForInitSliceViolation {
 // === case: same_type_cast_new ===
 class InputRedundantCastSameTypeNewSliceViolation {
 	void m() {
-		final Object x = (InputRedundantCastSameTypeNewSliceViolation) new InputRedundantCastSameTypeNewSliceViolation(); // violation: Remove redundant cast to 'InputRedundantCastSameTypeNewSliceViolation' (expression is already 'InputRedundantCastSameTypeNewSliceViolation').
+		final Object x = (InputRedundantCastSameTypeNewSliceViolation) new InputRedundantCastSameTypeNewSliceViolation(); // violation: Remove the redundant cast to 'InputRedundantCastSameTypeNewSliceViolation' (the expression is already 'InputRedundantCastSameTypeNewSliceViolation').
 	}
 }
 // === end ===
@@ -241,7 +241,7 @@ class InputRedundantCastSameTypeNewSliceViolation {
 // === case: same_type_cast_parameter ===
 class InputRedundantCastSameTypeParameterSliceViolation {
 	void m(String s) {
-		final String x = (String) s; // violation: Remove redundant cast to 'String' (expression is already 'String').
+		final String x = (String) s; // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -249,7 +249,7 @@ class InputRedundantCastSameTypeParameterSliceViolation {
 // === case: same_type_cast_receiver_paren ===
 class InputRedundantCastReceiverParenSliceViolation {
 	int m(String s) {
-		return ((String) s).length(); // violation: Remove redundant cast to 'String' (expression is already 'String').
+		return ((String) s).length(); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -259,7 +259,7 @@ class InputRedundantCastDollarIdSliceViolation {
 	void foo$(String x) {}
 
 	void m(String s) {
-		foo$((String) s); // violation: Remove redundant cast to 'String' (expression is already 'String').
+		foo$((String) s); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -268,7 +268,7 @@ class InputRedundantCastDollarIdSliceViolation {
 class InputRedundantCastReceiverParenLineStartSliceViolation {
 	int m(String s) {
 		return
-((String) s).length(); // violation: Remove redundant cast to 'String' (expression is already 'String').
+((String) s).length(); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -276,7 +276,7 @@ class InputRedundantCastReceiverParenLineStartSliceViolation {
 // === case: same_type_cast_receiver_paren_no_dot ===
 class InputRedundantCastReceiverParenNoDotSliceViolation {
 	String m(String s) {
-		return ((String) s); // violation: Remove redundant cast to 'String' (expression is already 'String').
+		return ((String) s); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -284,7 +284,7 @@ class InputRedundantCastReceiverParenNoDotSliceViolation {
 // === case: same_type_cast_receiver_paren_return_no_space ===
 class InputRedundantCastReceiverParenReturnNoSpaceSliceViolation {
 	int m(String s) {
-		return((String) s).length(); // violation: Remove redundant cast to 'String' (expression is already 'String').
+		return((String) s).length(); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -292,7 +292,7 @@ class InputRedundantCastReceiverParenReturnNoSpaceSliceViolation {
 // === case: same_type_cast_receiver_paren_string_with_parens ===
 class InputRedundantCastReceiverParenStringSliceViolation {
 	int m() {
-		return ((String) "x)y").length(); // violation: Remove redundant cast to 'String' (expression is already 'String').
+		return ((String) "x)y").length(); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -300,7 +300,7 @@ class InputRedundantCastReceiverParenStringSliceViolation {
 // === case: same_type_cast_receiver_paren_throw ===
 class InputRedundantCastReceiverParenThrowSliceViolation extends RuntimeException {
 	static void m(InputRedundantCastReceiverParenThrowSliceViolation e) {
-		throw ((InputRedundantCastReceiverParenThrowSliceViolation) e).self(); // violation: Remove redundant cast to 'InputRedundantCastReceiverParenThrowSliceViolation' (expression is already 'InputRedundantCastReceiverParenThrowSliceViolation').
+		throw ((InputRedundantCastReceiverParenThrowSliceViolation) e).self(); // violation: Remove the redundant cast to 'InputRedundantCastReceiverParenThrowSliceViolation' (the expression is already 'InputRedundantCastReceiverParenThrowSliceViolation').
 	}
 
 	InputRedundantCastReceiverParenThrowSliceViolation self() {
@@ -314,7 +314,7 @@ class InputRedundantCastReceiverParenYieldSliceViolation {
 	int m(int n, String s) {
 		return switch (n) {
 			case 1 -> {
-				yield ((String) s).length(); // violation: Remove redundant cast to 'String' (expression is already 'String').
+				yield ((String) s).length(); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 			}
 			default -> 0;
 		};
@@ -325,7 +325,7 @@ class InputRedundantCastReceiverParenYieldSliceViolation {
 // === case: same_type_cast_this ===
 class InputRedundantCastSameTypeThisSliceViolation {
 	InputRedundantCastSameTypeThisSliceViolation m() {
-		return (InputRedundantCastSameTypeThisSliceViolation) this; // violation: Remove redundant cast to 'InputRedundantCastSameTypeThisSliceViolation' (expression is already 'InputRedundantCastSameTypeThisSliceViolation').
+		return (InputRedundantCastSameTypeThisSliceViolation) this; // violation: Remove the redundant cast to 'InputRedundantCastSameTypeThisSliceViolation' (the expression is already 'InputRedundantCastSameTypeThisSliceViolation').
 	}
 }
 // === end ===
@@ -334,7 +334,7 @@ class InputRedundantCastSameTypeThisSliceViolation {
 class InputRedundantCastSameTypeVarIntSliceViolation {
 	void m() {
 		final int x = 5;
-		final int y = (int) x; // violation: Remove redundant cast to 'int' (expression is already 'int').
+		final int y = (int) x; // violation: Remove the redundant cast to 'int' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -343,51 +343,51 @@ class InputRedundantCastSameTypeVarIntSliceViolation {
 class InputRedundantCastSameTypeVarStringSliceViolation {
 	void m() {
 		final String s = "hi";
-		final String t = (String) s; // violation: Remove redundant cast to 'String' (expression is already 'String').
+		final String t = (String) s; // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
 
 // === case: same_type_field_char ===
 class InputRedundantCastSameTypeCharFieldSliceViolation {
-	char x = (char) 'a'; // violation: Remove redundant cast to 'char' (expression is already 'char').
+	char x = (char) 'a'; // violation: Remove the redundant cast to 'char' (the expression is already 'char').
 }
 // === end ===
 
 // === case: same_type_field_double ===
 class InputRedundantCastSameTypeDoubleFieldSliceViolation {
-	double x = (double) 5.0; // violation: Remove redundant cast to 'double' (expression is already 'double').
+	double x = (double) 5.0; // violation: Remove the redundant cast to 'double' (the expression is already 'double').
 }
 // === end ===
 
 // === case: same_type_field_float ===
 class InputRedundantCastSameTypeFloatFieldSliceViolation {
-	float x = (float) 5.0f; // violation: Remove redundant cast to 'float' (expression is already 'float').
+	float x = (float) 5.0f; // violation: Remove the redundant cast to 'float' (the expression is already 'float').
 }
 // === end ===
 
 // === case: same_type_field_int ===
 class InputRedundantCastSameTypeIntFieldSliceViolation {
-	int x = (int) 5; // violation: Remove redundant cast to 'int' (expression is already 'int').
+	int x = (int) 5; // violation: Remove the redundant cast to 'int' (the expression is already 'int').
 }
 // === end ===
 
 // === case: same_type_field_long ===
 class InputRedundantCastSameTypeLongFieldSliceViolation {
-	long x = (long) 5L; // violation: Remove redundant cast to 'long' (expression is already 'long').
+	long x = (long) 5L; // violation: Remove the redundant cast to 'long' (the expression is already 'long').
 }
 // === end ===
 
 // === case: same_type_field_string ===
 class InputRedundantCastSameTypeStringFieldSliceViolation {
-	String x = (String) "hi"; // violation: Remove redundant cast to 'String' (expression is already 'String').
+	String x = (String) "hi"; // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 }
 // === end ===
 
 // === case: same_type_nested_cast ===
 class InputRedundantCastSameTypeNestedSliceViolation {
 	void m(Object obj) {
-		final String s = (String) (String) obj; // violation: Remove redundant cast to 'String' (expression is already 'String').
+		final String s = (String) (String) obj; // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -396,7 +396,7 @@ class InputRedundantCastSameTypeNestedSliceViolation {
 class InputRedundantCastSiblingDoubleSliceViolation {
 	void m() {
 		final int x = 5;
-		final double d = (double) x * 1.5; // violation: Remove redundant cast to 'double' (expression is already 'int').
+		final double d = (double) x * 1.5; // violation: Remove the redundant cast to 'double' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -405,7 +405,7 @@ class InputRedundantCastSiblingDoubleSliceViolation {
 class InputRedundantCastSiblingFloatSliceViolation {
 	void m() {
 		final int x = 5;
-		final float d = (float) x * 1.5f; // violation: Remove redundant cast to 'float' (expression is already 'int').
+		final float d = (float) x * 1.5f; // violation: Remove the redundant cast to 'float' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -414,7 +414,7 @@ class InputRedundantCastSiblingFloatSliceViolation {
 class InputRedundantCastSiblingLongLiteralSliceViolation {
 	void m() {
 		final int x = 5;
-		final long y = (long) x * 100L; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		final long y = (long) x * 100L; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -424,7 +424,7 @@ class InputRedundantCastSiblingLongVarSliceViolation {
 	void m() {
 		final int x = 5;
 		final long y = 10;
-		final long z = (long) x * y; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		final long z = (long) x * y; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -434,7 +434,7 @@ class InputRedundantCastSiblingComparisonSliceViolation {
 	void m() {
 		final int x = 5;
 		final long y = 10;
-		final boolean b = (long) x == y; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		final boolean b = (long) x == y; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -442,7 +442,7 @@ class InputRedundantCastSiblingComparisonSliceViolation {
 // === case: string_escape_quote ===
 class InputRedundantCastStringEscapeQuoteSliceViolation {
 	int m() {
-		return ((String) "a\")b").length(); // violation: Remove redundant cast to 'String' (expression is already 'String').
+		return ((String) "a\")b").length(); // violation: Remove the redundant cast to 'String' (the expression is already 'String').
 	}
 }
 // === end ===
@@ -451,7 +451,7 @@ class InputRedundantCastStringEscapeQuoteSliceViolation {
 class InputRedundantCastTernaryFalseBranchSliceViolation {
 	void m(boolean flag) {
 		final int x = 5;
-		final long y = flag ? 0L : (long) x; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		final long y = flag ? 0L : (long) x; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -460,7 +460,7 @@ class InputRedundantCastTernaryFalseBranchSliceViolation {
 class InputRedundantCastTernaryReturnSliceViolation {
 	long m(boolean flag) {
 		final int x = 5;
-		return flag ? (long) x : 0L; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		return flag ? (long) x : 0L; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -469,7 +469,7 @@ class InputRedundantCastTernaryReturnSliceViolation {
 class InputRedundantCastTernaryTrueBranchSliceViolation {
 	void m(boolean flag) {
 		final int x = 5;
-		final long y = flag ? (long) x : 0L; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		final long y = flag ? (long) x : 0L; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -480,7 +480,7 @@ class InputRedundantCastTernaryLongReassignSliceViolation {
 		final int x = 5;
 		final int z = 10;
 		long y = 0;
-		y = flag ? (long) x : z; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		y = flag ? (long) x : z; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -490,7 +490,7 @@ class InputRedundantCastTernaryLongTargetSliceViolation {
 	void m(boolean flag) {
 		final int x = 5;
 		final int z = 10;
-		final long y = flag ? (long) x : z; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		final long y = flag ? (long) x : z; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -499,7 +499,7 @@ class InputRedundantCastTernaryLongTargetSliceViolation {
 class InputRedundantCastWideningByteToIntSliceViolation {
 	void m() {
 		final byte b = 5;
-		final int x = (int) b; // violation: Remove redundant cast to 'int' (expression is already 'byte').
+		final int x = (int) b; // violation: Remove the redundant cast to 'int' (the expression is already 'byte').
 	}
 }
 // === end ===
@@ -508,7 +508,7 @@ class InputRedundantCastWideningByteToIntSliceViolation {
 class InputRedundantCastWideningByteToShortSliceViolation {
 	void m() {
 		final byte b = 5;
-		final short x = (short) b; // violation: Remove redundant cast to 'short' (expression is already 'byte').
+		final short x = (short) b; // violation: Remove the redundant cast to 'short' (the expression is already 'byte').
 	}
 }
 // === end ===
@@ -517,7 +517,7 @@ class InputRedundantCastWideningByteToShortSliceViolation {
 class InputRedundantCastWideningCharToIntSliceViolation {
 	void m() {
 		final char c = 'a';
-		final int x = (int) c; // violation: Remove redundant cast to 'int' (expression is already 'char').
+		final int x = (int) c; // violation: Remove the redundant cast to 'int' (the expression is already 'char').
 	}
 }
 // === end ===
@@ -526,7 +526,7 @@ class InputRedundantCastWideningCharToIntSliceViolation {
 class InputRedundantCastWideningFloatToDoubleSliceViolation {
 	void m() {
 		final float f = 5.0f;
-		final double x = (double) f; // violation: Remove redundant cast to 'double' (expression is already 'float').
+		final double x = (double) f; // violation: Remove the redundant cast to 'double' (the expression is already 'float').
 	}
 }
 // === end ===
@@ -535,7 +535,7 @@ class InputRedundantCastWideningFloatToDoubleSliceViolation {
 class InputRedundantCastWideningInReturnSliceViolation {
 	long m() {
 		final int x = 5;
-		return (long) x; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		return (long) x; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -544,7 +544,7 @@ class InputRedundantCastWideningInReturnSliceViolation {
 class InputRedundantCastWideningInReturnWiderSliceViolation {
 	double m() {
 		final int x = 5;
-		return (long) x; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		return (long) x; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -554,7 +554,7 @@ class InputRedundantCastWideningStandaloneAssignSliceViolation {
 	void m() {
 		final int x = 5;
 		long y = 0;
-		y = (long) x; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		y = (long) x; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -563,7 +563,7 @@ class InputRedundantCastWideningStandaloneAssignSliceViolation {
 class InputRedundantCastWideningIntToDoubleSliceViolation {
 	void m() {
 		final int x = 5;
-		final double x = (double) x; // violation: Remove redundant cast to 'double' (expression is already 'int').
+		final double x = (double) x; // violation: Remove the redundant cast to 'double' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -572,7 +572,7 @@ class InputRedundantCastWideningIntToDoubleSliceViolation {
 class InputRedundantCastWideningIntToFloatSliceViolation {
 	void m() {
 		final int x = 5;
-		final float x = (float) x; // violation: Remove redundant cast to 'float' (expression is already 'int').
+		final float x = (float) x; // violation: Remove the redundant cast to 'float' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -581,7 +581,7 @@ class InputRedundantCastWideningIntToFloatSliceViolation {
 class InputRedundantCastWideningIntToLongSliceViolation {
 	void m() {
 		final int x = 5;
-		final long x = (long) x; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		final long x = (long) x; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -590,7 +590,7 @@ class InputRedundantCastWideningIntToLongSliceViolation {
 class InputRedundantCastWideningLongToDoubleSliceViolation {
 	void m() {
 		final long x = 5L;
-		final double d = (double) x; // violation: Remove redundant cast to 'double' (expression is already 'long').
+		final double d = (double) x; // violation: Remove the redundant cast to 'double' (the expression is already 'long').
 	}
 }
 // === end ===
@@ -599,7 +599,7 @@ class InputRedundantCastWideningLongToDoubleSliceViolation {
 class InputRedundantCastWideningLongToFloatSliceViolation {
 	void m() {
 		final long x = 5L;
-		final float f = (float) x; // violation: Remove redundant cast to 'float' (expression is already 'long').
+		final float f = (float) x; // violation: Remove the redundant cast to 'float' (the expression is already 'long').
 	}
 }
 // === end ===
@@ -607,7 +607,7 @@ class InputRedundantCastWideningLongToFloatSliceViolation {
 // === case: widening_on_parameter ===
 class InputRedundantCastWideningOnParameterSliceViolation {
 	void m(int x) {
-		final long y = (long) x; // violation: Remove redundant cast to 'long' (expression is already 'int').
+		final long y = (long) x; // violation: Remove the redundant cast to 'long' (the expression is already 'int').
 	}
 }
 // === end ===
@@ -616,7 +616,7 @@ class InputRedundantCastWideningOnParameterSliceViolation {
 class InputRedundantCastWideningShortToIntSliceViolation {
 	void m() {
 		final short s = 5;
-		final int x = (int) s; // violation: Remove redundant cast to 'int' (expression is already 'short').
+		final int x = (int) s; // violation: Remove the redundant cast to 'int' (the expression is already 'short').
 	}
 }
 // === end ===
@@ -625,7 +625,7 @@ class InputRedundantCastWideningShortToIntSliceViolation {
 class InputRedundantCastWideningShortToLongSliceViolation {
 	void m() {
 		final short s = 5;
-		final long x = (long) s; // violation: Remove redundant cast to 'long' (expression is already 'short').
+		final long x = (long) s; // violation: Remove the redundant cast to 'long' (the expression is already 'short').
 	}
 }
 // === end ===

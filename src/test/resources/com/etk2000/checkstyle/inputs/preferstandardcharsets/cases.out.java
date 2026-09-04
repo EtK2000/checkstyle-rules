@@ -1,5 +1,40 @@
 package com.etk2000.checkstyle.inputs.preferstandardcharsets;
 
+// === case: anon_inherited_string_field ===
+// skip-reason: cannot replace the charset name: the violation names a String variable, not a charset literal
+// imports: java.io.UnsupportedEncodingException
+class InputStandardCharsetsAnonInheritedStringFieldSliceViolation {
+	static class Base {
+		static final String CHARSET_NAME = "UTF-8";
+	}
+
+	Base holder = new Base() {
+		String decode(byte[] data) throws UnsupportedEncodingException {
+			return new String(data, CHARSET_NAME);
+		}
+	};
+}
+// === end ===
+
+// === case: anon_var_from_inherited_method ===
+// skip-reason: cannot replace the charset name: the violation names a String variable, not a charset literal
+// imports: java.io.UnsupportedEncodingException
+class InputStandardCharsetsAnonVarFromInheritedMethodSliceViolation {
+	static class Base {
+		String charsetName() {
+			return "UTF-8";
+		}
+	}
+
+	Base holder = new Base() {
+		String decode(byte[] data) throws UnsupportedEncodingException {
+			final var name = charsetName();
+			return new String(data, name);
+		}
+	};
+}
+// === end ===
+
 // === case: builtin_functions ===
 // imports: java.io.ByteArrayInputStream
 // imports: java.io.ByteArrayOutputStream
@@ -34,8 +69,27 @@ class InputStandardCharsetsBuiltinFunctionsSliceViolation {
 }
 // === end ===
 
+// === case: enum_constant_string_field ===
+// skip-reason: cannot replace the charset name: the violation names a String variable, not a charset literal
+// imports: java.io.UnsupportedEncodingException
+enum InputStandardCharsetsEnumConstantStringFieldSliceViolation {
+	A {
+		@Override
+		String decode(byte[] data) throws UnsupportedEncodingException {
+			return new String(data, charsetName);
+		}
+	};
+
+	final String charsetName = "UTF-8";
+
+	String decode(byte[] data) throws UnsupportedEncodingException {
+		return null;
+	}
+}
+// === end ===
+
 // === case: fq_string_local ===
-// skip-reason: the violation names a String variable, not a charset literal
+// skip-reason: cannot replace the charset name: the violation names a String variable, not a charset literal
 // imports: java.net.URLEncoder
 class InputStandardCharsetsFqStringLocalSliceViolation {
 	void m(byte[] data) throws Exception {
@@ -48,7 +102,7 @@ class InputStandardCharsetsFqStringLocalSliceViolation {
 // === end ===
 
 // === case: fq_string_parameter ===
-// skip-reason: the violation names a String variable, not a charset literal
+// skip-reason: cannot replace the charset name: the violation names a String variable, not a charset literal
 // imports: java.net.URLDecoder
 class InputStandardCharsetsFqStringParameterSliceViolation {
 	void m(byte[] data, java.lang.String encoding) throws Exception {
@@ -92,8 +146,32 @@ class InputStandardCharsetsOtherCharsetsSliceViolation {
 }
 // === end ===
 
+// === case: resource_receiver_charset_literal ===
+// imports: java.io.ByteArrayOutputStream
+// imports: java.nio.charset.StandardCharsets
+class InputStandardCharsetsResourceReceiverCharsetLiteralSliceViolation {
+	void m() throws Exception {
+		try (var out = new ByteArrayOutputStream()) {
+			final var s = out.toString(StandardCharsets.UTF_8);
+		}
+	}
+}
+// === end ===
+
+// === case: resource_receiver_string_charset ===
+// skip-reason: cannot replace the charset name: the violation names a String variable, not a charset literal
+// imports: java.io.ByteArrayOutputStream
+class InputStandardCharsetsResourceReceiverStringCharsetSliceViolation {
+	void m(String encoding) throws Exception {
+		try (var out = new ByteArrayOutputStream()) {
+			final var s = out.toString(encoding);
+		}
+	}
+}
+// === end ===
+
 // === case: string_field ===
-// skip-reason: the violation names a String variable, not a charset literal
+// skip-reason: cannot replace the charset name: the violation names a String variable, not a charset literal
 // imports: java.io.ByteArrayInputStream
 // imports: java.io.ByteArrayOutputStream
 // imports: java.io.File
@@ -125,7 +203,7 @@ class InputStandardCharsetsStringFieldSliceViolation {
 // === end ===
 
 // === case: string_local ===
-// skip-reason: the violation names a String variable, not a charset literal
+// skip-reason: cannot replace the charset name: the violation names a String variable, not a charset literal
 // imports: java.io.ByteArrayInputStream
 // imports: java.io.ByteArrayOutputStream
 // imports: java.io.File
@@ -156,7 +234,7 @@ class InputStandardCharsetsStringLocalSliceViolation {
 // === end ===
 
 // === case: string_parameter ===
-// skip-reason: the violation names a String variable, not a charset literal
+// skip-reason: cannot replace the charset name: the violation names a String variable, not a charset literal
 // imports: java.io.ByteArrayInputStream
 // imports: java.io.ByteArrayOutputStream
 // imports: java.io.File

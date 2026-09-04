@@ -92,7 +92,7 @@ class InputRedundantArrayCreationViolation {
 // === end ===
 
 // === case: multidim_brace_init_skipped ===
-// skip-reason: nested array initializer
+// skip-reason: cannot remove the array creation: its elements are nested array initializers
 // imports: java.util.Collections
 // imports: java.util.List
 @SuppressWarnings("unused")
@@ -115,7 +115,7 @@ class InputRedundantArrayCreationMultidimPlainElementsSliceViolation {
 // === end ===
 
 // === case: multiline_array_skipped ===
-// skip-reason: multi-line array initializer
+// skip-reason: cannot remove the array creation: the initializer spans multiple lines
 // imports: java.util.Arrays
 @SuppressWarnings("unused")
 class InputRedundantArrayCreationMultilineArraySkippedSliceViolation {
@@ -156,6 +156,18 @@ class InputRedundantArrayCreationNestedParensInElementsSliceViolation {
 class InputRedundantArrayCreationPrimitiveVarargsMethodSliceViolation {
 	void m() {
 		IntStream.of(1, 2);
+	}
+}
+// === end ===
+
+// === case: resource_receiver_varargs ===
+// imports: java.io.PrintWriter
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationResourceReceiverVarargsSliceViolation {
+	void m() throws Exception {
+		try (var writer = new PrintWriter(System.out)) {
+			writer.format("%s", "a");
+		}
 	}
 }
 // === end ===

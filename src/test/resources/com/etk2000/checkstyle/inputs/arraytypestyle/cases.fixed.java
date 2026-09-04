@@ -1,3 +1,13 @@
+// === case: for_loop_single_var_fixed ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleForLoopSingleVarFixedSliceViolation {
+	void m(int[] a, int step) {
+		for (var x = a; x.length < 10; step += 1)
+			break;
+	}
+}
+// === end ===
+
 // === case: generic_method_multi_param_lambda ===
 @SuppressWarnings("unused")
 class InputArrayTypeStyleGenericMethodMultiParamLambdaSliceViolation {

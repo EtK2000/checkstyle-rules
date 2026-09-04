@@ -7,9 +7,9 @@ import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkipResult;
 import org.junit.jupiter.api.Test;
 
 public class ArrayTypeStyleFixerTest {
-	private static final String SKIP_ANNOTATION = "type-use annotation before the array brackets";
-	private static final String SKIP_MULTI_VAR = "cannot move brackets in a multi-variable declaration";
-	private static final String SKIP_TEXT_BLOCK = "possible text block prevents scanning the declaration";
+	private static final String SKIP_ANNOTATION = "cannot move the brackets: a type-use annotation precedes them";
+	private static final String SKIP_MULTI_VAR = "cannot move the brackets: multi-variable declaration";
+	private static final String SKIP_TEXT_BLOCK = "cannot move the brackets: a possible text block prevents scanning the declaration";
 	private static final String TOPIC = "arraytypestyle";
 
 	private final CheckstyleFixer fixer = new ArrayTypeStyleFixer();
@@ -56,8 +56,8 @@ public class ArrayTypeStyleFixerTest {
 	}
 
 	@Test
-	public void testFieldInitCallEndsInParenMultiVarReturnsNull() throws Exception {
-		assertSkipResult(fixer, TOPIC, "field_init_call_ends_in_paren_multi_var_returns_null", SKIP_MULTI_VAR);
+	public void testFieldInitCallEndsInParenMultiVarSkips() throws Exception {
+		assertSkipResult(fixer, TOPIC, "field_init_call_ends_in_paren_multi_var_skips", SKIP_MULTI_VAR);
 	}
 
 	@Test
@@ -99,8 +99,8 @@ public class ArrayTypeStyleFixerTest {
 	}
 
 	@Test
-	public void testMethodReturnWithTypeUseAnnotationReturnsNull() throws Exception {
-		assertSkipResult(fixer, TOPIC, "method_return_with_type_use_annotation_returns_null", SKIP_ANNOTATION);
+	public void testMethodReturnWithTypeUseAnnotationSkips() throws Exception {
+		assertSkipResult(fixer, TOPIC, "method_return_with_type_use_annotation_skips", SKIP_ANNOTATION);
 	}
 
 	@Test
@@ -151,13 +151,13 @@ public class ArrayTypeStyleFixerTest {
 	}
 
 	@Test
-	public void testMultiLineTextBlockOnBracketLineReturnsNull() throws Exception {
-		assertSkipResult(fixer, TOPIC, "multi_line_text_block_on_bracket_line_returns_null", SKIP_TEXT_BLOCK);
+	public void testMultiLineTextBlockOnBracketLineSkips() throws Exception {
+		assertSkipResult(fixer, TOPIC, "multi_line_text_block_on_bracket_line_skips", SKIP_TEXT_BLOCK);
 	}
 
 	@Test
-	public void testMultiLineTextBlockOnLaterLineReturnsNull() throws Exception {
-		assertSkipResult(fixer, TOPIC, "multi_line_text_block_on_later_line_returns_null", SKIP_TEXT_BLOCK);
+	public void testMultiLineTextBlockOnLaterLineSkips() throws Exception {
+		assertSkipResult(fixer, TOPIC, "multi_line_text_block_on_later_line_skips", SKIP_TEXT_BLOCK);
 	}
 
 	@Test
@@ -238,13 +238,13 @@ public class ArrayTypeStyleFixerTest {
 	}
 
 	@Test
-	public void testTypeUseAnnotationInParameterReturnsNull() throws Exception {
-		assertSkipResult(fixer, TOPIC, "type_use_annotation_in_parameter_returns_null", SKIP_ANNOTATION);
+	public void testTypeUseAnnotationInParameterSkips() throws Exception {
+		assertSkipResult(fixer, TOPIC, "type_use_annotation_in_parameter_skips", SKIP_ANNOTATION);
 	}
 
 	@Test
-	public void testTypeUseAnnotationInRecordReturnsNull() throws Exception {
-		assertSkipResult(fixer, TOPIC, "type_use_annotation_in_record_returns_null", SKIP_ANNOTATION);
+	public void testTypeUseAnnotationInRecordSkips() throws Exception {
+		assertSkipResult(fixer, TOPIC, "type_use_annotation_in_record_skips", SKIP_ANNOTATION);
 	}
 
 	@Test

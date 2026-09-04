@@ -113,6 +113,35 @@ class InputAnnotationSameLineRecordComponentSliceViolation {
 }
 // === end ===
 
+// === case: entry_state_block_comment_before_inline_annotations ===
+// imports: java.util.List
+class InputAnnotationSameLineEntryStateBlockCommentSliceViolation {
+	void m(List<String> list) {
+		for (/* sorted by
+		, uh */ @A @B var item : list)
+			System.out.println(item);
+	}
+}
+// === end ===
+
+// === case: inline_reorder_after_annotation_with_named_arg ===
+class InputAnnotationSameLineInlineReorderAfterNamedArgSliceViolation {
+	void foo(@A @B(num = 1) @C String param) {}
+}
+// === end ===
+
+// === case: inline_reorder_after_annotation_with_string_comma ===
+class InputAnnotationSameLineInlineReorderAfterStringCommaSliceViolation {
+	void foo(@A @B("a, @Y @X") @C String param) {}
+}
+// === end ===
+
+// === case: inline_reorder_after_annotation_with_string_paren ===
+class InputAnnotationSameLineInlineReorderAfterStringParenSliceViolation {
+	void foo(@A @B("a(b") @C String param) {}
+}
+// === end ===
+
 // === case: inline_reorder_three_annotations ===
 class InputAnnotationSameLineInlineReorderThreeAnnotationsSliceViolation {
 	void foo(@A @B @C String param) {}

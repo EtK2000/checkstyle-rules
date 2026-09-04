@@ -21,16 +21,16 @@ class InputInstanceofBeforeCastViolation {
 		if (obj instanceof String)
 			System.out.println("is string");
 		else
-			System.out.println(((String) obj).length()); // violation: Cast to 'String' is in a branch where 'instanceof String' is false, this will throw ClassCastException.
+			System.out.println(((String) obj).length()); // violation: Cast to 'String' must not be in a branch where 'instanceof String' is false (it will throw 'ClassCastException').
 	}
 
 	void castInNegatedThen(Object obj) {
 		if (!(obj instanceof String))
-			System.out.println(((String) obj).length()); // violation: Cast to 'String' is in a branch where 'instanceof String' is false, this will throw ClassCastException.
+			System.out.println(((String) obj).length()); // violation: Cast to 'String' must not be in a branch where 'instanceof String' is false (it will throw 'ClassCastException').
 	}
 
 	int castInTernaryFalseBranch(Object obj) {
-		return obj instanceof String ? 0 : ((String) obj).length(); // violation: Cast to 'String' is in a branch where 'instanceof String' is false, this will throw ClassCastException.
+		return obj instanceof String ? 0 : ((String) obj).length(); // violation: Cast to 'String' must not be in a branch where 'instanceof String' is false (it will throw 'ClassCastException').
 	}
 }
 // === end ===

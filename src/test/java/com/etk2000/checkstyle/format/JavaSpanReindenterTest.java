@@ -344,7 +344,6 @@ public class JavaSpanReindenterTest {
 
 	@Test
 	public void testTrailingCloserSplitRejectsCodeAfterLiteralClose() {
-		// real code after the text-block close (not a pure closer run) is left inline, never split off
 		assertEquals(
 				List.of("m(() -> {", "\treturn \"\"\"", "\t\t\ttext\"\"\"; foo();"),
 				JavaSpanReindenter.reindent(List.of("m(() -> {", "return \"\"\"", "\t\t\ttext\"\"\"; foo();"), 0)

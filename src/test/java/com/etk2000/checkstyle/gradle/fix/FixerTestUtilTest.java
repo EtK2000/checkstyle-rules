@@ -2,23 +2,95 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.etk2000.checkstyle.BaseCheckTest;
+import com.etk2000.checkstyle.ConstructorAssignmentOrderCheck;
+import com.etk2000.checkstyle.EmptyBodyCheck;
+import com.etk2000.checkstyle.FieldSortingCheck;
+import com.etk2000.checkstyle.LineText;
+import com.etk2000.checkstyle.PreferBulkOperationCheck;
+import com.etk2000.checkstyle.PreferMathMethodCheck;
+import com.etk2000.checkstyle.TestResources;
+import com.puppycrawl.tools.checkstyle.api.AbstractCheck;
+import com.puppycrawl.tools.checkstyle.api.AuditEvent;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
+import com.puppycrawl.tools.checkstyle.checks.UpperEllCheck;
+
 import org.junit.jupiter.api.Test;
+import org.opentest4j.AssertionFailedError;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
+import javax.annotation.Nonnull;
 
 /**
  * Unit tests for the package-private helpers in {@link FixerTestUtil} that
  * enforce the imports-directive contract (additive-only diffs, top-of-slice
- * placement, no empty FQCNs). The public {@code assertCaseFix} path is
+ * placement, no empty FQCNs), and that the supplementary-character runs fail a fixer that reads
+ * its column at the wrong spot. The public {@code assertCaseFix} path is
  * exercised end-to-end by every {@code *FixerTest} class; these tests cover
  * the throw branches that the happy-path callers can't reach.
  */
 public class FixerTestUtilTest {
+	/**
+	 * Records what {@link FixContext#getViolationKey()} answers inside each
+	 * {@code fix()} call, then delegates. The key is read rather than asserted
+	 * in place so the surrounding {@code assertCase*} helper still runs its own
+	 * output assertions: a decorator that short-circuited would prove the key is
+	 * set but not that the fixer it is set for still behaves.
+	 */
+	private static final class KeyRecordingFixer implements CheckstyleFixer {
+		private final List<String> keys = new ArrayList<>();
+		private final CheckstyleFixer delegate;
+
+		KeyRecordingFixer(@Nonnull CheckstyleFixer delegate) {
+			this.delegate = delegate;
+		}
+
+		@Nonnull
+		@Override
+		public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+			keys.add(String.valueOf(FixContext.getViolationKey()));
+			return delegate.fix(lines, lineIndex, column);
+		}
+	}
+
+	/**
+	 * Runs {@link FixerTestUtil#assertCaseFixSupplementary} on the slice twice: with {@code fixer}, which
+	 * must pass, and with it {@linkplain #convertingTwice converting twice}, which must fail with a
+	 * message starting with {@code failure}.
+	 */
+	private static void assertSupplementaryCatchesADoubleConversion(
+			@Nonnull Class<? extends AbstractCheck> checkClass,
+			@Nonnull CheckstyleFixer fixer,
+			@Nonnull String topic,
+			@Nonnull String caseName,
+			@Nonnull String failure
+	) throws Exception {
+		FixerTestUtil.assertCaseFixSupplementary(checkClass, fixer, topic, caseName, Map.of());
+		final var error = assertThrows(
+				AssertionFailedError.class,
+				() -> FixerTestUtil.assertCaseFixSupplementary(checkClass, convertingTwice(fixer), topic, caseName, Map.of())
+		);
+		assertTrue(error.getMessage().startsWith("Case '" + topic + "/" + caseName + "': " + failure), error.getMessage());
+	}
+
+	/**
+	 * Hands {@code delegate} the code-point column of the char index it receives, converting once more
+	 * a column the pipeline already converted, so it reads a line holding a supplementary character
+	 * ahead of the column at the wrong spot.
+	 */
+	@Nonnull
+	private static CheckstyleFixer convertingTwice(@Nonnull CheckstyleFixer delegate) {
+		return (lines, lineIndex, column) -> delegate.fix(lines, lineIndex, LineText.columnOfCharIndex(lines.get(lineIndex), column));
+	}
+
 	@Test
 	public void testAssertAdditiveImportsAcceptsAdditiveDiff() {
 		FixerTestUtil.assertAdditiveImports(
@@ -43,6 +115,135 @@ public class FixerTestUtilTest {
 		assertTrue(ex.getMessage().contains("additive diffs only"));
 		assertTrue(ex.getMessage().contains("a.b.Removed"));
 		assertTrue(ex.getMessage().contains("topic/case"));
+	}
+
+	/**
+	 * The slice path threads the reported violation into {@link FixContext}, so a
+	 * fixer gated on the message key takes the same branch it would in production.
+	 */
+	@Test
+	public void testAssertCaseFixExposesViolationKeyToFixer() throws Exception {
+		final var fixer = new KeyRecordingFixer(new PreferMathMethodFixer());
+		FixerTestUtil.assertCaseFix(
+				PreferMathMethodCheck.class,
+				fixer,
+				"prefermathmethod",
+				"if_abs_decl_array_target"
+		);
+		assertEquals(List.of("prefer.math.method.if"), fixer.keys);
+	}
+
+	/**
+	 * Each call in a bottom-up sweep must see its own violation, not the first
+	 * one. The {@code body} slice spans two distinct keys, so a set-once
+	 * implementation would record ten copies of {@code empty.if} here.
+	 */
+	@Test
+	public void testAssertCaseFixMultiViolationExposesEachViolationKey() throws Exception {
+		final var fixer = new KeyRecordingFixer(new EmptyBodyFixer());
+		FixerTestUtil.assertCaseFixMultiViolation(EmptyBodyCheck.class, fixer, "emptybody", "body");
+		assertEquals(
+				List.of(
+						"empty.if",
+						"empty.if",
+						"empty.if",
+						"empty.if",
+						"empty.else",
+						"empty.else",
+						"empty.if",
+						"empty.if",
+						"empty.if",
+						"empty.else"
+				),
+				fixer.keys
+		);
+	}
+
+	@Test
+	public void testAssertCaseFixMultiViolationSkipExposesViolationKey() throws Exception {
+		final var fixer = new KeyRecordingFixer(new ConstructorAssignmentOrderFixer());
+		final var slice = TestResources.loadCaseSlice("constructorassignmentorder", "dependency_cycle");
+		FixerTestUtil.assertCaseFixMultiViolationSkip(
+				ConstructorAssignmentOrderCheck.class,
+				fixer,
+				"constructorassignmentorder",
+				"dependency_cycle",
+				slice.inputLines(),
+				SkipMessages.CONSTRUCTOR_ASSIGN_SKIP_CYCLE
+		);
+		assertEquals(List.of("constructor.assign.dependency", "constructor.assign.dependency"), fixer.keys);
+	}
+
+	@Test
+	public void testAssertCaseFixSupplementaryCatchesADoubleConversionAheadOfTheColumn() throws Exception {
+		assertSupplementaryCatchesADoubleConversion(
+				ConstructorAssignmentOrderCheck.class,
+				new ConstructorAssignmentOrderFixer(),
+				"constructorassignmentorder",
+				"alphabetical_simple",
+				"supplementary characters ahead of the column changed the fix"
+		);
+	}
+
+	@Test
+	public void testAssertCaseFixSupplementaryCatchesADoubleConversionAtTheFirstSpotThatDropsTheComment() throws Exception {
+		assertSupplementaryCatchesADoubleConversion(
+				PreferBulkOperationCheck.class,
+				new PreferBulkOperationFixer(),
+				"preferbulkoperation",
+				"for_each_method_ref_put_multi_line_receiver",
+				"supplementary characters at CommentSpot[at=12, beforeCode=true] changed the fix"
+		);
+	}
+
+	@Test
+	public void testAssertCaseFixSupplementaryCatchesADoubleConversionAtTheFirstSpotThatParses() throws Exception {
+		assertSupplementaryCatchesADoubleConversion(
+				EmptyBodyCheck.class,
+				new EmptyBodyFixer(),
+				"emptybody",
+				"else_if_chain_tail_removed",
+				"supplementary characters at CommentSpot[at=7, beforeCode=true] changed a skip"
+		);
+	}
+
+	@Test
+	public void testAssertCaseSkipExposesViolationKey() throws Exception {
+		final var fixer = new KeyRecordingFixer(new EmptyBodyFixer());
+		final var caseName = "if_braced_with_block_comment_inside_returns_skip";
+		final var slice = TestResources.loadCaseSlice("emptybody", caseName);
+		FixerTestUtil.assertCaseSkip(
+				EmptyBodyCheck.class,
+				fixer,
+				"emptybody",
+				caseName,
+				slice.inputLines(),
+				SkipMessages.EMPTY_SKIP_COMMENT_IN_SPAN
+		);
+		assertEquals(List.of("empty.if"), fixer.keys);
+	}
+
+	@Test
+	public void testAssertFixedPointFailsOnAResidualError() {
+		final var lines = TestResources.loadCase("integration", "upper_ell").inputLines();
+		final var error = assertThrows(
+				AssertionFailedError.class,
+				() -> FixerTestUtil.assertFixedPoint(UpperEllCheck.class, lines, "integration", "upper_ell")
+		);
+		assertTrue(
+				error.getMessage().startsWith("Case 'integration/upper_ell': fixed content is not a fixed point (1 residual errors from UpperEllCheck)"),
+				error.getMessage()
+		);
+	}
+
+	@Test
+	public void testAssertFixedPointPassesOnAResidualWarning() throws Exception {
+		final var lines = TestResources.loadCase("integration", "field_sorting_enum_reorder").inputLines();
+		assertEquals(
+				List.of(SeverityLevel.WARNING),
+				BaseCheckTest.runCheckInline(FieldSortingCheck.class, String.join("\n", lines)).stream().map(AuditEvent::getSeverityLevel).toList()
+		);
+		FixerTestUtil.assertFixedPoint(FieldSortingCheck.class, lines, "integration", "field_sorting_enum_reorder");
 	}
 
 	@Test
@@ -86,6 +287,20 @@ public class FixerTestUtilTest {
 						"class Foo {}"
 				))
 		);
+	}
+
+	/**
+	 * A fragment drives the fixer at a {@code // target:} the check never
+	 * reported, so there is no violation to thread and the key stays null. Pinned
+	 * rather than left implicit: it is the reason a fixer branch gated on the key
+	 * cannot be covered by a fragment and needs a slice.
+	 */
+	@Test
+	public void testFragmentCallersExposeNoViolationKey() throws Exception {
+		final var fixer = new KeyRecordingFixer(new ArrayTypeStyleFixer());
+		FixerTestUtil.assertSimpleFix(fixer, "arraytypestyle", "escaped_backslash_at_eol_in_string");
+		FixerTestUtil.assertSkipResult(fixer, "arraytypestyle", "catch_keyword_not_treated_as_param_list");
+		assertEquals(List.of("null", "null"), fixer.keys);
 	}
 
 	@Test
@@ -553,6 +768,23 @@ public class FixerTestUtilTest {
 		final var scan = FixerTestUtil.scanAnnotationLine("@A(x/", 0, false);
 		assertEquals(1, scan.depth());
 		assertFalse(scan.inBlockComment());
+	}
+
+	/**
+	 * {@link FixContext} is thread-local and JUnit reuses threads, so a violation
+	 * left set after the helper returns would answer a later test's {@code fix()}
+	 * with a key from an unrelated topic.
+	 */
+	@Test
+	public void testViolationKeyDoesNotLeakAfterInvocation() throws Exception {
+		FixerTestUtil.assertCaseFix(
+				PreferMathMethodCheck.class,
+				new PreferMathMethodFixer(),
+				"prefermathmethod",
+				"if_abs_decl_array_target"
+		);
+		assertNull(FixContext.getViolationKey());
+		assertNull(FixContext.getViolationMessage());
 	}
 
 	@Test

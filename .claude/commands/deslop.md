@@ -92,11 +92,11 @@ Focus only on patterns the project's own checkstyle config does NOT catch. Runni
 
 ### Test resource handling
 
-Test resource files under `src/test/resources/` (typically `.../inputs/<dir>/Input*.java`) are in scope for deslop — Claude adds slop comments to them too, and leaving slop there means the fixtures drift from the project's style. But they have three hard constraints:
+Test resource files under `src/test/resources/` (`.../inputs/<dir>/cases.*.java`, `fragments.*.java`, and `Input*.java` companions) are in scope for deslop — Claude adds slop comments to them too, and leaving slop there means the fixtures drift from the project's style. But they have three hard constraints:
 
 1. **`// violation: <message>` and `// violation (warning): <message>` markers must be preserved verbatim.** These are what the test framework asserts against. Never remove, rename, paraphrase, or merge them.
 2. **Line numbers of violation-bearing lines must not shift**, OR you must update the corresponding test's line assertions to match. Tests typically assert `assertEquals(<line>, violations.get(N).getLine())`. If you remove a slop comment above a violation line, the violation shifts up by one, breaking the assertion.
-3. **Intentional anti-patterns must not be "fixed".** The file exists because it contains code the check should flag. If you see wrong-order modifiers, missing annotations, unsorted methods, etc. in an `Input*Violation.java` file, that's the point — leave them alone. Clean fixtures (`Input*Clean.java`) follow project style and anti-patterns there are real slop.
+3. **Intentional anti-patterns must not be "fixed".** The file exists because it contains code the check should flag. If you see wrong-order modifiers, missing annotations, unsorted methods, etc. in a violation fixture (`cases.in.java`, `fragments.in.java`), that's the point — leave them alone. Clean fixtures (`cases.clean.java`) follow project style and anti-patterns there are real slop.
 
 **Rules of thumb:**
 
@@ -112,11 +112,11 @@ Test resource files under `src/test/resources/` (typically `.../inputs/<dir>/Inp
 3. Note which line numbers are asserted in that test.
 4. Remove slop comments only in positions where removal either (a) doesn't shift any asserted line, or (b) shifts asserted lines in a predictable way AND you update the test's assertions to match.
 5. After editing, the set of violations produced by the check on the fixture, and their line numbers, should match what the test expects.
-6. **If you modified any `Input*Violation.java` (or any other fixture with `// violation` markers), you MUST run `./gradlew check` after editing and fix every test that fails as a result.** A failed line-number assertion is the expected signal that your shift math was off; debug the count of comment lines removed and update the assertions to match. Don't declare done with a broken test "to be fixed later."
+6. **If you modified any fixture carrying `// violation` markers, you MUST run `./gradlew check` after editing and fix every test that fails as a result.** A failed line-number assertion is the expected signal that your shift math was off; debug the count of comment lines removed and update the assertions to match. Don't declare done with a broken test "to be fixed later."
 
 ### Do NOT
 
-- Do not "fix" intentional anti-patterns in `Input*Violation.java` files — those are the subject of the test.
+- Do not "fix" intentional anti-patterns in violation fixtures — those are the subject of the test.
 - Do not remove or edit `// violation` markers.
 - Do not make changes outside the scope of slop cleanup (no refactoring "while I'm here", no new features, no silent bug fixes). If you spot a real bug, mention it to the user instead.
 - Do not add tests, docs, or NET-NEW comments where none existed. Deslop removes, restyles, and (per the "Stale comments / Javadocs" pattern) corrects a comment that already exists but no longer matches the code. It does not author documentation for something previously undocumented, and does not add a comment to un-commented code.

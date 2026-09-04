@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
@@ -10,6 +11,8 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -22,20 +25,21 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 
 /**
- * Dynamically fixes every {@code integration} fixture to convergence and asserts
+ * Dynamically fixes every {@code integration} fixture the way the fix task does, pass after
+ * pass up to {@link CheckstyleFixAction#MAX_FIX_PASSES}, and asserts
  * its output equals the {@code .fixed} slice (or the input, for a no-op case)
  * with no fixable violations left. Adding a new integration case needs no new
  * test method here; only cases that assert more than input-to-output (skip
- * reasons, minSdk gating, dry-run counts, {@code doExecute} mechanics) keep a
- * dedicated method in {@link CheckstyleFixIntegrationTest}.
+ * reasons, minSdk gating, dry-run counts, {@code doExecute} mechanics, suppressions) keep a
+ * dedicated method in {@link CheckstyleFixIntegrationTest} or {@link CheckstyleFixSuppressionsTest}.
  *
  * <p>{@code fixCount} is intentionally not asserted (the final content plus a
  * zero-fixable-residual check is the real invariant). A case that needs more
- * than one pass is not a failure but prints a {@code FIXME} line, since the goal
- * is to eliminate second-pass reliance.
+ * than one fixing pass (more than two passes, the last always finding nothing to
+ * fix) is not a failure but prints a {@code FIXME} line, since the goal is for
+ * one fixing pass to be enough.
  */
 public class CheckstyleFixIntegrationCasesTest {
-	private static final int MAX_PASSES = 10;
 	// Cases a dedicated CheckstyleFixIntegrationTest method already covers in a
 	// way this uniform factory can't: jit_inefficiency_to_array_sized is minSdk
 	// dependent (its output differs from the MIN_SDK run here); the other three
@@ -74,6 +78,7 @@ public class CheckstyleFixIntegrationCasesTest {
 		}
 	}
 
+	@Execution(ExecutionMode.CONCURRENT)
 	@TestFactory
 	Stream<DynamicTest> integrationCases() {
 		return TestResources.caseNames("integration").stream()
@@ -87,20 +92,13 @@ public class CheckstyleFixIntegrationCasesTest {
 		final var file = tempDir.resolve(caseName + ".java").toFile();
 		Files.writeString(file.toPath(), String.join("\n", fx.inputLines()));
 
-		final var config = CheckstyleFixAction.createCheckerConfig(MIN_SDK);
-		var passes = 0;
-		var needsAnotherPass = false;
-		do {
-			final var result = CheckstyleFixAction.doExecute(config, false, List.of(file));
-			needsAnotherPass = result[0] != 0;
-			++passes;
-		}
-		while (needsAnotherPass && passes < MAX_PASSES);
+		final var passes = CheckstyleFixAction.fixUntilSettled(CheckstyleFixAction.createCheckerConfig(MIN_SDK), List.of(file), CheckstyleFixAction.MAX_FIX_PASSES);
 
 		assertEquals(expected, Files.readString(file.toPath()), caseName + ": fixed content");
 		assertNoFixableResidual(file, caseName);
-		if (passes > 1) {
-			// FIXME: eliminate second-pass reliance so this drops to a single pass.
+		assertNotEquals(CheckstyleFixAction.MAX_FIX_PASSES, passes, caseName + ": did not settle before the last allowed pass");
+		if (passes > 2) {
+			// FIXME: make one fixing pass enough so this drops to two passes.
 			System.err.println("[second-pass] integration/" + caseName + " converged in " + passes + " passes");
 		}
 	}

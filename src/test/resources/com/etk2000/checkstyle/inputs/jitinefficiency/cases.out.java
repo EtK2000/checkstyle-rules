@@ -17,47 +17,93 @@ class InputJitInefficiencyAllocationAppendConcatBracketIndexArithmeticSliceViola
 }
 // === end ===
 
-// === case: allocation_append_concat_cast_receiver_bails ===
-// skip-reason: string concatenation inside append()
-class InputJitInefficiencyAllocationAppendConcatCastReceiverBailsSliceViolation {
+// === case: allocation_append_concat_cast_receiver ===
+class InputJitInefficiencyAllocationAppendConcatCastReceiverSliceViolation {
 	void m(Object o, String b) {
-		((StringBuilder) o).append("a" + b);
+		((StringBuilder) o).append("a").append(b);
+	}
+}
+// === end ===
+
+// === case: allocation_append_concat_char_array_cast_operand_bails ===
+// skip-reason: cannot rewrite the string concatenation inside 'append(...)': this shape is not supported
+class InputJitInefficiencyAllocationAppendConcatCharArrayCastOperandBailsSliceViolation {
+	void m(StringBuilder sb, String prefix, Object o) {
+		// the brackets of an array cast are a sibling of the element type, not part of it
+		sb.append(prefix + (char[]) o);
+	}
+}
+// === end ===
+
+// === case: allocation_append_concat_char_array_operand_bails ===
+// skip-reason: cannot rewrite the string concatenation inside 'append(...)': this shape is not supported
+class InputJitInefficiencyAllocationAppendConcatCharArrayOperandBailsSliceViolation {
+	void m(StringBuilder sb, String prefix, char[] chars) {
+		// `prefix + chars` appends the array's toString, while append(char[]) appends its contents
+		sb.append(prefix + chars);
+	}
+}
+// === end ===
+
+// === case: allocation_append_concat_char_matrix_cast_operand ===
+class InputJitInefficiencyAllocationAppendConcatCharMatrixCastOperandSliceViolation {
+	void m(StringBuilder sb, String prefix, Object o) {
+		// a char[][] has no append overload of its own, so both forms reach append(Object)
+		sb.append(prefix).append((char[][]) o);
+	}
+}
+// === end ===
+
+// === case: allocation_append_concat_index_op_char_array_operand_bails ===
+// skip-reason: cannot rewrite the string concatenation inside 'append(...)': this shape is not supported
+class InputJitInefficiencyAllocationAppendConcatIndexOpCharArrayOperandBailsSliceViolation {
+	private char[][] grid;
+
+	void m(StringBuilder sb, String prefix) {
+		sb.append(prefix + grid[0]);
+	}
+}
+// === end ===
+
+// === case: allocation_append_concat_index_op_char_element_operand ===
+class InputJitInefficiencyAllocationAppendConcatIndexOpCharElementOperandSliceViolation {
+	private char[][] grid;
+
+	void m(StringBuilder sb, String prefix) {
+		// one index deeper is a char, which appends the same either way
+		sb.append(prefix).append(grid[0][0]);
 	}
 }
 // === end ===
 
 // === case: allocation_append_concat_leading_char_literal ===
-// skip-reason: string concatenation inside append()
 class InputJitInefficiencyAllocationAppendConcatLeadingCharLiteralSliceViolation {
 	void m(StringBuilder sb) {
-		sb.append('a' + "x"); // violation: Use chained '.append()' instead of string concatenation inside '.append(...)'.
+		sb.append('a').append("x");
 	}
 }
 // === end ===
 
 // === case: allocation_append_concat_leading_dot_float ===
-// skip-reason: string concatenation inside append()
 class InputJitInefficiencyAllocationAppendConcatLeadingDotFloatSliceViolation {
 	void m(StringBuilder sb) {
-		sb.append(.5 + "x"); // violation: Use chained '.append()' instead of string concatenation inside '.append(...)'.
+		sb.append(.5).append("x");
 	}
 }
 // === end ===
 
 // === case: allocation_append_concat_leading_signed_dot_float ===
-// skip-reason: string concatenation inside append()
 class InputJitInefficiencyAllocationAppendConcatLeadingSignedDotFloatSliceViolation {
 	void m(StringBuilder sb) {
-		sb.append(-.5 + "x"); // violation: Use chained '.append()' instead of string concatenation inside '.append(...)'.
+		sb.append(-.5).append("x");
 	}
 }
 // === end ===
 
 // === case: allocation_append_concat_leading_signed_number ===
-// skip-reason: string concatenation inside append()
 class InputJitInefficiencyAllocationAppendConcatLeadingSignedNumberSliceViolation {
 	void m(StringBuilder sb) {
-		sb.append(-1 + "x"); // violation: Use chained '.append()' instead of string concatenation inside '.append(...)'.
+		sb.append(-1).append("x");
 	}
 }
 // === end ===
@@ -102,21 +148,45 @@ class InputJitInefficiencyAllocationAppendConcatLhsVarSliceViolation {
 }
 // === end ===
 
-// === case: allocation_append_concat_no_literal_operand_bails ===
-// skip-reason: string concatenation inside append()
-class InputJitInefficiencyAllocationAppendConcatNoLiteralOperandBailsSliceViolation {
+// === case: allocation_append_concat_no_literal_operand ===
+class InputJitInefficiencyAllocationAppendConcatNoLiteralOperandSliceViolation {
 	void m(StringBuilder sb, String a, String b) {
-		sb.append(a + b);
+		sb.append(a).append(b);
 	}
 }
 // === end ===
 
 // === case: allocation_append_concat_numeric_leading_chain ===
-// skip-reason: string concatenation inside append()
+// skip-reason: cannot rewrite the string concatenation inside 'append(...)': this shape is not supported
 class InputJitInefficiencyAllocationAppendConcatNumericLeadingChainSliceViolation {
 	void m(StringBuilder sb) {
 		sb.append(1 + 2 + "x");
 	}
+}
+// === end ===
+
+// === case: allocation_append_concat_outer_this_receiver ===
+class InputJitInefficiencyAllocationAppendConcatOuterThisReceiverSliceViolation {
+	class Inner {
+		void m(String a, String b) {
+			InputJitInefficiencyAllocationAppendConcatOuterThisReceiverSliceViolation.this.sb.append(a).append(b);
+		}
+	}
+
+	private final StringBuilder sb = new StringBuilder();
+}
+// === end ===
+
+// === case: allocation_append_concat_outer_this_receiver_self_reference_bails ===
+// skip-reason: cannot rewrite the string concatenation inside 'append(...)': this shape is not supported
+class InputJitInefficiencyAllocationAppendConcatOuterThisReceiverSelfReferenceBailsSliceViolation {
+	class Inner {
+		void m(String x) {
+			InputJitInefficiencyAllocationAppendConcatOuterThisReceiverSelfReferenceBailsSliceViolation.this.sb.append(x + sb.length());
+		}
+	}
+
+	private final StringBuilder sb = new StringBuilder();
 }
 // === end ===
 
@@ -133,7 +203,7 @@ class InputJitInefficiencyAllocationAppendConcatReceiverAfterDotOperandSliceViol
 // === end ===
 
 // === case: allocation_append_concat_receiver_self_reference ===
-// skip-reason: string concatenation inside append()
+// skip-reason: cannot rewrite the string concatenation inside 'append(...)': this shape is not supported
 class InputJitInefficiencyAllocationAppendConcatReceiverSelfReferenceSliceViolation {
 	void m(StringBuilder sb) {
 		sb.append("a" + sb.length() + "b");
@@ -142,7 +212,7 @@ class InputJitInefficiencyAllocationAppendConcatReceiverSelfReferenceSliceViolat
 // === end ===
 
 // === case: allocation_append_concat_receiver_self_reference_leading ===
-// skip-reason: string concatenation inside append()
+// skip-reason: cannot rewrite the string concatenation inside 'append(...)': this shape is not supported
 class InputJitInefficiencyAllocationAppendConcatReceiverSelfReferenceLeadingSliceViolation {
 	void m(StringBuilder sb) {
 		sb.append(sb.length() + "x");
@@ -151,7 +221,7 @@ class InputJitInefficiencyAllocationAppendConcatReceiverSelfReferenceLeadingSlic
 // === end ===
 
 // === case: allocation_append_concat_receiver_self_reference_var_leading ===
-// skip-reason: string concatenation inside append()
+// skip-reason: cannot rewrite the string concatenation inside 'append(...)': this shape is not supported
 class InputJitInefficiencyAllocationAppendConcatReceiverSelfReferenceVarLeadingSliceViolation {
 	void m(StringBuilder sb, String value) {
 		sb.append(value + sb.length() + "tail");
@@ -175,33 +245,129 @@ class InputJitInefficiencyAllocationAppendConcatStringBufferReceiverSliceViolati
 }
 // === end ===
 
-// === case: allocation_append_concat_unanalysable_receiver_bails ===
-// skip-reason: string concatenation inside append()
-class InputJitInefficiencyAllocationAppendConcatUnanalysableReceiverBailsSliceViolation {
-	void m(String z) {
-		buf().append("len=" + buf().length());
-	}
+// === case: allocation_append_concat_super_receiver ===
+class InputJitInefficiencyAllocationAppendConcatSuperReceiverSliceViolationBase {
+	protected final StringBuilder sb = new StringBuilder();
+}
 
-	private StringBuilder buf() {
-		return new StringBuilder();
+class InputJitInefficiencyAllocationAppendConcatSuperReceiverSliceViolation
+		extends InputJitInefficiencyAllocationAppendConcatSuperReceiverSliceViolationBase {
+	void m(String a, String b) {
+		super.sb.append(a).append(b);
 	}
 }
 // === end ===
 
-// === case: allocation_append_concat_unary_increment_operand_bails ===
-// skip-reason: string concatenation inside append()
-class InputJitInefficiencyAllocationAppendConcatUnaryIncrementOperandBailsSliceViolation {
+// === case: allocation_append_concat_super_receiver_self_reference_bails ===
+// skip-reason: cannot rewrite the string concatenation inside 'append(...)': this shape is not supported
+class InputJitInefficiencyAllocationAppendConcatSuperReceiverSelfReferenceBailsSliceViolationBase {
+	protected final StringBuilder sb = new StringBuilder();
+}
+
+class InputJitInefficiencyAllocationAppendConcatSuperReceiverSelfReferenceBailsSliceViolation
+		extends InputJitInefficiencyAllocationAppendConcatSuperReceiverSelfReferenceBailsSliceViolationBase {
+	void m(String x) {
+		// splitting would read the length after the first append rather than before it
+		super.sb.append(x + super.sb.length());
+	}
+}
+// === end ===
+
+// === case: allocation_append_concat_this_as_argument ===
+class InputJitInefficiencyAllocationAppendConcatThisAsArgumentSliceViolation {
+	void m(StringBuilder sb, String x) {
+		// `this` here names no receiver, so the operand does not alias one
+		sb.append(x).append(render(this));
+	}
+
+	private String render(Object o) {
+		return String.valueOf(o);
+	}
+}
+// === end ===
+
+// === case: allocation_append_concat_this_receiver_self_reference_bails ===
+// skip-reason: cannot rewrite the string concatenation inside 'append(...)': this shape is not supported
+class InputJitInefficiencyAllocationAppendConcatThisReceiverSelfReferenceBailsSliceViolation {
+	private final StringBuilder sb = new StringBuilder();
+
+	void m(String x) {
+		this.sb.append(x + this.sb.length());
+	}
+}
+// === end ===
+
+// === case: allocation_append_concat_this_receiver_sibling_field ===
+class InputJitInefficiencyAllocationAppendConcatThisReceiverSiblingFieldSliceViolation {
+	private final String other = "o";
+	private final StringBuilder sb = new StringBuilder();
+
+	void m(String x) {
+		// both sides resolve to a field name, so a different field reads as a different name
+		this.sb.append(x).append(this.other);
+	}
+}
+// === end ===
+
+// === case: allocation_append_concat_this_receiver_unrelated_operand ===
+class InputJitInefficiencyAllocationAppendConcatThisReceiverUnrelatedOperandSliceViolation {
+	private final StringBuilder sb = new StringBuilder();
+
+	void m(String x, String y) {
+		this.sb.append(x).append(y);
+	}
+}
+// === end ===
+
+// === case: allocation_append_concat_to_char_array_call_operand_bails ===
+// skip-reason: cannot rewrite the string concatenation inside 'append(...)': this shape is not supported
+class InputJitInefficiencyAllocationAppendConcatToCharArrayCallOperandBailsSliceViolation {
+	void m(StringBuilder sb, String prefix, String name) {
+		// reflection spells the return [C, which is the same char[] under another name
+		sb.append(prefix + name.toCharArray());
+	}
+}
+// === end ===
+
+// === case: allocation_append_concat_to_string_call_operand ===
+class InputJitInefficiencyAllocationAppendConcatToStringCallOperandSliceViolation {
+	void m(StringBuilder sb, String prefix, String name) {
+		sb.append(prefix).append(name.trim());
+	}
+}
+// === end ===
+
+// === case: allocation_append_concat_unary_increment_operand ===
+class InputJitInefficiencyAllocationAppendConcatUnaryIncrementOperandSliceViolation {
 	void m(StringBuilder sb, int i) {
-		sb.append("a" + ++i);
+		sb.append("a").append(++i);
 	}
 }
 // === end ===
 
-// === case: allocation_boxed_constructor_space_before_paren_bails ===
-// skip-reason: qualified boxed constructor
-class InputJitInefficiencyAllocationBoxedConstructorSpaceBeforeParenBailsSliceViolation {
+// === case: allocation_append_concat_var_char_array_operand_bails ===
+// skip-reason: cannot rewrite the string concatenation inside 'append(...)': this shape is not supported
+class InputJitInefficiencyAllocationAppendConcatVarCharArrayOperandBailsSliceViolation {
+	void m(StringBuilder sb, String prefix, String name) {
+		final var chars = name.toCharArray();
+		sb.append(prefix + chars);
+	}
+}
+// === end ===
+
+// === case: allocation_append_concat_var_string_operand ===
+class InputJitInefficiencyAllocationAppendConcatVarStringOperandSliceViolation {
+	void m(StringBuilder sb, String prefix, String name) {
+		final var trimmed = name.trim();
+		sb.append(prefix).append(trimmed);
+	}
+}
+// === end ===
+
+// === case: allocation_boxed_constructor_space_before_paren ===
+class InputJitInefficiencyAllocationBoxedConstructorSpaceBeforeParenSliceViolation {
 	void m() {
-		final var n = new Integer (42);
+		final var n = Integer.valueOf(42);
 		System.out.println(n);
 	}
 }
@@ -252,20 +418,18 @@ class InputJitInefficiencyAllocationEmptyStringConcatCallArgComparisonTernarySli
 // === end ===
 
 // === case: allocation_empty_string_concat_chain ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
 class InputJitInefficiencyAllocationEmptyStringConcatChainSliceViolation {
 	void m(int a, int b) {
-		final var s = "" + a + b;
+		final var s = String.valueOf(a) + b;
 		System.out.println(s);
 	}
 }
 // === end ===
 
 // === case: allocation_empty_string_concat_chain_reversed ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
 class InputJitInefficiencyAllocationEmptyStringConcatChainReversedSliceViolation {
 	void m(Object a, Object b) {
-		final var s = a + b + "";
+		final var s = String.valueOf(a + b);
 		System.out.println(s);
 	}
 }
@@ -379,10 +543,9 @@ class InputJitInefficiencyAllocationEmptyStringConcatMultiArgGenericWitnessSlice
 // === end ===
 
 // === case: allocation_empty_string_concat_multiline_continuation ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
 class InputJitInefficiencyAllocationEmptyStringConcatMultilineContinuationSliceViolation {
 	void m(Object foo, Object bar) {
-		final var s = "" + foo
+		final var s = String.valueOf(foo)
 				+ bar;
 		System.out.println(s);
 	}
@@ -475,7 +638,7 @@ class InputJitInefficiencyAllocationEmptyStringConcatStringLiteralContainingStop
 // === case: allocation_empty_string_concat_ternary_true_branch ===
 class InputJitInefficiencyAllocationEmptyStringConcatTernaryTrueBranchSliceViolation {
 	void m(boolean cond, String a, String b) {
-		final var s = cond ? String.valueOf(a ): b;
+		final var s = cond ? String.valueOf(a) : b;
 		System.out.println(s);
 	}
 }
@@ -484,7 +647,16 @@ class InputJitInefficiencyAllocationEmptyStringConcatTernaryTrueBranchSliceViola
 // === case: allocation_empty_string_concat_trailing_block_comment ===
 class InputJitInefficiencyAllocationEmptyStringConcatTrailingBlockCommentSliceViolation {
 	void m(Object foo) {
-		final var s = String.valueOf(foo /* note */);
+		final var s = String.valueOf(foo) /* note */;
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: allocation_empty_string_concat_trailing_line_comment ===
+class InputJitInefficiencyAllocationEmptyStringConcatTrailingLineCommentSliceViolation {
+	void m(Object foo) {
+		final var s = String.valueOf(foo);
 		System.out.println(s);
 	}
 }
@@ -502,20 +674,36 @@ class InputJitInefficiencyAllocationEmptyStringConcatTwoOnOneLineSliceViolation 
 // === end ===
 
 // === case: allocation_new_string_comment_in_arg ===
-// skip-reason: redundant new String(...) wrapper
 class InputJitInefficiencyAllocationNewStringCommentInArgSliceViolation {
 	void m(String existing) {
-		final var b = new String(/* c */ existing);
+		final var b = /* c */ existing;
 		System.out.println(b);
 	}
 }
 // === end ===
 
-// === case: allocation_new_string_fqn_bails ===
-// skip-reason: redundant new String(...) wrapper
-class InputJitInefficiencyAllocationNewStringFqnBailsSliceViolation {
+// === case: allocation_new_string_foreign_qualifier_bails ===
+// skip-reason: cannot remove the redundant 'new String(...)' wrapper: this shape is not supported
+class InputJitInefficiencyAllocationNewStringForeignQualifierBailsSliceViolation {
+	static class Foreign {
+		static class String {
+			String(java.lang.String value) {
+				System.out.println(value);
+			}
+		}
+	}
+
 	void m() {
-		final var a = new java.lang.String("hello");
+		final var a = new Foreign.String("hello");
+		System.out.println(a);
+	}
+}
+// === end ===
+
+// === case: allocation_new_string_fqn ===
+class InputJitInefficiencyAllocationNewStringFqnSliceViolation {
+	void m() {
+		final var a = "hello";
 		System.out.println(a);
 	}
 }
@@ -557,11 +745,38 @@ class InputJitInefficiencyAllocationNewStringVarSliceViolation {
 }
 // === end ===
 
+// === case: allocation_string_buffer_explicit_type_bails ===
+// skip-reason: cannot replace the local 'StringBuffer': this shape is not supported
+class InputJitInefficiencyAllocationStringBufferExplicitTypeBailsSliceViolation {
+	void m() {
+		// only the class name inside the `new` is replaced, so an explicit declaration would be
+		// left saying StringBuffer over a StringBuilder initializer
+		final StringBuffer sb = new StringBuffer();
+		sb.append("x");
+		System.out.println(sb);
+	}
+}
+// === end ===
+
+// === case: allocation_string_buffer_foreign_qualifier_bails ===
+// skip-reason: cannot replace the local 'StringBuffer': this shape is not supported
+class InputJitInefficiencyAllocationStringBufferForeignQualifierBailsSliceViolation {
+	static class Foreign {
+		static class StringBuffer {
+		}
+	}
+
+	void m() {
+		final var sb = new Foreign.StringBuffer();
+		System.out.println(sb);
+	}
+}
+// === end ===
+
 // === case: allocation_string_buffer_fqn_constructor ===
-// skip-reason: local StringBuffer
 class InputJitInefficiencyAllocationStringBufferFqnConstructorSliceViolation {
 	void m() {
-		final var sb = new java.lang.StringBuffer();
+		final var sb = new StringBuilder();
 		System.out.println(sb);
 	}
 }
@@ -587,7 +802,7 @@ class InputJitInefficiencyAllocationStringBufferLocalWithConstructorArgSliceViol
 // === end ===
 
 // === case: allocation_to_array_sized_annotated_type ===
-// skip-reason: presized toArray(...)
+// skip-reason: cannot rewrite the presized 'toArray(...)': this shape is not supported
 // imports: java.util.List
 // imports: javax.annotation.Nullable
 class InputJitInefficiencyAllocationToArraySizedAnnotatedTypeSliceViolation {
@@ -598,49 +813,100 @@ class InputJitInefficiencyAllocationToArraySizedAnnotatedTypeSliceViolation {
 }
 // === end ===
 
+// === case: allocation_to_array_sized_arithmetic_size_bails ===
+// skip-reason: cannot rewrite the presized 'toArray(...)': this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyAllocationToArraySizedArithmeticSizeBailsSliceViolation {
+	void m(List<String> list, int n) {
+		final var a = list.toArray(new String[n + 1]);
+		System.out.println(a.length);
+	}
+}
+// === end ===
+
 // === case: allocation_to_array_sized_bare_ident_size ===
+// skip-reason: cannot rewrite the presized 'toArray(...)': this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyAllocationToArraySizedBareIdentSizeSliceViolation {
 	void m(List<String> list, int n) {
-		final var a = list.toArray(new String[0]);
+		final var a = list.toArray(new String[n]);
+		System.out.println(a.length);
+	}
+}
+// === end ===
+
+// === case: allocation_to_array_sized_cast_size_bails ===
+// skip-reason: cannot rewrite the presized 'toArray(...)': this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyAllocationToArraySizedCastSizeBailsSliceViolation {
+	void m(List<String> list, double d) {
+		final var a = list.toArray(new String[(int) d]);
 		System.out.println(a.length);
 	}
 }
 // === end ===
 
 // === case: allocation_to_array_sized_length_suffix_size ===
+// skip-reason: cannot rewrite the presized 'toArray(...)': this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyAllocationToArraySizedLengthSuffixSizeSliceViolation {
 	void m(List<String> list, String key) {
-		final var a = list.toArray(new String[0]);
+		final var a = list.toArray(new String[key.length()]);
 		System.out.println(a.length);
 	}
 }
 // === end ===
 
 // === case: allocation_to_array_sized_literal ===
+// skip-reason: cannot rewrite the presized 'toArray(...)': this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyAllocationToArraySizedLiteralSliceViolation {
 	void m(List<String> list) {
-		final var a = list.toArray(new String[0]);
+		final var a = list.toArray(new String[5]);
+		System.out.println(a.length);
+	}
+}
+// === end ===
+
+// === case: allocation_to_array_sized_negative_literal_size_bails ===
+// skip-reason: cannot rewrite the presized 'toArray(...)': this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyAllocationToArraySizedNegativeLiteralSizeBailsSliceViolation {
+	void m(List<String> list) {
+		// a negative size throws where `new String[0]` would not, so the value is not droppable
+		final var a = list.toArray(new String[-1]);
+		System.out.println(a.length);
+	}
+}
+// === end ===
+
+// === case: allocation_to_array_sized_other_receiver_size_bails ===
+// skip-reason: cannot rewrite the presized 'toArray(...)': this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyAllocationToArraySizedOtherReceiverSizeBailsSliceViolation {
+	void m(List<String> list, List<String> other) {
+		// a size() on a different collection is not this one's count, so dropping it changes the
+		// returned array's length whenever the two differ
+		final var a = list.toArray(new String[other.size()]);
 		System.out.println(a.length);
 	}
 }
 // === end ===
 
 // === case: allocation_to_array_sized_qualified_type ===
+// skip-reason: cannot rewrite the presized 'toArray(...)': this shape is not supported
 // imports: java.util.Date
 // imports: java.util.List
 class InputJitInefficiencyAllocationToArraySizedQualifiedTypeSliceViolation {
 	void m(List<Date> list) {
-		final var a = list.toArray(new java.util.Date[0]);
+		final var a = list.toArray(new java.util.Date[5]);
 		System.out.println(a.length);
 	}
 }
 // === end ===
 
 // === case: allocation_to_array_sized_side_effecting_size ===
-// skip-reason: presized toArray(...)
+// skip-reason: cannot rewrite the presized 'toArray(...)': this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyAllocationToArraySizedSideEffectingSizeSliceViolation {
 	void m(List<String> list, int x) {
@@ -660,10 +926,34 @@ class InputJitInefficiencyAllocationToArraySizedSizeExprSliceViolation {
 }
 // === end ===
 
-// === case: allocation_to_array_sized_wrapped_call_bails ===
-// skip-reason: presized toArray(...)
+// === case: allocation_to_array_sized_ternary_size_bails ===
+// skip-reason: cannot rewrite the presized 'toArray(...)': this shape is not supported
 // imports: java.util.List
-class InputJitInefficiencyAllocationToArraySizedWrappedCallBailsSliceViolation {
+class InputJitInefficiencyAllocationToArraySizedTernarySizeBailsSliceViolation {
+	void m(List<String> list, boolean cond, int n) {
+		final var a = list.toArray(new String[cond ? n : 1]);
+		System.out.println(a.length);
+	}
+}
+// === end ===
+
+// === case: allocation_to_array_sized_this_qualified_size ===
+// skip-reason: cannot rewrite the presized 'toArray(...)': this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyAllocationToArraySizedThisQualifiedSizeSliceViolation {
+	int n;
+
+	void m(List<String> list) {
+		final var a = list.toArray(new String[this.n]);
+		System.out.println(a.length);
+	}
+}
+// === end ===
+
+// === case: allocation_to_array_sized_wrapped_call ===
+// skip-reason: cannot rewrite the presized 'toArray(...)': this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyAllocationToArraySizedWrappedCallSliceViolation {
 	void m(List<String> list, int n) {
 		final var a = list.toArray(new String[
 				n]);
@@ -747,7 +1037,7 @@ class InputJitInefficiencyArrayLhsArrayMentionedInStringLiteralPassesSliceViolat
 // === end ===
 
 // === case: array_lhs_array_mentioned_in_text_block_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsArrayMentionedInTextBlockBailsSliceViolation {
 	void m(int k, List<String> list) {
@@ -765,7 +1055,7 @@ class InputJitInefficiencyArrayLhsArrayMentionedInTextBlockBailsSliceViolation {
 // === end ===
 
 // === case: array_lhs_body_line_packs_chain_prefix_compound_assign_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsBodyLinePacksChainPrefixCompoundAssignBailsSliceViolation {
 	static class Obj {
@@ -807,7 +1097,7 @@ class InputJitInefficiencyArrayLhsBodyLinePacksChainPrefixCousinNameNotMatchPass
 // === end ===
 
 // === case: array_lhs_body_line_packs_chain_prefix_simple_assign_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsBodyLinePacksChainPrefixSimpleAssignBailsSliceViolation {
 	static class Obj {
@@ -849,7 +1139,7 @@ class InputJitInefficiencyArrayLhsBodyLinePacksChainPrefixStringLiteralPassesSli
 // === end ===
 
 // === case: array_lhs_body_line_packs_full_chain_reassigned_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsBodyLinePacksFullChainReassignedBailsSliceViolation {
 	static class Obj {
@@ -871,7 +1161,7 @@ class InputJitInefficiencyArrayLhsBodyLinePacksFullChainReassignedBailsSliceViol
 // === end ===
 
 // === case: array_lhs_body_line_packs_this_chain_prefix_mutated_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsBodyLinePacksThisChainPrefixMutatedBailsSliceViolation {
 	static class Matrix {
@@ -893,7 +1183,7 @@ class InputJitInefficiencyArrayLhsBodyLinePacksThisChainPrefixMutatedBailsSliceV
 // === end ===
 
 // === case: array_lhs_chain_prefix_behind_carried_comment_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsChainPrefixBehindCarriedCommentBailsSliceViolation {
 	static class Obj {
@@ -977,7 +1267,7 @@ class InputJitInefficiencyArrayLhsForHeaderArrayLengthPassesSliceViolation {
 // === end ===
 
 // === case: array_lhs_for_header_array_reassigned_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyArrayLhsForHeaderArrayReassignedBailsSliceViolation {
 	static final int CONSTANT = 0;
 
@@ -995,7 +1285,7 @@ class InputJitInefficiencyArrayLhsForHeaderArrayReassignedBailsSliceViolation {
 // === end ===
 
 // === case: array_lhs_for_header_array_reassigned_compound_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyArrayLhsForHeaderArrayReassignedCompoundBailsSliceViolation {
 	static final int CONSTANT = 0;
 
@@ -1013,7 +1303,7 @@ class InputJitInefficiencyArrayLhsForHeaderArrayReassignedCompoundBailsSliceViol
 // === end ===
 
 // === case: array_lhs_for_header_block_comment_binding_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsForHeaderBlockCommentBindingBailsSliceViolation {
 	void m(List<String> list) {
@@ -1025,7 +1315,7 @@ class InputJitInefficiencyArrayLhsForHeaderBlockCommentBindingBailsSliceViolatio
 // === end ===
 
 // === case: array_lhs_for_header_chain_prefix_mentioned_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyArrayLhsForHeaderChainPrefixMentionedBailsSliceViolation {
 	static class Matrix {
 		String[][] cells;
@@ -1041,7 +1331,7 @@ class InputJitInefficiencyArrayLhsForHeaderChainPrefixMentionedBailsSliceViolati
 // === end ===
 
 // === case: array_lhs_for_header_chain_prefix_mutated_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyArrayLhsForHeaderChainPrefixMutatedBailsSliceViolation {
 	static class Matrix {
 		String[][] cells;
@@ -1076,7 +1366,7 @@ class InputJitInefficiencyArrayLhsForHeaderClassicMultilineCommentMentionsIndexP
 // === end ===
 
 // === case: array_lhs_for_header_foreach_multiline_comment_index_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyArrayLhsForHeaderForeachMultilineCommentIndexBailsSliceViolation {
 	void m(int[] indices) {
 		final var arr = new String[10];
@@ -1088,7 +1378,7 @@ class InputJitInefficiencyArrayLhsForHeaderForeachMultilineCommentIndexBailsSlic
 // === end ===
 
 // === case: array_lhs_for_header_line_comment_skip_passes ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyArrayLhsForHeaderLineCommentSkipPassesSliceViolation {
 	void m(int[] indices) {
 		final var arr = new String[10];
@@ -1100,7 +1390,7 @@ class InputJitInefficiencyArrayLhsForHeaderLineCommentSkipPassesSliceViolation {
 // === end ===
 
 // === case: array_lhs_for_header_multiline_comment_index_in_header_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyArrayLhsForHeaderMultilineCommentIndexInHeaderBailsSliceViolation {
 	void m() {
 		final var arr = new String[10];
@@ -1186,7 +1476,7 @@ class InputJitInefficiencyArrayLhsForHeaderStringLiteralWithParenPassesSliceViol
 // === end ===
 
 // === case: array_lhs_for_header_text_block_in_parens_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsForHeaderTextBlockInParensBailsSliceViolation {
 	void m(int k) {
@@ -1254,7 +1544,7 @@ class InputJitInefficiencyArrayLhsLongerNameNotSubstringMatchPassesSliceViolatio
 // === end ===
 
 // === case: array_lhs_loop_after_statement_label_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsLoopAfterStatementLabelBailsSliceViolation {
 	static class Obj {
@@ -1295,7 +1585,7 @@ class InputJitInefficiencyArrayLhsMemberKDoesNotCountAsMutationSliceViolation {
 // === end ===
 
 // === case: array_lhs_nested_loop_inner_var_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyArrayLhsNestedLoopInnerVarBailsSliceViolation {
 	void m(int m, int n) {
 		final var arr = new String[10];
@@ -1329,7 +1619,7 @@ class InputJitInefficiencyArrayLhsPrefixNameNotSubstringMatchPassesSliceViolatio
 // === end ===
 
 // === case: array_lhs_right_shift_compound_index_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsRightShiftCompoundIndexBailsSliceViolation {
 	void m(int k, List<String> list) {
@@ -1344,7 +1634,7 @@ class InputJitInefficiencyArrayLhsRightShiftCompoundIndexBailsSliceViolation {
 // === end ===
 
 // === case: array_lhs_right_shift_regular_compound_index_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsRightShiftRegularCompoundIndexBailsSliceViolation {
 	void m(int k, List<String> list) {
@@ -1359,7 +1649,7 @@ class InputJitInefficiencyArrayLhsRightShiftRegularCompoundIndexBailsSliceViolat
 // === end ===
 
 // === case: array_lhs_root_identifier_mutated_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsRootIdentifierMutatedBailsSliceViolation {
 	static class Obj {
@@ -1383,7 +1673,7 @@ class InputJitInefficiencyArrayLhsRootIdentifierMutatedBailsSliceViolation {
 // === end ===
 
 // === case: array_lhs_shift_compound_index_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsShiftCompoundIndexBailsSliceViolation {
 	void m(int k, List<String> list) {
@@ -1467,7 +1757,7 @@ class InputJitInefficiencyArrayLhsThisChainInStringLiteralPassesSliceViolation {
 // === end ===
 
 // === case: array_lhs_this_chain_mutated_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsThisChainMutatedBailsSliceViolation {
 	static class Inner {
@@ -1491,7 +1781,7 @@ class InputJitInefficiencyArrayLhsThisChainMutatedBailsSliceViolation {
 // === end ===
 
 // === case: array_lhs_this_chain_prefix_mutated_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyArrayLhsThisChainPrefixMutatedBailsSliceViolation {
 	static class Matrix {
@@ -1595,8 +1885,31 @@ class InputJitInefficiencyBoxedConstructorFloatConstructorSliceViolation {
 }
 // === end ===
 
+// === case: boxed_constructor_float_double_argument_bails ===
+// skip-reason: cannot rewrite the boxed constructor: it is qualified
+class InputJitInefficiencyBoxedConstructorFloatDoubleArgumentBailsSliceViolation {
+	void m() {
+		// Float is the one boxed type whose valueOf is narrower than its constructor: there is no
+		// Float.valueOf(double), so the rewrite would not compile
+		final var f = new Float(1.5);
+		System.out.println(f);
+	}
+}
+// === end ===
+
+// === case: boxed_constructor_float_variable_argument_bails ===
+// skip-reason: cannot rewrite the boxed constructor: it is qualified
+class InputJitInefficiencyBoxedConstructorFloatVariableArgumentBailsSliceViolation {
+	void m(float g) {
+		// safe in fact, but the suffix is all the fixer reads, so an identifier is refused
+		final var f = new Float(g);
+		System.out.println(f);
+	}
+}
+// === end ===
+
 // === case: boxed_constructor_foreign_qualifier ===
-// skip-reason: qualified boxed constructor
+// skip-reason: cannot rewrite the boxed constructor: it is qualified
 class InputJitInefficiencyBoxedConstructorForeignQualifierSliceViolation {
 	void m() {
 		final var x = new com.example.Integer(42);
@@ -1632,11 +1945,114 @@ class InputJitInefficiencyBoxedConstructorShortConstructorSliceViolation {
 }
 // === end ===
 
-// === case: empty_string_concat_call_receiver_bails ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
-class InputJitInefficiencyEmptyStringConcatCallReceiverBailsSliceViolation {
+// === case: empty_string_concat_anon_declared_method_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatAnonDeclaredMethodCharArrayBailsSliceViolation {
+	Object m() {
+		// the frame is the class body, so a method the anonymous body declares hides the
+		// same-named one on the class around it
+		return new Object() {
+			String dump() {
+				return "" + pick();
+			}
+
+			char[] pick() {
+				return new char[] { 'h', 'i' };
+			}
+		};
+	}
+
+	String pick() {
+		return "shadowed";
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_anon_inherited_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatAnonInheritedCharArrayBailsSliceViolationBase {
+	char[] chars = { 'h', 'i' };
+}
+
+class InputJitInefficiencyEmptyStringConcatAnonInheritedCharArrayBailsSliceViolation {
+	String chars = "shadowed";
+
+	Object m() {
+		// an anonymous body hangs off a LITERAL_NEW carrying no extends clause, so what it
+		// inherits is the type the new names rather than the class it sits in
+		return new InputJitInefficiencyEmptyStringConcatAnonInheritedCharArrayBailsSliceViolationBase() {
+			String dump() {
+				return "" + chars;
+			}
+		};
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_anon_inherited_string_method ===
+class InputJitInefficiencyEmptyStringConcatAnonInheritedStringMethodSliceViolationBase {
+	String pick() {
+		return "hi";
+	}
+}
+
+class InputJitInefficiencyEmptyStringConcatAnonInheritedStringMethodSliceViolation {
+	Object m() {
+		// `this` names the anonymous body, so it reads the base's String pick() rather than the
+		// char[] one on the class around it
+		return new InputJitInefficiencyEmptyStringConcatAnonInheritedStringMethodSliceViolationBase() {
+			String dump() {
+				return String.valueOf(this.pick());
+			}
+		};
+	}
+
+	char[] pick() {
+		return new char[] { 'h', 'i' };
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_anon_outer_method_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatAnonOuterMethodCharArrayBailsSliceViolation {
+	Object m() {
+		// the anonymous body declares no pick(), so cutting the walk short here would answer
+		// unknown and rewrite the one shape that must not be rewritten
+		return new Object() {
+			String dump() {
+				return "" + pick();
+			}
+		};
+	}
+
+	char[] pick() {
+		return new char[] { 'h', 'i' };
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_anon_outer_method_fallthrough ===
+class InputJitInefficiencyEmptyStringConcatAnonOuterMethodFallthroughSliceViolation {
+	Object m() {
+		// the anonymous body declares no pick(), so the walk continues to the class around it
+		return new Object() {
+			String dump() {
+				return String.valueOf(pick());
+			}
+		};
+	}
+
+	String pick() {
+		return "hi";
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_call_receiver ===
+class InputJitInefficiencyEmptyStringConcatCallReceiverSliceViolation {
 	void m() {
-		final var s = f() + "";
+		final var s = String.valueOf(f());
 		System.out.println(s);
 	}
 
@@ -1647,7 +2063,7 @@ class InputJitInefficiencyEmptyStringConcatCallReceiverBailsSliceViolation {
 // === end ===
 
 // === case: empty_string_concat_carried_block_comment_bails ===
-// skip-reason: reusable object creation
+// skip-reason: cannot hoist the reusable object creation: this shape is not supported
 // imports: java.util.regex.Pattern
 class InputJitInefficiencyEmptyStringConcatCarriedBlockCommentBailsSliceViolation {
 	void m() {
@@ -1658,13 +2074,285 @@ class InputJitInefficiencyEmptyStringConcatCarriedBlockCommentBailsSliceViolatio
 }
 // === end ===
 
-// === case: empty_string_concat_diamond_operand_bails ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
-// imports: java.util.ArrayList
-class InputJitInefficiencyEmptyStringConcatDiamondOperandBailsSliceViolation {
-	void m() {
-		final String s = "" + new ArrayList<>();
+// === case: empty_string_concat_char_array_cast_operand_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatCharArrayCastOperandBailsSliceViolation {
+	void m(Object o) {
+		// an array cast spells its brackets beside the element type, not inside it
+		final var s = "" + (char[]) o;
 		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_char_array_field_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatCharArrayFieldBailsSliceViolation {
+	private char[] buf;
+
+	String dump() {
+		// the same divergence reached through a field access rather than a bare name
+		return "" + this.buf;
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_char_array_operand_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatCharArrayOperandBailsSliceViolation {
+	void m(char[] chars) {
+		// `"" + chars` is the array's toString, while String.valueOf(char[]) returns its contents
+		final var s = "" + chars;
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_char_cast_operand ===
+class InputJitInefficiencyEmptyStringConcatCharCastOperandSliceViolation {
+	void m(int c) {
+		// a scalar char cast, which valueOf renders exactly as the concatenation does
+		final var s = String.valueOf((char) c);
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_char_matrix_cast_operand ===
+class InputJitInefficiencyEmptyStringConcatCharMatrixCastOperandSliceViolation {
+	void m(Object o) {
+		// valueOf has no char[][] overload, so both forms reach valueOf(Object)
+		final var s = String.valueOf((char[][]) o);
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_comment_abutting_plus ===
+class InputJitInefficiencyEmptyStringConcatCommentAbuttingPlusSliceViolation {
+	void m(int x) {
+		final var s = String.valueOf(/*c*/x);
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_deep_inherited_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatDeepInheritedCharArrayBailsSliceViolationTop {
+	char[] chars = { 'h', 'i' };
+}
+
+class InputJitInefficiencyEmptyStringConcatDeepInheritedCharArrayBailsSliceViolationMid
+		extends InputJitInefficiencyEmptyStringConcatDeepInheritedCharArrayBailsSliceViolationTop {
+}
+
+class InputJitInefficiencyEmptyStringConcatDeepInheritedCharArrayBailsSliceViolation
+		extends InputJitInefficiencyEmptyStringConcatDeepInheritedCharArrayBailsSliceViolationMid {
+	String dump() {
+		// two links up, so a walk that only reads direct supertypes answers unknown and rewrites
+		return "" + chars;
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_deep_inherited_method_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatDeepInheritedMethodCharArrayBailsSliceViolationTop {
+	char[] pick() {
+		return new char[] { 'h', 'i' };
+	}
+}
+
+class InputJitInefficiencyEmptyStringConcatDeepInheritedMethodCharArrayBailsSliceViolationMid
+		extends InputJitInefficiencyEmptyStringConcatDeepInheritedMethodCharArrayBailsSliceViolationTop {
+}
+
+class InputJitInefficiencyEmptyStringConcatDeepInheritedMethodCharArrayBailsSliceViolation
+		extends InputJitInefficiencyEmptyStringConcatDeepInheritedMethodCharArrayBailsSliceViolationMid {
+	String dump() {
+		// two links up, the same depth the field walk is pinned at
+		return "" + pick();
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_diamond_operand ===
+// imports: java.util.ArrayList
+class InputJitInefficiencyEmptyStringConcatDiamondOperandSliceViolation {
+	void m() {
+		final String s = String.valueOf(new ArrayList<>());
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_dotted_array_receiver ===
+class InputJitInefficiencyEmptyStringConcatDottedArrayReceiverSliceViolation {
+	String name;
+
+	void m(InputJitInefficiencyEmptyStringConcatDottedArrayReceiverSliceViolation[] items, int i) {
+		final var s = String.valueOf(items[i].name);
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_dotted_call_receiver ===
+class InputJitInefficiencyEmptyStringConcatDottedCallReceiverSliceViolation {
+	String name;
+
+	InputJitInefficiencyEmptyStringConcatDottedCallReceiverSliceViolation get() {
+		return this;
+	}
+
+	void m() {
+		final var s = String.valueOf(get().name);
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_enum_constant_declared_method_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+enum InputJitInefficiencyEmptyStringConcatEnumConstantDeclaredMethodCharArrayBailsSliceViolation {
+	A {
+		char[] pick() {
+			return new char[] { 'h', 'i' };
+		}
+
+		@Override
+		String render() {
+			// a constant's body is a frame of its own, so the method it declares hides the enum's
+			return "" + pick();
+		}
+	};
+
+	String pick() {
+		return "shadowed";
+	}
+
+	abstract String render();
+}
+// === end ===
+
+// === case: empty_string_concat_enum_constant_super_char_array_call_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+enum InputJitInefficiencyEmptyStringConcatEnumConstantSuperCharArrayCallBailsSliceViolation {
+	A {
+		@Override
+		String render() {
+			// a constant's body subclasses the enum, so `super.` names the enum's own method
+			return "" + super.pick();
+		}
+	};
+
+	char[] pick() {
+		return new char[] { 'h', 'i' };
+	}
+
+	abstract String render();
+}
+// === end ===
+
+// === case: empty_string_concat_enum_constant_this_field_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+enum InputJitInefficiencyEmptyStringConcatEnumConstantThisFieldBailsSliceViolation {
+	A {
+		@Override
+		String render() {
+			// an enum constant's body subclasses the enum, so `this.chars` names the enum's own
+			// field through inheritance; stopping the member scan at the constant's own body
+			// leaves the type unresolved and the char[] gate fails open
+			return "" + this.chars;
+		}
+	};
+
+	char[] chars = { 'h', 'i' };
+
+	abstract String render();
+}
+// === end ===
+
+// === case: empty_string_concat_for_each_var_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatForEachVarCharArrayBailsSliceViolation {
+	private char[][] grid;
+
+	void m() {
+		// the binding's own declaration says `var`; the element type comes from the iterable
+		for (var row : grid)
+			System.out.println("" + row);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_index_op_char_array_operand_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatIndexOpCharArrayOperandBailsSliceViolation {
+	private char[][] grid;
+
+	String dump() {
+		return "" + grid[0];
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_index_op_char_element_operand ===
+class InputJitInefficiencyEmptyStringConcatIndexOpCharElementOperandSliceViolation {
+	private char[][] grid;
+
+	String dump() {
+		// two indexes reach a char, which has no divergent overload
+		return String.valueOf(grid[0][0]);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_index_op_string_element_operand ===
+class InputJitInefficiencyEmptyStringConcatIndexOpStringElementOperandSliceViolation {
+	private String[] names;
+
+	String dump() {
+		return String.valueOf(names[0]);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_inherited_char_array_this_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatInheritedCharArrayThisBailsSliceViolationBase {
+	char[] chars = { 'h', 'i' };
+}
+
+class InputJitInefficiencyEmptyStringConcatInheritedCharArrayThisBailsSliceViolation
+		extends InputJitInefficiencyEmptyStringConcatInheritedCharArrayThisBailsSliceViolationBase {
+	String dump() {
+		// the qualified spelling must reach the same field the bare one does
+		return "" + this.chars;
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_inherited_method_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatInheritedMethodCharArrayBailsSliceViolationBase {
+	char[] pick() {
+		return new char[] { 'h', 'i' };
+	}
+}
+
+class InputJitInefficiencyEmptyStringConcatInheritedMethodCharArrayBailsSliceViolation {
+	static class Inner
+			extends InputJitInefficiencyEmptyStringConcatInheritedMethodCharArrayBailsSliceViolationBase {
+		String dump() {
+			// an inherited member hides one declared further out, so this is the base's char[]
+			return "" + pick();
+		}
+	}
+
+	String pick() {
+		return "s";
 	}
 }
 // === end ===
@@ -1680,6 +2368,411 @@ class InputJitInefficiencyEmptyStringConcatNewArrayArgumentSliceViolation {
 }
 // === end ===
 
+// === case: empty_string_concat_null_literal_operand_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatNullLiteralOperandBailsSliceViolation {
+	void m() {
+		// `"" + null` is the text "null", while String.valueOf(null) binds to valueOf(char[]) and throws
+		final var s = "" + null;
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_object_operand ===
+class InputJitInefficiencyEmptyStringConcatObjectOperandSliceViolation {
+	void m(Object o) {
+		// the control for the two gates above: an operand they must not suppress
+		final var s = String.valueOf(o);
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_obscuring_variable_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyObscuredData {
+	String v = "s";
+}
+
+class InputJitInefficiencyObscuringHolder {
+	char[] v = { 'h', 'i' };
+}
+
+class InputJitInefficiencyEmptyStringConcatObscuringVariableCharArrayBailsSliceViolation {
+	String dump(InputJitInefficiencyObscuringHolder InputJitInefficiencyObscuredData) {
+		// JLS 6.4.2: the parameter obscures the type of the same name, so this reads the holder's
+		// char[] rather than the obscured type's String
+		return "" + InputJitInefficiencyObscuredData.v;
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_outer_vs_inherited_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatOuterVsInheritedCharArrayBailsSliceViolationBase {
+	char[] chars = { 'h', 'i' };
+}
+
+class InputJitInefficiencyEmptyStringConcatOuterVsInheritedCharArrayBailsSliceViolation {
+	class Inner
+			extends InputJitInefficiencyEmptyStringConcatOuterVsInheritedCharArrayBailsSliceViolationBase {
+		String dump() {
+			// an inherited field hides an enclosing one, so this is the base's char[], not the
+			// outer class's String
+			return "" + this.chars;
+		}
+	}
+
+	String chars = "outer";
+}
+// === end ===
+
+// === case: empty_string_concat_parenthesized_empty_literal_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatParenthesizedEmptyLiteralBailsSliceViolation {
+	void m(int value) {
+		// the `(` takes the first-child slot the side test reads, so the check hands back the
+		// empty literal as the surviving operand and slicing the far side would delete `value`
+		final var s = ("") + value;
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_pattern_variable_bitwise_and_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatPatternVariableBitwiseAndBailsSliceViolation {
+	char[] chars = { 'h', 'i' };
+
+	String m(Object o, boolean flag) {
+		// a single & does not bind the pattern the way && does, so this is the field
+		if (flag & o instanceof String chars)
+			return "" + chars;
+		return "";
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_pattern_variable_bitwise_or_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatPatternVariableBitwiseOrBailsSliceViolation {
+	char[] chars = { 'h', 'i' };
+
+	String m(Object o, boolean flag) {
+		if (flag | o instanceof String chars)
+			return "" + chars;
+		return "";
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_pattern_variable_braceless_body ===
+class InputJitInefficiencyEmptyStringConcatPatternVariableBracelessBodySliceViolation {
+	char[] chars = { 'h', 'i' };
+
+	void m(Object o) {
+		// a braceless body that is an expression statement is an EXPR, like the condition is, so
+		// telling them apart by token type would read this as the field
+		if (o instanceof String chars)
+			System.out.println(String.valueOf(chars));
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_pattern_variable_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatPatternVariableCharArrayBailsSliceViolation {
+	String m(Object o) {
+		// the binding hangs off the instanceof, not off any enclosing scope's child list
+		if (o instanceof char[] arr)
+			return "" + arr;
+		return "";
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_pattern_variable_left_operand_of_and_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatPatternVariableLeftOperandOfAndBailsSliceViolation {
+	char[] chars = { 'h', 'i' };
+
+	boolean m(Object o) {
+		// the left operand runs before the match, so this reads the field, not the pattern
+		return ("" + chars).isEmpty() && o instanceof String chars;
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_pattern_variable_negated_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatPatternVariableNegatedBailsSliceViolation {
+	char[] chars = { 'h', 'i' };
+
+	String m(Object o) {
+		// the branch is taken when the match FAILED, so this is the field and not the pattern
+		if (!(o instanceof String chars))
+			return "" + chars;
+		return "";
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_pattern_variable_or_operand_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatPatternVariableOrOperandBailsSliceViolation {
+	char[] chars = { 'h', 'i' };
+
+	String m(Object o, boolean flag) {
+		// the left operand alone can take the branch, so the pattern is not assigned here
+		if (flag || o instanceof String chars)
+			return "" + chars;
+		return "";
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_pattern_variable_out_of_scope_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatPatternVariableOutOfScopeBailsSliceViolation {
+	char[] chars = { 'h', 'i' };
+
+	String m(Object o) {
+		if (o instanceof String chars)
+			System.out.println(chars);
+		// the pattern is out of scope here, so this is the char[] field and not the String
+		return "" + chars;
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_pattern_variable_paren_right_operand_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatPatternVariableParenRightOperandBailsSliceViolation {
+	String chars = "x";
+
+	boolean m(Object o) {
+		// a fully parenthesized right operand is not the && node's last child, the RPAREN is
+		return o instanceof char[] chars && (("" + chars).isEmpty());
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_pattern_variable_right_operand_of_and ===
+class InputJitInefficiencyEmptyStringConcatPatternVariableRightOperandOfAndSliceViolation {
+	char[] chars = { 'h', 'i' };
+
+	boolean m(Object o) {
+		// the right operand runs only once the match is made, so this is the String pattern
+		return o instanceof String chars && (String.valueOf(chars)).isEmpty();
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_pattern_variable_shadows_field ===
+class InputJitInefficiencyEmptyStringConcatPatternVariableShadowsFieldSliceViolation {
+	char[] chars = { 'h', 'i' };
+
+	String m(Object o) {
+		// inside the branch the pattern governs, the pattern shadows the field, so this is a
+		// String and the rewrite is legal
+		if (o instanceof String chars)
+			return String.valueOf(chars);
+		return "";
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_pattern_variable_string_operand ===
+class InputJitInefficiencyEmptyStringConcatPatternVariableStringOperandSliceViolation {
+	String m(Object o) {
+		if (o instanceof String text)
+			return String.valueOf(text);
+		return "";
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_qualified_owner_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatQualifiedOwnerCharArrayBailsSliceViolation {
+	static class Outer {
+		static class Inner {
+			char[] v = { 'h', 'i' };
+		}
+	}
+
+	String dump() {
+		// the local's declared type is written qualified, which only a dotted lookup resolves
+		final Outer.Inner box = new Outer.Inner();
+		return "" + box.v;
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_record_accessor_bare_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+record InputJitInefficiencyEmptyStringConcatRecordAccessorBareCharArrayBailsSliceViolation(char[] data) {
+	String dump() {
+		// an implicit accessor is no METHOD_DEF, so the component is what names its return type
+		return "" + data();
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_record_accessor_bare_string_operand ===
+record InputJitInefficiencyEmptyStringConcatRecordAccessorBareStringOperandSliceViolation(String name) {
+	String dump() {
+		return String.valueOf(name());
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_record_accessor_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatRecordAccessorCharArrayBailsSliceViolation {
+	record Payload(char[] buf) {}
+
+	String m(Payload p) {
+		// an implicit accessor has no METHOD_DEF, so its type comes from the component
+		return "" + p.buf();
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_record_accessor_string_operand ===
+class InputJitInefficiencyEmptyStringConcatRecordAccessorStringOperandSliceViolation {
+	record Payload(String name) {}
+
+	String m(Payload p) {
+		return String.valueOf(p.name());
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_record_accessor_this_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+record InputJitInefficiencyEmptyStringConcatRecordAccessorThisCharArrayBailsSliceViolation(char[] data) {
+	String dump() {
+		// the qualified spelling must reach the same component the bare one does
+		return "" + this.data();
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_record_component_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatRecordComponentCharArrayBailsSliceViolation {
+	record Payload(char[] chars) {
+		String dump() {
+			// a component hangs off the RECORD_DEF rather than its body, so a body-only scan
+			// misses it and the operand reads as unknown
+			return "" + chars;
+		}
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_record_component_varargs_array_accessor_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+record InputJitInefficiencyEmptyStringConcatRecordComponentVarargsArrayAccessorBailsSliceViolation(char[]... rows) {
+	String dump() {
+		return "" + rows()[0];
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_record_component_varargs_array_bare_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+record InputJitInefficiencyEmptyStringConcatRecordComponentVarargsArrayBareBailsSliceViolation(char[]... rows) {
+	String dump() {
+		// the component declares a dimension of its own, so the varargs one is the second, not the
+		// only: reading it as char[] would make this element read as a scalar char
+		return "" + rows[0];
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_record_component_varargs_array_this_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+record InputJitInefficiencyEmptyStringConcatRecordComponentVarargsArrayThisBailsSliceViolation(char[]... rows) {
+	String dump() {
+		return "" + this.rows[0];
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_record_component_varargs_array_whole_operand ===
+record InputJitInefficiencyEmptyStringConcatRecordComponentVarargsArrayWholeOperandSliceViolation(char[]... rows) {
+	String dump() {
+		// char[][] is not char[], so this one is safe to rewrite and must not be over-suppressed
+		return String.valueOf(rows);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_record_component_varargs_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+record InputJitInefficiencyEmptyStringConcatRecordComponentVarargsCharArrayBailsSliceViolation(char... cs) {
+	String dump() {
+		// a component's binding already carries the varargs dimension, so the bare read must not
+		// add a second one and report char[][]
+		return "" + cs;
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_record_component_varargs_string_operand ===
+record InputJitInefficiencyEmptyStringConcatRecordComponentVarargsStringOperandSliceViolation(String... xs) {
+	String dump() {
+		return String.valueOf(xs);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_record_component_varargs_this_char_array_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+record InputJitInefficiencyEmptyStringConcatRecordComponentVarargsThisCharArrayBailsSliceViolation(char... cs) {
+	String dump() {
+		// the qualified spelling reads the component's type directly, with no dimension to re-add
+		return "" + this.cs;
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_same_file_char_array_call_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatSameFileCharArrayCallBailsSliceViolation {
+	private char[] buf;
+
+	String dump() {
+		// resolved from the declaration rather than reflection, so it is spelled char[] not [C
+		return "" + mk();
+	}
+
+	private char[] mk() {
+		return buf;
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_super_qualified_char_array_call_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatSuperQualifiedCharArrayCallBailsSliceViolationBase {
+	char[] pick() {
+		return new char[] { 'h', 'i' };
+	}
+}
+
+class InputJitInefficiencyEmptyStringConcatSuperQualifiedCharArrayCallBailsSliceViolation
+		extends InputJitInefficiencyEmptyStringConcatSuperQualifiedCharArrayCallBailsSliceViolationBase {
+	String m() {
+		// a super. qualifier names a method the supertypes declare
+		return "" + super.pick();
+	}
+}
+// === end ===
+
 // === case: empty_string_concat_switch_expression ===
 class InputJitInefficiencyEmptyStringConcatSwitchExpressionSliceViolation {
 	String m(int kind) {
@@ -1689,24 +2782,143 @@ class InputJitInefficiencyEmptyStringConcatSwitchExpressionSliceViolation {
 }
 // === end ===
 
-// === case: empty_string_concat_switch_expression_operand_plus_bails ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
-class InputJitInefficiencyEmptyStringConcatSwitchExpressionOperandPlusBailsSliceViolation {
+// === case: empty_string_concat_switch_expression_operand_plus ===
+class InputJitInefficiencyEmptyStringConcatSwitchExpressionOperandPlusSliceViolation {
 	String m(int kind, String a, String b) {
-		final String label = "" + switch (kind) { case 1 -> a + b; default -> "c"; };
+		final String label = String.valueOf(switch (kind) { case 1 -> a + b; default -> "c"; });
 		return label;
 	}
 }
 // === end ===
 
+// === case: empty_string_concat_ternary_char_array_operand_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatTernaryCharArrayOperandBailsSliceViolation {
+	void m(boolean flag, char[] a, char[] b) {
+		// both branches agree on char[], so the whole ternary is one
+		final var s = "" + (flag ? a : b);
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_ternary_char_array_paren_condition_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatTernaryCharArrayParenConditionBailsSliceViolation {
+	char[] a = { 'h', 'i' };
+	char[] b = { 'y', 'o' };
+
+	String m(int n) {
+		// a grouping paren is a sibling, so it takes the slot the condition would sit in
+		return "" + ((n > 0) ? a : b);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_ternary_char_array_paren_false_branch_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatTernaryCharArrayParenFalseBranchBailsSliceViolation {
+	char[] a = { 'h', 'i' };
+	char[] b = { 'y', 'o' };
+
+	String m(boolean flag) {
+		// the last child here is the RPAREN, not the branch
+		return "" + (flag ? a : (b));
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_ternary_mixed_operand ===
+class InputJitInefficiencyEmptyStringConcatTernaryMixedOperandSliceViolation {
+	void m(boolean flag, char[] a, String b) {
+		// the branches disagree, so no type is resolved and the rewrite goes ahead
+		final var s = String.valueOf((flag ? a : b));
+		System.out.println(s);
+	}
+}
+// === end ===
+
 // === case: empty_string_concat_text_block_bail ===
-// skip-reason: empty-string concatenation the fixer cannot simplify
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
 class InputJitInefficiencyEmptyStringConcatTextBlockBailSliceViolation {
 	void m() {
 		final var s = """
 				body
 				""" + "";
 		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_this_qualified_char_array_call_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatThisQualifiedCharArrayCallBailsSliceViolation {
+	char[] pick() {
+		return new char[] { 'h', 'i' };
+	}
+
+	String m() {
+		// a this. qualifier names a method of this very type, exactly as the bare spelling does
+		return "" + this.pick();
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_to_char_array_call_operand_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatToCharArrayCallOperandBailsSliceViolation {
+	void m(String name) {
+		// reflection spells this return [C rather than char[]; both name the same type
+		final var s = "" + name.toCharArray();
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_to_string_call_operand ===
+class InputJitInefficiencyEmptyStringConcatToStringCallOperandSliceViolation {
+	void m(String name) {
+		final var s = String.valueOf(name.trim());
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_var_char_array_operand_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatVarCharArrayOperandBailsSliceViolation {
+	void m(String name) {
+		final var chars = name.toCharArray();
+		final var s = "" + chars;
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_var_string_operand ===
+class InputJitInefficiencyEmptyStringConcatVarStringOperandSliceViolation {
+	void m(String name) {
+		final var trimmed = name.trim();
+		final var s = String.valueOf(trimmed);
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_varargs_char_array_operand_bails ===
+// skip-reason: cannot simplify the empty-string concatenation: this shape is not supported
+class InputJitInefficiencyEmptyStringConcatVarargsCharArrayOperandBailsSliceViolation {
+	String m(char... cs) {
+		// the ELLIPSIS carries the dimension the declared type does not spell
+		return "" + cs;
+	}
+}
+// === end ===
+
+// === case: empty_string_concat_varargs_string_operand ===
+class InputJitInefficiencyEmptyStringConcatVarargsStringOperandSliceViolation {
+	String m(String... names) {
+		return String.valueOf(names);
 	}
 }
 // === end ===
@@ -1727,7 +2939,7 @@ class InputJitInefficiencyExplicitFormArrayLhsChainedIndexSliceViolation {
 // === end ===
 
 // === case: explicit_form_array_lhs_classic_for ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyExplicitFormArrayLhsClassicForSliceViolation {
 	void m(int n) {
 		final var arr = new String[n];
@@ -1943,7 +3155,7 @@ class InputJitInefficiencyExplicitFormFqnTypeSliceViolation {
 // === end ===
 
 // === case: explicit_form_in_for_iterator ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyExplicitFormInForIteratorSliceViolation {
 	void m(int n) {
 		var s = "";
@@ -1967,7 +3179,7 @@ class InputJitInefficiencyExplicitFormMiddleSliceViolation {
 // === end ===
 
 // === case: explicit_form_nested_loop_inner_index ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyExplicitFormNestedLoopInnerIndexSliceViolation {
 	void m(int m, int n) {
 		final var local = new String[n];
@@ -2030,7 +3242,7 @@ class InputJitInefficiencyExplicitFormThisDotNestedSliceViolation {
 // === end ===
 
 // === case: explicit_form_var_from_method ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyExplicitFormVarFromMethodSliceViolation {
 	void m(List<String> list) {
@@ -2065,7 +3277,7 @@ class InputJitInefficiencyExplicitFormWhileLoopSliceViolation {
 // === end ===
 
 // === case: field_lhs_tier2_do_while_after_statement_label_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyFieldLhsTier2DoWhileAfterStatementLabelBailsSliceViolation {
 	private String out = "";
 
@@ -2078,8 +3290,58 @@ class InputJitInefficiencyFieldLhsTier2DoWhileAfterStatementLabelBailsSliceViola
 }
 // === end ===
 
+// === case: foreign_category_enum_values_array_lhs_does_not_borrow_concat_rewrite ===
+// skip-reason: cannot hoist the 'Enum.values()' call out of the loop: this shape is not supported
+class InputJitInefficiencyForeignCategoryEnumValuesArrayLhsDoesNotBorrowConcatRewriteSliceViolation {
+	enum Color {
+		BLUE
+	}
+
+	int[] totals = new int[4];
+
+	int m() {
+		for (var i = 0; i < 3; ++i)
+			totals[0] = totals[0] + Color.values().length;
+		return totals[0];
+	}
+}
+// === end ===
+
+// === case: foreign_category_enum_values_field_lhs_does_not_borrow_concat_rewrite ===
+// skip-reason: cannot hoist the 'Enum.values()' call out of the loop: this shape is not supported
+class InputJitInefficiencyForeignCategoryEnumValuesFieldLhsDoesNotBorrowConcatRewriteSliceViolation {
+	enum Color {
+		BLUE
+	}
+
+	int total;
+
+	int m() {
+		// the loop rewriter's field path synthesizes a String declaration without resolving the
+		// field's type, so reaching it from another category emitted `this.total = sb.toString();`
+		for (var i = 0; i < 3; ++i)
+			this.total = this.total + Color.values().length;
+		return this.total;
+	}
+}
+// === end ===
+
+// === case: foreign_category_reusable_object_does_not_borrow_concat_rewrite ===
+// skip-reason: cannot hoist the reusable object creation: this shape is not supported
+// imports: java.util.regex.Pattern
+class InputJitInefficiencyForeignCategoryReusableObjectDoesNotBorrowConcatRewriteSliceViolation {
+	int total;
+
+	int m() {
+		for (var i = 0; i < 3; ++i)
+			this.total = this.total + Pattern.compile("a").pattern().length();
+		return this.total;
+	}
+}
+// === end ===
+
 // === case: loop_boxed_accumulator_byte ===
-// skip-reason: boxed accumulator in a loop
+// skip-reason: cannot rewrite the boxed accumulator: this shape is not supported
 class InputJitInefficiencyLoopBoxedAccumulatorByteSliceViolation {
 	void m(int n) {
 		Byte total = Byte.valueOf((byte) 0);
@@ -2091,7 +3353,7 @@ class InputJitInefficiencyLoopBoxedAccumulatorByteSliceViolation {
 // === end ===
 
 // === case: loop_boxed_accumulator_classic_for ===
-// skip-reason: boxed accumulator in a loop
+// skip-reason: cannot rewrite the boxed accumulator: this shape is not supported
 class InputJitInefficiencyLoopBoxedAccumulatorClassicForSliceViolation {
 	void m(int n) {
 		Double total = 0.0;
@@ -2103,7 +3365,7 @@ class InputJitInefficiencyLoopBoxedAccumulatorClassicForSliceViolation {
 // === end ===
 
 // === case: loop_boxed_accumulator_div_assign ===
-// skip-reason: boxed accumulator in a loop
+// skip-reason: cannot rewrite the boxed accumulator: this shape is not supported
 class InputJitInefficiencyLoopBoxedAccumulatorDivAssignSliceViolation {
 	void m() {
 		Long n = 1024L;
@@ -2115,7 +3377,7 @@ class InputJitInefficiencyLoopBoxedAccumulatorDivAssignSliceViolation {
 // === end ===
 
 // === case: loop_boxed_accumulator_do_while ===
-// skip-reason: boxed accumulator in a loop
+// skip-reason: cannot rewrite the boxed accumulator: this shape is not supported
 class InputJitInefficiencyLoopBoxedAccumulatorDoWhileSliceViolation {
 	void m() {
 		Float fSum = 0f;
@@ -2127,7 +3389,7 @@ class InputJitInefficiencyLoopBoxedAccumulatorDoWhileSliceViolation {
 // === end ===
 
 // === case: loop_boxed_accumulator_for ===
-// skip-reason: boxed accumulator in a loop
+// skip-reason: cannot rewrite the boxed accumulator: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyLoopBoxedAccumulatorForSliceViolation {
 	void m(List<Long> nums) {
@@ -2140,7 +3402,7 @@ class InputJitInefficiencyLoopBoxedAccumulatorForSliceViolation {
 // === end ===
 
 // === case: loop_boxed_accumulator_minus_assign ===
-// skip-reason: boxed accumulator in a loop
+// skip-reason: cannot rewrite the boxed accumulator: this shape is not supported
 class InputJitInefficiencyLoopBoxedAccumulatorMinusAssignSliceViolation {
 	void m() {
 		Long count = 100L;
@@ -2152,7 +3414,7 @@ class InputJitInefficiencyLoopBoxedAccumulatorMinusAssignSliceViolation {
 // === end ===
 
 // === case: loop_boxed_accumulator_mod_assign ===
-// skip-reason: boxed accumulator in a loop
+// skip-reason: cannot rewrite the boxed accumulator: this shape is not supported
 class InputJitInefficiencyLoopBoxedAccumulatorModAssignSliceViolation {
 	void m() {
 		Long m = 1000L;
@@ -2164,7 +3426,7 @@ class InputJitInefficiencyLoopBoxedAccumulatorModAssignSliceViolation {
 // === end ===
 
 // === case: loop_boxed_accumulator_self_read ===
-// skip-reason: boxed accumulator in a loop
+// skip-reason: cannot rewrite the boxed accumulator: this shape is not supported
 class InputJitInefficiencyLoopBoxedAccumulatorSelfReadSliceViolation {
 	void m(int n) {
 		Integer count = 0;
@@ -2176,7 +3438,7 @@ class InputJitInefficiencyLoopBoxedAccumulatorSelfReadSliceViolation {
 // === end ===
 
 // === case: loop_boxed_accumulator_short ===
-// skip-reason: boxed accumulator in a loop
+// skip-reason: cannot rewrite the boxed accumulator: this shape is not supported
 class InputJitInefficiencyLoopBoxedAccumulatorShortSliceViolation {
 	void m(int n) {
 		Short total = Short.valueOf((short) 0);
@@ -2188,7 +3450,7 @@ class InputJitInefficiencyLoopBoxedAccumulatorShortSliceViolation {
 // === end ===
 
 // === case: loop_boxed_accumulator_star_assign ===
-// skip-reason: boxed accumulator in a loop
+// skip-reason: cannot rewrite the boxed accumulator: this shape is not supported
 class InputJitInefficiencyLoopBoxedAccumulatorStarAssignSliceViolation {
 	void m() {
 		Integer prod = 1;
@@ -2200,7 +3462,7 @@ class InputJitInefficiencyLoopBoxedAccumulatorStarAssignSliceViolation {
 // === end ===
 
 // === case: loop_boxed_accumulator_while ===
-// skip-reason: boxed accumulator in a loop
+// skip-reason: cannot rewrite the boxed accumulator: this shape is not supported
 class InputJitInefficiencyLoopBoxedAccumulatorWhileSliceViolation {
 	void m(boolean cond) {
 		Integer count = 0;
@@ -2232,7 +3494,7 @@ class InputJitInefficiencyLoopBoxedFqnConstructorBooleanTrueSliceViolation {
 // === end ===
 
 // === case: loop_enum_values_do_while ===
-// skip-reason: Enum.values() in a loop
+// skip-reason: cannot hoist the 'Enum.values()' call out of the loop: this shape is not supported
 class InputJitInefficiencyLoopEnumValuesDoWhileSliceViolation {
 	enum Color {
 		BLUE,
@@ -2252,7 +3514,7 @@ class InputJitInefficiencyLoopEnumValuesDoWhileSliceViolation {
 // === end ===
 
 // === case: loop_enum_values_in_for_each ===
-// skip-reason: Enum.values() in a loop
+// skip-reason: cannot hoist the 'Enum.values()' call out of the loop: this shape is not supported
 class InputJitInefficiencyLoopEnumValuesInForEachSliceViolation {
 	enum Color {
 		BLUE,
@@ -2270,7 +3532,7 @@ class InputJitInefficiencyLoopEnumValuesInForEachSliceViolation {
 // === end ===
 
 // === case: loop_enum_values_in_while ===
-// skip-reason: Enum.values() in a loop
+// skip-reason: cannot hoist the 'Enum.values()' call out of the loop: this shape is not supported
 class InputJitInefficiencyLoopEnumValuesInWhileSliceViolation {
 	enum Color {
 		BLUE,
@@ -2288,7 +3550,7 @@ class InputJitInefficiencyLoopEnumValuesInWhileSliceViolation {
 // === end ===
 
 // === case: loop_enum_values_second_top_level_type ===
-// skip-reason: Enum.values() in a loop
+// skip-reason: cannot hoist the 'Enum.values()' call out of the loop: this shape is not supported
 class InputJitInefficiencyLoopEnumValuesSecondTopLevelTypeFirstSlice {
 }
 
@@ -2302,7 +3564,7 @@ class InputJitInefficiencyLoopEnumValuesSecondTopLevelTypeSliceViolation {
 	void m() {
 		var i = 0;
 		do {
-			final var arr = Color.values(); // violation: 'Color.values()' allocates a new array each call; cache to a static final field outside the loop.
+			final var arr = Color.values(); // violation: Cache 'Color.values()' in a static final field outside the loop (it allocates a new array on every call).
 			i += arr.length;
 		}
 		while (i < 10);
@@ -2311,7 +3573,7 @@ class InputJitInefficiencyLoopEnumValuesSecondTopLevelTypeSliceViolation {
 // === end ===
 
 // === case: loop_iterator_while_no_remove ===
-// skip-reason: explicit Iterator loop
+// skip-reason: cannot convert the explicit 'Iterator' loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyLoopIteratorWhileNoRemoveSliceViolation {
 	void m(List<String> list) {
@@ -2325,7 +3587,7 @@ class InputJitInefficiencyLoopIteratorWhileNoRemoveSliceViolation {
 // === end ===
 
 // === case: loop_map_key_set_get ===
-// skip-reason: keySet() with get(key)
+// skip-reason: cannot convert the 'keySet()' + 'get(key)' loop: this shape is not supported
 // imports: java.util.Map
 class InputJitInefficiencyLoopMapKeySetGetSliceViolation {
 	void m(Map<String, Integer> map) {
@@ -2338,7 +3600,7 @@ class InputJitInefficiencyLoopMapKeySetGetSliceViolation {
 // === end ===
 
 // === case: loop_matches_in_do_while ===
-// skip-reason: regex method in a loop
+// skip-reason: cannot hoist the regex method out of the loop: this shape is not supported
 class InputJitInefficiencyLoopMatchesInDoWhileSliceViolation {
 	void m(String s) {
 		var i = 0;
@@ -2352,7 +3614,7 @@ class InputJitInefficiencyLoopMatchesInDoWhileSliceViolation {
 // === end ===
 
 // === case: loop_regex_in_for_condition ===
-// skip-reason: regex method in a loop
+// skip-reason: cannot hoist the regex method out of the loop: this shape is not supported
 class InputJitInefficiencyLoopRegexInForConditionSliceViolation {
 	void m(String s) {
 		for (var i = 0; s.matches("\\d+"); ++i)
@@ -2362,7 +3624,7 @@ class InputJitInefficiencyLoopRegexInForConditionSliceViolation {
 // === end ===
 
 // === case: loop_regex_in_for_iterator ===
-// skip-reason: regex method in a loop
+// skip-reason: cannot hoist the regex method out of the loop: this shape is not supported
 class InputJitInefficiencyLoopRegexInForIteratorSliceViolation {
 	void m(String s) {
 		for (var i = 0; i < 10; s = s.replace("a", "b"))
@@ -2372,7 +3634,7 @@ class InputJitInefficiencyLoopRegexInForIteratorSliceViolation {
 // === end ===
 
 // === case: loop_regex_matches_in_for_each ===
-// skip-reason: regex method in a loop
+// skip-reason: cannot hoist the regex method out of the loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyLoopRegexMatchesInForEachSliceViolation {
 	void m(List<String> lines) {
@@ -2385,7 +3647,7 @@ class InputJitInefficiencyLoopRegexMatchesInForEachSliceViolation {
 // === end ===
 
 // === case: loop_regex_replace_all_in_for ===
-// skip-reason: regex method in a loop
+// skip-reason: cannot hoist the regex method out of the loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyLoopRegexReplaceAllInForSliceViolation {
 	void m(List<String> lines) {
@@ -2412,7 +3674,7 @@ class InputJitInefficiencyLoopRegexSplitInWhileSliceViolation {
 // === end ===
 
 // === case: loop_regex_string_literal_receiver ===
-// skip-reason: regex method in a loop
+// skip-reason: cannot hoist the regex method out of the loop: this shape is not supported
 class InputJitInefficiencyLoopRegexStringLiteralReceiverSliceViolation {
 	void m(int n) {
 		for (var i = 0; i < n; ++i)
@@ -2421,8 +3683,20 @@ class InputJitInefficiencyLoopRegexStringLiteralReceiverSliceViolation {
 }
 // === end ===
 
+// === case: loop_regex_unresolvable_resource_receiver ===
+// skip-reason: cannot hoist the regex method out of the loop: this shape is not supported
+class InputJitInefficiencyLoopRegexUnresolvableResourceReceiverSliceViolation {
+	void m() throws Exception {
+		try (var tokenizer = InputJitInefficiencyTokenizerFactory.make()) {
+			for (var i = 0; i < 3; ++i)
+				tokenizer.split(",");
+		}
+	}
+}
+// === end ===
+
 // === case: loop_split_in_classic_for ===
-// skip-reason: regex method in a loop
+// skip-reason: cannot hoist the regex method out of the loop: this shape is not supported
 class InputJitInefficiencyLoopSplitInClassicForSliceViolation {
 	void m(String s) {
 		for (var i = 0; i < 10; ++i) {
@@ -2502,7 +3776,7 @@ class InputJitInefficiencyStringConcatAccumulatorNameInLiteralOperandSliceViolat
 // === end ===
 
 // === case: string_concat_array_lhs_array_mutated_by_method_call_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.Arrays
 // imports: java.util.List
 class InputJitInefficiencyStringConcatArrayLhsArrayMutatedByMethodCallBailsSliceViolation {
@@ -2518,7 +3792,7 @@ class InputJitInefficiencyStringConcatArrayLhsArrayMutatedByMethodCallBailsSlice
 // === end ===
 
 // === case: string_concat_array_lhs_array_var_reassigned_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatArrayLhsArrayVarReassignedBailsSliceViolation {
 	void m(List<String> list) {
@@ -2537,7 +3811,7 @@ class InputJitInefficiencyStringConcatArrayLhsArrayVarReassignedBailsSliceViolat
 // === end ===
 
 // === case: string_concat_array_lhs_body_line_mutates_index_external_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatArrayLhsBodyLineMutatesIndexExternalBailsSliceViolation {
 	void m(int k, List<String> list) {
@@ -2550,7 +3824,7 @@ class InputJitInefficiencyStringConcatArrayLhsBodyLineMutatesIndexExternalBailsS
 // === end ===
 
 // === case: string_concat_array_lhs_chained_index_inner_var_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatArrayLhsChainedIndexInnerVarBailsSliceViolation {
 	void m(int k) {
 		final var matrix = new String[3][3];
@@ -2561,7 +3835,7 @@ class InputJitInefficiencyStringConcatArrayLhsChainedIndexInnerVarBailsSliceViol
 // === end ===
 
 // === case: string_concat_array_lhs_compound_assign_index_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatArrayLhsCompoundAssignIndexBailsSliceViolation {
 	void m(int k, List<String> list) {
@@ -2576,7 +3850,7 @@ class InputJitInefficiencyStringConcatArrayLhsCompoundAssignIndexBailsSliceViola
 // === end ===
 
 // === case: string_concat_array_lhs_dotted_prefix_reassigned_unindented_below_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatArrayLhsDottedPrefixReassignedUnindentedBelowBailsSliceViolation {
 	static class Obj {
@@ -2600,7 +3874,7 @@ obj = newObj();
 // === end ===
 
 // === case: string_concat_array_lhs_for_each_iter_var_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatArrayLhsForEachIterVarBailsSliceViolation {
 	void m(int[] indices) {
 		final var arr = new String[3];
@@ -2611,7 +3885,7 @@ class InputJitInefficiencyStringConcatArrayLhsForEachIterVarBailsSliceViolation 
 // === end ===
 
 // === case: string_concat_array_lhs_multi_line_for_each_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatArrayLhsMultiLineForEachBailsSliceViolation {
 	void m(int[] indices) {
 		final var arr = new String[3];
@@ -2623,7 +3897,7 @@ class InputJitInefficiencyStringConcatArrayLhsMultiLineForEachBailsSliceViolatio
 // === end ===
 
 // === case: string_concat_array_lhs_multi_line_for_each_continuation_line_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatArrayLhsMultiLineForEachContinuationLineBailsSliceViolation {
 	void m(int[] indices) {
 		final var arr = new String[3];
@@ -2635,7 +3909,7 @@ class InputJitInefficiencyStringConcatArrayLhsMultiLineForEachContinuationLineBa
 // === end ===
 
 // === case: string_concat_array_lhs_mutated_index_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatArrayLhsMutatedIndexBailsSliceViolation {
 	void m(int k, List<String> list) {
@@ -2650,7 +3924,7 @@ class InputJitInefficiencyStringConcatArrayLhsMutatedIndexBailsSliceViolation {
 // === end ===
 
 // === case: string_concat_array_lhs_negative_literal_index_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatArrayLhsNegativeLiteralIndexBailsSliceViolation {
 	void m(List<String> list) {
@@ -2663,7 +3937,7 @@ class InputJitInefficiencyStringConcatArrayLhsNegativeLiteralIndexBailsSliceViol
 // === end ===
 
 // === case: string_concat_array_lhs_non_simple_index_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatArrayLhsNonSimpleIndexBailsSliceViolation {
 	static class Index {
@@ -2680,7 +3954,7 @@ class InputJitInefficiencyStringConcatArrayLhsNonSimpleIndexBailsSliceViolation 
 // === end ===
 
 // === case: string_concat_array_lhs_post_decrement_index_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatArrayLhsPostDecrementIndexBailsSliceViolation {
 	void m(int k, List<String> list) {
@@ -2695,7 +3969,7 @@ class InputJitInefficiencyStringConcatArrayLhsPostDecrementIndexBailsSliceViolat
 // === end ===
 
 // === case: string_concat_array_lhs_post_increment_index_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatArrayLhsPostIncrementIndexBailsSliceViolation {
 	void m(int k, List<String> list) {
@@ -2710,7 +3984,7 @@ class InputJitInefficiencyStringConcatArrayLhsPostIncrementIndexBailsSliceViolat
 // === end ===
 
 // === case: string_concat_array_lhs_reassigned_unindented_below_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatArrayLhsReassignedUnindentedBelowBailsSliceViolation {
 	void m(List<String> list) {
@@ -2729,7 +4003,7 @@ arr = newArr();
 // === end ===
 
 // === case: string_concat_array_lhs_simple_assign_index_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatArrayLhsSimpleAssignIndexBailsSliceViolation {
 	void m(int k, List<String> list) {
@@ -2748,7 +4022,7 @@ class InputJitInefficiencyStringConcatArrayLhsSimpleAssignIndexBailsSliceViolati
 // === end ===
 
 // === case: string_concat_array_lhs_this_qualified_prefix_mutated_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatArrayLhsThisQualifiedPrefixMutatedBailsSliceViolation {
 	static class Obj {
@@ -2789,6 +4063,89 @@ class InputJitInefficiencyStringConcatArrayLhsWrappedForHeaderBracedSliceViolati
 }
 // === end ===
 
+// === case: string_concat_bare_indexed_read_of_this_qualified_array_accumulator_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyStringConcatBareIndexedReadOfThisQualifiedArrayAccumulatorBailsSliceViolation {
+	String[] arr;
+
+	void m(int k, List<String> list) {
+		this.arr[k] = "";
+		for (var x : list) {
+			this.arr[k] = this.arr[k] + x;
+			// the same slot under its other spelling, carried with its index
+			System.out.println(arr[k]);
+		}
+	}
+}
+// === end ===
+
+// === case: string_concat_bare_operand_reads_accumulator_alias_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyStringConcatBareOperandReadsAccumulatorAliasBailsSliceViolation {
+	private String f = "";
+
+	void m(List<String> list) {
+		for (var x : list) {
+			// the operand reads the accumulator under its other spelling, on the assignment's
+			// own line, where only the spelling the rewrite redirects would have been caught
+			this.f = this.f + f.length();
+		}
+		System.out.println(x(list));
+	}
+
+	private String x(List<String> list) {
+		return list.toString();
+	}
+}
+// === end ===
+
+// === case: string_concat_bare_read_of_nested_this_qualified_accumulator_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyStringConcatBareReadOfNestedThisQualifiedAccumulatorBailsSliceViolation {
+	static class Holder {
+		String value = "";
+	}
+
+	private final Holder holder = new Holder();
+
+	void m(List<String> list) {
+		for (var x : list) {
+			this.holder.value = this.holder.value + x;
+			// the same storage one segment deeper, which a whole-identifier scan cannot see
+			log(holder.value);
+		}
+	}
+
+	private void log(String v) {
+		System.out.println(v);
+	}
+}
+// === end ===
+
+// === case: string_concat_bare_read_of_this_qualified_accumulator_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyStringConcatBareReadOfThisQualifiedAccumulatorBailsSliceViolation {
+	private String s = "";
+
+	void m(List<String> list) {
+		for (var v : list) {
+			this.s = this.s + v;
+			// the same field under its other spelling, which the write-back only reaches after
+			// the loop, so rewriting would feed this read the pre-loop value every iteration
+			log(s);
+		}
+	}
+
+	private void log(String v) {
+		System.out.println(v);
+	}
+}
+// === end ===
+
 // === case: string_concat_block_comment_containing_brace_finds_real_close ===
 // imports: java.util.List
 class InputJitInefficiencyStringConcatBlockCommentContainingBraceFindsRealCloseSliceViolation {
@@ -2807,7 +4164,7 @@ class InputJitInefficiencyStringConcatBlockCommentContainingBraceFindsRealCloseS
 // === end ===
 
 // === case: string_concat_block_comment_in_gap_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatBlockCommentInGapBailsSliceViolation {
 	void m(List<String> list) {
@@ -2821,7 +4178,7 @@ class InputJitInefficiencyStringConcatBlockCommentInGapBailsSliceViolation {
 // === end ===
 
 // === case: string_concat_block_comment_on_body_line_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatBlockCommentOnBodyLineBailsSliceViolation {
 	void m(List<String> list) {
@@ -2834,7 +4191,7 @@ class InputJitInefficiencyStringConcatBlockCommentOnBodyLineBailsSliceViolation 
 // === end ===
 
 // === case: string_concat_body_line_packs_second_statement_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatBodyLinePacksSecondStatementBailsSliceViolation {
 	void m(List<String> list) {
@@ -2850,7 +4207,7 @@ class InputJitInefficiencyStringConcatBodyLinePacksSecondStatementBailsSliceViol
 // === end ===
 
 // === case: string_concat_body_line_text_block_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatBodyLineTextBlockBailsSliceViolation {
 	void m(List<String> list) {
@@ -2884,7 +4241,7 @@ class InputJitInefficiencyStringConcatBracedCloseLinePacksSafeUsePassesSliceViol
 // === end ===
 
 // === case: string_concat_braced_close_line_packs_unsafe_use_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatBracedCloseLinePacksUnsafeUseBailsSliceViolation {
 	void m(List<String> list, String target) {
@@ -2916,7 +4273,7 @@ class InputJitInefficiencyStringConcatBracedDoWhileSliceViolation {
 // === end ===
 
 // === case: string_concat_braced_do_while_condition_wraps_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatBracedDoWhileConditionWrapsBailsSliceViolation {
 	void m(boolean flag) {
 		String s = "";
@@ -2944,7 +4301,7 @@ class InputJitInefficiencyStringConcatBracedDoWhileCuddledTerminatorSliceViolati
 // === end ===
 
 // === case: string_concat_braced_do_while_sibling_unsafe_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatBracedDoWhileSiblingUnsafeBailsSliceViolation {
 	void m(String target) {
 		var s = "a";
@@ -2962,7 +4319,7 @@ class InputJitInefficiencyStringConcatBracedDoWhileSiblingUnsafeBailsSliceViolat
 // === end ===
 
 // === case: string_concat_braced_do_while_unsafe_method_in_while_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatBracedDoWhileUnsafeMethodInWhileBailsSliceViolation {
 	void m(String target) {
 		var s = "";
@@ -3003,7 +4360,7 @@ class InputJitInefficiencyStringConcatBracketIndexArithmeticSliceViolation {
 // === end ===
 
 // === case: string_concat_buried_assign_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatBuriedAssignBailsSliceViolation {
 	void m(List<String> list) {
@@ -3057,7 +4414,7 @@ class InputJitInefficiencyStringConcatCommentedOutDeclAboveIsSkippedSliceViolati
 // === end ===
 
 // === case: string_concat_cuddled_else_below_body_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatCuddledElseBelowBodyBailsSliceViolation {
 	void m(List<String> list) {
@@ -3077,7 +4434,7 @@ class InputJitInefficiencyStringConcatCuddledElseBelowBodyBailsSliceViolation {
 // === end ===
 
 // === case: string_concat_cuddled_else_no_space_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatCuddledElseNoSpaceBailsSliceViolation {
 	void m(List<String> list) {
@@ -3092,6 +4449,63 @@ class InputJitInefficiencyStringConcatCuddledElseNoSpaceBailsSliceViolation {
 	}
 
 	private void log(String s) {
+	}
+}
+// === end ===
+
+// === case: string_concat_decl_null_initializer_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyStringConcatDeclNullInitializerBailsSliceViolation {
+	void m(List<String> list) {
+		// the initializer is spliced into its own append, and append(null) picks no overload
+		String s = null;
+		for (var v : list)
+			s = s + v;
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: string_concat_decl_parenthesized_null_initializer_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyStringConcatDeclParenthesizedNullInitializerBailsSliceViolation {
+	void m(List<String> list) {
+		// grouping parens do not change which append overload the null picks
+		String s = (null);
+		for (var v : list)
+			s = s + v;
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: string_concat_decl_parenthesized_seed_initializer ===
+// imports: java.util.List
+class InputJitInefficiencyStringConcatDeclParenthesizedSeedInitializerSliceViolation {
+	void m(List<String> list) {
+		// the same parenthesized shape as the null bail, but nothing ambiguous inside it
+		final var sb = new StringBuilder();
+		sb.append(("seed"));
+		for (var v : list)
+			sb.append(v);
+		final var s = sb.toString();
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: string_concat_decl_seed_initializer ===
+// imports: java.util.List
+class InputJitInefficiencyStringConcatDeclSeedInitializerSliceViolation {
+	void m(List<String> list) {
+		final var sb = new StringBuilder();
+		sb.append("seed");
+		for (var v : list)
+			sb.append(v);
+		final var s = sb.toString();
+		System.out.println(s);
 	}
 }
 // === end ===
@@ -3136,7 +4550,7 @@ class InputJitInefficiencyStringConcatDeclWithGapBraceInStringPassesSliceViolati
 // === end ===
 
 // === case: string_concat_decl_with_gap_mentions_var_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatDeclWithGapMentionsVarBailsSliceViolation {
 	void m(List<String> list) {
@@ -3175,7 +4589,7 @@ class InputJitInefficiencyStringConcatDeclWithGapStringMentionsVarPassesSliceVio
 // === end ===
 
 // === case: string_concat_do_while_close_comment_shares_while_line_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatDoWhileCloseCommentSharesWhileLineBailsSliceViolation {
 	void m() {
 		var s = "";
@@ -3189,7 +4603,7 @@ class InputJitInefficiencyStringConcatDoWhileCloseCommentSharesWhileLineBailsSli
 // === end ===
 
 // === case: string_concat_do_while_close_comment_shares_while_line_no_space_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatDoWhileCloseCommentSharesWhileLineNoSpaceBailsSliceViolation {
 	void m() {
 		var s = "";
@@ -3228,7 +4642,7 @@ class InputJitInefficiencyStringConcatDoWhileCuddledTerminatorDecoyWhileBelowSli
 // === end ===
 
 // === case: string_concat_do_while_decoy_while_in_block_comment_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatDoWhileDecoyWhileInBlockCommentBailsSliceViolation {
 	void m(String target) {
 		var s = "";
@@ -3245,7 +4659,7 @@ class InputJitInefficiencyStringConcatDoWhileDecoyWhileInBlockCommentBailsSliceV
 // === end ===
 
 // === case: string_concat_do_while_decoy_while_in_text_block_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatDoWhileDecoyWhileInTextBlockBailsSliceViolation {
 	void m(String target) {
 		var s = "";
@@ -3276,7 +4690,7 @@ class InputJitInefficiencyStringConcatDoWhileTier3WhileNoSpaceFixedSliceViolatio
 // === end ===
 
 // === case: string_concat_else_brace_no_space_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatElseBraceNoSpaceBailsSliceViolation {
 	void m(List<String> list) {
@@ -3296,7 +4710,7 @@ class InputJitInefficiencyStringConcatElseBraceNoSpaceBailsSliceViolation {
 // === end ===
 
 // === case: string_concat_else_branch_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatElseBranchBailsSliceViolation {
 	void m(List<String> list) {
@@ -3345,7 +4759,7 @@ class InputJitInefficiencyStringConcatExplicitBracedBodySliceViolation {
 // === end ===
 
 // === case: string_concat_explicit_double_lhs_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatExplicitDoubleLhsBailsSliceViolation {
 	void m(List<String> list) {
@@ -3447,8 +4861,57 @@ class InputJitInefficiencyStringConcatForHeaderTrailingCommentBracedSliceViolati
 }
 // === end ===
 
+// === case: string_concat_gap_cross_scope_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyStringConcatGapCrossScopeBailsSliceViolation {
+	void g() {
+		final String s = "in g";
+		System.out.println(s);
+	}
+
+	// the accumulator is a parameter here, so the backward scan for its declaration runs past the
+	// method boundary and lands on g()'s local
+	String h(List<String> list, String s) {
+		for (var x : list)
+			s = s + x;
+		return s;
+	}
+}
+// === end ===
+
+// === case: string_concat_gap_nested_scope_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyStringConcatGapNestedScopeBailsSliceViolation {
+	String m(boolean flag, List<String> list) {
+		String s = "";
+		if (flag) {
+			for (var x : list)
+				s = s + x;
+		}
+		return s;
+	}
+}
+// === end ===
+
+// === case: string_concat_gap_text_block_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyStringConcatGapTextBlockBailsSliceViolation {
+	String m(List<String> list) {
+		String s = "";
+		final var note = """
+				note""";
+		for (var x : list)
+			s = s + x;
+		return s + note;
+	}
+}
+// === end ===
+
 // === case: string_concat_generic_type_args_init_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.HashMap
 // imports: java.util.List
 class InputJitInefficiencyStringConcatGenericTypeArgsInitBailsSliceViolation {
@@ -3462,7 +4925,7 @@ class InputJitInefficiencyStringConcatGenericTypeArgsInitBailsSliceViolation {
 // === end ===
 
 // === case: string_concat_if_else_above_body_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatIfElseAboveBodyBailsSliceViolation {
 	void m(List<String> list) {
@@ -3481,7 +4944,7 @@ class InputJitInefficiencyStringConcatIfElseAboveBodyBailsSliceViolation {
 // === end ===
 
 // === case: string_concat_index_of_char_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatIndexOfCharBailsSliceViolation {
 	void m(List<String> list) {
@@ -3542,8 +5005,27 @@ class InputJitInefficiencyStringConcatInitLiteralCommaPassesSliceViolation {
 }
 // === end ===
 
+// === case: string_concat_inside_block_comment_not_rewritten ===
+class InputJitInefficiencyStringConcatInsideBlockCommentNotRewrittenSliceViolation {
+	String m() {
+		final var s = "";
+		final var sb = new StringBuilder();
+		// the commented-out accumulation has no node, so the check never reports it and the
+		// rewrite below cannot reach it; under the old text scan it was live input
+		for (var i = 0; i < 3; ++i) {
+			/* commented out
+			s += "x";
+			*/
+			sb.append("y");
+		}
+		final var t = sb.toString();
+		return s + t;
+	}
+}
+// === end ===
+
 // === case: string_concat_last_index_of_char_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatLastIndexOfCharBailsSliceViolation {
 	void m(List<String> list) {
@@ -3558,7 +5040,7 @@ class InputJitInefficiencyStringConcatLastIndexOfCharBailsSliceViolation {
 // === end ===
 
 // === case: string_concat_later_append_reads_accumulator_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatLaterAppendReadsAccumulatorBailsSliceViolation {
 	String f() {
 		String s = "";
@@ -3585,7 +5067,7 @@ class InputJitInefficiencyStringConcatLoopCloseLineHasClosedBlockCommentSliceVio
 // === end ===
 
 // === case: string_concat_loop_close_line_opens_block_comment_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatLoopCloseLineOpensBlockCommentBailsSliceViolation {
 	void m(List<String> list) {
@@ -3700,7 +5182,7 @@ class InputJitInefficiencyStringConcatMidLoopReadSubSequenceSliceViolation {
 // === end ===
 
 // === case: string_concat_mid_loop_unsafe_method_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatMidLoopUnsafeMethodBailsSliceViolation {
 	void m(String target, List<String> list) {
@@ -3715,7 +5197,7 @@ class InputJitInefficiencyStringConcatMidLoopUnsafeMethodBailsSliceViolation {
 // === end ===
 
 // === case: string_concat_middle_append_reads_accumulator_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatMiddleAppendReadsAccumulatorBailsSliceViolation {
 	String f(String x) {
 		String s = "";
@@ -3727,7 +5209,7 @@ class InputJitInefficiencyStringConcatMiddleAppendReadsAccumulatorBailsSliceViol
 // === end ===
 
 // === case: string_concat_multi_var_decl_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatMultiVarDeclBailsSliceViolation {
 	void m(List<String> list) {
@@ -3741,7 +5223,7 @@ class InputJitInefficiencyStringConcatMultiVarDeclBailsSliceViolation {
 // === end ===
 
 // === case: string_concat_multivar_relational_rebalanced_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatMultivarRelationalRebalancedBailsSliceViolation {
 	String f(int n, int mm, int j, int k) {
 		String s = n < mm ? "x" : "y", t = j > k ? "p" : "q";
@@ -3749,6 +5231,21 @@ class InputJitInefficiencyStringConcatMultivarRelationalRebalancedBailsSliceViol
 			s += i;
 		t = t.trim();
 		return s + t;
+	}
+}
+// === end ===
+
+// === case: string_concat_nested_assignment_lhs_mismatch_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+class InputJitInefficiencyStringConcatNestedAssignmentLhsMismatchBailsSliceViolation {
+	String f(String x) {
+		String a = "";
+		String s = "";
+		// the check reports the inner assignment to `s`, while the line scanner stops at the first
+		// `=` and reads `a`, so the two disagree about which variable the rewrite would replace
+		for (var i = 0; i < 3; ++i)
+			a = s = s + x;
+		return a + s;
 	}
 }
 // === end ===
@@ -3830,7 +5327,7 @@ class InputJitInefficiencyStringConcatNonEmptyInitVarSliceViolation {
 // === end ===
 
 // === case: string_concat_operand_unsafe_method_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatOperandUnsafeMethodBailsSliceViolation {
 	void m(List<String> list) {
@@ -3843,7 +5340,7 @@ class InputJitInefficiencyStringConcatOperandUnsafeMethodBailsSliceViolation {
 // === end ===
 
 // === case: string_concat_packed_second_statement_in_decl_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatPackedSecondStatementInDeclBailsSliceViolation {
 	void m(List<String> xs) {
@@ -3871,6 +5368,19 @@ class InputJitInefficiencyStringConcatPlusAssignAcceptsTabBetweenLhsAndOpSliceVi
 }
 // === end ===
 
+// === case: string_concat_plus_assign_char_array_operand_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+class InputJitInefficiencyStringConcatPlusAssignCharArrayOperandBailsSliceViolation {
+	void m(int n, char[] buf) {
+		// the operand gets its own append, where append(char[]) writes the characters
+		String s = "";
+		for (var i = 0; i < n; ++i)
+			s += buf;
+		System.out.println(s);
+	}
+}
+// === end ===
+
 // === case: string_concat_plus_assign_do_while_tier3 ===
 class InputJitInefficiencyStringConcatPlusAssignDoWhileTier3SliceViolation {
 	void m() {
@@ -3884,8 +5394,21 @@ class InputJitInefficiencyStringConcatPlusAssignDoWhileTier3SliceViolation {
 }
 // === end ===
 
+// === case: string_concat_plus_assign_null_operand_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+class InputJitInefficiencyStringConcatPlusAssignNullOperandBailsSliceViolation {
+	void m(int n) {
+		// append(null) picks no overload, so the rewrite would not compile
+		String s = "";
+		for (var i = 0; i < n; ++i)
+			s += null;
+		System.out.println(s);
+	}
+}
+// === end ===
+
 // === case: string_concat_plus_assign_unsafe_method_rhs_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatPlusAssignUnsafeMethodRhsBailsSliceViolation {
 	void m(List<String> list) {
@@ -3914,7 +5437,7 @@ class InputJitInefficiencyStringConcatPlusAssignWhileSliceViolation {
 // === end ===
 
 // === case: string_concat_post_loop_write_behind_carried_comment_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatPostLoopWriteBehindCarriedCommentBailsSliceViolation {
 	void m(List<String> list) {
@@ -3923,6 +5446,32 @@ class InputJitInefficiencyStringConcatPostLoopWriteBehindCarriedCommentBailsSlic
 			s = s + x;
 		/* note:
 		   don't */ s = s.trim();
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: string_concat_prepend_char_array_joined_with_sibling ===
+class InputJitInefficiencyStringConcatPrependCharArrayJoinedWithSiblingSliceViolation {
+	void m(int n, char[] buf, String a) {
+		// two prepends are joined into one insert, whose argument is a String however buf renders
+		final var sb = new StringBuilder();
+		for (var i = 0; i < n; ++i)
+			sb.insert(0, a + buf);
+		final var s = sb.toString();
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: string_concat_prepend_char_array_operand_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+class InputJitInefficiencyStringConcatPrependCharArrayOperandBailsSliceViolation {
+	void m(int n, char[] buf) {
+		// a lone prepend becomes insert(0, buf), which binds insert(int, char[])
+		String s = "";
+		for (var i = 0; i < n; ++i)
+			s = buf + s;
 		System.out.println(s);
 	}
 }
@@ -3943,7 +5492,7 @@ class InputJitInefficiencyStringConcatPrependInsertSbTakenSliceViolation {
 // === end ===
 
 // === case: string_concat_prepend_operand_unsafe_method_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatPrependOperandUnsafeMethodBailsSliceViolation {
 	void m(List<String> list) {
@@ -3956,7 +5505,7 @@ class InputJitInefficiencyStringConcatPrependOperandUnsafeMethodBailsSliceViolat
 // === end ===
 
 // === case: string_concat_prepend_then_append_reads_accumulator_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatPrependThenAppendReadsAccumulatorBailsSliceViolation {
 	String f(String p) {
 		String s = "";
@@ -3968,7 +5517,7 @@ class InputJitInefficiencyStringConcatPrependThenAppendReadsAccumulatorBailsSlic
 // === end ===
 
 // === case: string_concat_reassigned_after_loop_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatReassignedAfterLoopBailsSliceViolation {
 	void m(List<String> list) {
@@ -4010,7 +5559,7 @@ class InputJitInefficiencyStringConcatRelationalLtSingleDeclaratorPassesSliceVio
 // === end ===
 
 // === case: string_concat_same_line_else_body_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatSameLineElseBodyBailsSliceViolation {
 	void m(List<String> list) {
@@ -4190,7 +5739,7 @@ class InputJitInefficiencyStringConcatTextBlockAboveBodyLineSliceViolation {
 // === end ===
 
 // === case: string_concat_text_block_below_loop_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatTextBlockBelowLoopBailsSliceViolation {
 	void m(List<String> list) {
@@ -4208,7 +5757,7 @@ class InputJitInefficiencyStringConcatTextBlockBelowLoopBailsSliceViolation {
 // === end ===
 
 // === case: string_concat_text_block_close_line_reads_accumulator_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatTextBlockCloseLineReadsAccumulatorBailsSliceViolation {
 	void m(List<String> list) {
@@ -4225,7 +5774,7 @@ class InputJitInefficiencyStringConcatTextBlockCloseLineReadsAccumulatorBailsSli
 // === end ===
 
 // === case: string_concat_text_block_containing_brace_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 // imports: java.util.List
 class InputJitInefficiencyStringConcatTextBlockContainingBraceBailsSliceViolation {
 	void m(List<String> list) {
@@ -4238,6 +5787,26 @@ class InputJitInefficiencyStringConcatTextBlockContainingBraceBailsSliceViolatio
 			System.out.println(tb);
 		}
 		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: string_concat_this_qualified_read_of_bare_qualified_accumulator_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+// imports: java.util.List
+class InputJitInefficiencyStringConcatThisQualifiedReadOfBareQualifiedAccumulatorBailsSliceViolation {
+	static class Holder {
+		String value = "";
+	}
+
+	private final Holder holder = new Holder();
+
+	void m(List<String> list) {
+		for (var x : list) {
+			holder.value = holder.value + x;
+			// the same storage with `this.` put back: the other direction of the alias rule
+			System.out.println(this.holder.value);
+		}
 	}
 }
 // === end ===
@@ -4268,7 +5837,7 @@ class InputJitInefficiencyStringConcatTier2DoWhileAcceptsTabSeparatorSliceViolat
 // === end ===
 
 // === case: string_concat_tier2_do_while_array_lhs_mutated_index_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatTier2DoWhileArrayLhsMutatedIndexBailsSliceViolation {
 	void m(String[] arr, int k) {
 		do arr[k] = arr[k] + (++k);
@@ -4277,8 +5846,21 @@ class InputJitInefficiencyStringConcatTier2DoWhileArrayLhsMutatedIndexBailsSlice
 }
 // === end ===
 
+// === case: string_concat_tier2_do_while_bare_read_of_this_qualified_accumulator_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+class InputJitInefficiencyStringConcatTier2DoWhileBareReadOfThisQualifiedAccumulatorBailsSliceViolation {
+	private String f = "";
+
+	void m() {
+		// the rewrite never updates `f`, so a condition reading it would never stop
+		do this.f = this.f + "y";
+		while (f.length() < 5);
+	}
+}
+// === end ===
+
 // === case: string_concat_tier2_do_while_block_comment_in_do_line_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatTier2DoWhileBlockCommentInDoLineBailsSliceViolation {
 	void m() {
 		String s = "";
@@ -4290,7 +5872,7 @@ class InputJitInefficiencyStringConcatTier2DoWhileBlockCommentInDoLineBailsSlice
 // === end ===
 
 // === case: string_concat_tier2_do_while_block_comment_in_while_line_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatTier2DoWhileBlockCommentInWhileLineBailsSliceViolation {
 	void m() {
 		String s = "";
@@ -4309,6 +5891,19 @@ class InputJitInefficiencyStringConcatTier2DoWhileChainedExpandsToTier3SliceViol
 			sb.append(", ").append(x);
 		while (sb.length() < 5);
 		final var s = sb.toString();
+		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: string_concat_tier2_do_while_char_array_operand_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+class InputJitInefficiencyStringConcatTier2DoWhileCharArrayOperandBailsSliceViolation {
+	void m(char[] buf) {
+		// the tier-2 rewrite is its own function, so it needs the operand gate of its own
+		String s = "";
+		do s = s + buf;
+		while (s.length() < 5);
 		System.out.println(s);
 	}
 }
@@ -4345,7 +5940,7 @@ class InputJitInefficiencyStringConcatTier2DoWhileFieldLhsSbTakenSliceViolation 
 // === end ===
 
 // === case: string_concat_tier2_do_while_gap_mentions_var_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatTier2DoWhileGapMentionsVarBailsSliceViolation {
 	void m() {
 		String s = "";
@@ -4361,13 +5956,27 @@ class InputJitInefficiencyStringConcatTier2DoWhileGapMentionsVarBailsSliceViolat
 // === end ===
 
 // === case: string_concat_tier2_do_while_mismatched_while_indent_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatTier2DoWhileMismatchedWhileIndentBailsSliceViolation {
 	void m() {
 		String s = "";
 		do s = s + "y";
 			while (s.length() < 5);
 		System.out.println(s);
+	}
+}
+// === end ===
+
+// === case: string_concat_tier2_do_while_nested_scope_bails ===
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
+class InputJitInefficiencyStringConcatTier2DoWhileNestedScopeBailsSliceViolation {
+	String m(boolean flag) {
+		String s = "";
+		if (flag) {
+			do s = s + "y";
+			while (s.length() < 5);
+		}
+		return s;
 	}
 }
 // === end ===
@@ -4397,7 +6006,7 @@ class InputJitInefficiencyStringConcatTier2DoWhileParenInLiteralStaysTier2SliceV
 // === end ===
 
 // === case: string_concat_tier2_do_while_reassigned_after_loop_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatTier2DoWhileReassignedAfterLoopBailsSliceViolation {
 	void m(int n) {
 		String result = "";
@@ -4424,7 +6033,7 @@ class InputJitInefficiencyStringConcatTier2DoWhileSbTakenSliceViolation {
 // === end ===
 
 // === case: string_concat_tier2_do_while_unsafe_method_in_while_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatTier2DoWhileUnsafeMethodInWhileBailsSliceViolation {
 	void m(String target) {
 		String s = "";
@@ -4436,7 +6045,7 @@ class InputJitInefficiencyStringConcatTier2DoWhileUnsafeMethodInWhileBailsSliceV
 // === end ===
 
 // === case: string_concat_tier3_do_while_unsafe_method_in_while_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatTier3DoWhileUnsafeMethodInWhileBailsSliceViolation {
 	void m(String target) {
 		var s = "";
@@ -4449,7 +6058,7 @@ class InputJitInefficiencyStringConcatTier3DoWhileUnsafeMethodInWhileBailsSliceV
 // === end ===
 
 // === case: string_concat_unary_increment_operand_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatUnaryIncrementOperandBailsSliceViolation {
 	int count;
 
@@ -4463,7 +6072,7 @@ class InputJitInefficiencyStringConcatUnaryIncrementOperandBailsSliceViolation {
 // === end ===
 
 // === case: string_concat_unary_plus_operand_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatUnaryPlusOperandBailsSliceViolation {
 	String f(int n, int b) {
 		String s = "";
@@ -4505,7 +6114,7 @@ class InputJitInefficiencyStringConcatWhileHeaderAfterClosedBlockCommentSliceVio
 // === end ===
 
 // === case: string_concat_while_header_in_carried_block_comment_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatWhileHeaderInCarriedBlockCommentBailsSliceViolation {
 	String f;
 
@@ -4519,7 +6128,7 @@ class InputJitInefficiencyStringConcatWhileHeaderInCarriedBlockCommentBailsSlice
 // === end ===
 
 // === case: string_concat_while_header_in_carried_comment_no_decoy_paren_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatWhileHeaderInCarriedCommentNoDecoyParenBailsSliceViolation {
 	String f;
 
@@ -4574,7 +6183,7 @@ class InputJitInefficiencyStringConcatWhileHeaderReadsLengthSliceViolation {
 // === end ===
 
 // === case: string_concat_while_header_unsafe_method_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatWhileHeaderUnsafeMethodBailsSliceViolation {
 	void m(String target) {
 		String s = "";
@@ -4616,7 +6225,7 @@ class InputJitInefficiencyStringConcatWhileHeaderWrapsReadsLengthSliceViolation 
 // === end ===
 
 // === case: string_concat_while_header_wraps_unsafe_method_bails ===
-// skip-reason: string concatenation in a loop
+// skip-reason: cannot rewrite the string concatenation in a loop: this shape is not supported
 class InputJitInefficiencyStringConcatWhileHeaderWrapsUnsafeMethodBailsSliceViolation {
 	void m(int n, String target) {
 		String s = "";
@@ -4659,7 +6268,7 @@ class InputJitInefficiencyStringConcatWrappedWhileHeaderReadsLengthSbTakenSliceV
 // === end ===
 
 // === case: structural_double_brace_fqn ===
-// skip-reason: double-brace initialization
+// skip-reason: cannot rewrite the double-brace initialization: this shape is not supported
 class InputJitInefficiencyStructuralDoubleBraceFqnSliceViolation {
 	void m() {
 		final var list = new java.util.ArrayList<String>() {{
@@ -4671,7 +6280,7 @@ class InputJitInefficiencyStructuralDoubleBraceFqnSliceViolation {
 // === end ===
 
 // === case: structural_double_brace_list ===
-// skip-reason: double-brace initialization
+// skip-reason: cannot rewrite the double-brace initialization: this shape is not supported
 // imports: java.util.ArrayList
 class InputJitInefficiencyStructuralDoubleBraceListSliceViolation {
 	void m() {
@@ -4685,7 +6294,7 @@ class InputJitInefficiencyStructuralDoubleBraceListSliceViolation {
 // === end ===
 
 // === case: structural_double_brace_map ===
-// skip-reason: double-brace initialization
+// skip-reason: cannot rewrite the double-brace initialization: this shape is not supported
 // imports: java.util.HashMap
 class InputJitInefficiencyStructuralDoubleBraceMapSliceViolation {
 	void m() {
@@ -4698,7 +6307,7 @@ class InputJitInefficiencyStructuralDoubleBraceMapSliceViolation {
 // === end ===
 
 // === case: structural_pattern_compile_in_constructor ===
-// skip-reason: reusable object creation
+// skip-reason: cannot hoist the reusable object creation: this shape is not supported
 // imports: java.util.regex.Pattern
 class InputJitInefficiencyStructuralPatternCompileInConstructorSliceViolation {
 	private final Pattern instancePattern;
@@ -4712,7 +6321,7 @@ class InputJitInefficiencyStructuralPatternCompileInConstructorSliceViolation {
 // === end ===
 
 // === case: structural_reusable_date_time_formatter ===
-// skip-reason: reusable object creation
+// skip-reason: cannot hoist the reusable object creation: this shape is not supported
 // imports: java.time.format.DateTimeFormatter
 // imports: java.util.Date
 class InputJitInefficiencyStructuralReusableDateTimeFormatterSliceViolation {
@@ -4724,7 +6333,7 @@ class InputJitInefficiencyStructuralReusableDateTimeFormatterSliceViolation {
 // === end ===
 
 // === case: structural_reusable_decimal_format ===
-// skip-reason: reusable object creation
+// skip-reason: cannot hoist the reusable object creation: this shape is not supported
 // imports: java.text.DecimalFormat
 class InputJitInefficiencyStructuralReusableDecimalFormatSliceViolation {
 	void m(double n) {
@@ -4735,7 +6344,7 @@ class InputJitInefficiencyStructuralReusableDecimalFormatSliceViolation {
 // === end ===
 
 // === case: structural_reusable_pattern_compile ===
-// skip-reason: reusable object creation
+// skip-reason: cannot hoist the reusable object creation: this shape is not supported
 // imports: java.util.regex.Pattern
 class InputJitInefficiencyStructuralReusablePatternCompileSliceViolation {
 	void m(String s) {
@@ -4746,7 +6355,7 @@ class InputJitInefficiencyStructuralReusablePatternCompileSliceViolation {
 // === end ===
 
 // === case: structural_reusable_simple_date_format ===
-// skip-reason: reusable object creation
+// skip-reason: cannot hoist the reusable object creation: this shape is not supported
 // imports: java.text.SimpleDateFormat
 // imports: java.util.Date
 class InputJitInefficiencyStructuralReusableSimpleDateFormatSliceViolation {

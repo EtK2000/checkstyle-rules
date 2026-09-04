@@ -17,7 +17,7 @@ public class PreferDoWhileFixerTest {
 
 	@Test
 	public void testPreStmtBlankLineSkipped() throws Exception {
-		assertSkipResult(fixer, TOPIC, "pre_stmt_blank_line_skipped", "pre-statement formatting");
+		assertSkipResult(fixer, TOPIC, "pre_stmt_blank_line_skipped", "cannot convert to do-while: the statement before the loop is not a single statement ending in a semicolon");
 	}
 
 	@Test
@@ -27,6 +27,6 @@ public class PreferDoWhileFixerTest {
 
 	@Test
 	public void testWhileLineFormatNotMatched() throws Exception {
-		assertSkipResult(fixer, TOPIC, "while_line_format_not_matched", "while line not in expected format (multi-line cond, trailing content, or comment)");
+		assertSkipResult(fixer, TOPIC, "while_line_format_not_matched", "cannot convert to do-while: the while line has a multi-line condition, trailing content or a comment");
 	}
 }

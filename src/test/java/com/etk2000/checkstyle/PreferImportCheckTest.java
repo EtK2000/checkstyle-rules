@@ -6,22 +6,15 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.nio.file.Files;
 
 /**
  * Edge-case coverage for {@link PreferImportCheck} that cannot live in the
- * data-driven {@code StandardCheckTests} slices: a pathologically deep generated
- * name, the segment ceiling verified by a reflection-call count, a
- * generic-outer-nested type whose reported name drops the type arguments (the
- * fixer's line scan cannot handle the mid-name {@code <...>}), and the
- * {@code prefer.import.nested} classifier paths that need scope a temp-file slice
- * lacks (a same-package classpath type, an uncompiled sibling source file, and
- * the segment ceiling applied to a type-bound root). The routine
- * self-reference, expression-receiver, class-literal, enclosing-name collision,
- * and every-declaration-kind-as-a-same-file-root cases live in
- * {@code cases.clean.java} / {@code cases.in.java}.
+ * data-driven {@code StandardCheckTests} slices.
  */
+@Isolated
 public class PreferImportCheckTest {
 	@Test
 	public void testCompletesOnDeeplyNestedName() throws Exception {
@@ -110,7 +103,7 @@ public class PreferImportCheckTest {
 		assertEquals(3, violations.getFirst().getLine());
 		assertEquals(SeverityLevel.WARNING, violations.getFirst().getSeverityLevel());
 		final var qualifier = full.substring(0, full.lastIndexOf('.'));
-		assertEquals("Import the nested type 'a16' instead of qualifying it through '" + qualifier + "'.", violations.getFirst().getMessage());
+		assertEquals("Consider importing the nested type 'a16' instead of qualifying it through '" + qualifier + "'.", violations.getFirst().getMessage());
 	}
 
 	@Test
@@ -120,7 +113,7 @@ public class PreferImportCheckTest {
 		assertEquals(1, violations.size());
 		assertEquals(3, violations.getFirst().getLine());
 		assertEquals(SeverityLevel.WARNING, violations.getFirst().getSeverityLevel());
-		assertEquals("Import the nested type 'Foo' instead of qualifying it through 'LineText'.", violations.getFirst().getMessage());
+		assertEquals("Consider importing the nested type 'Foo' instead of qualifying it through 'LineText'.", violations.getFirst().getMessage());
 	}
 
 	@Test
@@ -154,7 +147,7 @@ public class PreferImportCheckTest {
 			assertEquals(1, violations.size());
 			assertEquals(2, violations.getFirst().getLine());
 			assertEquals(SeverityLevel.WARNING, violations.getFirst().getSeverityLevel());
-			assertEquals("Import the nested type 'Nested' instead of qualifying it through 'Sibling'.", violations.getFirst().getMessage());
+			assertEquals("Consider importing the nested type 'Nested' instead of qualifying it through 'Sibling'.", violations.getFirst().getMessage());
 		}
 		finally {
 			Files.deleteIfExists(dir.resolve("Sibling.java"));

@@ -1,6 +1,7 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.format.SpanReformat;
 
 import java.util.List;
 
@@ -9,6 +10,16 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 class ExplicitInitializationFixer implements CheckstyleFixer {
+	/** The Java identifier starting at char {@code start} of {@code line}, empty when none does. */
+	@CheckReturnValue
+	@Nonnull
+	private static String identifierAt(@Nonnull String line, int start) {
+		var end = start;
+		while (end < line.length() && Character.isJavaIdentifierPart(line.codePointAt(end)))
+			end += Character.charCount(line.codePointAt(end));
+		return line.substring(start, end);
+	}
+
 	/**
 	 * Returns true if the value string represents a Java default value:
 	 * zero for numeric types, false for boolean, '\0' for char, null for references.
@@ -64,35 +75,45 @@ class ExplicitInitializationFixer implements CheckstyleFixer {
 		}
 	}
 
+	/**
+	 * True when {@code message} quotes {@code name}, as the check's message quotes the variable
+	 * ({@code Variable 'name' explicitly initialized to ...}). The only other quoted text is the
+	 * initializer, a literal no identifier can spell.
+	 */
+	@CheckReturnValue
+	private static boolean namesVariable(@Nonnull String message, @Nonnull String name) {
+		return !name.isEmpty() && message.contains("'" + name + "'");
+	}
+
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
 		final var line = lines.get(lineIndex);
-		if (column < 0 || column >= line.length())
+		if (charColumn < 0 || charColumn >= line.length())
 			return null;
 
-		// Fold the lexer state over preceding lines so a declaration that continues a
-		// multi-line comment or text block (its closer sits before the code on this
-		// line) is masked with the correct entry state; a NONE mask would mis-lex a
-		// stray quote in the carried comment tail and blank the real assignment.
-		var entryState = JavaLineScanner.LexerState.NONE;
-		for (var i = 0; i < lineIndex; ++i)
-			entryState = JavaLineScanner.stateAfter(lines.get(i), entryState);
+		// a sibling fix may have rebuilt the line under the event (a merge putting another
+		// declarator first), so the name at the column must be the one the violation reports
+		final var reported = FixContext.getViolationMessage();
+		if (reported != null && !namesVariable(reported, identifierAt(line, charColumn)))
+			return new SkipResult(SkipMessages.EXPLICIT_INIT_SKIP_STALE);
+
+		final var entryState = SpanReformat.lexerStateAt(lines, lineIndex);
 		// Locate the assignment and initializer terminator on the mask so a '=', ';',
 		// or ',' inside a comment/string/char literal can't hijack them. The comment
 		// between the name and '=' is why the '=' locate itself must be masked.
 		final var scan = JavaLineScanner.stripCommentsAndStrings(line, entryState);
 
-		final var eqIdx = scan.indexOf('=', column);
+		final var eqIdx = scan.indexOf('=', charColumn);
 		if (eqIdx < 0)
 			return null;
 
+		// a declarator wrapped onto the next line ends its line with the ',' before it
 		final var semiIdx = scan.indexOf(';', eqIdx);
-		if (semiIdx < 0)
-			return null;
-
 		final var commaIdx = scan.indexOf(',', eqIdx);
-		final var endIdx = (commaIdx >= 0 && commaIdx < semiIdx) ? commaIdx : semiIdx;
+		if (semiIdx < 0 && commaIdx < 0)
+			return null;
+		final var endIdx = commaIdx >= 0 && (semiIdx < 0 || commaIdx < semiIdx) ? commaIdx : semiIdx;
 
 		// The value token is the whitespace-trimmed span of the masked initializer
 		// region; classify it from the ORIGINAL text, since a char literal like '\0'

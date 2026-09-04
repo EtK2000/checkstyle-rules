@@ -39,7 +39,7 @@ class InputRedundantArrayCreationEscapedQuoteInStringSliceViolation {
 // === end ===
 
 // === case: multiline_array_skipped ===
-// skip-reason: multi-line array initializer
+// skip-reason: cannot remove the array creation: the initializer spans multiple lines
 // imports: java.util.List
 @SuppressWarnings("unused")
 class InputRedundantArrayCreationMultilineArraySkippedSliceViolation {

@@ -2,6 +2,7 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import com.etk2000.checkstyle.JavaLineScanner;
 import com.etk2000.checkstyle.JavaLineScanner.LexerState;
+import com.etk2000.checkstyle.LineText;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -13,7 +14,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 class ArrayTypeStyleFixer implements CheckstyleFixer {
-	/** Outcome of {@link #applyBracketsToDeclaration}: exactly one field is non-null. */
+	/** Outcome of {@link #applyBracketsToDeclaration}: at most one field is non-null. */
 	private record DeclApply(@Nullable String fixedLine, @Nullable String skipReason) {}
 
 	/** Result of {@link #scanToTerminator}: what a forward depth-0 scan hit before the declaration terminator. */
@@ -43,19 +44,16 @@ class ArrayTypeStyleFixer implements CheckstyleFixer {
 			"extends", "implements", "permits", "super", "throws"
 	);
 
-	private static final String SKIP_ANNOTATED_BRACKETS = "type-use annotation before the array brackets";
-	private static final String SKIP_COMMENT_BEFORE_BRACKETS = "comment between the identifier and the array brackets";
-	private static final String SKIP_MULTI_VARIABLE = "cannot move brackets in a multi-variable declaration";
-	private static final String SKIP_TEXT_BLOCK = "possible text block prevents scanning the declaration";
 	private static final String THROWS_KEYWORD = "throws";
 
 	/**
 	 * Inserts {@code brackets} into {@code rawDeclLine} at the type-end position computed
 	 * from {@code blankedDeclLine} ending at {@code prevPreBracket}. Returns a {@link DeclApply}
 	 * whose {@code fixedLine} is null when the declaration shape is not recognized: a {@code skipReason}
-	 * of {@link #SKIP_MULTI_VARIABLE} (a comma-separated later declarator) or {@link #SKIP_ANNOTATED_BRACKETS}
+	 * of {@link SkipMessages#ARRAY_TYPE_STYLE_SKIP_MULTI_VARIABLE} (a comma-separated later declarator) or
+	 * {@link SkipMessages#ARRAY_TYPE_STYLE_SKIP_ANNOTATED_BRACKETS}
 	 * (a type-use annotation) is a reachable refusal on valid Java; a null reason marks a defensive bail
-	 * (malformed source) the caller reports as a plain skip.
+	 * (malformed source).
 	 */
 	@CheckReturnValue
 	@Nonnull
@@ -74,43 +72,43 @@ class ArrayTypeStyleFixer implements CheckstyleFixer {
 			final var beforeParen = skipWhitespaceBackward(blankedDeclLine, openParen - 1);
 			if (beforeParen < 0)
 				return new DeclApply(null, null);
-			if (!Character.isJavaIdentifierPart(blankedDeclLine.charAt(beforeParen)))
+			if (!LineText.isIdentifierPart(blankedDeclLine.charAt(beforeParen)))
 				return new DeclApply(null, null);
 			var methodIdentStart = beforeParen;
 			while (methodIdentStart > 0
-					&& Character.isJavaIdentifierPart(blankedDeclLine.charAt(methodIdentStart - 1)))
+					&& LineText.isIdentifierPart(blankedDeclLine.charAt(methodIdentStart - 1)))
 				--methodIdentStart;
-			if (!Character.isJavaIdentifierStart(blankedDeclLine.charAt(methodIdentStart)))
+			if (!LineText.isIdentifierStart(blankedDeclLine.charAt(methodIdentStart)))
 				return new DeclApply(null, null);
 			final var beforeMethodIdent = skipWhitespaceBackward(blankedDeclLine, methodIdentStart - 1);
 			if (beforeMethodIdent < 0)
 				return new DeclApply(null, null);
 			final var typeEndChar = blankedDeclLine.charAt(beforeMethodIdent);
-			if (!Character.isJavaIdentifierPart(typeEndChar) && typeEndChar != ']' && typeEndChar != '>')
+			if (!LineText.isIdentifierPart(typeEndChar) && typeEndChar != ']' && typeEndChar != '>')
 				return new DeclApply(null, null);
 			middleEnd = prevPreBracket + 1;
 			typeEndExclusive = beforeMethodIdent + 1;
 		}
 		else {
-			if (!Character.isJavaIdentifierPart(blankedDeclLine.charAt(prevPreBracket)))
+			if (!LineText.isIdentifierPart(blankedDeclLine.charAt(prevPreBracket)))
 				return new DeclApply(null, null);
 			var identStart = prevPreBracket;
-			while (identStart > 0 && Character.isJavaIdentifierPart(blankedDeclLine.charAt(identStart - 1)))
+			while (identStart > 0 && LineText.isIdentifierPart(blankedDeclLine.charAt(identStart - 1)))
 				--identStart;
-			if (!Character.isJavaIdentifierStart(blankedDeclLine.charAt(identStart)))
+			if (!LineText.isIdentifierStart(blankedDeclLine.charAt(identStart)))
 				return new DeclApply(null, null);
 			final var preIdent = skipWhitespaceBackward(blankedDeclLine, identStart - 1);
 			if (preIdent < 0)
 				return new DeclApply(null, null);
 			final var preIdentChar = blankedDeclLine.charAt(preIdent);
 			if (preIdentChar == ',')
-				return new DeclApply(null, SKIP_MULTI_VARIABLE);
+				return new DeclApply(null, SkipMessages.ARRAY_TYPE_STYLE_SKIP_MULTI_VARIABLE);
 			if (preIdentChar == '@')
-				return new DeclApply(null, SKIP_ANNOTATED_BRACKETS);
-			if (Character.isJavaIdentifierPart(preIdentChar)) {
+				return new DeclApply(null, SkipMessages.ARRAY_TYPE_STYLE_SKIP_ANNOTATED_BRACKETS);
+			if (LineText.isIdentifierPart(preIdentChar)) {
 				var typeWordStart = preIdent;
 				while (typeWordStart > 0
-						&& Character.isJavaIdentifierPart(blankedDeclLine.charAt(typeWordStart - 1)))
+						&& LineText.isIdentifierPart(blankedDeclLine.charAt(typeWordStart - 1)))
 					--typeWordStart;
 				if (NON_TYPE_KEYWORDS.contains(blankedDeclLine.substring(typeWordStart, preIdent + 1)))
 					return new DeclApply(null, null);
@@ -219,9 +217,9 @@ class ArrayTypeStyleFixer implements CheckstyleFixer {
 		if (!prevIsMethodReturn) {
 			final var scan = scanToTerminator(lines, lineIndex, bracketsEnd);
 			if (scan == DeclScan.COMMA)
-				return new SkipResult(SKIP_MULTI_VARIABLE);
+				return new SkipResult(SkipMessages.ARRAY_TYPE_STYLE_SKIP_MULTI_VARIABLE);
 			if (scan == DeclScan.TEXT_BLOCK)
-				return new SkipResult(SKIP_TEXT_BLOCK);
+				return new SkipResult(SkipMessages.ARRAY_TYPE_STYLE_SKIP_TEXT_BLOCK);
 		}
 
 		final var applied = applyBracketsToDeclaration(
@@ -262,42 +260,42 @@ class ArrayTypeStyleFixer implements CheckstyleFixer {
 			final var beforeParen = skipWhitespaceBackward(line, openParen - 1);
 			if (beforeParen < 0)
 				return null;
-			if (!Character.isJavaIdentifierPart(line.charAt(beforeParen)))
+			if (!LineText.isIdentifierPart(line.charAt(beforeParen)))
 				return null;
 			var methodIdentStart = beforeParen;
-			while (methodIdentStart > 0 && Character.isJavaIdentifierPart(line.charAt(methodIdentStart - 1)))
+			while (methodIdentStart > 0 && LineText.isIdentifierPart(line.charAt(methodIdentStart - 1)))
 				--methodIdentStart;
-			if (!Character.isJavaIdentifierStart(line.charAt(methodIdentStart)))
+			if (!LineText.isIdentifierStart(line.charAt(methodIdentStart)))
 				return null;
 			final var beforeMethodIdent = skipWhitespaceBackward(line, methodIdentStart - 1);
 			if (beforeMethodIdent < 0)
 				return null;
 			final var typeEndChar = line.charAt(beforeMethodIdent);
-			if (!Character.isJavaIdentifierPart(typeEndChar) && typeEndChar != ']' && typeEndChar != '>')
+			if (!LineText.isIdentifierPart(typeEndChar) && typeEndChar != ']' && typeEndChar != '>')
 				return null;
 			middleEnd = preBracket + 1;
 			typeEndExclusive = beforeMethodIdent + 1;
 		}
 		else {
 			final var identEndExclusive = preBracket + 1;
-			if (!Character.isJavaIdentifierPart(line.charAt(identEndExclusive - 1)))
+			if (!LineText.isIdentifierPart(line.charAt(identEndExclusive - 1)))
 				return null;
 			var identStart = identEndExclusive - 1;
-			while (identStart > 0 && Character.isJavaIdentifierPart(line.charAt(identStart - 1)))
+			while (identStart > 0 && LineText.isIdentifierPart(line.charAt(identStart - 1)))
 				--identStart;
-			if (!Character.isJavaIdentifierStart(line.charAt(identStart)))
+			if (!LineText.isIdentifierStart(line.charAt(identStart)))
 				return null;
 			final var preIdent = skipWhitespaceBackward(line, identStart - 1);
 			if (preIdent < 0)
 				return null;
 			final var preIdentChar = line.charAt(preIdent);
 			if (preIdentChar == ',')
-				return new SkipResult(SKIP_MULTI_VARIABLE);
+				return new SkipResult(SkipMessages.ARRAY_TYPE_STYLE_SKIP_MULTI_VARIABLE);
 			if (preIdentChar == '@')
-				return new SkipResult(SKIP_ANNOTATED_BRACKETS);
-			if (Character.isJavaIdentifierPart(preIdentChar)) {
+				return new SkipResult(SkipMessages.ARRAY_TYPE_STYLE_SKIP_ANNOTATED_BRACKETS);
+			if (LineText.isIdentifierPart(preIdentChar)) {
 				var typeWordStart = preIdent;
-				while (typeWordStart > 0 && Character.isJavaIdentifierPart(line.charAt(typeWordStart - 1)))
+				while (typeWordStart > 0 && LineText.isIdentifierPart(line.charAt(typeWordStart - 1)))
 					--typeWordStart;
 				if (NON_TYPE_KEYWORDS.contains(line.substring(typeWordStart, preIdent + 1)))
 					return null;
@@ -319,9 +317,9 @@ class ArrayTypeStyleFixer implements CheckstyleFixer {
 			if (!isMethodReturn && !inParens) {
 				final var scan = scanToTerminator(lines, lineIndex, bracketsEnd);
 				if (scan == DeclScan.COMMA)
-					return new SkipResult(SKIP_MULTI_VARIABLE);
+					return new SkipResult(SkipMessages.ARRAY_TYPE_STYLE_SKIP_MULTI_VARIABLE);
 				if (scan == DeclScan.TEXT_BLOCK)
-					return new SkipResult(SKIP_TEXT_BLOCK);
+					return new SkipResult(SkipMessages.ARRAY_TYPE_STYLE_SKIP_TEXT_BLOCK);
 			}
 			return null;
 		}
@@ -332,13 +330,13 @@ class ArrayTypeStyleFixer implements CheckstyleFixer {
 				if (afterBrackets + len > line.length()
 						|| !line.regionMatches(afterBrackets, THROWS_KEYWORD, 0, len)
 						|| (afterBrackets + len < line.length()
-								&& Character.isJavaIdentifierPart(line.charAt(afterBrackets + len))))
+								&& LineText.isIdentifierPart(line.charAt(afterBrackets + len))))
 					return null;
 			}
 		}
 		else if (nextChar == ',') {
 			if (!inParens)
-				return new SkipResult(SKIP_MULTI_VARIABLE);
+				return new SkipResult(SkipMessages.ARRAY_TYPE_STYLE_SKIP_MULTI_VARIABLE);
 		}
 		else if (nextChar != '=' && nextChar != ';' && nextChar != ')')
 			return null;
@@ -346,13 +344,13 @@ class ArrayTypeStyleFixer implements CheckstyleFixer {
 		if (!isMethodReturn && !inParens) {
 			final var scan = scanToTerminator(lines, lineIndex, bracketsEnd);
 			if (scan == DeclScan.COMMA)
-				return new SkipResult(SKIP_MULTI_VARIABLE);
+				return new SkipResult(SkipMessages.ARRAY_TYPE_STYLE_SKIP_MULTI_VARIABLE);
 			if (scan == DeclScan.TEXT_BLOCK)
-				return new SkipResult(SKIP_TEXT_BLOCK);
+				return new SkipResult(SkipMessages.ARRAY_TYPE_STYLE_SKIP_TEXT_BLOCK);
 		}
 
 		if (!rawLine.substring(middleEnd, column).equals(line.substring(middleEnd, column)))
-			return new SkipResult(SKIP_COMMENT_BEFORE_BRACKETS);
+			return new SkipResult(SkipMessages.ARRAY_TYPE_STYLE_SKIP_COMMENT_BEFORE_BRACKETS);
 
 		final var brackets = rawLine.substring(column, bracketsEnd);
 		final var fixed = rawLine.substring(0, typeEndExclusive)
@@ -389,11 +387,11 @@ class ArrayTypeStyleFixer implements CheckstyleFixer {
 
 		if (pos < 0)
 			return true;
-		if (!Character.isJavaIdentifierPart(line.charAt(pos)))
+		if (!LineText.isIdentifierPart(line.charAt(pos)))
 			return true;
 
 		var identStart = pos;
-		while (identStart > 0 && Character.isJavaIdentifierPart(line.charAt(identStart - 1)))
+		while (identStart > 0 && LineText.isIdentifierPart(line.charAt(identStart - 1)))
 			--identStart;
 		final var ident = line.substring(identStart, pos + 1);
 		if (NON_PARAM_LIST_KEYWORDS.contains(ident))
@@ -419,17 +417,17 @@ class ArrayTypeStyleFixer implements CheckstyleFixer {
 		final var beforeParen = skipWhitespaceBackward(blankedDeclLine, openParen - 1);
 		if (beforeParen < 0)
 			return false;
-		if (!Character.isJavaIdentifierPart(blankedDeclLine.charAt(beforeParen)))
+		if (!LineText.isIdentifierPart(blankedDeclLine.charAt(beforeParen)))
 			return false;
 		var methodIdentStart = beforeParen;
 		while (methodIdentStart > 0
-				&& Character.isJavaIdentifierPart(blankedDeclLine.charAt(methodIdentStart - 1)))
+				&& LineText.isIdentifierPart(blankedDeclLine.charAt(methodIdentStart - 1)))
 			--methodIdentStart;
 		final var beforeMethodIdent = skipWhitespaceBackward(blankedDeclLine, methodIdentStart - 1);
 		if (beforeMethodIdent < 0)
 			return false;
 		final var typeEndChar = blankedDeclLine.charAt(beforeMethodIdent);
-		return Character.isJavaIdentifierPart(typeEndChar) || typeEndChar == ']' || typeEndChar == '>';
+		return LineText.isIdentifierPart(typeEndChar) || typeEndChar == ']' || typeEndChar == '>';
 	}
 
 	/**
@@ -437,9 +435,7 @@ class ArrayTypeStyleFixer implements CheckstyleFixer {
 	 * tracking comments, string/char literals, and paren/bracket/brace depth, until a
 	 * depth-0 {@code ,} ({@link DeclScan#COMMA}, a multi-variable declaration) or the
 	 * declaration terminator ({@code ;} or a depth-0 close bracket, {@link DeclScan#NONE})
-	 * is reached. Block-comment state persists across line boundaries (so block comments
-	 * spanning multiple lines are correctly skipped); string, char, and line-comment states
-	 * reset per line, since Java strings and chars cannot span lines. A text-block opener
+	 * is reached. A text-block opener
 	 * ({@code """}) encountered in code (not inside a string, char, or comment) returns
 	 * {@link DeclScan#TEXT_BLOCK} (conservative bail: the multi-line literal cannot be
 	 * reliably scanned).

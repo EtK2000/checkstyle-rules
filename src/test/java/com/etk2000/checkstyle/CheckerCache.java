@@ -34,8 +34,7 @@ import javax.annotation.Nonnull;
  * <p>Thread-safety: the cache is a {@link ThreadLocal}, so a Checker is never
  * shared between threads. This keeps it correct under JUnit parallel execution
  * (each thread configures and reuses its own Checkers) with no locking and no
- * cross-thread listener interleaving, and it is trivially correct under the
- * current single-threaded execution. Checkers are not destroyed between runs
+ * cross-thread listener interleaving. Checkers are not destroyed between runs
  * (a configured Checker is reused for the life of the test JVM).
  */
 public final class CheckerCache {

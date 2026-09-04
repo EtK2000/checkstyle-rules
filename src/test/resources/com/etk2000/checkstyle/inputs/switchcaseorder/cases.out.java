@@ -109,6 +109,25 @@ class InputSwitchOrderDefaultFirstViolation {
 		};
 	}
 
+	int middleAscending(int x) {
+		return switch (x) {
+			case 1 -> 1;
+			default -> -1;
+			case 2 -> 2;
+		};
+	}
+
+	int middleDescending(int x) {
+		switch (x) {
+			case 5:
+				return 5;
+			default:
+				return -1;
+			case 1:
+				return 1;
+		}
+	}
+
 	int traditional(int x) {
 		switch (x) {
 			default:

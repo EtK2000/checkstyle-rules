@@ -137,7 +137,7 @@ class InputPreferLiteralSuffixCastToLongSubtractSliceViolation {
 // === end ===
 
 // === case: complex_cast_subject_field_access ===
-// skip-reason: complex-cast-subject
+// skip-reason: cannot replace the cast with a suffix: the cast subject is a complex expression
 class InputPreferLiteralSuffixComplexCastSubjectFieldAccessSliceViolation {
 	long m(int[] arr) {
 		return (long) arr.length * 100; // violation: Use 'L' suffix on '100' instead of a cast.
@@ -210,7 +210,7 @@ class InputPreferLiteralSuffixLiteralOnLeftFloatSliceViolation {
 // === end ===
 
 // === case: multi_line_cast ===
-// skip-reason: multi-line-cast
+// skip-reason: cannot replace the cast with a suffix: the cast spans multiple lines
 class InputPreferLiteralSuffixMultiLineCastSliceViolation {
 	long m(int x) {
 		return (long // violation: Use 'L' suffix on '100' instead of a cast.
@@ -236,7 +236,7 @@ class InputPreferLiteralSuffixNegatedLiteralRightSliceViolation {
 // === end ===
 
 // === case: non_identifier_cast_subject ===
-// skip-reason: non-identifier-cast-subject
+// skip-reason: cannot replace the cast with a suffix: the cast subject is not an identifier
 class InputPreferLiteralSuffixNonIdentifierCastSubjectSliceViolation {
 	long m(int x) {
 		return (long) (x) * 100; // violation: Use 'L' suffix on '100' instead of a cast.
@@ -269,7 +269,7 @@ class InputPreferLiteralSuffixSupplementaryCodepointInSubjectSliceViolation {
 // === end ===
 
 // === case: supplementary_non_identifier_terminator ===
-// skip-reason: complex-cast-subject
+// skip-reason: cannot replace the cast with a suffix: the cast subject is a complex expression
 class InputPreferLiteralSuffixSupplementaryNonIdentifierTerminatorSliceViolation {
 	long m(int x) {
 		return (long) x😀 + 100; // violation: Use 'L' suffix on '100' instead of a cast.

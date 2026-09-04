@@ -1,5 +1,5 @@
 // === case: dependency_cycle ===
-// skip-reason: cannot reorder: a field dependency cycle has no valid order
+// skip-reason: cannot reorder assignments: a field dependency cycle has no valid order
 class InputConstructorAssignDependencyCycleSliceViolation {
 	int alpha, beta, gamma;
 

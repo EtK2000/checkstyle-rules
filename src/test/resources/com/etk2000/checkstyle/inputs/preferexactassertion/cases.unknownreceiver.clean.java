@@ -18,6 +18,12 @@ class InputPreferExactAssertionUnknownReceiverClean {
 
 	private final Helper helper = new Helper();
 
+	void assertFalse(boolean cond) {
+	}
+
+	void assertTrue(boolean cond) {
+	}
+
 	void chainedReceiverClean() {
 		final var flag = true;
 		final var a = 1;
@@ -27,6 +33,23 @@ class InputPreferExactAssertionUnknownReceiverClean {
 		getHelper().assertTrue(a == b);
 		getHelper().assertTrue(!(o instanceof String));
 		getHelper().assertTrue(o instanceof String);
+	}
+
+	void indexedReceiverClean() {
+		final var flag = true;
+		final var o = anyObject();
+		final Helper[] helpers = {helper};
+		helpers[0].assertTrue(!flag);
+		helpers[0].assertTrue(o instanceof String);
+	}
+
+	void newReceiverClean() {
+		final var flag = true;
+		final var o = anyObject();
+		new Helper().assertTrue(!flag);
+		new Helper().assertTrue(o instanceof String);
+		new com.foo.Assert().assertTrue(!flag);
+		new com.foo.Assert().assertTrue(o instanceof String);
 	}
 
 	private Helper getHelper() {

@@ -56,6 +56,9 @@ class InputRedundantSuffixClean {
 	void doubleAndNegatedLocals() {
 		final double intValued = 0d;
 		final long negated = -1L;
+		final long positive = +1L;
+		final long parenWrapped = (0L);
+		final float decimalPair = 1.5f, decimalPairTwo = 2.5f;
 	}
 
 	void forInitLocals(long total) {

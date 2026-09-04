@@ -10,13 +10,13 @@ import javax.annotation.Nullable;
 class UpperEllFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int start) {
 		final var line = lines.get(lineIndex);
-		if (column < 0 || column >= line.length())
+		if (start < 0 || start >= line.length())
 			return null;
 
-		final var end = LineText.literalTokenEnd(line, column);
-		if (end <= column)
+		final var end = LineText.literalTokenEnd(line, start);
+		if (end <= start)
 			return null;
 
 		final var suffixPos = end - 1;

@@ -606,10 +606,68 @@ class InputMultilineCallSharedLineFirstTwoSharingSliceViolation {
 }
 // === end ===
 
+// === case: get_quantity_string_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetQuantityStringContextParamNotOnOpeningSliceViolation {
+	void m(Context ctx) {
+		method(ctx.getResources().getQuantityString(
+				1,
+				2
+		));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: get_string_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringContextParamNotOnOpeningSliceViolation {
+	void m(Context ctx) {
+		method(ctx.getString(
+				1
+		));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: get_string_fqn_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringFqnContextParamNotOnOpeningSliceViolation {
+	void m(android.content.Context ctx) {
+		method(ctx.getString(
+				1
+		));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
 // === case: get_string_not_on_closing ===
 class InputMultilineCallSpecialMethodGetStringNotOnClosingSliceViolation {
 	void m() {
 		method(requireContext().getString(
+				1
+		));
+	}
+
+	void method(Object a) {
+	}
+
+	Object requireContext() {
+		return null;
+	}
+}
+// === end ===
+
+// === case: get_string_tracked_var_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringTrackedVarNotOnOpeningSliceViolation {
+	void m() {
+		final var ctx = requireContext();
+		method(ctx.getString(
 				1
 		));
 	}
@@ -692,7 +750,7 @@ class InputMultilineCallSharedLineLastTwoSharingSliceViolation {
 // === end ===
 
 // === case: list_of_fqn_not_on_opening ===
-// skip-reason: multiline formatting fix not yet supported for this shape
+// skip-reason: cannot reformat: this multi-line call shape is not supported yet
 // imports: java.util.List
 class InputMultilineCallSpecialMethodListOfFqnNotOnOpeningSliceViolation {
 	void m() {
@@ -709,7 +767,7 @@ class InputMultilineCallSpecialMethodListOfFqnNotOnOpeningSliceViolation {
 // === end ===
 
 // === case: list_of_fqn_type_witness_not_on_opening ===
-// skip-reason: multiline formatting fix not yet supported for this shape
+// skip-reason: cannot reformat: this multi-line call shape is not supported yet
 // imports: java.util.List
 class InputMultilineCallSpecialMethodListOfFqnTypeWitnessNotOnOpeningSliceViolation {
 	void m() {
@@ -1447,7 +1505,7 @@ class InputMultilineCallPutNewJsonObjectTextBlockValueSliceViolation {
 
 // === case: put_new_jsonobject_trailing_comment ===
 // imports: org.json.JSONObject
-// skip-reason: cannot collapse: a comment sits between new JSONObject() and .put
+// skip-reason: cannot collapse: a comment sits between 'new JSONObject()' and '.put'
 class InputMultilineCallPutNewJsonObjectTrailingCommentSliceViolation {
 	void m() {
 		new JSONObject() // note

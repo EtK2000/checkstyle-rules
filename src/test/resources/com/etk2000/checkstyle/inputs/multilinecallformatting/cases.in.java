@@ -5,11 +5,11 @@ package com.etk2000.checkstyle.inputs.multilinecall;
 // multi-fix-expected
 class InputMultilineCallResourceIdAndroidLambdaNotOnOpeningSliceViolation {
 	void m() {
-		method( // violation: Inline block argument: must be on the opening paren line.
+		method( // violation: Inline block argument must start on the opening paren line.
 				android.R.string.ok, x -> {
 					System.out.println(x);
 				}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a, Consumer<Integer> c) {
@@ -39,7 +39,7 @@ class InputMultilineCallAnonClassClosingNotOnClosingSliceViolation {
 			public void run() {
 			}
 		}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Runnable r) {
@@ -51,12 +51,12 @@ class InputMultilineCallAnonClassClosingNotOnClosingSliceViolation {
 // multi-fix-expected
 class InputMultilineCallAnonClassNotOnOpeningSliceViolation {
 	void m() {
-		method( // violation: Inline block argument: must be on the opening paren line.
+		method( // violation: Inline block argument must start on the opening paren line.
 				new Runnable() {
 					public void run() {
 					}
 				}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Runnable r) {
@@ -69,7 +69,7 @@ class InputMultilineCallAnonClassNotOnOpeningSliceViolation {
 class InputMultilineCallLambdaBracelessClosingOnBodyLineSliceViolation {
 	void m() {
 		method(v ->
-				System.out.println(v)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				System.out.println(v)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Consumer<Integer> c) {
@@ -81,7 +81,7 @@ class InputMultilineCallLambdaBracelessClosingOnBodyLineSliceViolation {
 // imports: java.util.function.Consumer
 class InputMultilineCallLambdaBracelessNotOnOpeningSliceViolation {
 	void m() {
-		method( // violation: Inline block argument: must be on the opening paren line.
+		method( // violation: Inline block argument must start on the opening paren line.
 				v ->
 						System.out.println(v)
 		);
@@ -97,7 +97,7 @@ class InputMultilineCallLambdaBracelessNotOnOpeningSliceViolation {
 class InputMultilineCallBracelessLambdaOver120SliceViolation {
 	void m() {
 		method(v ->
-				System.out.println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				System.out.println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Consumer<Integer> c) {
@@ -110,7 +110,7 @@ class InputMultilineCallBracelessLambdaOver120SliceViolation {
 class InputMultilineCallSharedLineNestedGenericCommaSliceViolation {
 	void m() {
 		method(
-				Map.of("k", 1), other, // violation: In multiline calls/signatures, each argument must be on its own line.
+				Map.of("k", 1), other, // violation: Multi-line call/signature must have each argument on its own line.
 				z
 		);
 	}
@@ -126,7 +126,7 @@ class InputMultilineCallChainedConstructorClosingOnChainLineSliceViolation {
 	void m() {
 		method(new JSONObject()
 				.put("key", "value")
-				.put("key2", "value2")); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				.put("key2", "value2")); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -138,7 +138,7 @@ class InputMultilineCallChainedConstructorClosingOnChainLineSliceViolation {
 // imports: org.json.JSONObject
 class InputMultilineCallChainedConstructorNotOnOpeningLineSliceViolation {
 	void m() {
-		method( // violation: Inline block argument: must be on the opening paren line.
+		method( // violation: Inline block argument must start on the opening paren line.
 				new JSONObject()
 						.put("key", "value")
 						.put("key2", "value2")
@@ -155,7 +155,7 @@ class InputMultilineCallChainedConstructorNotOnOpeningLineSliceViolation {
 class InputMultilineCallChainedConstructorOver120SliceViolation {
 	void m() {
 		method(new JSONObject()
-				.put("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "value")); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				.put("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "value")); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -168,7 +168,7 @@ class InputMultilineCallClosingCollapseCommentFallbackSliceViolation {
 	void m() {
 		method(
 				1, // inner note
-				2); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				2); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(int a, int b) {
@@ -181,7 +181,7 @@ class InputMultilineCallClosingCollapseExactly120SliceViolation {
 	void m() {
 		method(
 				"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-				2); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				2); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a, int b) {
@@ -194,7 +194,7 @@ class InputMultilineCallClosingCollapseOver120SliceViolation {
 	void m() {
 		method(
 				"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-				2); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				2); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a, int b) {
@@ -209,7 +209,7 @@ class InputMultilineCallClosingCollapseTextblockFallbackSliceViolation {
 				"""
 				hello
 				""",
-				2); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				2); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a, int b) {
@@ -265,8 +265,8 @@ class InputMultilineCallComputeIfAbsentBracelessLambdaNotExemptSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.computeIfAbsent("k", x -> // violation: In multiline calls/signatures, no arguments on the opening paren line.
-				x.trim()); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+		cache.computeIfAbsent("k", x -> // violation: Multi-line call/signature must not have arguments on the opening paren line.
+				x.trim()); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
@@ -278,11 +278,11 @@ class InputMultilineCallComputeIfAbsentDottedKeyNotOnOpeningSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.computeIfAbsent( // violation: Inline block argument: must be on the opening paren line.
+		cache.computeIfAbsent( // violation: Inline block argument must start on the opening paren line.
 				"k", x -> {
 					System.out.println(x);
 				}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -295,11 +295,11 @@ class InputMultilineCallComputeIfAbsentKeyNotOnOpeningSliceViolation {
 	}
 
 	void m() {
-		computeIfAbsent( // violation: Inline block argument: must be on the opening paren line.
+		computeIfAbsent( // violation: Inline block argument must start on the opening paren line.
 				"k", x -> {
 					System.out.println(x);
 				}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -310,7 +310,7 @@ class InputMultilineCallComputeIfAbsentKeyNotOnOpeningOnlySliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.computeIfAbsent( // violation: Inline block argument: must be on the opening paren line.
+		cache.computeIfAbsent( // violation: Inline block argument must start on the opening paren line.
 				"k", x -> {
 					System.out.println(x);
 				});
@@ -328,7 +328,7 @@ class InputMultilineCallComputeIfAbsentLambdaNotOnClosingSliceViolation {
 		computeIfAbsent("k", x -> {
 			System.out.println(x);
 		}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -339,7 +339,7 @@ class InputMultilineCallComputeIfAbsentMethodRefNotExemptSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.computeIfAbsent("k", String::trim // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		cache.computeIfAbsent("k", String::trim // violation: Multi-line call/signature must not have arguments on the opening paren line.
 		);
 	}
 }
@@ -352,9 +352,9 @@ class InputMultilineCallComputeIfAbsentThreeArgsNotExemptSliceViolation {
 	}
 
 	void m() {
-		computeIfAbsent("k", "v", x -> { // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		computeIfAbsent("k", "v", x -> { // violation: Multi-line call/signature must not have arguments on the opening paren line.
 			System.out.println(x);
-		}); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+		}); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
@@ -366,11 +366,11 @@ class InputMultilineCallComputeIfAbsentTypeWitnessNotOnOpeningSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.<String>computeIfAbsent( // violation: Inline block argument: must be on the opening paren line.
+		cache.<String>computeIfAbsent( // violation: Inline block argument must start on the opening paren line.
 				"k", x -> {
 					System.out.println(x);
 				}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -383,7 +383,7 @@ class InputMultilineCallComputeIfAbsentVariableNotExemptSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.computeIfAbsent("k", factory // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		cache.computeIfAbsent("k", factory // violation: Multi-line call/signature must not have arguments on the opening paren line.
 		);
 	}
 }
@@ -395,9 +395,9 @@ class InputMultilineCallComputeIfPresentTwoArgLambdaNotExemptSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.computeIfPresent("k", (k, v) -> { // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		cache.computeIfPresent("k", (k, v) -> { // violation: Multi-line call/signature must not have arguments on the opening paren line.
 			System.out.println(v);
-		}); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+		}); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
@@ -410,7 +410,7 @@ class InputMultilineCallConstructorFirstArgOnOpeningSliceViolation {
 	}
 
 	void m() {
-		new Foo(1, // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		new Foo(1, // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				2
 		);
 	}
@@ -426,7 +426,7 @@ class InputMultilineCallConstructorNotOnClosingLineSliceViolation {
 		method(new ArrayList<>(
 				Collections.nCopies(3, 1)
 		)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(List<Integer> list) {
@@ -441,11 +441,11 @@ class InputMultilineCallConstructorNotOnClosingLineSliceViolation {
 // multi-fix-expected
 class InputMultilineCallConstructorNotOnOpeningLineSliceViolation {
 	void m() {
-		method( // violation: Inline block argument: must be on the opening paren line.
+		method( // violation: Inline block argument must start on the opening paren line.
 				new ArrayList<>(
 						Collections.nCopies(3, 1)
 				)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(List<Integer> list) {
@@ -462,7 +462,7 @@ class InputMultilineCallConstructorOwnRparenClosingSliceViolation {
 
 	void m() {
 		new Foo(
-				1, 2); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				1, 2); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
@@ -476,7 +476,7 @@ class InputMultilineCallMethodCallConstructorStackedClosingNotStackedSliceViolat
 		method(new ArrayList<>(other(
 				arg
 		)
-		)); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		)); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -508,7 +508,7 @@ class InputMultilineCallMethodCallConstructorUnstackedClosingStackedSliceViolati
 		method(new ArrayList<>(
 				other(
 						arg
-				))); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				))); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -523,7 +523,7 @@ class InputMultilineCallMethodCallConstructorUnstackedClosingStackedSliceViolati
 // === case: ctordef_first_two_sharing ===
 class InputMultilineCallSharedLineCtorDefSliceViolation {
 	InputMultilineCallSharedLineCtorDefSliceViolation(
-			int a, int b, // violation: In multiline calls/signatures, each argument must be on its own line.
+			int a, int b, // violation: Multi-line call/signature must have each argument on its own line.
 			int c
 	) {
 	}
@@ -534,7 +534,7 @@ class InputMultilineCallSharedLineCtorDefSliceViolation {
 class InputMultilineCallSharedLineDefAnnotatedSliceViolation {
 	void m(
 			int a,
-			@Deprecated String b, int c // violation: In multiline calls/signatures, each argument must be on its own line.
+			@Deprecated String b, int c // violation: Multi-line call/signature must have each argument on its own line.
 	) {
 	}
 }
@@ -543,7 +543,7 @@ class InputMultilineCallSharedLineDefAnnotatedSliceViolation {
 // === case: def_first_two_sharing ===
 class InputMultilineCallSharedLineDefFirstTwoSharingSliceViolation {
 	void m(
-			int a, int b, // violation: In multiline calls/signatures, each argument must be on its own line.
+			int a, int b, // violation: Multi-line call/signature must have each argument on its own line.
 			int c
 	) {
 	}
@@ -554,7 +554,7 @@ class InputMultilineCallSharedLineDefFirstTwoSharingSliceViolation {
 // imports: java.util.Map
 class InputMultilineCallSharedLineDefGenericCommaSliceViolation {
 	void m(
-			Map<String, Integer> a, int b, // violation: In multiline calls/signatures, each argument must be on its own line.
+			Map<String, Integer> a, int b, // violation: Multi-line call/signature must have each argument on its own line.
 			int c
 	) {
 	}
@@ -565,7 +565,7 @@ class InputMultilineCallSharedLineDefGenericCommaSliceViolation {
 class InputMultilineCallSharedLineDefLastTwoSharingSliceViolation {
 	void m(
 			int a,
-			int b, int c // violation: In multiline calls/signatures, each argument must be on its own line.
+			int b, int c // violation: Multi-line call/signature must have each argument on its own line.
 	) {
 	}
 }
@@ -575,7 +575,7 @@ class InputMultilineCallSharedLineDefLastTwoSharingSliceViolation {
 class InputMultilineCallSharedLineDefVarargsSliceViolation {
 	void m(
 			int a,
-			String b, int... xs // violation: In multiline calls/signatures, each argument must be on its own line.
+			String b, int... xs // violation: Multi-line call/signature must have each argument on its own line.
 	) {
 	}
 }
@@ -585,14 +585,14 @@ class InputMultilineCallSharedLineDefVarargsSliceViolation {
 class InputMultilineCallDefinitionConstructorClosingSliceViolation {
 	InputMultilineCallDefinitionConstructorClosingSliceViolation(
 			int a,
-			int b) { // violation: In multiline calls/signatures, no arguments on the closing paren line.
+			int b) { // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
 
 // === case: definition_constructor_opening ===
 class InputMultilineCallDefinitionConstructorOpeningSliceViolation {
-	InputMultilineCallDefinitionConstructorOpeningSliceViolation(int a, // violation: In multiline calls/signatures, no arguments on the opening paren line.
+	InputMultilineCallDefinitionConstructorOpeningSliceViolation(int a, // violation: Multi-line call/signature must not have arguments on the opening paren line.
 			int b
 	) {
 	}
@@ -603,7 +603,7 @@ class InputMultilineCallDefinitionConstructorOpeningSliceViolation {
 class InputMultilineCallDefinitionMethodClosingSliceViolation {
 	void m(
 			int a,
-			int b) { // violation: In multiline calls/signatures, no arguments on the closing paren line.
+			int b) { // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
@@ -613,7 +613,7 @@ class InputMultilineCallDefinitionMethodClosingNestedSliceViolation {
 	static class Inner {
 		void m(
 				int a,
-				int b) { // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				int b) { // violation: Multi-line call/signature must not have arguments on the closing paren line.
 		}
 	}
 }
@@ -621,7 +621,7 @@ class InputMultilineCallDefinitionMethodClosingNestedSliceViolation {
 
 // === case: definition_method_opening ===
 class InputMultilineCallDefinitionMethodOpeningSliceViolation {
-	void m(int a, // violation: In multiline calls/signatures, no arguments on the opening paren line.
+	void m(int a, // violation: Multi-line call/signature must not have arguments on the opening paren line.
 			int b
 	) {
 	}
@@ -630,7 +630,7 @@ class InputMultilineCallDefinitionMethodOpeningSliceViolation {
 
 // === case: definition_method_over_120 ===
 class InputMultilineCallDefinitionMethodOver120SliceViolation {
-	void mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm(int a, // violation: In multiline calls/signatures, no arguments on the opening paren line.
+	void mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm(int a, // violation: Multi-line call/signature must not have arguments on the opening paren line.
 			int b
 	) {
 	}
@@ -640,7 +640,7 @@ class InputMultilineCallDefinitionMethodOver120SliceViolation {
 // === case: delay_not_on_closing_line ===
 class InputMultilineCallPostDelayedDelayNotOnClosingLineSliceViolation {
 	void m() {
-		handler.postDelayed(() -> { // violation: Handler.postDelayed with a single-statement lambda that fits must be a single line.
+		handler.postDelayed(() -> { // violation: 'Handler.postDelayed(...)' with a single-statement lambda that fits must be on one line.
 			System.out.println("delayed");
 		},
 				1000
@@ -667,12 +667,55 @@ class InputMultilineCallFalseBranchMultilineSliceViolation {
 class InputMultilineCallSharedLineFirstTwoSharingSliceViolation {
 	void m() {
 		method(
-				1, 2, // violation: In multiline calls/signatures, each argument must be on its own line.
+				1, 2, // violation: Multi-line call/signature must have each argument on its own line.
 				3
 		);
 	}
 
 	void method(int a, int b, int c) {
+	}
+}
+// === end ===
+
+// === case: get_quantity_string_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetQuantityStringContextParamNotOnOpeningSliceViolation {
+	void m(Context ctx) {
+		method( // violation: Inline block argument must start on the opening paren line.
+				ctx.getResources().getQuantityString(
+						1,
+						2
+				));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: get_string_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringContextParamNotOnOpeningSliceViolation {
+	void m(Context ctx) {
+		method( // violation: Inline block argument must start on the opening paren line.
+				ctx.getString(
+						1
+				));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: get_string_fqn_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringFqnContextParamNotOnOpeningSliceViolation {
+	void m(android.content.Context ctx) {
+		method( // violation: Inline block argument must start on the opening paren line.
+				ctx.getString(
+						1
+				));
+	}
+
+	void method(Object a) {
 	}
 }
 // === end ===
@@ -683,7 +726,26 @@ class InputMultilineCallSpecialMethodGetStringNotOnClosingSliceViolation {
 		method(requireContext().getString(
 				1
 		)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
+	}
+
+	void method(Object a) {
+	}
+
+	Object requireContext() {
+		return null;
+	}
+}
+// === end ===
+
+// === case: get_string_tracked_var_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringTrackedVarNotOnOpeningSliceViolation {
+	void m() {
+		final var ctx = requireContext();
+		method( // violation: Inline block argument must start on the opening paren line.
+				ctx.getString(
+						1
+				));
 	}
 
 	void method(Object a) {
@@ -704,7 +766,7 @@ class InputMultilineCallSpecialMethodGetStringTrackedVarTypeWitnessNotOnClosingS
 		method(ctx.getString(
 				1
 		)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -718,7 +780,7 @@ class InputMultilineCallSpecialMethodGetStringTypeWitnessNotOnClosingSliceViolat
 		method(fragment.<Object>getContext().getString(
 				1
 		)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -733,7 +795,7 @@ class InputMultilineCallLambdaNotOnClosingLineSliceViolation {
 		method(x -> {
 			System.out.println(x);
 		}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Consumer<Integer> c) {
@@ -746,11 +808,11 @@ class InputMultilineCallLambdaNotOnClosingLineSliceViolation {
 // multi-fix-expected
 class InputMultilineCallLambdaNotOnOpeningLineSliceViolation {
 	void m() {
-		method( // violation: Inline block argument: must be on the opening paren line.
+		method( // violation: Inline block argument must start on the opening paren line.
 				x -> {
 					System.out.println(x);
 				}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Consumer<Integer> c) {
@@ -763,7 +825,7 @@ class InputMultilineCallSharedLineLastTwoSharingSliceViolation {
 	void m() {
 		method(
 				1,
-				2, 3 // violation: In multiline calls/signatures, each argument must be on its own line.
+				2, 3 // violation: Multi-line call/signature must have each argument on its own line.
 		);
 	}
 
@@ -774,15 +836,15 @@ class InputMultilineCallSharedLineLastTwoSharingSliceViolation {
 
 // === case: list_of_fqn_not_on_opening ===
 // multi-fix-expected
-// skip-reason: multiline formatting fix not yet supported for this shape
+// skip-reason: cannot reformat: this multi-line call shape is not supported yet
 // imports: java.util.List
 class InputMultilineCallSpecialMethodListOfFqnNotOnOpeningSliceViolation {
 	void m() {
-		method( // violation: Inline block argument: must be on the opening paren line.
+		method( // violation: Inline block argument must start on the opening paren line.
 				java.util.List.of(
 						1, 2, 3
 				)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -792,15 +854,15 @@ class InputMultilineCallSpecialMethodListOfFqnNotOnOpeningSliceViolation {
 
 // === case: list_of_fqn_type_witness_not_on_opening ===
 // multi-fix-expected
-// skip-reason: multiline formatting fix not yet supported for this shape
+// skip-reason: cannot reformat: this multi-line call shape is not supported yet
 // imports: java.util.List
 class InputMultilineCallSpecialMethodListOfFqnTypeWitnessNotOnOpeningSliceViolation {
 	void m() {
-		method( // violation: Inline block argument: must be on the opening paren line.
+		method( // violation: Inline block argument must start on the opening paren line.
 				java.util.List.<Integer>of(
 						1, 2, 3
 				)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -813,11 +875,11 @@ class InputMultilineCallSpecialMethodListOfFqnTypeWitnessNotOnOpeningSliceViolat
 // multi-fix-expected
 class InputMultilineCallSpecialMethodListOfNotOnOpeningSliceViolation {
 	void m() {
-		method( // violation: Inline block argument: must be on the opening paren line.
+		method( // violation: Inline block argument must start on the opening paren line.
 				List.of(
 						1, 2, 3
 				)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -830,11 +892,11 @@ class InputMultilineCallSpecialMethodListOfNotOnOpeningSliceViolation {
 // multi-fix-expected
 class InputMultilineCallSpecialMethodListOfTypeWitnessNotOnOpeningSliceViolation {
 	void m() {
-		method( // violation: Inline block argument: must be on the opening paren line.
+		method( // violation: Inline block argument must start on the opening paren line.
 				List.<Integer>of(
 						1, 2, 3
 				)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -853,7 +915,7 @@ class InputMultilineCallMethodChainAfterClosingSliceViolation {
 
 	void m() {
 		foo(
-				1, 2).bar(); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				1, 2).bar(); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
@@ -861,7 +923,7 @@ class InputMultilineCallMethodChainAfterClosingSliceViolation {
 // === case: method_first_arg_on_opening ===
 class InputMultilineCallOpeningMethodFirstArgOnOpeningSliceViolation {
 	void m() {
-		method(1, // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		method(1, // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				2
 		);
 	}
@@ -875,7 +937,7 @@ class InputMultilineCallOpeningMethodFirstArgOnOpeningSliceViolation {
 class InputMultilineCallSharedLineThreeOnOneLineSliceViolation {
 	void m() {
 		method(
-				1, 2, 3, // violation: In multiline calls/signatures, each argument must be on its own line. // violation: In multiline calls/signatures, each argument must be on its own line.
+				1, 2, 3, // violation: Multi-line call/signature must have each argument on its own line. // violation: Multi-line call/signature must have each argument on its own line.
 				4
 		);
 	}
@@ -889,7 +951,7 @@ class InputMultilineCallSharedLineThreeOnOneLineSliceViolation {
 class InputMultilineCallClosingMethodTwoArgsOnClosingSliceViolation {
 	void m() {
 		method(
-				1, 2); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				1, 2); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(int a, int b) {
@@ -906,7 +968,7 @@ class InputMultilineCallNestedStackMultilineOver120SliceViolation {
 				"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 				other(
 						arg
-		)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+		)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a, Object b) {
@@ -925,7 +987,7 @@ class InputMultilineCallNestedStackOver120SliceViolation {
 	void m() {
 		method(
 				"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-				other(arg)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				other(arg)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a, Object b) {
@@ -959,7 +1021,7 @@ class InputMultilineCallSharedLineNewFooSliceViolation {
 
 	void m() {
 		new Foo(
-				1, 2, // violation: In multiline calls/signatures, each argument must be on its own line.
+				1, 2, // violation: Multi-line call/signature must have each argument on its own line.
 				3
 		);
 	}
@@ -970,9 +1032,9 @@ class InputMultilineCallSharedLineNewFooSliceViolation {
 // imports: java.util.function.Consumer
 class InputMultilineCallNonSpecialTwoArgInlineLambdaSliceViolation {
 	void m() {
-		store("k", x -> { // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		store("k", x -> { // violation: Multi-line call/signature must not have arguments on the opening paren line.
 			System.out.println(x);
-		}); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+		}); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void store(Object a, Consumer<Integer> c) {
@@ -986,7 +1048,7 @@ class InputMultilineCallSharedLineNonSpecialOfSliceViolation {
 
 	void m() {
 		obj.of(
-				1, 2, // violation: In multiline calls/signatures, each argument must be on its own line.
+				1, 2, // violation: Multi-line call/signature must have each argument on its own line.
 				3
 		);
 	}
@@ -996,7 +1058,7 @@ class InputMultilineCallSharedLineNonSpecialOfSliceViolation {
 // === case: opening_collapse_comment_fallback ===
 class InputMultilineCallOpeningCollapseCommentFallbackSliceViolation {
 	void m() {
-		method(1, // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		method(1, // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				2 // trailing note
 		);
 	}
@@ -1009,7 +1071,7 @@ class InputMultilineCallOpeningCollapseCommentFallbackSliceViolation {
 // === case: opening_collapse_exactly_120 ===
 class InputMultilineCallOpeningCollapseExactly120SliceViolation {
 	void m() {
-		method("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		method("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				2
 		);
 	}
@@ -1022,7 +1084,7 @@ class InputMultilineCallOpeningCollapseExactly120SliceViolation {
 // === case: opening_collapse_over_120 ===
 class InputMultilineCallOpeningCollapseOver120SliceViolation {
 	void m() {
-		method("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		method("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				2
 		);
 	}
@@ -1035,7 +1097,7 @@ class InputMultilineCallOpeningCollapseOver120SliceViolation {
 // === case: opening_collapse_textblock_fallback ===
 class InputMultilineCallOpeningCollapseTextblockFallbackSliceViolation {
 	void m() {
-		method(1, // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		method(1, // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				"""
 				hello
 				"""
@@ -1050,14 +1112,14 @@ class InputMultilineCallOpeningCollapseTextblockFallbackSliceViolation {
 // === case: postdelayed_anon_class_not_on_opening ===
 class InputMultilineCallPostDelayedAnonClassNotOnOpeningSliceViolation {
 	void m() {
-		handler.postDelayed( // violation: Inline block argument: must be on the opening paren line.
+		handler.postDelayed( // violation: Inline block argument must start on the opening paren line.
 				new Runnable() {
 					public void run() {
 						doThing();
 					}
 				},
 				1000
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -1065,7 +1127,7 @@ class InputMultilineCallPostDelayedAnonClassNotOnOpeningSliceViolation {
 // === case: postdelayed_anon_class_with_field ===
 class InputMultilineCallPostDelayedAnonClassWithFieldSliceViolation {
 	void m() {
-		handler.postDelayed( // violation: Inline block argument: must be on the opening paren line.
+		handler.postDelayed( // violation: Inline block argument must start on the opening paren line.
 				new Runnable() {
 					int count;
 
@@ -1074,7 +1136,7 @@ class InputMultilineCallPostDelayedAnonClassWithFieldSliceViolation {
 					}
 				},
 				1000
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -1082,7 +1144,7 @@ class InputMultilineCallPostDelayedAnonClassWithFieldSliceViolation {
 // === case: postdelayed_anon_class_with_method ===
 class InputMultilineCallPostDelayedAnonClassWithMethodSliceViolation {
 	void m() {
-		handler.postDelayed( // violation: Inline block argument: must be on the opening paren line.
+		handler.postDelayed( // violation: Inline block argument must start on the opening paren line.
 				new Runnable() {
 					public void run() {
 						stop();
@@ -1092,7 +1154,7 @@ class InputMultilineCallPostDelayedAnonClassWithMethodSliceViolation {
 					}
 				},
 				1000
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -1100,7 +1162,7 @@ class InputMultilineCallPostDelayedAnonClassWithMethodSliceViolation {
 // === case: postdelayed_braced_lambda_fits_one_line ===
 class InputMultilineCallPostDelayedBracedLambdaFitsOneLineSliceViolation {
 	void m() {
-		handler.postDelayed(() -> { // violation: Handler.postDelayed with a single-statement lambda that fits must be a single line.
+		handler.postDelayed(() -> { // violation: 'Handler.postDelayed(...)' with a single-statement lambda that fits must be on one line.
 			System.out.println("delayed");
 		}, 1000);
 	}
@@ -1111,7 +1173,7 @@ class InputMultilineCallPostDelayedBracedLambdaFitsOneLineSliceViolation {
 // skip-reason: cannot pull the argument onto the opening paren line: a comment on a joined line would swallow the rest
 class InputMultilineCallPostDelayedCommentJoinSliceViolation {
 	void m() {
-		handler.postDelayed(() -> { // violation: Handler.postDelayed with a single-statement lambda that fits must be a single line.
+		handler.postDelayed(() -> { // violation: 'Handler.postDelayed(...)' with a single-statement lambda that fits must be on one line.
 			doThing(); // note
 		}, 1000);
 	}
@@ -1121,7 +1183,7 @@ class InputMultilineCallPostDelayedCommentJoinSliceViolation {
 // === case: postdelayed_lambda_not_on_opening_but_delay_on_closing ===
 class InputMultilineCallPostDelayedLambdaNotOnOpeningButDelayOnClosingSliceViolation {
 	void m() {
-		handler.postDelayed( // violation: Handler.postDelayed with a single-statement lambda that fits must be a single line.
+		handler.postDelayed( // violation: 'Handler.postDelayed(...)' with a single-statement lambda that fits must be on one line.
 				() -> {
 					System.out.println("delayed");
 				}, 1000);
@@ -1132,7 +1194,7 @@ class InputMultilineCallPostDelayedLambdaNotOnOpeningButDelayOnClosingSliceViola
 // === case: postdelayed_lambda_not_on_opening_line ===
 class InputMultilineCallPostDelayedLambdaNotOnOpeningLineSliceViolation {
 	void m() {
-		handler.postDelayed( // violation: Handler.postDelayed with a single-statement lambda that fits must be a single line.
+		handler.postDelayed( // violation: 'Handler.postDelayed(...)' with a single-statement lambda that fits must be on one line.
 				() -> {
 					System.out.println("delayed");
 				},
@@ -1150,7 +1212,7 @@ class InputMultilineCallPostDelayedMultiStatementFallbackSliceViolation {
 			System.out.println("b");
 		},
 				1000
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -1162,7 +1224,7 @@ class InputMultilineCallPostDelayedOver120FallbackSliceViolation {
 			System.out.println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 		},
 				1000
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -1174,7 +1236,7 @@ class InputMultilineCallPostDelayedReturnBodyFallbackSliceViolation {
 			return;
 		},
 				1000
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -1182,7 +1244,7 @@ class InputMultilineCallPostDelayedReturnBodyFallbackSliceViolation {
 // === case: println_first_arg_on_opening ===
 class InputMultilineCallOpeningPrintlnFirstArgOnOpeningSliceViolation {
 	void m() {
-		System.out.println(1, // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		System.out.println(1, // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				2,
 				3
 		);
@@ -1196,7 +1258,7 @@ class InputMultilineCallClosingPrintlnThreeArgsOnClosingSliceViolation {
 		System.out.println(
 				1,
 				2,
-				3); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				3); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
@@ -1211,7 +1273,7 @@ class InputMultilineCallPutAnonClassNotOnClosingSliceViolation {
 			public void run() {
 			}
 		}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -1226,7 +1288,7 @@ class InputMultilineCallPutBareNewNotOnClosingSliceViolation {
 		cache.put("k", new JSONObject(
 				"x"
 		)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -1238,7 +1300,7 @@ class InputMultilineCallPutBareNoReceiverNotOnClosingSliceViolation {
 		put("k", x -> {
 			System.out.println(x);
 		}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void put(Object a, Consumer<Integer> c) {
@@ -1255,7 +1317,7 @@ class InputMultilineCallPutBracedLambdaNotOnClosingSliceViolation {
 		cache.put("k", x -> {
 			System.out.println(x);
 		}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -1267,7 +1329,7 @@ class InputMultilineCallPutBracelessLambdaClosingOnBodyLineSliceViolation {
 
 	void m() {
 		cache.put("k", v ->
-				System.out.println(v)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				System.out.println(v)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
@@ -1281,7 +1343,7 @@ class InputMultilineCallPutChainedConstructorClosingOnChainLineSliceViolation {
 	void m() {
 		cache.put("k", new JSONObject()
 				.put("a", 1)
-				.put("b", 2)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				.put("b", 2)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
@@ -1293,7 +1355,7 @@ class InputMultilineCallPutChainedConstructorKeyNotOnOpeningSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put( // violation: Inline block argument: must be on the opening paren line.
+		cache.put( // violation: Inline block argument must start on the opening paren line.
 				"k", new JSONObject()
 						.put("a", 1)
 						.put("b", 2)
@@ -1309,7 +1371,7 @@ class InputMultilineCallPutKeyCommentOnValueHeadLineSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put( // violation: Inline block argument: must be on the opening paren line.
+		cache.put( // violation: Inline block argument must start on the opening paren line.
 				"k",
 				new JSONObject() // note
 						.put("a", 1)
@@ -1330,7 +1392,7 @@ class InputMultilineCallPutKeyInfeasibleCommentClosingSliceViolation {
 				"k", // note
 				new JSONObject()
 						.put("a", 1)
-						.put("b", 2)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+						.put("b", 2)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
@@ -1347,7 +1409,7 @@ class InputMultilineCallPutKeyInfeasibleCommentClosingNestedSliceViolation {
 					"k", // note
 					new JSONObject()
 							.put("a", 1)
-							.put("b", 2)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+							.put("b", 2)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 		}
 	}
 }
@@ -1362,7 +1424,7 @@ class InputMultilineCallPutKeyInfeasibleLengthClosingSliceViolation {
 	void m() {
 		cache.put(
 				"aKeyNameLongEnoughToPushTheCollapsedFormPastOneHundredTwentyColumnsWithRoom",
-				new JSONObject().put("k", 1)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				new JSONObject().put("k", 1)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
@@ -1374,7 +1436,7 @@ class InputMultilineCallPutKeyMaskedSlashslashStringSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put( // violation: Inline block argument: must be on the opening paren line.
+		cache.put( // violation: Inline block argument must start on the opening paren line.
 				"a // b",
 				new JSONObject()
 						.put("x", 1)
@@ -1390,7 +1452,7 @@ class InputMultilineCallPutKeyNotOnOpeningBlockCommentValueSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put( // violation: Inline block argument: must be on the opening paren line.
+		cache.put( // violation: Inline block argument must start on the opening paren line.
 				"k", () -> {
 					/* line1
 					line2 */
@@ -1407,11 +1469,11 @@ class InputMultilineCallPutKeyNotOnOpeningBracedLambdaSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put( // violation: Inline block argument: must be on the opening paren line.
+		cache.put( // violation: Inline block argument must start on the opening paren line.
 				"k", x -> {
 					System.out.println(x);
 				}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -1422,7 +1484,7 @@ class InputMultilineCallPutKeyNotOnOpeningOnlySliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put( // violation: Inline block argument: must be on the opening paren line.
+		cache.put( // violation: Inline block argument must start on the opening paren line.
 				"k", x -> {
 					System.out.println(x);
 				});
@@ -1436,7 +1498,7 @@ class InputMultilineCallPutKeyNotOnOpeningTextBlockTailValueSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put( // violation: Inline block argument: must be on the opening paren line.
+		cache.put( // violation: Inline block argument must start on the opening paren line.
 				"k", () -> {
 					return """
 							text"""; });
@@ -1450,7 +1512,7 @@ class InputMultilineCallPutKeyNotOnOpeningTextBlockValueSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put( // violation: Inline block argument: must be on the opening paren line.
+		cache.put( // violation: Inline block argument must start on the opening paren line.
 				"k", () -> {
 					return """
 							hello
@@ -1467,7 +1529,7 @@ class InputMultilineCallPutKeyOwnLineChainedValueSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put( // violation: Inline block argument: must be on the opening paren line.
+		cache.put( // violation: Inline block argument must start on the opening paren line.
 				"productCharacteristics",
 				new JSONObject().put("shortSavingDepositName", "monthly")
 		);
@@ -1482,7 +1544,7 @@ class InputMultilineCallPutKeyOwnLineChainedValueExactly120SliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put( // violation: Inline block argument: must be on the opening paren line.
+		cache.put( // violation: Inline block argument must start on the opening paren line.
 				"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 				new JSONObject().put("bbbbbbbbbbbbbbbbbbbb", "cccccccc")
 		);
@@ -1497,7 +1559,7 @@ class InputMultilineCallPutKeyOwnLineMultilineChainedValueSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put( // violation: Inline block argument: must be on the opening paren line.
+		cache.put( // violation: Inline block argument must start on the opening paren line.
 				"estValueOfOptionsFVData",
 				new JSONObject()
 						.put("ilsValue", 1)
@@ -1512,7 +1574,7 @@ class InputMultilineCallPutKeyOwnLineMultilineChainedValueSliceViolation {
 // imports: org.json.JSONObject
 class InputMultilineCallPutKeyOwnLineNewJsonArrayValueSliceViolation {
 	void m() {
-		new JSONObject().put( // violation: Inline block argument: must be on the opening paren line.
+		new JSONObject().put( // violation: Inline block argument must start on the opening paren line.
 				"tiles",
 				new JSONArray().put(new JSONObject()
 						.put("source", "trading")
@@ -1529,7 +1591,7 @@ class InputMultilineCallPutMethodRefNotExemptSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put("k", String::trim // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		cache.put("k", String::trim // violation: Multi-line call/signature must not have arguments on the opening paren line.
 		);
 	}
 }
@@ -1542,7 +1604,7 @@ class InputMultilineCallPutNestedKeyNotOnOpeningSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put( // violation: Inline block argument: must be on the opening paren line.
+		cache.put( // violation: Inline block argument must start on the opening paren line.
 				"View", new JSONObject().put("id", 1)
 		);
 	}
@@ -1554,7 +1616,7 @@ class InputMultilineCallPutNestedKeyNotOnOpeningSliceViolation {
 class InputMultilineCallPutNewJsonObjectExactly120SliceViolation {
 	void m() {
 		new JSONObject()
-				.put("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", 1); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", 1); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 	}
 }
 // === end ===
@@ -1568,7 +1630,7 @@ class InputMultilineCallPutNewJsonObjectNestedSingleSplitSliceViolation {
 	void m() {
 		cache.put("View", new JSONObject()
 				.put("Account", new JSONObject()
-						.put("id", 1) // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+						.put("id", 1) // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 				)
 		);
 	}
@@ -1581,7 +1643,7 @@ class InputMultilineCallPutNewJsonObjectSameLineReceiverClosingSliceViolation {
 	void m() {
 		new JSONObject().put(
 				"key",
-				"value"); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				"value"); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
@@ -1594,7 +1656,7 @@ class InputMultilineCallPutNewJsonObjectSingleSplitSliceViolation {
 
 	void m() {
 		cache.put("k", new JSONObject()
-				.put("a", 1) // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("a", 1) // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		);
 	}
 }
@@ -1607,18 +1669,18 @@ class InputMultilineCallPutNewJsonObjectTextBlockValueSliceViolation {
 		new JSONObject().put(
 				"k",
 				"""
-				text"""); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				text"""); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
 
 // === case: put_new_jsonobject_trailing_comment ===
 // imports: org.json.JSONObject
-// skip-reason: cannot collapse: a comment sits between new JSONObject() and .put
+// skip-reason: cannot collapse: a comment sits between 'new JSONObject()' and '.put'
 class InputMultilineCallPutNewJsonObjectTrailingCommentSliceViolation {
 	void m() {
 		new JSONObject() // note
-				.put("k", 1); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", 1); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 	}
 }
 // === end ===
@@ -1631,35 +1693,35 @@ class InputMultilineCallPutNewJsonObjectValueTypesSliceViolation {
 
 	void m() {
 		new JSONObject()
-				.put("k", "str"); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", "str"); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", 'c'); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", 'c'); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", 1L); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", 1L); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", 1.5); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", 1.5); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", 1.5f); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", 1.5f); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", true); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", true); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", false); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", false); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", null); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", null); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", arg); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", arg); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", System.out); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", System.out); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", -1); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", -1); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", +1); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", +1); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", - -1); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", - -1); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", hashCode()); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", hashCode()); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 		new JSONObject()
-				.put("k", arg.hashCode()); // violation: A simple new JSONObject().put(...) fits on one line; do not split it across lines.
+				.put("k", arg.hashCode()); // violation: Simple 'new JSONObject().put(...)' that fits must be on one line.
 	}
 }
 // === end ===
@@ -1670,9 +1732,9 @@ class InputMultilineCallPutNonInlineBlockValueNotExemptSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put("k", other( // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		cache.put("k", other( // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				"v"
-		)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+		)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	Object other(Object a) {
@@ -1688,7 +1750,7 @@ class InputMultilineCallPutAllNotExemptSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.putAll("k", new JSONObject() // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		cache.putAll("k", new JSONObject() // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				.put("a", 1)
 				.put("b", 2)
 		);
@@ -1703,7 +1765,7 @@ class InputMultilineCallPutIfAbsentNotExemptSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.putIfAbsent("k", new JSONObject() // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		cache.putIfAbsent("k", new JSONObject() // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				.put("a", 1)
 				.put("b", 2)
 		);
@@ -1721,7 +1783,7 @@ class InputMultilineCallPutSpecialMethodNotOnClosingSliceViolation {
 		cache.put("k", List.of(
 				1, 2, 3
 		)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -1732,9 +1794,9 @@ class InputMultilineCallPutThreeArgsNotExemptSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put("k", "extra", x -> { // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		cache.put("k", "extra", x -> { // violation: Multi-line call/signature must not have arguments on the opening paren line.
 			System.out.println(x);
-		}); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+		}); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 }
 // === end ===
@@ -1746,11 +1808,11 @@ class InputMultilineCallPutTypeWitnessKeyNotOnOpeningSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.<String>put( // violation: Inline block argument: must be on the opening paren line.
+		cache.<String>put( // violation: Inline block argument must start on the opening paren line.
 				"k", x -> {
 					System.out.println(x);
 				}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 }
 // === end ===
@@ -1818,7 +1880,7 @@ class InputMultilineCallTernaryPositionQuestionTwoLinesAfterConditionSliceViolat
 class InputMultilineCallResourceIdBracelessLambdaOnBodyLineSliceViolation {
 	void m() {
 		method(R.string.ok, v ->
-				System.out.println(v)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				System.out.println(v)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a, Consumer<Integer> c) {
@@ -1846,7 +1908,7 @@ class InputMultilineCallResourceIdLambdaNotOnClosingSliceViolation {
 		method(R.string.ok, x -> {
 			System.out.println(x);
 		}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a, Consumer<Integer> c) {
@@ -1859,11 +1921,11 @@ class InputMultilineCallResourceIdLambdaNotOnClosingSliceViolation {
 // multi-fix-expected
 class InputMultilineCallResourceIdLambdaNotOnOpeningSliceViolation {
 	void m() {
-		method( // violation: Inline block argument: must be on the opening paren line.
+		method( // violation: Inline block argument must start on the opening paren line.
 				R.string.ok, x -> {
 					System.out.println(x);
 				}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a, Consumer<Integer> c) {
@@ -1879,7 +1941,7 @@ class InputMultilineCallMethodCallResourceIdStackedClosingNotStackedSliceViolati
 		method(R.string.ok, other(
 						arg
 				)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a, Object b) {
@@ -1900,7 +1962,7 @@ class InputMultilineCallMethodCallResourceIdStandardClosingStackedSliceViolation
 				R.string.ok,
 				other(
 						arg
-		)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+		)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a, Object b) {
@@ -1915,7 +1977,7 @@ class InputMultilineCallMethodCallResourceIdStandardClosingStackedSliceViolation
 // === case: resource_id_ternary_not_on_opening ===
 class InputMultilineCallThisTernaryResourceIdNotOnOpeningSliceViolation {
 	void m() {
-		method( // violation: Ternary argument: condition must be on the opening paren line.
+		method( // violation: Ternary argument's condition must be on the opening paren line.
 				R.string.ok, true
 						? "a"
 						: "b"
@@ -1932,7 +1994,7 @@ class InputMultilineCallMethodCallResourceIdUnstackedClosingNotStackedSliceViola
 	Object arg;
 
 	void m() {
-		method(R.string.ok, // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		method(R.string.ok, // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				other(
 						arg
 				)
@@ -1953,10 +2015,10 @@ class InputMultilineCallMethodCallResourceIdUnstackedClosingStackedSliceViolatio
 	Object arg;
 
 	void m() {
-		method(R.string.ok, // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		method(R.string.ok, // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				other(
 						arg
-				)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a, Object b) {
@@ -1972,8 +2034,8 @@ class InputMultilineCallMethodCallResourceIdUnstackedClosingStackedSliceViolatio
 // multi-fix-expected
 class InputMultilineCallSharedLineAndBothSliceViolation {
 	void m() {
-		method(1, // violation: In multiline calls/signatures, no arguments on the opening paren line.
-				2, 3); // violation: In multiline calls/signatures, each argument must be on its own line. // violation: In multiline calls/signatures, no arguments on the closing paren line.
+		method(1, // violation: Multi-line call/signature must not have arguments on the opening paren line.
+				2, 3); // violation: Multi-line call/signature must have each argument on its own line. // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(int a, int b, int c) {
@@ -1986,7 +2048,7 @@ class InputMultilineCallSharedLineAndClosingSliceViolation {
 	void m() {
 		method(
 				1,
-				2, 3); // violation: In multiline calls/signatures, each argument must be on its own line. // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				2, 3); // violation: Multi-line call/signature must have each argument on its own line. // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(int a, int b, int c) {
@@ -1997,7 +2059,7 @@ class InputMultilineCallSharedLineAndClosingSliceViolation {
 // === case: shared_and_opening ===
 class InputMultilineCallSharedLineAndOpeningSliceViolation {
 	void m() {
-		method(1, 2, // violation: In multiline calls/signatures, no arguments on the opening paren line. // violation: In multiline calls/signatures, each argument must be on its own line.
+		method(1, 2, // violation: Multi-line call/signature must not have arguments on the opening paren line. // violation: Multi-line call/signature must have each argument on its own line.
 				3
 		);
 	}
@@ -2015,7 +2077,7 @@ class InputMultilineCallSharedAnonClassSliceViolation {
 					public void run() {
 						step1();
 					}
-				}, other // violation: In multiline calls/signatures, each argument must be on its own line.
+				}, other // violation: Multi-line call/signature must have each argument on its own line.
 		);
 	}
 
@@ -2029,7 +2091,7 @@ class InputMultilineCallSharedLineBlockCommentSliceViolation {
 	void m() {
 		method(
 				/* line1
-				line2 */ first, other, // violation: In multiline calls/signatures, each argument must be on its own line.
+				line2 */ first, other, // violation: Multi-line call/signature must have each argument on its own line.
 				z
 		);
 	}
@@ -2044,7 +2106,7 @@ class InputMultilineCallSharedLineCommentSwallowSliceViolation {
 	void m() {
 		method(
 				"a" // note
-						+ "b", other, // violation: In multiline calls/signatures, each argument must be on its own line.
+						+ "b", other, // violation: Multi-line call/signature must have each argument on its own line.
 				z
 		);
 	}
@@ -2058,7 +2120,7 @@ class InputMultilineCallSharedLineCommentSwallowSliceViolation {
 class InputMultilineCallSharedLineExactly120SliceViolation {
 	void m() {
 		method(
-				"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", b, // violation: In multiline calls/signatures, each argument must be on its own line.
+				"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", b, // violation: Multi-line call/signature must have each argument on its own line.
 				c
 		);
 	}
@@ -2072,7 +2134,7 @@ class InputMultilineCallSharedLineExactly120SliceViolation {
 class InputMultilineCallSharedLineLastArgCommentSliceViolation {
 	void m() {
 		method(
-				1, 2, // violation: In multiline calls/signatures, each argument must be on its own line.
+				1, 2, // violation: Multi-line call/signature must have each argument on its own line.
 				3 // note
 		);
 	}
@@ -2087,7 +2149,7 @@ class InputMultilineCallSharedLeadingCommentAfterCommaSliceViolation {
 	void m() {
 		method(
 				a, // note
-				b, c // violation: In multiline calls/signatures, each argument must be on its own line.
+				b, c // violation: Multi-line call/signature must have each argument on its own line.
 		);
 	}
 
@@ -2101,7 +2163,7 @@ class InputMultilineCallSharedLineMultilineArgSliceViolation {
 	void m() {
 		method(
 				"a"
-						+ "b", other, // violation: In multiline calls/signatures, each argument must be on its own line.
+						+ "b", other, // violation: Multi-line call/signature must have each argument on its own line.
 				z
 		);
 	}
@@ -2116,7 +2178,7 @@ class InputMultilineCallSharedLineMultilineArgSliceViolation {
 class InputMultilineCallSharedLineNestedGenericTrailingSliceViolation {
 	void m() {
 		method(
-				x, Map.of("k", 1), // violation: In multiline calls/signatures, each argument must be on its own line.
+				x, Map.of("k", 1), // violation: Multi-line call/signature must have each argument on its own line.
 				z
 		);
 	}
@@ -2130,7 +2192,7 @@ class InputMultilineCallSharedLineNestedGenericTrailingSliceViolation {
 class InputMultilineCallSharedLineOver120SliceViolation {
 	void m() {
 		method(
-				"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", other, // violation: In multiline calls/signatures, each argument must be on its own line.
+				"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", other, // violation: Multi-line call/signature must have each argument on its own line.
 				z
 		);
 	}
@@ -2144,7 +2206,7 @@ class InputMultilineCallSharedLineOver120SliceViolation {
 class InputMultilineCallSharedLineStringCommaSliceViolation {
 	void m() {
 		method(
-				"a, b", c, // violation: In multiline calls/signatures, each argument must be on its own line.
+				"a, b", c, // violation: Multi-line call/signature must have each argument on its own line.
 				d
 		);
 	}
@@ -2159,7 +2221,7 @@ class InputMultilineCallSharedLineTextBlockSliceViolation {
 	void m() {
 		method(
 				"""
-				txt""", other, // violation: In multiline calls/signatures, each argument must be on its own line.
+				txt""", other, // violation: Multi-line call/signature must have each argument on its own line.
 				z
 		);
 	}
@@ -2173,7 +2235,7 @@ class InputMultilineCallSharedLineTextBlockSliceViolation {
 class InputMultilineCallSharedLineTextBlockLastArgSliceViolation {
 	void m() {
 		method(
-				other, z, // violation: In multiline calls/signatures, each argument must be on its own line.
+				other, z, // violation: Multi-line call/signature must have each argument on its own line.
 				"""
 				txt"""
 		);
@@ -2190,7 +2252,7 @@ class InputMultilineCallSharedLineTextBlockMiddleArgSliceViolation {
 		method(
 				other,
 				"""
-				txt""", z // violation: In multiline calls/signatures, each argument must be on its own line.
+				txt""", z // violation: Multi-line call/signature must have each argument on its own line.
 		);
 	}
 
@@ -2203,7 +2265,7 @@ class InputMultilineCallSharedLineTextBlockMiddleArgSliceViolation {
 class InputMultilineCallSharedLineTrailingCommentMiddleArgSliceViolation {
 	void m() {
 		method(
-				a, b, // violation: In multiline calls/signatures, each argument must be on its own line.
+				a, b, // violation: Multi-line call/signature must have each argument on its own line.
 				c // note
 				, d
 		);
@@ -2219,7 +2281,7 @@ class InputMultilineCallSharedLineTrailingCommentNonLastSliceViolation {
 	void m() {
 		method(
 				a // note
-				, b, c, // violation: In multiline calls/signatures, each argument must be on its own line.
+				, b, c, // violation: Multi-line call/signature must have each argument on its own line.
 				d
 		);
 	}
@@ -2233,7 +2295,7 @@ class InputMultilineCallSharedLineTrailingCommentNonLastSliceViolation {
 class InputMultilineCallTernarySingleLineTernaryWrongCloseSliceViolation {
 	void m() {
 		method(true ? "a" : "b"
-		); // violation: Single-line ternary argument: closing paren must be on the same line.
+		); // violation: Single-line ternary argument's closing paren must be on the same line.
 	}
 
 	void method(Object a) {
@@ -2249,7 +2311,7 @@ class InputMultilineCallMethodCallStackedCallsClosingNotStackedSliceViolation {
 		method(other(
 						arg
 				)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -2272,7 +2334,7 @@ class InputMultilineCallSuperClosingSliceViolation {
 			super(
 					1,
 					2,
-					3); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+					3); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 		}
 	}
 }
@@ -2286,7 +2348,7 @@ class InputMultilineCallSuperOpeningSliceViolation {
 
 	static class Inner extends Base {
 		Inner() {
-			super(1, // violation: In multiline calls/signatures, no arguments on the opening paren line.
+			super(1, // violation: Multi-line call/signature must not have arguments on the opening paren line.
 					2,
 					3
 			);
@@ -2303,7 +2365,7 @@ class InputMultilineCallSuperOver120SliceViolation {
 
 	static class Inner extends Base {
 		Inner() {
-			super("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // violation: In multiline calls/signatures, no arguments on the opening paren line.
+			super("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // violation: Multi-line call/signature must not have arguments on the opening paren line.
 					2,
 					3
 			);
@@ -2321,7 +2383,7 @@ class InputMultilineCallSuperSharedLineSliceViolation {
 	static class Inner extends Base {
 		Inner() {
 			super(
-					1, 2, // violation: In multiline calls/signatures, each argument must be on its own line.
+					1, 2, // violation: Multi-line call/signature must have each argument on its own line.
 					3
 			);
 		}
@@ -2372,7 +2434,7 @@ class InputMultilineCallTernaryClosingOver120SliceViolation {
 	void m() {
 		method(true
 				? "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-				: "b"); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				: "b"); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -2384,7 +2446,7 @@ class InputMultilineCallTernaryClosingOver120SliceViolation {
 class InputMultilineCallTernaryColonAndClosingSliceViolation {
 	void m() {
 		method(true
-				? "a" : "b"); // violation: Ternary ':' must be on the line immediately after the true branch. // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				? "a" : "b"); // violation: Ternary ':' must be on the line immediately after the true branch. // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -2440,8 +2502,8 @@ class InputMultilineCallTernaryMultilineConditionCommentSwallowSliceViolation {
 // multi-fix-expected
 class InputMultilineCallTernaryMultilineConditionNestedCallSliceViolation {
 	void m() {
-		method(value(a, // violation: In multiline calls/signatures, no arguments on the opening paren line.
-				b) ? // violation: In multiline calls/signatures, no arguments on the closing paren line. // violation: Ternary '?' must be on the line immediately after the condition.
+		method(value(a, // violation: Multi-line call/signature must not have arguments on the opening paren line.
+				b) ? // violation: Multi-line call/signature must not have arguments on the closing paren line. // violation: Ternary '?' must be on the line immediately after the condition.
 				"x"
 				: "y"
 		);
@@ -2459,7 +2521,7 @@ class InputMultilineCallTernaryMultilineConditionNestedCallSliceViolation {
 // === case: ternary_not_on_opening ===
 class InputMultilineCallTernaryNotOnOpeningSliceViolation {
 	void m() {
-		method( // violation: Ternary argument: condition must be on the opening paren line.
+		method( // violation: Ternary argument's condition must be on the opening paren line.
 				true
 						? "a"
 						: "b"
@@ -2475,7 +2537,7 @@ class InputMultilineCallTernaryNotOnOpeningSliceViolation {
 // multi-fix-expected
 class InputMultilineCallTernaryNotOnOpeningAndQuestionSliceViolation {
 	void m() {
-		method( // violation: Ternary argument: condition must be on the opening paren line.
+		method( // violation: Ternary argument's condition must be on the opening paren line.
 				true ? // violation: Ternary '?' must be on the line immediately after the condition.
 				"a"
 				: "b"
@@ -2492,7 +2554,7 @@ class InputMultilineCallTernaryOnClosingSliceViolation {
 	void m() {
 		method(true
 				? "a"
-				: "b"); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				: "b"); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a) {
@@ -2516,7 +2578,7 @@ class InputMultilineCallTernaryOver120SliceViolation {
 // === case: ternary_single_line_fits ===
 class InputMultilineCallTernarySingleLineFitsSliceViolation {
 	void m() {
-		method( // violation: Ternary argument: condition must be on the opening paren line.
+		method( // violation: Ternary argument's condition must be on the opening paren line.
 				true ? "a" : "b");
 	}
 
@@ -2528,7 +2590,7 @@ class InputMultilineCallTernarySingleLineFitsSliceViolation {
 // === case: ternary_single_line_over_120 ===
 class InputMultilineCallTernarySingleLineOver120SliceViolation {
 	void m() {
-		method( // violation: Ternary argument: condition must be on the opening paren line.
+		method( // violation: Ternary argument's condition must be on the opening paren line.
 				true ? "aLongEnoughStringLiteralValueThatMakesTheCollapsedTernaryExpressionExceedOneHundredTwentyColumnsForSure" : "b");
 	}
 
@@ -2585,7 +2647,7 @@ class InputMultilineCallTernaryTrailingCommentSliceViolation {
 class InputMultilineCallThisBracelessLambdaOnBodyLineSliceViolation {
 	void m() {
 		method(this, v ->
-				System.out.println(v)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				System.out.println(v)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a, Consumer<Integer> c) {
@@ -2600,7 +2662,7 @@ class InputMultilineCallThisLambdaNotOnClosingSliceViolation {
 		method(this, x -> {
 			System.out.println(x);
 		}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a, Consumer<Integer> c) {
@@ -2613,11 +2675,11 @@ class InputMultilineCallThisLambdaNotOnClosingSliceViolation {
 // multi-fix-expected
 class InputMultilineCallThisLambdaNotOnOpeningSliceViolation {
 	void m() {
-		method( // violation: Inline block argument: must be on the opening paren line.
+		method( // violation: Inline block argument must start on the opening paren line.
 				this, x -> {
 					System.out.println(x);
 				}
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a, Consumer<Integer> c) {
@@ -2643,7 +2705,7 @@ class InputMultilineCallThisQuestionOnConditionLineSliceViolation {
 class InputMultilineCallThisTernarySingleLineWrongCloseSliceViolation {
 	void m() {
 		method(this, true ? "a" : "b"
-		); // violation: Single-line ternary argument: closing paren must be on the same line.
+		); // violation: Single-line ternary argument's closing paren must be on the same line.
 	}
 
 	void method(Object a, Object b) {
@@ -2659,7 +2721,7 @@ class InputMultilineCallMethodCallThisStackedCallsClosingNotStackedSliceViolatio
 		method(this, other(
 						arg
 				)
-		); // violation: Inline block argument: closing brace/paren must be on the closing paren line.
+		); // violation: Inline block argument's closing brace/paren must be on the closing paren line.
 	}
 
 	void method(Object a, Object b) {
@@ -2680,7 +2742,7 @@ class InputMultilineCallMethodCallThisStandardClosingStackedSliceViolation {
 				this,
 				other(
 						arg
-		)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+		)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a, Object b) {
@@ -2695,7 +2757,7 @@ class InputMultilineCallMethodCallThisStandardClosingStackedSliceViolation {
 // === case: this_ternary_not_on_opening ===
 class InputMultilineCallThisTernaryNotOnOpeningSliceViolation {
 	void m() {
-		method( // violation: Ternary argument: condition must be on the opening paren line.
+		method( // violation: Ternary argument's condition must be on the opening paren line.
 				this, true
 						? "a"
 						: "b"
@@ -2712,7 +2774,7 @@ class InputMultilineCallThisTernaryOnClosingSliceViolation {
 	void m() {
 		method(this, true
 				? "a"
-				: "b"); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				: "b"); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a, Object b) {
@@ -2725,7 +2787,7 @@ class InputMultilineCallMethodCallThisUnstackedCallsClosingNotStackedSliceViolat
 	Object arg;
 
 	void m() {
-		method(this, // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		method(this, // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				other(
 						arg
 				)
@@ -2746,10 +2808,10 @@ class InputMultilineCallMethodCallThisUnstackedCallsClosingStackedSliceViolation
 	Object arg;
 
 	void m() {
-		method(this, // violation: In multiline calls/signatures, no arguments on the opening paren line.
+		method(this, // violation: Multi-line call/signature must not have arguments on the opening paren line.
 				other(
 						arg
-				)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a, Object b) {
@@ -2769,7 +2831,7 @@ class InputMultilineCallMethodCallUnstackedCallsClosingStackedSliceViolation {
 		method(
 				other(
 						arg
-				)); // violation: In multiline calls/signatures, no arguments on the closing paren line.
+				)); // violation: Multi-line call/signature must not have arguments on the closing paren line.
 	}
 
 	void method(Object a) {

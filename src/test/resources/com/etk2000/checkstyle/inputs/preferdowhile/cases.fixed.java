@@ -1,15 +1,5 @@
-// === case: assignment_body ===
-class InputPreferDoWhileAssignmentBodySliceViolation {
-	void m(int i) {
-		do
-			i = i + 1;
-		while (i < 10);
-	}
-}
-// === end ===
-
 // === case: body_formatting_skipped ===
-// skip-reason: body formatting
+// skip-reason: cannot convert to do-while: the loop body does not end in a semicolon
 class InputPreferDoWhileBodyFormattingSkippedSliceViolation {
 	void m(int x, int a, int b, int i) {
 		x = a + b;
@@ -22,7 +12,7 @@ class InputPreferDoWhileBodyFormattingSkippedSliceViolation {
 // === end ===
 
 // === case: braced_closing_indent_mismatch_skipped ===
-// skip-reason: braced body multi-statement or unusual closing
+// skip-reason: cannot convert to do-while: the braced body has more than one statement or an unusual closing brace
 class InputPreferDoWhileBracedClosingIndentMismatchSkippedSliceViolation {
 	void m(int i) {
 		do ++i;
@@ -32,7 +22,7 @@ class InputPreferDoWhileBracedClosingIndentMismatchSkippedSliceViolation {
 // === end ===
 
 // === case: braced_closing_trailing_content_skipped ===
-// skip-reason: braced body multi-statement or unusual closing
+// skip-reason: cannot convert to do-while: the braced body has more than one statement or an unusual closing brace
 class InputPreferDoWhileBracedClosingTrailingContentSkippedSliceViolation {
 	void m(int i) {
 		do ++i;

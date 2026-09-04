@@ -1,7 +1,6 @@
 # LambdaParameterTypeCheck auto-fix coverage
 
-The fixer handles all three violation types in a single pass. For single non-annotated params, the
-fixer goes straight to naked form (removing both type and parens).
+The fixer handles all three violation types in a single pass.
 
 | Violation type | Pattern | Replacement |
 | --- | --- | --- |
@@ -18,16 +17,25 @@ Removing the explicit type from a lambda parameter drops any trailing C-style ar
 (`int a[]` -> `a`, not `a[]`), regardless of whitespace before the bracket. Java-style brackets on
 the type (`int[] a`) are unaffected since they precede the name.
 
-String/char literals and comments on the lambda line are masked before the parameter list is
-located and split, so a `->`, `(`, `)`, or `,` inside a literal or comment (e.g. an annotation
-argument like `@A(")")` or a block comment between the parens and the type) does not misdirect the
-fix; the literal content is preserved verbatim in the output.
+A `->`, `(`, `)`, or `,` inside a string/char literal or comment on the lambda line (e.g. an
+annotation argument like `@A(")")` or a block comment between the parens and the type) does not
+misdirect the fix; the literal content is preserved verbatim in the output. The list is split only on commas
+outside type arguments, annotation arguments and array brackets, so `(Map<String, Integer> m,
+Integer x) ->` becomes `(m, x) ->` and `(@A(x = 1, y = 2) Map<String, Integer> m, Integer x) ->`
+becomes `(@A(x = 1, y = 2) var m, var x) ->`.
+
+A block comment between the type and the name, or trailing the name, is not mistaken for the name
+itself.
+
+**A comment inside a parameter is dropped when the type goes with it** (`(String x /*c*/) ->`
+becomes `x ->`, and `(/*c*/ String x) ->` becomes `x ->`). A comment *before the annotations* of an
+annotated parameter is kept (`(/*c*/ @A String x) ->` becomes `(/*c*/ @A var x) ->`).
 
 ## Not supported
 
 | Pattern | Reason |
 | --- | --- |
-| Arrow `->` not found from the violation column | The fixer operates on the text from the column onward, so an arrow on a different line is skipped |
-| Opening paren not found for the lambda parameters | A single naked parameter without parens, in unusual positions |
+| Arrow `->` not found from the violation column | An arrow on a different line from the violation column is skipped |
+| Opening paren not found for the lambda parameters | The parameter list's `(` is on an earlier line than the arrow (`(String a,\n String b) ->`), so it is not on the line being fixed |
 
 Part of [auto-fix coverage](../auto-fix-coverage.md).

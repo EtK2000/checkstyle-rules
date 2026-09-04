@@ -74,8 +74,6 @@ public class FragmentMigrationGuardTest {
 
 	@Test
 	public void classifyMigratableCleanWhenCheckNeverFires() {
-		// compiles and UpperEll stays silent (already uppercase), so it is a clean
-		// input for cases.clean.java, not a fixer-robustness fragment.
 		final var clean = List.of("\tlong x = 100L;");
 		final var verdict = FragmentMigrationDetector.classify(UpperEllCheck.class, skipFixer(), clean, clean);
 		assertEquals(Verdict.MIGRATABLE_CLEAN, verdict);
@@ -83,8 +81,6 @@ public class FragmentMigrationGuardTest {
 
 	@Test
 	public void classifyMigratableCleanWhenTargetPresentButCheckNeverFires() {
-		// a // target: on a check-silent body drives the fixer where production
-		// never would, so the directive is meaningless: still a clean case.
 		final var in = List.of("// target: col=10", "\tlong x = 100L;");
 		final var out = List.of("\tlong x = 100L;");
 		final var verdict = FragmentMigrationDetector.classify(UpperEllCheck.class, skipFixer(), in, out);
@@ -187,7 +183,6 @@ public class FragmentMigrationGuardTest {
 
 	@Test
 	public void classifyNonCompilableWhenTrailingBareAnnotationUnclosedEvenWithMemberAppend() {
-		// unclosed paren: even wrapper 4's appended member cannot make @B( parse.
 		final var in = List.of("\t@B(");
 		final var verdict = FragmentMigrationDetector.classify(RedundantAnnotationSyntaxCheck.class, new RedundantAnnotationSyntaxFixer(), in, in);
 		assertEquals(Verdict.NON_COMPILABLE, verdict);
@@ -211,8 +206,6 @@ public class FragmentMigrationGuardTest {
 
 	@Test
 	public void classifyRedundantTargetWhenDeclaredColumnEqualsReportedAndAlsoFixedPoint() {
-		// redundancy wins over the fixed-point MIGRATABLE verdict: the directive
-		// duplicates the position the check reports, so the case should be a slice.
 		final var in = List.of("// target: col=10", "\tlong x = 100l;");
 		final var out = List.of("\tlong x = 100L;");
 		final var verdict = FragmentMigrationDetector.classify(UpperEllCheck.class, new UpperEllFixer(), in, out);
@@ -221,8 +214,6 @@ public class FragmentMigrationGuardTest {
 
 	@Test
 	public void classifyRedundantTargetWhenDeclaredColumnEqualsReportedWithoutFixedSibling() {
-		// redundancy is independent of the fix outcome: even with no .out sibling
-		// (a skip fragment), a directive at the reported position is redundant.
 		final var in = List.of("// target: col=10", "\tlong x = 100l;");
 		final var verdict = FragmentMigrationDetector.classify(UpperEllCheck.class, skipFixer(), in, null);
 		assertEquals(Verdict.REDUNDANT_TARGET, verdict);
@@ -272,8 +263,6 @@ public class FragmentMigrationGuardTest {
 
 	@Test
 	public void classifyRedundantTargetWhenTargetColumnOutOfBounds() {
-		// col=999 is past the body line's end while the reported char 10 fixes, so the
-		// out-of-bounds guard makes the target redundant.
 		final var in = List.of("// target: col=999", "\tlong x = 100l;");
 		final var fixer = columnSensitiveFixer(10, List.of("\tlong x = 100L;"));
 		final var verdict = FragmentMigrationDetector.classify(UpperEllCheck.class, fixer, in, null);
@@ -292,8 +281,6 @@ public class FragmentMigrationGuardTest {
 
 	@Test
 	public void classifyRedundantTargetWhenTargetLinePastEnd() {
-		// the target line is past the one-line body while the reported char 10 fixes,
-		// so the out-of-bounds guard makes the target redundant.
 		final var in = List.of("// target: line=5 col=10", "\tlong x = 100l;");
 		final var fixer = columnSensitiveFixer(10, List.of("\tlong x = 100L;"));
 		final var verdict = FragmentMigrationDetector.classify(UpperEllCheck.class, fixer, in, null);
@@ -302,8 +289,6 @@ public class FragmentMigrationGuardTest {
 
 	@Test
 	public void classifyRedundantTargetWhenUnreportedColumnNullFixerSameOutcome() {
-		// nullFixer leaves the document unchanged at both the synthetic col=5 and the
-		// reported char 10, so their outcomes match: a disguised skip-slice.
 		final var in = List.of("// target: col=5", "\tlong x = 100l;");
 		final var verdict = FragmentMigrationDetector.classify(UpperEllCheck.class, nullFixer(), in, null);
 		assertEquals(Verdict.REDUNDANT_TARGET, verdict);
@@ -311,8 +296,6 @@ public class FragmentMigrationGuardTest {
 
 	@Test
 	public void classifyRedundantTargetWhenUnreportedColumnSameOutcome() {
-		// col=5 is in-bounds but not where UpperEll reports (char 10); the fixer skips
-		// at both, so the outcomes match and the synthetic target is redundant.
 		final var in = List.of("// target: col=5", "\tlong x = 100l;");
 		final var verdict = FragmentMigrationDetector.classify(UpperEllCheck.class, skipFixer(), in, null);
 		assertEquals(Verdict.REDUNDANT_TARGET, verdict);
@@ -320,9 +303,6 @@ public class FragmentMigrationGuardTest {
 
 	@Test
 	public void classifyStyleInvariantWhenCheckSilentSpaceIndentedBody() {
-		// check-silent AND space-indented: it would be a clean case, but a clean
-		// slice cannot carry space indentation (NoSpaceIndent), so it stays a
-		// fragment rather than migrating to cases.clean.java.
 		final var clean = List.of("    long x = 100L;");
 		final var verdict = FragmentMigrationDetector.classify(UpperEllCheck.class, skipFixer(), clean, clean);
 		assertEquals(Verdict.STYLE_INVARIANT, verdict);
@@ -330,8 +310,6 @@ public class FragmentMigrationGuardTest {
 
 	@Test
 	public void classifyStyleInvariantWhenSpaceIndentedBody() {
-		// otherwise MIGRATABLE, but a space-indented body would trip NoSpaceIndent
-		// as a slice (which the policy refuses to suppress), so it stays a fragment.
 		final var in = List.of("    long x = 100l;");
 		final var out = List.of("    long x = 100L;");
 		final var verdict = FragmentMigrationDetector.classify(UpperEllCheck.class, new UpperEllFixer(), in, out);

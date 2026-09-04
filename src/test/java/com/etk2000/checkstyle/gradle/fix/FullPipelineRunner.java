@@ -60,7 +60,7 @@ public final class FullPipelineRunner {
 	@Nonnull
 	public static String runFixToFixedPoint(@Nonnull File file, @Nonnull String minSdk) throws Exception {
 		final var lines = new ArrayList<>(CheckstyleFixAction.readSourceLines(file.toPath()));
-		for (var pass = 0; pass < 10; ++pass) {
+		for (var pass = 0; pass < CheckstyleFixAction.MAX_FIX_PASSES; ++pass) {
 			final var current = String.join("\n", lines);
 			Files.writeString(file.toPath(), current);
 			final List<AuditEvent> violations;
@@ -95,8 +95,7 @@ public final class FullPipelineRunner {
 
 	/**
 	 * Strips {@code // violation: ...} marker text from each line, leaving
-	 * only the code prefix. Uses {@code Matcher.find()} so the regex can
-	 * match anywhere on the line.
+	 * only the code prefix.
 	 * <p>Limitation: if a line embeds the marker text inside a string
 	 * literal (e.g. {@code String s = "// violation: foo";}), the strip
 	 * truncates the line at the literal's opening, producing corrupt

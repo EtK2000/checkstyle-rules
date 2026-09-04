@@ -50,11 +50,51 @@ class InputLambdaParamAnnotationArgStringArrowSliceViolation {
 }
 // === end ===
 
+// === case: block_comment_before_annotation ===
+// imports: java.util.List
+class InputLambdaParamBlockCommentBeforeAnnotationSliceViolation {
+	@interface A {}
+
+	void m(List<String> list) {
+		list.forEach((/* c */ @A var x) -> System.out.println(x));
+	}
+}
+// === end ===
+
 // === case: block_comment_before_arrow ===
 // imports: java.util.List
 class InputLambdaParamBlockCommentBeforeArrowSliceViolation {
 	void m(List<String> list) {
 		list.forEach(x -> System.out.println(x));
+	}
+}
+// === end ===
+
+// === case: block_comment_trailing_name ===
+// imports: java.util.List
+class InputLambdaParamBlockCommentTrailingNameSliceViolation {
+	void m(List<String> list) {
+		list.forEach(x -> System.out.println(x));
+	}
+}
+// === end ===
+
+// === case: block_comment_trailing_name_annotated ===
+// imports: java.util.List
+class InputLambdaParamBlockCommentTrailingNameAnnotatedSliceViolation {
+	@interface A {}
+
+	void m(List<String> list) {
+		list.forEach((@A var x) -> System.out.println(x));
+	}
+}
+// === end ===
+
+// === case: block_comment_trailing_name_second_param ===
+// imports: java.util.List
+class InputLambdaParamBlockCommentTrailingNameSecondParamSliceViolation {
+	void m(List<String> list) {
+		list.sort((x, y) -> x.compareTo(y));
 	}
 }
 // === end ===
@@ -84,6 +124,14 @@ class InputLambdaParamNestedInnerAnnotationArgParenSliceViolation {
 
 	void m(List<List<String>> lists) {
 		lists.forEach(inner -> inner.forEach((@A(")") var y) -> System.out.println(y)));
+	}
+}
+// === end ===
+
+// === case: no_space_before_arrow ===
+class InputLambdaParamNoSpaceBeforeArrowSliceViolation {
+	void m() {
+		final F f = s-> s.length;
 	}
 }
 // === end ===
@@ -205,6 +253,30 @@ class InputLambdaParamRemoveTypeCStyleObjectArraySliceViolation {
 }
 // === end ===
 
+// === case: remove_type_generic_array_param ===
+class InputLambdaParamRemoveTypeGenericArrayParamSliceViolation {
+	void m() {
+		final BiFunction<X, Y, Z> c = (m, x) -> 0;
+	}
+}
+// === end ===
+
+// === case: remove_type_generic_param_with_comma ===
+class InputLambdaParamRemoveTypeGenericParamWithCommaSliceViolation {
+	void m() {
+		final BiFunction<X, Y, Z> c = (m, x) -> m.size() + x;
+	}
+}
+// === end ===
+
+// === case: remove_type_generic_single_param ===
+class InputLambdaParamRemoveTypeGenericSingleParamSliceViolation {
+	void m() {
+		final Function<X, Z> c = m -> m.size();
+	}
+}
+// === end ===
+
 // === case: remove_type_java_style_array ===
 class InputLambdaParamRemoveTypeJavaStyleArraySliceViolation {
 	void m() {
@@ -218,6 +290,14 @@ class InputLambdaParamRemoveTypeJavaStyleArraySliceViolation {
 class InputLambdaParamRemoveTypeMultiSliceViolation {
 	void m(List<String> list) {
 		list.sort((x, y) -> x.compareTo(y));
+	}
+}
+// === end ===
+
+// === case: remove_type_nested_generics_param ===
+class InputLambdaParamRemoveTypeNestedGenericsParamSliceViolation {
+	void m() {
+		final BiFunction<X, Y, Z> c = (m, n) -> {};
 	}
 }
 // === end ===
@@ -240,6 +320,54 @@ class InputLambdaParamRemoveTypeTabSliceViolation {
 }
 // === end ===
 
+// === case: remove_type_trailing_space_in_list ===
+class InputLambdaParamRemoveTypeTrailingSpaceSliceViolation {
+	void m() {
+		final F f = (a, b, c) -> a + b + c;
+	}
+}
+// === end ===
+
+// === case: remove_type_varargs_primitive ===
+class InputLambdaParamRemoveTypeVarargsPrimitiveSliceViolation {
+	void m() {
+		final F f = xs -> xs.length;
+	}
+}
+// === end ===
+
+// === case: remove_type_varargs_reference ===
+class InputLambdaParamRemoveTypeVarargsReferenceSliceViolation {
+	void m() {
+		final F f = parts -> parts.length;
+	}
+}
+// === end ===
+
+// === case: remove_type_wildcard_bare ===
+class InputLambdaParamRemoveTypeWildcardBareSliceViolation {
+	void m() {
+		final F f = n -> n.size();
+	}
+}
+// === end ===
+
+// === case: remove_type_wildcard_lower ===
+class InputLambdaParamRemoveTypeWildcardLowerSliceViolation {
+	void m() {
+		final F f = n -> n.size();
+	}
+}
+// === end ===
+
+// === case: remove_type_wildcard_upper ===
+class InputLambdaParamRemoveTypeWildcardUpperSliceViolation {
+	void m() {
+		final F f = n -> n.size();
+	}
+}
+// === end ===
+
 // === case: replace_type_with_var_annotated ===
 // imports: java.util.List
 class InputLambdaParamReplaceVarAnnotatedSliceViolation {
@@ -257,6 +385,20 @@ class InputLambdaParamReplaceVarAnnotationWithArgsSliceViolation {
 
 	void m() {
 		final BiConsumer<X, Y> c = (@A("v") var x, var y) -> {};
+	}
+}
+// === end ===
+
+// === case: replace_type_with_var_annotation_with_comma_args ===
+class InputLambdaParamReplaceVarAnnotationWithCommaArgsSliceViolation {
+	@interface A {
+		int x();
+
+		int y();
+	}
+
+	void m() {
+		final BiFunction<X, Y, Z> c = (@A(x = 1, y = 2) var m, var x) -> 0;
 	}
 }
 // === end ===
@@ -379,6 +521,36 @@ class InputLambdaParamReplaceVarSecondParamAnnotatedMultiSliceViolation {
 }
 // === end ===
 
+// === case: replace_type_with_var_three_params_last_annotated ===
+class InputLambdaParamReplaceVarThreeParamsLastSliceViolation {
+	@interface A {}
+
+	void m() {
+		final F f = (var a, var b, @A var c) -> a + b + c;
+	}
+}
+// === end ===
+
+// === case: replace_type_with_var_three_params_middle_annotated ===
+class InputLambdaParamReplaceVarThreeParamsMiddleSliceViolation {
+	@interface A {}
+
+	void m() {
+		final F f = (var a, @A var b, var c) -> a + b + c;
+	}
+}
+// === end ===
+
+// === case: replace_type_with_var_varargs_annotated ===
+class InputLambdaParamReplaceVarVarargsSliceViolation {
+	@interface A {}
+
+	void m() {
+		final F f = (@A var parts) -> parts.length;
+	}
+}
+// === end ===
+
 // === case: string_arrow_after_arrow_unchanged ===
 // imports: java.util.List
 class InputLambdaParamStringArrowAfterArrowSliceViolation {
@@ -393,6 +565,14 @@ class InputLambdaParamStringArrowAfterArrowSliceViolation {
 class InputLambdaParamStringParenAfterArrowSliceViolation {
 	void m(List<String> list) {
 		list.forEach(x -> System.out.println(")"));
+	}
+}
+// === end ===
+
+// === case: two_arrows_on_one_line ===
+class InputLambdaParamTwoArrowsOnOneLineSliceViolation {
+	void m() {
+		final F f = a -> () -> System.out.println(a);
 	}
 }
 // === end ===

@@ -4,7 +4,7 @@ package com.etk2000.checkstyle.inputs.preferdowhile;
 class InputPreferDoWhileArrayAssignSliceViolation {
 	void m(int[] arr, int i) {
 		arr[i] = 0;
-		while (i-- > 0) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i-- > 0) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			arr[i] = 0;
 	}
 }
@@ -14,7 +14,7 @@ class InputPreferDoWhileArrayAssignSliceViolation {
 class InputPreferDoWhileAssignmentBodySliceViolation {
 	void m(int i) {
 		i = i + 1;
-		while (i < 10) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			i = i + 1;
 	}
 }
@@ -31,7 +31,7 @@ class InputPreferDoWhileBareCallNoArgsSliceViolation {
 
 	void m() {
 		foo();
-		while (cond()) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (cond()) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			foo();
 	}
 }
@@ -41,18 +41,18 @@ class InputPreferDoWhileBareCallNoArgsSliceViolation {
 class InputPreferDoWhileBareMethodCallSliceViolation {
 	void m(int i) {
 		System.out.println(i);
-		while (--i > 0) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (--i > 0) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			System.out.println(i);
 	}
 }
 // === end ===
 
 // === case: body_formatting_skipped ===
-// skip-reason: body formatting
+// skip-reason: cannot convert to do-while: the loop body does not end in a semicolon
 class InputPreferDoWhileBodyFormattingSkippedSliceViolation {
 	void m(int x, int a, int b, int i) {
 		x = a + b;
-		while (i < 10) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			x = a
 				+ b;
 	}
@@ -63,7 +63,7 @@ class InputPreferDoWhileBodyFormattingSkippedSliceViolation {
 class InputPreferDoWhileBracedBodySliceViolation {
 	void m(int i) {
 		++i;
-		while (i < 10) { // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) { // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			++i;
 		}
 	}
@@ -71,11 +71,11 @@ class InputPreferDoWhileBracedBodySliceViolation {
 // === end ===
 
 // === case: braced_closing_indent_mismatch_skipped ===
-// skip-reason: braced body multi-statement or unusual closing
+// skip-reason: cannot convert to do-while: the braced body has more than one statement or an unusual closing brace
 class InputPreferDoWhileBracedClosingIndentMismatchSkippedSliceViolation {
 	void m(int i) {
 		++i;
-		while (i < 10) { // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) { // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			++i;
 	}
 	}
@@ -83,11 +83,11 @@ class InputPreferDoWhileBracedClosingIndentMismatchSkippedSliceViolation {
 // === end ===
 
 // === case: braced_closing_trailing_content_skipped ===
-// skip-reason: braced body multi-statement or unusual closing
+// skip-reason: cannot convert to do-while: the braced body has more than one statement or an unusual closing brace
 class InputPreferDoWhileBracedClosingTrailingContentSkippedSliceViolation {
 	void m(int i) {
 		++i;
-		while (i < 10) { // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) { // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			++i;
 		} // done
 	}
@@ -104,29 +104,39 @@ class InputPreferDoWhileChainedAssignmentBodySliceViolation {
 
 	void m(Node node) {
 		node = node.next();
-		while (node != null) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (node != null) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			node = node.next();
 	}
 }
 // === end ===
 
+// === case: chained_call_body ===
+class InputPreferDoWhileChainedCallBodySliceViolation {
+	void m(StringBuilder sb, int i) {
+		sb.append("a").append("b");
+		while (--i > 0) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
+			sb.append("a").append("b");
+	}
+}
+// === end ===
+
 // === case: comment_on_body_line_skipped ===
-// skip-reason: comment on body line
+// skip-reason: cannot convert to do-while: the loop body line has a comment
 class InputPreferDoWhileCommentOnBodyLineSkippedSliceViolation {
 	void m(int i) {
 		++i;
-		while (i < 10) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			++i; // comment
 	}
 }
 // === end ===
 
 // === case: comment_on_pre_line_skipped ===
-// skip-reason: comment on pre-statement line
+// skip-reason: cannot convert to do-while: the statement before the loop has a comment
 class InputPreferDoWhileCommentOnPreLineSkippedSliceViolation {
 	void m(int i) {
 		++i; // comment
-		while (i < 10) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			++i;
 	}
 }
@@ -136,7 +146,7 @@ class InputPreferDoWhileCommentOnPreLineSkippedSliceViolation {
 class InputPreferDoWhileCompoundAssignBodySliceViolation {
 	void m(int i) {
 		i += 2;
-		while (i < 100) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 100) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			i += 2;
 	}
 }
@@ -150,18 +160,18 @@ class InputPreferDoWhileConditionWithNestedParensSliceViolation {
 
 	void m(int i) {
 		++i;
-		while ((i < 10) && check(i)) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while ((i < 10) && check(i)) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			++i;
 	}
 }
 // === end ===
 
 // === case: indent_mismatch_skipped ===
-// skip-reason: pre-statement indent mismatch
+// skip-reason: cannot convert to do-while: the statement before the loop is not at the loop's indent
 class InputPreferDoWhileIndentMismatchSkippedSliceViolation {
 	void m(int i) {
 	++i;
-		while (i < 10) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			++i;
 	}
 }
@@ -171,7 +181,7 @@ class InputPreferDoWhileIndentMismatchSkippedSliceViolation {
 class InputPreferDoWhileViolation {
 	void bracedBody(int i) {
 		++i;
-		while (i < 10) { // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) { // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			++i;
 		}
 	}
@@ -179,7 +189,7 @@ class InputPreferDoWhileViolation {
 	void commentBetween(int i) {
 		++i;
 		// walking forward
-		while (i < 10) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			++i;
 	}
 }
@@ -190,7 +200,7 @@ class InputPreferDoWhileViolation {
 class InputPreferDoWhileMethodCallBodySliceViolation {
 	void m(List<Integer> list) {
 		list.add(1);
-		while (list.size() < 10) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (list.size() < 10) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			list.add(1);
 	}
 }
@@ -202,19 +212,30 @@ class InputPreferDoWhileNestedInForBodySliceViolation {
 		for (var k = 0; k < n; ++k) {
 			var i = 0;
 			++i;
-			while (i < n) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+			while (i < n) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 				++i;
 		}
 	}
 }
 // === end ===
 
+// === case: new_expression_body ===
+class InputPreferDoWhileNewExpressionBodySliceViolation {
+	void m(int i) {
+		StringBuilder sb;
+		sb = new StringBuilder();
+		while (--i > 0) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
+			sb = new StringBuilder();
+	}
+}
+// === end ===
+
 // === case: pre_stmt_extra_whitespace_after_indent_skipped ===
-// skip-reason: pre-statement formatting
+// skip-reason: cannot convert to do-while: the statement before the loop is not a single statement ending in a semicolon
 class InputPreferDoWhilePreStmtExtraWhitespaceAfterIndentSkippedSliceViolation {
 	void m(int i) {
 		 	++i;
-		while (i < 10) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			++i;
 	}
 }
@@ -224,7 +245,7 @@ class InputPreferDoWhilePreStmtExtraWhitespaceAfterIndentSkippedSliceViolation {
 class InputPreferDoWhilePrefixDecrementSliceViolation {
 	void m(int i) {
 		--i;
-		while (i > 0) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i > 0) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			--i;
 	}
 }
@@ -234,7 +255,7 @@ class InputPreferDoWhilePrefixDecrementSliceViolation {
 class InputPreferDoWhilePrefixIncSliceViolation {
 	void m(int i, String text) {
 		++i;
-		while (i < text.length() && Character.isLetterOrDigit(text.charAt(i))) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < text.length() && Character.isLetterOrDigit(text.charAt(i))) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			++i;
 	}
 }
@@ -244,29 +265,29 @@ class InputPreferDoWhilePrefixIncSliceViolation {
 class InputPreferDoWhilePrefixIncrementSliceViolation {
 	void m(int i) {
 		++i;
-		while (i < 10) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			++i;
 	}
 }
 // === end ===
 
 // === case: textual_mismatch_whitespace_skipped ===
-// skip-reason: textual mismatch between pre-statement and body
+// skip-reason: cannot convert to do-while: the loop body does not repeat the statement before the loop
 class InputPreferDoWhileTextualMismatchWhitespaceSkippedSliceViolation {
 	void m(int i) {
 		i +=2;
-		while (i < 10) // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			i += 2;
 	}
 }
 // === end ===
 
 // === case: while_line_has_trailing_comment ===
-// skip-reason: while line not in expected format (multi-line cond, trailing content, or comment)
+// skip-reason: cannot convert to do-while: the while line has a multi-line condition, trailing content or a comment
 class InputPreferDoWhileWhileLineHasTrailingCommentSliceViolation {
 	void m(int i) {
 		++i;
-		while (i < 10) // loop // violation: Replace pre-loop statement and 'while' with 'do-while'.
+		while (i < 10) // loop // violation: Replace the pre-loop statement and 'while' with 'do-while'.
 			++i;
 	}
 }

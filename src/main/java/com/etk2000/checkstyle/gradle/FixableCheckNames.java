@@ -7,23 +7,30 @@ import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 
 /**
- * Lightweight holder for fixable check source names and module IDs.
+ * Lightweight holder for fixable check source names, module IDs and regexp messages.
  * This class intentionally has no checkstyle API imports so it can be
  * loaded on the buildscript classpath without requiring checkstyle.
  */
-final class FixableCheckNames {
+public final class FixableCheckNames {
+	public static final String BLANK_LINE_AFTER_BREAK_MESSAGE = "Add a blank line after break; before the next case/default.";
+	public static final String BLANK_LINE_AFTER_CLASS_BRACE_MESSAGE = "Class/interface/enum/record body must not start with a blank line.";
+	public static final String BLANK_LINE_BEFORE_CLOSING_BRACE_MESSAGE = "Closing brace must not be preceded by a blank line.";
+	public static final String DOUBLE_BLANK_LINES_MESSAGE = "File must not contain consecutive blank lines.";
+	public static final String TRAILING_NEWLINE_MESSAGE = "File must not end with a trailing newline.";
+	public static final String TRAILING_WHITESPACE_MESSAGE = "Line must not end with whitespace.";
+
 	/**
 	 * Messages from fixable regexp-based checks (RegexpMultiline/RegexpSingleline).
 	 * The XML report's {@code source} attribute for these is the generic regexp class
 	 * name, not the module ID, so matching by message is the only way to identify them.
 	 */
 	static final Set<String> FIXABLE_MESSAGES = Set.of(
-			"Add a blank line after break; before the next case/default.",
-			"File must not end with a trailing newline.",
-			"No blank line at start of a class/interface/enum/record.",
-			"No blank line before closing brace.",
-			"No double blank lines.",
-			"No trailing whitespace."
+			BLANK_LINE_AFTER_BREAK_MESSAGE,
+			BLANK_LINE_AFTER_CLASS_BRACE_MESSAGE,
+			BLANK_LINE_BEFORE_CLOSING_BRACE_MESSAGE,
+			DOUBLE_BLANK_LINES_MESSAGE,
+			TRAILING_NEWLINE_MESSAGE,
+			TRAILING_WHITESPACE_MESSAGE
 	);
 
 	static final Set<String> MODULE_IDS = Set.of(
@@ -41,6 +48,7 @@ final class FixableCheckNames {
 			"com.etk2000.checkstyle.ArrayTypeStyleCheck",
 			"com.etk2000.checkstyle.ConstructorAssignmentOrderCheck",
 			"com.etk2000.checkstyle.ControlFlowBracesCheck",
+			"com.etk2000.checkstyle.EmptyBodyCheck",
 			"com.etk2000.checkstyle.FieldConsolidationCheck",
 			"com.etk2000.checkstyle.FieldSortingCheck",
 			"com.etk2000.checkstyle.JitInefficiencyCheck",

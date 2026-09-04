@@ -1,12 +1,122 @@
 package com.etk2000.checkstyle.inputs.preferbulkoperation;
 
+import android.content.ContentValues;
+import android.util.SparseArray;
+
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 class InputPreferBulkOperationClean {
+	enum Weekday {
+		MONDAY,
+		TUESDAY
+	}
+
+	static class Bag {
+		void add(String item) {
+		}
+	}
+
+	static class BagWithAddAll {
+		void add(String item) {
+		}
+
+		void addAll(Collection<String> items) {
+		}
+	}
+
+	static class PatternShadowedInheritedField extends UnknownBase {
+		// `items` here is the field inherited from a supertype this file cannot see. The pattern
+		// variable of the same name is an array, and a scope-blind read of it would retype the
+		// field as an array and rewrite the loop to a Collections.addAll that does not compile
+		void addAllShadowed(List<String> target, Object o) {
+			if (o instanceof String[] items)
+				target.add(items[0]);
+			for (var item : items)
+				target.add(item);
+		}
+	}
+
+	record PrimitiveVarargsSource(int... source) {
+		void addAllTo(List<Integer> target) {
+			for (var item : source)
+				target.add(item);
+		}
+	}
+
+	record TypeVariableVarargsSource<T>(T... source) {
+		void addAllTo(List<T> target) {
+			for (var item : source)
+				target.add(item);
+		}
+	}
+
+	// the size() and get() receivers are different lists, so the loop is not a bulk copy. Both are
+	// parenthesized because a grouping paren used to make every receiver compare equal
+	void addAllIndexedParenthesizedDifferentReceivers(List<String> target, List<String> a, List<String> b) {
+		for (var i = 0; i < (a).size(); ++i)
+			target.add((b).get(i));
+	}
+
+	void addAllSourceIterable(List<String> target, Iterable<String> source) {
+		for (var item : source)
+			target.add(item);
+	}
+
+	void addAllSourcePrimitiveArray(List<Integer> target, int[] source) {
+		for (var item : source)
+			target.add(item);
+	}
+
+	void addAllSourcePrimitiveArrayFromCall(List<Integer> target, String csv) {
+		for (var codePoint : csv.codePoints().toArray())
+			target.add(codePoint);
+	}
+
+	void addAllSourcePrimitiveVarargs(List<Integer> target, int... source) {
+		for (var item : source)
+			target.add(item);
+	}
+
+	void addAllSourceSameFileClassVarargs(List<Bag> target, Bag... source) {
+		for (var item : source)
+			target.add(item);
+	}
+
+	void addAllSourceSameFileEnumValues(List<Weekday> target) {
+		for (var item : Weekday.values())
+			target.add(item);
+	}
+
+	void addAllSourceStream(List<String> target, Stream<String> source) {
+		source.forEach(target::add);
+	}
+
+	void addAllSourceUnresolvable(List<String> target, UnknownIterable source) {
+		for (var item : source)
+			target.add(item);
+	}
+
+	void addAllTargetLacksAddAll(SparseArray<String> target, List<String> source) {
+		for (var item : source)
+			target.add(item);
+	}
+
+	void addAllTargetSameFileClass(Bag target, List<String> source) {
+		for (var item : source)
+			target.add(item);
+	}
+
+	void addAllTargetSameFileClassDeclaringAddAll(BagWithAddAll target, List<String> source) {
+		for (var item : source)
+			target.add(item);
+	}
+
 	void addConditional(List<String> target, List<String> source) {
 		for (var item : source) {
 			if (!item.isEmpty())
@@ -144,6 +254,18 @@ class InputPreferBulkOperationClean {
 		source.forEach((k, v) -> target.put(k, v.toUpperCase()));
 	}
 
+	void forEachMethodRefAddTargetLacksAddAll(List<String> source, SparseArray<String> target) {
+		source.forEach(target::add);
+	}
+
+	void forEachMethodRefPutSourceSparseArray(SparseArray<String> source, Map<String, String> target) {
+		source.forEach(target::put);
+	}
+
+	void forEachMethodRefPutTargetContentValues(Map<String, String> source, ContentValues target) {
+		source.forEach(target::put);
+	}
+
 	void forEachMethodRefRemove(List<String> list, List<String> other) {
 		list.forEach(other::remove);
 	}
@@ -165,6 +287,24 @@ class InputPreferBulkOperationClean {
 		list.stream().forEach(other::add);
 	}
 
+	void forEachTextBlockSource(List<String> target) {
+		for (var item : List.of(
+				"""
+						value
+						"""
+		))
+			target.add(item);
+	}
+
+	void forEachTextBlockSourceContainingCommentMarker(List<String> target) {
+		for (var item : List.of(
+				"""
+						// not a comment
+						"""
+		))
+			target.add(item);
+	}
+
 	void forEachValuesSourcePut(Map<String, String> target, Map<String, String> source) {
 		for (var v : source.values())
 			target.put(v, v);
@@ -181,6 +321,16 @@ class InputPreferBulkOperationClean {
 
 	void indexedAddNonZeroStart(List<String> target, List<String> source) {
 		for (var i = 1; i < source.size(); ++i)
+			target.add(source.get(i));
+	}
+
+	void indexedAddSourceSparseArray(List<String> target, SparseArray<String> source) {
+		for (var i = 0; i < source.size(); ++i)
+			target.add(source.get(i));
+	}
+
+	void indexedAddTargetLacksAddAll(SparseArray<String> target, List<String> source) {
+		for (var i = 0; i < source.size(); ++i)
 			target.add(source.get(i));
 	}
 
@@ -219,6 +369,14 @@ class InputPreferBulkOperationClean {
 			target.put(keys.get(i), vals.get(i));
 	}
 
+	void lambdaAddSourceIterable(List<String> target, Iterable<String> source) {
+		source.forEach(item -> target.add(item));
+	}
+
+	void lambdaAddTargetLacksAddAll(SparseArray<String> target, List<String> source) {
+		source.forEach(item -> target.add(item));
+	}
+
 	void lambdaArgumentToAdd(List<String> names, List<Runnable> tasks) {
 		names.forEach(name -> tasks.add(() -> System.out.println(name)));
 	}
@@ -231,6 +389,14 @@ class InputPreferBulkOperationClean {
 		source.forEach((k, v) -> target.put(() -> k, k));
 	}
 
+	void lambdaPutSourceSparseArray(Map<String, String> target, SparseArray<String> source) {
+		source.forEach((k, v) -> target.put(k, v));
+	}
+
+	void lambdaPutTargetContentValues(ContentValues target, Map<String, String> source) {
+		source.forEach((k, v) -> target.put(k, v));
+	}
+
 	void methodRefArgumentToAdd(List<String> names, List<IntSupplier> tasks) {
 		names.forEach(name -> tasks.add(name::length));
 	}
@@ -241,6 +407,40 @@ class InputPreferBulkOperationClean {
 
 	void methodRefKeyArgumentToPut(Map<String, String> source, Map<Supplier<String>, String> target) {
 		source.forEach((k, v) -> target.put(k::toString, k));
+	}
+
+	void nestedForEachInnerSourceIterable(Map<String, Iterable<String>> map, List<String> target) {
+		map.forEach((k, v) -> v.forEach(item -> target.add(item)));
+	}
+
+	void nestedForEachOuterCallIsNotForEach(Map<String, List<String>> map, List<String> target) {
+		map.computeIfAbsent("k", v -> v.forEach(item -> target.add(item)));
+	}
+
+	void nestedForEachOuterReceiverIsCall(List<String> target) {
+		nestedMap().forEach((k, v) -> v.forEach(item -> target.add(item)));
+	}
+
+	void nestedForEachRawOuterReceiver(Map map, List<String> target) {
+		map.forEach((k, v) -> v.forEach(item -> target.add(item)));
+	}
+
+	void nestedForEachWildcardTypeArgument(Map<String, ?> map, List<String> target) {
+		map.forEach((k, v) -> v.forEach(item -> target.add(item)));
+	}
+
+	Map<String, List<String>> nestedMap() {
+		return Map.of();
+	}
+
+	void putAllSourceUnresolvable(Map<String, String> target, UnknownMap source) {
+		for (var entry : source.entrySet())
+			target.put(entry.getKey(), entry.getValue());
+	}
+
+	void putAllTargetContentValues(ContentValues target, Map<String, String> source) {
+		for (var entry : source.entrySet())
+			target.put(entry.getKey(), entry.getValue());
 	}
 
 	void putKeyMismatch(Map<String, String> target, Map<String, String> source) {

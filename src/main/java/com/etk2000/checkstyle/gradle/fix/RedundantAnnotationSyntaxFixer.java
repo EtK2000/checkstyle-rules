@@ -1,7 +1,6 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import com.etk2000.checkstyle.JavaLineScanner;
-import com.etk2000.checkstyle.JavaLineScanner.LexerState;
 import com.etk2000.checkstyle.LineText;
 import com.etk2000.checkstyle.format.SpanReformat;
 
@@ -65,20 +64,6 @@ class RedundantAnnotationSyntaxFixer implements CheckstyleFixer {
 	}
 
 	/**
-	 * The lexer state entering {@code lines.get(lineIndex)}, folded over the
-	 * preceding lines so a line that continues a multi-line comment or text block
-	 * is masked correctly.
-	 */
-	@CheckReturnValue
-	@Nonnull
-	private static LexerState entryStateAt(@Nonnull List<String> lines, int lineIndex) {
-		var state = LexerState.NONE;
-		for (var i = 0; i < lineIndex; ++i)
-			state = JavaLineScanner.stateAfter(lines.get(i), state);
-		return state;
-	}
-
-	/**
 	 * Net paren depth (opens minus closes) over a masked line.
 	 */
 	@CheckReturnValue
@@ -103,9 +88,8 @@ class RedundantAnnotationSyntaxFixer implements CheckstyleFixer {
 		// Match every syntax pattern on a literal/comment/text-block-aware mask
 		// (positions preserved, output spliced from the original line) so a
 		// decoy @A() / (value = / value = inside a string or comment is never
-		// matched, and continuation lines inside a multi-line comment/text block
-		// are masked with the correct entry state.
-		final var entryState = entryStateAt(lines, lineIndex);
+		// matched.
+		final var entryState = SpanReformat.lexerStateAt(lines, lineIndex);
 		final var mask = JavaLineScanner.stripCommentsAndStrings(line, entryState);
 
 		// rule 1: single-line empty parens @A() / @A ( ) -> @A. A comment inside

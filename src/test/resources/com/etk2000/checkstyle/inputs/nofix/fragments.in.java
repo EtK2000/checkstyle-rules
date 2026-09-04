@@ -88,6 +88,21 @@ class B {
 }
 // === end ===
 
+// === case: fix_until_settled_one_pass_merge_stale_line ===
+class T {
+	private int volume = 5;
+	private final boolean debug = false;
+	private int retries = 0; // reset on connect
+}
+// === end ===
+
+// === case: fix_until_settled_one_pass_merge_suppressed_line ===
+class T {
+	private int count = 5;
+	private int total = 0;
+}
+// === end ===
+
 // === case: test_all_skipped_has_reasons ===
 class T {
 	void f(boolean a, boolean b) {
@@ -117,20 +132,6 @@ class T {
 // === case: test_clean_file_no_violations_no_reasons ===
 class T {
 	void method() {}
-}
-// === end ===
-
-// === case: test_field_consolidation_block_comment_before_field_name_skipped ===
-class T {
-	int /* note */ alpha;
-	int /* note */ beta;
-}
-// === end ===
-
-// === case: test_field_consolidation_block_comment_post_name_skipped ===
-class T {
-	int alpha;
-	int beta /* doc */;
 }
 // === end ===
 
@@ -231,6 +232,33 @@ class T {
 	int f(int a, int b) {
 		return a > b
 			? a : b;
+	}
+}
+// === end ===
+
+// === case: test_prefer_var_try_resource_warning_not_fixed ===
+import java.io.BufferedReader;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.StringReader;
+
+class T {
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void f() throws IOException {
+		try (Closeable c = openReader()) {
+			System.out.println(use(c));
+		}
 	}
 }
 // === end ===

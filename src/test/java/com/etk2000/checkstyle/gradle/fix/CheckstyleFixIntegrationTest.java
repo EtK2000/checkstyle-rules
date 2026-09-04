@@ -13,6 +13,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -24,15 +27,16 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
+@Isolated
 public class CheckstyleFixIntegrationTest {
 	record FixOutput(@Nonnull String content, @Nonnull ApplyFixesResult result) {}
 
 	record MultiPassOutput(
 			@Nonnull String content,
 			int pass1FixCount,
-			boolean pass1NeedsSecondPass,
+			boolean pass1NeedsAnotherPass,
 			int pass2FixCount,
-			boolean pass2NeedsSecondPass
+			boolean pass2NeedsAnotherPass
 	) {}
 
 	private int verifyCleanCallCount;
@@ -41,17 +45,17 @@ public class CheckstyleFixIntegrationTest {
 	Path tempDir;
 
 	@Nonnull
-	private FixOutput assertFullFix(@Nonnull String caseName, int expectedFixCount, boolean expectedNeedsSecondPass) throws Exception {
-		return assertFullFix(caseName, expectedFixCount, expectedNeedsSecondPass, String.valueOf(Integer.MAX_VALUE));
+	private FixOutput assertFullFix(@Nonnull String caseName, int expectedFixCount, boolean expectedNeedsAnotherPass) throws Exception {
+		return assertFullFix(caseName, expectedFixCount, expectedNeedsAnotherPass, String.valueOf(Integer.MAX_VALUE));
 	}
 
 	@Nonnull
-	private FixOutput assertFullFix(@Nonnull String caseName, int expectedFixCount, boolean expectedNeedsSecondPass, @Nonnull String minSdk) throws Exception {
-		return assertFullFixTopic("integration", caseName, expectedFixCount, expectedNeedsSecondPass, minSdk);
+	private FixOutput assertFullFix(@Nonnull String caseName, int expectedFixCount, boolean expectedNeedsAnotherPass, @Nonnull String minSdk) throws Exception {
+		return assertFullFixTopic("integration", caseName, expectedFixCount, expectedNeedsAnotherPass, minSdk);
 	}
 
 	@Nonnull
-	private FixOutput assertFullFixTopic(@Nonnull String topic, @Nonnull String caseName, int expectedFixCount, boolean expectedNeedsSecondPass, @Nonnull String minSdk) throws Exception {
+	private FixOutput assertFullFixTopic(@Nonnull String topic, @Nonnull String caseName, int expectedFixCount, boolean expectedNeedsAnotherPass, @Nonnull String minSdk) throws Exception {
 		final var fx = TestResources.loadCase(topic, caseName);
 		final var file = tempDir.resolve(caseName + ".java").toFile();
 		Files.writeString(file.toPath(), String.join("\n", fx.inputLines()));
@@ -59,7 +63,7 @@ public class CheckstyleFixIntegrationTest {
 		assertAll(
 				() -> assertEquals(String.join("\n", fx.fixedLines()), output.content(), "content"),
 				() -> assertEquals(expectedFixCount, output.result().fixCount(), "fixCount"),
-				() -> assertEquals(expectedNeedsSecondPass, output.result().needsSecondPass(), "needsSecondPass")
+				() -> assertEquals(expectedNeedsAnotherPass, output.result().needsAnotherPass(), "needsAnotherPass")
 		);
 		return output;
 	}
@@ -71,6 +75,18 @@ public class CheckstyleFixIntegrationTest {
 		Files.writeString(file.toPath(), input);
 		assertEquals(input, runFixAndGetResult(file, belowSdk).content());
 		assertEquals(String.join("\n", fx.fixedLines()), runFixAndGetResult(file, atSdk).content());
+	}
+
+	@Test
+	public void doExecuteNormalModeAnotherPassFlag() throws Exception {
+		final var file = tempDir.resolve("AnotherPass.java").toFile();
+		Files.writeString(file.toPath(), String.join("\n", TestResources.loadCase("integration", "do_execute_charset_for_name").inputLines()));
+
+		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+		final var result = CheckstyleFixAction.doExecute(config, false, List.of(file));
+		assertEquals(1, result[0]);
+		assertEquals(1, result[1]);
+		verifyFixedOutputClean(file, Files.readString(file.toPath()), String.valueOf(Integer.MAX_VALUE), false);
 	}
 
 	@Test
@@ -89,18 +105,6 @@ public class CheckstyleFixIntegrationTest {
 			System.setOut(origOut);
 		}
 		assertTrue(captured.toString().contains("Fixed"));
-		verifyFixedOutputClean(file, Files.readString(file.toPath()), String.valueOf(Integer.MAX_VALUE), false);
-	}
-
-	@Test
-	public void doExecuteNormalModeSecondPassFlag() throws Exception {
-		final var file = tempDir.resolve("SecondPass.java").toFile();
-		Files.writeString(file.toPath(), String.join("\n", TestResources.loadCase("integration", "do_execute_charset_for_name").inputLines()));
-
-		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
-		final var result = CheckstyleFixAction.doExecute(config, false, List.of(file));
-		assertEquals(1, result[0]);
-		assertEquals(1, result[1]);
 		verifyFixedOutputClean(file, Files.readString(file.toPath()), String.valueOf(Integer.MAX_VALUE), false);
 	}
 
@@ -153,7 +157,7 @@ public class CheckstyleFixIntegrationTest {
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 		final var content = String.join("\n", lines);
 		if (result.fixCount() > 0)
-			verifyFixedOutputClean(file, content, minSdk, result.needsSecondPass());
+			verifyFixedOutputClean(file, content, minSdk, result.needsAnotherPass());
 		return new FixOutput(content, result);
 	}
 
@@ -167,17 +171,17 @@ public class CheckstyleFixIntegrationTest {
 		final var config = CheckstyleFixAction.createCheckerConfig(minSdk);
 		final var pass1Result = CheckstyleFixAction.doExecute(config, false, List.of(file));
 		final var pass1FixCount = pass1Result[1];
-		final var pass1NeedsSecondPass = pass1Result[0] != 0;
+		final var pass1NeedsAnotherPass = pass1Result[0] != 0;
 		var pass2FixCount = 0;
-		var pass2NeedsSecondPass = false;
-		if (pass1NeedsSecondPass) {
+		var pass2NeedsAnotherPass = false;
+		if (pass1NeedsAnotherPass) {
 			final var pass2Result = CheckstyleFixAction.doExecute(config, false, List.of(file));
 			pass2FixCount = pass2Result[1];
-			pass2NeedsSecondPass = pass2Result[0] != 0;
+			pass2NeedsAnotherPass = pass2Result[0] != 0;
 		}
 		final var content = Files.readString(file.toPath());
-		verifyFixedOutputClean(file, content, minSdk, pass2NeedsSecondPass);
-		return new MultiPassOutput(content, pass1FixCount, pass1NeedsSecondPass, pass2FixCount, pass2NeedsSecondPass);
+		verifyFixedOutputClean(file, content, minSdk, pass2NeedsAnotherPass);
+		return new MultiPassOutput(content, pass1FixCount, pass1NeedsAnotherPass, pass2FixCount, pass2NeedsAnotherPass);
 	}
 
 	@BeforeEach
@@ -197,11 +201,59 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
-	public void testFieldConsolidationWrappingFourLongFields() throws Exception {
-		final var fx = TestResources.loadCase("integration", "field_consolidation_wrapping_four_long_fields");
-		final var file = tempDir.resolve("FieldConsWrap4.java").toFile();
+	public void testExplicitInitializationStaleEventFixedOnSecondPass() throws Exception {
+		final var fx = TestResources.loadCase("integration", "explicit_initialization_stale_event_inside_field_sorting_span");
+		final var file = tempDir.resolve("StaleEvent.java").toFile();
 		Files.writeString(file.toPath(), String.join("\n", fx.inputLines()));
-		assertEquals(String.join("\n", fx.fixedLines()), runFixMultiPass(file).content());
+		final var output = runFixMultiPass(file);
+		assertTrue(output.pass1NeedsAnotherPass());
+		assertEquals(1, output.pass2FixCount());
+		assertEquals(String.join("\n", fx.fixedLines()), output.content());
+	}
+
+	@Test
+	public void testFieldConsolidationToolDirectiveSkipReported() throws Exception {
+		final var fx = TestResources.loadCase("integration", "field_consolidation_tool_directive_skipped");
+		final var file = tempDir.resolve("ToolDirective.java").toFile();
+		Files.writeString(file.toPath(), String.join("\n", fx.inputLines()));
+		final var output = runFixAndGetResult(file, String.valueOf(Integer.MAX_VALUE));
+		assertEquals(String.join("\n", fx.inputLines()), output.content());
+		assertEquals(0, output.result().fixCount());
+		assertEquals(
+				List.of("cannot consolidate: a comment that has to move above the merged declaration is a tool directive acting on its own line"),
+				output.result().skippedReasons().get("FieldConsolidationCheck")
+		);
+		verifyFixedOutputClean(file, output.content(), String.valueOf(Integer.MAX_VALUE), false);
+	}
+
+	@CsvSource({
+			"explicit_initialization_stale_event_inside_field_consolidation_span, 3",
+			"field_consolidation_explicit_init_session, 4",
+			"field_consolidation_explicit_init_shrunk_line, 3",
+			"field_consolidation_explicit_init_shrunk_line_three_fields, 4",
+			"field_consolidation_explicit_init_stale_same_line, 4",
+			"field_consolidation_explicit_init_shortens_long_initializer, 3",
+			"field_consolidation_explicit_init_stale_same_line_wrapped, 2",
+			"field_consolidation_interleaved_three_keys_fold, 2",
+			"field_consolidation_prefer_import_shortens_long_initializer, 3",
+			"field_consolidation_suppressed_field_sorting_source_order, 2",
+			"field_consolidation_suppressed_outer_nested_sorted, 3",
+			"field_consolidation_wrapping_four_long_fields, 2",
+			"field_sorting_move_exposes_field_consolidation_pair, 4",
+			"no_unnecessary_this_six_reads_on_one_line, 2",
+			"prefer_import_inside_field_consolidation_span_keeps_import, 3",
+			"unused_import_held_back_by_deferral_deleted_next_pass, 3"
+	})
+	@ParameterizedTest
+	void testFixUntilSettled(String caseName, int expectedPasses) throws Exception {
+		final var fx = TestResources.loadCase("integration", caseName);
+		final var file = tempDir.resolve(caseName + ".java").toFile();
+		Files.writeString(file.toPath(), String.join("\n", fx.inputLines()));
+		final var config = CheckstyleFixAction.createCheckerConfig(String.valueOf(Integer.MAX_VALUE));
+		assertEquals(expectedPasses, CheckstyleFixAction.fixUntilSettled(config, List.of(file), CheckstyleFixAction.MAX_FIX_PASSES));
+		final var content = Files.readString(file.toPath());
+		assertEquals(String.join("\n", fx.fixedLines()), content);
+		verifyFixedOutputClean(file, content, String.valueOf(Integer.MAX_VALUE), false);
 	}
 
 	@Test
@@ -226,11 +278,8 @@ public class CheckstyleFixIntegrationTest {
 
 	@Test
 	public void testMixedFixAndSkipFromSameCheck() throws Exception {
-		final var output = assertFullFix("mixed_fix_and_skip_from_same_check", 2, false);
-		assertTrue(
-				output.result().skippedReasons().getOrDefault("FieldSortingCheck", List.of())
-						.contains(SkipMessages.FIX_NOT_FIXABLE)
-		);
+		final var output = assertFullFix("mixed_fix_and_skip_from_same_check", 2, true);
+		assertEquals(List.of(SkipMessages.FIX_SUPPRESSED), output.result().skippedReasons().get("FieldSortingCheck"));
 	}
 
 	@Test
@@ -241,14 +290,6 @@ public class CheckstyleFixIntegrationTest {
 				SkipMessages.CONTROL_FLOW_SKIP_MULTILINE_HEADER,
 				output.result().skippedReasons().get("ControlFlowBracesCheck").getFirst()
 		);
-	}
-
-	@Test
-	public void testPreferExactAssertionHelperQualifierUnchanged() throws Exception {
-		final var input = String.join("\n", TestResources.loadCase("integration", "prefer_exact_assertion_helper_qualifier_unchanged").inputLines());
-		final var file = tempDir.resolve("ExactAssertHelperQualifier.java").toFile();
-		Files.writeString(file.toPath(), input);
-		assertEquals(input, runFixMultiPass(file).content());
 	}
 
 	@Test
@@ -271,13 +312,13 @@ public class CheckstyleFixIntegrationTest {
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
 		assertEquals(0, result.fixCount());
-		assertFalse(result.needsSecondPass());
+		assertFalse(result.needsAnotherPass());
 		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), false);
 	}
 
 	@Test
 	public void testRedundantImportContiguousSuppressesDuplicate() throws Exception {
-		final var output = assertFullFix("redundant_import_contiguous_suppresses_duplicate", 1, false);
+		final var output = assertFullFix("redundant_import_contiguous_suppresses_duplicate", 1, true);
 		assertFalse(output.result().skippedReasons().isEmpty());
 		assertTrue(
 				output.result().skippedReasons().values().stream()
@@ -326,22 +367,6 @@ public class CheckstyleFixIntegrationTest {
 	}
 
 	@Test
-	public void testVerifyCleanAcceptsCleanOutput() throws Exception {
-		final var content = String.join("\n", TestResources.loadCase("integration", "verify_clean_accepts_clean_output").inputLines());
-		final var file = tempDir.resolve("VerClean.java").toFile();
-		Files.writeString(file.toPath(), content);
-		verifyFixedOutputClean(file, content, String.valueOf(Integer.MAX_VALUE), false);
-	}
-
-	@Test
-	public void testVerifyCleanAcceptsUnfixableViolations() throws Exception {
-		final var content = String.join("\n", TestResources.loadCase("integration", "verify_clean_accepts_unfixable_violations").inputLines());
-		final var file = tempDir.resolve("VerUnfixable.java").toFile();
-		Files.writeString(file.toPath(), content);
-		verifyFixedOutputClean(file, content, String.valueOf(Integer.MAX_VALUE), false);
-	}
-
-	@Test
 	public void testVerifyCleanHandlesMultiPassStabilization() throws Exception {
 		final var content = String.join("\n", TestResources.loadCase("integration", "verify_clean_handles_multi_pass_stabilization").inputLines());
 		final var file = tempDir.resolve("VerMulti.java").toFile();
@@ -349,19 +374,19 @@ public class CheckstyleFixIntegrationTest {
 		final var violations = runChecks(file);
 		final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 		final var result = CheckstyleFixAction.applyFixes(lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS);
-		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), result.needsSecondPass());
+		verifyFixedOutputClean(file, String.join("\n", lines), String.valueOf(Integer.MAX_VALUE), result.needsAnotherPass());
 	}
 
-	private void verifyFixedOutputClean(@Nonnull File file, @Nonnull String content, @Nonnull String minSdk, boolean needsSecondPass) throws Exception {
+	private void verifyFixedOutputClean(@Nonnull File file, @Nonnull String content, @Nonnull String minSdk, boolean needsAnotherPass) throws Exception {
 		++verifyCleanCallCount;
 		Files.writeString(file.toPath(), content);
-		if (needsSecondPass) {
+		if (needsAnotherPass) {
 			final var violations = runChecks(file, minSdk);
 			final var lines = new ArrayList<>(Files.readAllLines(file.toPath()));
 			final var secondPassResult = CheckstyleFixAction.applyFixes(
 					lines, violations, CheckstyleFixAction.FIXERS, CheckstyleFixAction.MODULE_ID_FIXERS
 			);
-			assertFalse(secondPassResult.needsSecondPass(), "Second pass should not require a third pass");
+			assertFalse(secondPassResult.needsAnotherPass(), "Second pass should not require a third pass");
 			Files.writeString(file.toPath(), String.join("\n", lines));
 		}
 		final var finalViolations = runChecks(file, minSdk);

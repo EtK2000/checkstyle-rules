@@ -177,7 +177,7 @@ class PreferLiteralSuffixFixer implements CheckstyleFixer {
 
 		final var castClose = line.indexOf(')', column + 1);
 		if (castClose < 0)
-			return new SkipResult("multi-line-cast");
+			return new SkipResult(SkipMessages.PREFER_LITERAL_SUFFIX_SKIP_MULTILINE);
 
 		final var castType = line.substring(column + 1, castClose).trim();
 		final var suffix = switch (castType) {
@@ -193,10 +193,10 @@ class PreferLiteralSuffixFixer implements CheckstyleFixer {
 		while (subjectStart < line.length() && Character.isWhitespace(line.charAt(subjectStart)))
 			++subjectStart;
 		if (subjectStart >= line.length())
-			return new SkipResult("malformed-cast-no-expression");
+			return new SkipResult(SkipMessages.PREFER_LITERAL_SUFFIX_SKIP_MALFORMED);
 		final var subjectEnd = findIdentifierEnd(line, subjectStart);
 		if (subjectEnd == subjectStart)
-			return new SkipResult("non-identifier-cast-subject");
+			return new SkipResult(SkipMessages.PREFER_LITERAL_SUFFIX_SKIP_NON_IDENTIFIER_SUBJECT);
 
 		final var forwardFix = tryForwardLiteral(line, lineIndex, column, subjectStart, subjectEnd, suffix);
 		if (forwardFix != null)
@@ -206,9 +206,6 @@ class PreferLiteralSuffixFixer implements CheckstyleFixer {
 		if (backwardFix != null)
 			return backwardFix;
 
-		// Subject parses as an identifier prefix but is followed by a non-operator char
-		// (e.g. '.', '(', '['). The check fired on a compound subject the fixer can't
-		// disambiguate without paren/bracket-balanced parsing.
-		return new SkipResult("complex-cast-subject");
+		return new SkipResult(SkipMessages.PREFER_LITERAL_SUFFIX_SKIP_COMPLEX_SUBJECT);
 	}
 }

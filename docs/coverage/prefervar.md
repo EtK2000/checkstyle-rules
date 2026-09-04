@@ -7,6 +7,13 @@ single-line switch initializer receives them, since any arm may supply the value
 explicit array initializer to the implicit form and replaces `<Object>` with `<>` on a `var`
 declaration.
 
+A primitive declaration whose initializer the check cannot type is reported as a warning
+(`should use 'var'`) and never fixed, since `var` may bind a narrower type (`long total = count()`
+with an `int` method). Two shapes are typed and converted: a `boolean` initialized by a comparison,
+`!`, `&&`, `||` or `instanceof` (`boolean b = x == y`), whose result is always a `boolean`, and a
+primitive array (`int[][] m = new int[3][3]`, `byte[] all = in.readAllBytes()`), which no other array
+type converts to.
+
 The check refuses wherever `var` would bind a type other than the one written. Those refusals are
 grouped below by what drives them.
 
@@ -31,8 +38,9 @@ sharing the simple name (`Map<String, Types.Number>`) converts while `Map<String
 
 ## Conditional initializers
 
-Converted only when every arm is a `new` that can take the declared arguments, since under `var` the
-arms no longer share the declaration as a target type.
+A declaration with type arguments is converted only when every arm is a `new` that can take them,
+since under `var` the arms no longer share the declaration as a target type. One without type
+arguments is not held to this (`Base item = flag ? makeDerived() : new Derived()` converts).
 
 | Pattern | Reason |
 | --- | --- |
@@ -51,22 +59,21 @@ arms no longer share the declaration as a target type.
 
 ## Narrowing and later use
 
-A non-`final` local whose declared type names something other than the class its initializer binds is
+A local whose declared type names something other than the class its initializer binds is
 reported as a warning (`should use 'var'`) and never fixed, whenever converting it would change what
-later code means. The bound class is read from the initializer rather than from a `new` keyword, so a
-same-file factory (`List<String> l = makeArrayList()`) and a conditional whose arms all construct one
-class are covered too. The classpath is deliberately not consulted for a method's return type, since
+later code means. A same-file factory (`List<String> l = makeArrayList()`) and a conditional whose
+arms all construct one class are covered too. The classpath is deliberately not consulted for a method's return type, since
 reflection reports the erasure and `List<String>.get` would read as `Object`.
 
 | Pattern | Reason |
 | --- | --- |
 | Reassigned to anything but a `new` of the same class | Under `var` the variable takes the bound class, so `List<String> l = new ArrayList<>()` followed by `l = new LinkedList<>()` stops compiling. Reassigning the very same class still converts, as does `l = null` |
-| Reassigned where the two spellings resolve differently (`new api.Cache<>()` then `new impl.Cache<>()`) | Compared fully qualified, so a matching simple name is not mistaken for the same class. When neither name resolves the declaration stays a warning |
+| Reassigned where the two spellings resolve differently (`new api.Cache<>()` then `new impl.Cache<>()`) | Compared fully qualified, so a matching simple name is not mistaken for the same class. When either name does not resolve the declaration stays a warning, unless both name the same class declared in this file |
 | Passed to an overload set that discriminates on the narrowing (both `take(List)` and `take(ArrayList)` exist) | The call binds to the most specific applicable parameter, so under `var` it would silently select the other overload. Constructor overloads are checked the same way, against the constructors of the class the `new` names |
 
-The reassignment scan starts at the declarator, so a same-named field assigned above it is not
-mistaken for a reassignment, and it skips nested and anonymous class bodies, whose same-named members
-shadow the local rather than using it. The overload test treats a parameter as discriminating only
+A same-named field assigned above the declarator is not mistaken for a reassignment, and neither is
+a same-named member of a nested or anonymous class body, which shadows the local rather than using
+it. The overload test treats a parameter as discriminating only
 when it accepts the constructed class but not the declared one, so an overload set that cannot tell
 them apart (`take(List)` beside `take(String)`, or `println(Object)`) still converts, as does a
 same-named overload of a different arity. Only a bare or `this`/`super`-qualified call is matched,
@@ -86,7 +93,8 @@ element's array. A call none of those resolve stays as written.
 
 ## Try-with-resources
 
-Refused on all the same grounds as a local, including a declared supertype of what it constructs
+Refused on the same initializer grounds as a local (the first two sections, not the narrowing or
+unresolvable-call ones), including a declared supertype of what it constructs
 (`try (InputStream in = new FileInputStream(f))` stays as written): the body is written against the
 declared type, and rebinding to the concrete one can reselect an overload or make an enclosing
 `catch` unreachable when the subtype's `close()` throws less.
@@ -98,15 +106,16 @@ declared type, and rebinding to the concrete one can reselect an overload or mak
 | Column out of range, or resolving to a field or a bare assignment | A sibling fixer shifted the line earlier in the pass, so the reported column no longer names a convertible declaration, and `var` is illegal in both shapes |
 | Column landing mid-identifier, on a non-identifier, inside a string or char literal, or on a name followed by `==` | Replacing from that offset would leave the token's head behind, splice `var` into a literal, or rewrite a comparison |
 | C-style array declarator (`String x[] = new String[0];`) | `var x[]` is not legal Java. In the full pipeline `ArrayTypeStyleFixer` normalises the declaration first, after which it converts |
-| Explicit array initializer the array path cannot resolve on the reported line (brace on a later line, or a comment between the `=` and the `new`) | Skipped rather than falling through to the type-to-`var` rewrite, which would leave the violation standing |
+| Explicit array initializer the array path cannot resolve on the reported line (brace on a later line, or a comment between the `=` and the `new` or between the `[]` and the `{`) | Skipped rather than falling through to the type-to-`var` rewrite, which would leave the violation standing |
 | Explicit array initializer whose declared type cannot be read at the reported column | The `{...}` shorthand is legal only where the declared type is itself an array, so the `new Type[]` is kept rather than emitting `var x = {1}` |
 | Declared type arguments that wrap onto a later line (`Map<String,` / `Integer> m = ...`) | The `<...>` never closes on the reported line, so consuming to end-of-line would delete the rest of the declaration |
 | Declared type arguments whose diamond sits on a continuation line, or whose only diamond is nested in a call argument | Only a diamond on the reported line can receive them; dropping them binds the constructor to `Object`, and moving them into a nested call would retype that call |
 | Declared type arguments on a declaration whose buffer no longer parses | The target cannot be verified: splicing into a chain receiver's diamond retypes that receiver, and dropping them rebinds the variable |
 | Multi-line block comment between the type and the name, or between the name and its `=` | The comment does not close on the reported line, so the declaration shape cannot be confirmed |
-| Multi-variable declaration (`int a, b;`) | One `var` cannot serve several declarators |
-| Declaration already uses `var` | Nothing to convert; the advisory generic-type-info warning has no mechanical fix |
+| Multi-variable declaration (`int a = 1, b = 2;`, which the check reports only as a warning) | One `var` cannot serve several declarators |
+| A required conversion of a primitive declaration whose initializer no longer pins its type (`final long y = x;` with `int x`, once a sibling fix removed the `(long)` the check saw) | `var` would make `y` an `int`, so the explicit type stays. On the next run the declaration is reported as a suggestion instead |
+| Declaration already uses `var` | Nothing to convert: the `<Object>` diamond or explicit-array rewrite did not apply (`var x = factory<Object>()` has no `new`), and the advisory generic-type-info warning never reaches the fixer |
 | Non-`Object` generic type arguments (`<String>`) | The diamond rewrite only collapses `<Object>` |
-| Open-paren join: trailing content on the `(` line, a `(` that is only a comment's own trailing character, or non-annotation content between the `(` and the declaration | Joining would swallow the clause into a comment or move the declaration inside one |
+| Open-paren join: trailing content on the `(` line, a `(` that is only a comment's own trailing character, a `(` line that starts with an annotation, or non-annotation content between the `(` and the declaration | Joining would swallow the clause into a comment or move the declaration inside one |
 
 Part of [auto-fix coverage](../auto-fix-coverage.md).

@@ -1,7 +1,7 @@
 // === case: all_fixed_no_skip_reasons ===
 class T {
 	long x = 3000000000L;
-	long y = 4000000000L;
+	Long y = 4000000000L;
 }
 // === end ===
 
@@ -585,6 +585,12 @@ class T {
 }
 // === end ===
 
+// === case: do_execute_suppressed_upper_ell ===
+class T {
+	long x = 3000000000L;
+}
+// === end ===
+
 // === case: do_while_assign_chained_rhs ===
 class T {
 	void f(java.util.List<String> list, int x) {
@@ -735,7 +741,7 @@ class T {
 class T {
 	int x;
 
-	int y;
+	long y;
 }
 // === end ===
 
@@ -743,25 +749,14 @@ class T {
 class T {
 	int x;
 
-	int y;
-}
-// === end ===
-
-// === case: enum_nested_two_tab_indent ===
-class Outer {
-	static class Inner {
-		enum Nested {
-			ALPHA,
-			ZETA
-		}
-	}
+	long y;
 }
 // === end ===
 
 // === case: enum_trailing_comma ===
 enum Color {
-	GREEN,
-	RED
+	RED,
+	GREEN
 }
 // === end ===
 
@@ -844,6 +839,20 @@ class T {
 }
 // === end ===
 
+// === case: explicit_initialization_stale_event_inside_field_consolidation_span ===
+class T {
+	int alpha, zeta;
+}
+// === end ===
+
+// === case: explicit_initialization_stale_event_inside_field_sorting_span ===
+class T {
+	private final int alpha = 0;
+
+	private int zeta;
+}
+// === end ===
+
 // === case: explicit_initialization_tab_comment ===
 class T {
 	int x; // note
@@ -879,6 +888,19 @@ class T {
 }
 // === end ===
 
+// === case: field_consolidation_block_comment_before_field_name ===
+class T {
+	int /* note */ alpha, beta;
+}
+// === end ===
+
+// === case: field_consolidation_block_comment_post_name ===
+class T {
+	// doc
+	int alpha, beta;
+}
+// === end ===
+
 // === case: field_consolidation_both_c_style_array ===
 class T {
 	int[] alpha, beta;
@@ -904,9 +926,90 @@ class T {
 }
 // === end ===
 
+// === case: field_consolidation_collapse_later_split_declarator ===
+class T {
+	private int retries, timeout = 30;
+}
+// === end ===
+
+// === case: field_consolidation_collapse_split_declarator ===
+class T {
+	private int retries = 3, timeout;
+	private String label = "ok".trim(), name;
+}
+// === end ===
+
 // === case: field_consolidation_comma_merge ===
 class T {
 	int alpha, beta, gamma;
+}
+// === end ===
+
+// === case: field_consolidation_explicit_init_boxed_boolean ===
+class T {
+	// lazily
+	private Boolean cached = false, dirty;
+}
+// === end ===
+
+// === case: field_consolidation_explicit_init_boxed_comment_moved ===
+class T {
+	// set on connect
+	private Integer retries = 0, timeout;
+}
+// === end ===
+
+// === case: field_consolidation_explicit_init_boxed_wrapped ===
+class T {
+	private Integer connectionRetryCountForTheSessionManagerOfThisClient = 0;
+	private Integer connectionTimeoutMillisecondsForTheSessionManagerOfThisClient;
+}
+// === end ===
+
+// === case: field_consolidation_explicit_init_session ===
+class T {
+	private int retries;
+	// login name
+	private String token, user;
+}
+// === end ===
+
+// === case: field_consolidation_explicit_init_shortens_long_initializer ===
+class T {
+	private Integer connectionRetryDelayMillisecondsForTheSessionManagerOfThisClient,
+			connectionTimeoutMillisecondsForTheSessionManagerOfThisClient, retries = 0;
+}
+// === end ===
+
+// === case: field_consolidation_explicit_init_shrunk_line ===
+class T {
+	private int count = 5, total;
+}
+// === end ===
+
+// === case: field_consolidation_explicit_init_shrunk_line_three_fields ===
+class T {
+	private final boolean debug = false;
+
+	private int retries, volume = 5;
+}
+// === end ===
+
+// === case: field_consolidation_explicit_init_stale_same_line ===
+class T {
+	private final boolean debug = false;
+
+	// reset on connect
+	private int retries, volume = 5;
+}
+// === end ===
+
+// === case: field_consolidation_explicit_init_stale_same_line_wrapped ===
+class T {
+	private final boolean debug = false;
+
+	private int retryCountBeforeGivingUpOnTheRemotePlaybackServer;
+	private int volumeLevelAppliedToEveryNewlyCreatedPlaybackSession = 5;
 }
 // === end ===
 
@@ -924,9 +1027,42 @@ class T {
 }
 // === end ===
 
+// === case: field_consolidation_interleaved_three_keys_fold ===
+class T {
+	int a, c;
+	static int s, t;
+	private int b, d;
+}
+// === end ===
+
+// === case: field_consolidation_long_initializer_between_merges ===
+class T {
+	private int alpha, gamma;
+	private int beta = 1_000_000 + 2_000_000 + 3_000_000;
+	private String first, third;
+	private String second = """
+			text
+			""";
+}
+// === end ===
+
 // === case: field_consolidation_multi_var_prev ===
 class T {
 	int a, b, c;
+}
+// === end ===
+
+// === case: field_consolidation_names_out_of_order ===
+class T {
+	int alpha, zeta;
+}
+// === end ===
+
+// === case: field_consolidation_prefer_import_shortens_long_initializer ===
+import java.util.ArrayList;
+
+class T {
+	private Object ab = new ArrayList<String>(), cd;
 }
 // === end ===
 
@@ -948,9 +1084,43 @@ class T {
 }
 // === end ===
 
+// === case: field_consolidation_supplementary_character_and_tab_ahead ===
+class T {
+	// 𝑥𝑥𝑥
+	int alpha, beta;
+}
+// === end ===
+
+// === case: field_consolidation_suppressed_field_sorting_source_order ===
+@SuppressWarnings("FieldSorting")
+class T {
+	private String zeta, alpha;
+	private int count;
+}
+// === end ===
+
+// === case: field_consolidation_suppressed_outer_nested_sorted ===
+@SuppressWarnings("FieldSorting")
+class T {
+	private int outer;
+
+	class Inner {
+		private int count;
+		private String alpha, zeta;
+	}
+}
+// === end ===
+
 // === case: field_consolidation_three_fields ===
 class T {
 	int a, b, c;
+}
+// === end ===
+
+// === case: field_consolidation_wrap_short_initializers ===
+class T {
+	private int v01 = 1_000_000_001, v02 = 1_000_000_002, v03 = 1_000_000_003, v04 = 1_000_000_004, v05 = 1_000_000_005,
+			v06 = 1_000_000_006, v07 = 1_000_000_007;
 }
 // === end ===
 
@@ -1057,6 +1227,103 @@ class T {
 }
 // === end ===
 
+// === case: field_sorting_anon_class_after_plain ===
+class T {
+	final String label = "w";
+	final Thread worker = new Thread() {
+		@Override
+		public void run() {
+			System.out.println("working");
+		}
+	};
+}
+// === end ===
+
+// === case: field_sorting_anon_class_body_forward_reference ===
+class T {
+	final int count = 0;
+	final Thread alpha = new Thread() {
+		@Override
+		public void run() {
+			beta.start();
+		}
+	};
+	final Thread beta = new Thread() {
+		@Override
+		public void run() {
+			System.out.println("beta");
+		}
+	};
+}
+// === end ===
+
+// === case: field_sorting_anon_class_body_reads_nonfinal ===
+class T {
+	final String name = "x";
+	final Thread task = new Thread() {
+		@Override
+		public void run() {
+			++counter;
+		}
+	};
+
+	int counter;
+}
+// === end ===
+
+// === case: field_sorting_anon_class_construction_time_reference ===
+class T {
+	final String label = "w";
+	final Object holder = new Object() {
+		final String copy = label;
+	};
+}
+// === end ===
+
+// === case: field_sorting_anon_class_free_plain_after_reader ===
+class T {
+	final String name = "n";
+	final Thread worker = new Thread() {
+	};
+	final String label = worker.getName();
+}
+// === end ===
+
+// === case: field_sorting_anon_class_interleaved_static ===
+class T {
+	final String label = "w";
+	static int shared;
+	final Thread worker = new Thread() {
+	};
+}
+// === end ===
+
+// === case: field_sorting_anon_class_plain_reads_anon ===
+class T {
+	final String label = String.valueOf(worker);
+	final Thread worker = new Thread() {
+	};
+}
+// === end ===
+
+// === case: field_sorting_anon_class_reader_mixed_other_group ===
+class T {
+	static final Object ANON = new Object() {
+	};
+	static final int P = 1, Q = ANON.hashCode();
+
+	final String alpha = "a", zebra = "z";
+}
+// === end ===
+
+// === case: field_sorting_anon_class_static ===
+class T {
+	static final String LABEL = "w";
+	static final Thread WORKER = new Thread() {
+	};
+}
+// === end ===
+
 // === case: field_sorting_chunk_order ===
 class T {
 	final int finalWithValue = 1;
@@ -1069,26 +1336,20 @@ class T {
 }
 // === end ===
 
+// === case: field_sorting_dependency_non_adjacent ===
+class T {
+	final String label = "w";
+	final Object holder = new Object() {
+		final String copy = label;
+	};
+	final String alpha = String.valueOf(holder);
+}
+// === end ===
+
 // === case: field_sorting_dependency_order ===
 class T {
 	static final int A = 0;
 	static final int B = A + 1;
-}
-// === end ===
-
-// === case: field_sorting_enum_inner_class ===
-class T {
-	enum E {
-		ALPHA,
-		BETA
-	}
-}
-// === end ===
-
-// === case: field_sorting_enum_reorder ===
-enum T {
-	ALPHA,
-	BETA
 }
 // === end ===
 
@@ -1101,61 +1362,60 @@ enum T {
 
 // === case: field_sorting_enum_same_line_and_reorder ===
 enum T {
-	ALPHA,
-	ZEBRA
+	ZEBRA,
+	ALPHA
 }
 // === end ===
 
-// === case: field_sorting_enum_semicolon ===
-enum T {
-	ALPHA,
-	BETA;
-	int x;
+// === case: field_sorting_init_forward_read_other_group_still_sorts ===
+class T {
+	private static int alpha, zeta;
+	private int total = this.count * 2;
+	private int count = 3;
 }
 // === end ===
 
-// === case: field_sorting_enum_with_annotations ===
-enum T {
-	ALPHA,
-	@Deprecated
-	BETA
-}
-// === end ===
+// === case: field_sorting_initializers_running_code_keep_their_order ===
+class T {
+	static final class Ids {
+		private static int last;
 
-// === case: field_sorting_enum_with_args ===
-enum T {
-	APPLE("g"),
-	CHERRY("r")
-}
-// === end ===
-
-// === case: field_sorting_enum_with_bodies ===
-enum T {
-	ADD {
-		int v() {
-			return 0;
+		static int next() {
+			return ++last;
 		}
-	},
-	SUB {
-		int v() {
-			return 1;
-		}
-	};
-	abstract int v();
+	}
+
+	private final int beta = 2, zeta = Ids.next(), alpha = Ids.next();
+	private int count;
 }
 // === end ===
 
-// === case: field_sorting_enum_with_trailing_comments ===
-enum T {
-	ALPHA, // a
-	BETA // b
+// === case: field_sorting_long_initializer_reorders_without_merge ===
+class T {
+	private int alpha, mid;
+	private int zeta = 1_000_000 + 2_000_000 + 3_000_000;
+}
+// === end ===
+
+// === case: field_sorting_move_exposes_field_consolidation_pair ===
+class T {
+	// separator
+	int alpha, beta, gamma;
 }
 // === end ===
 
 // === case: field_sorting_name_order ===
 class T {
-	final int a = 0;
-	final int z = 1;
+	final int a = 0, z = 1;
+}
+// === end ===
+
+// === case: field_sorting_rebuild_keeps_constants_apart ===
+class T {
+	static final int ALPHA = 1;
+	static final int ZETA = 2;
+
+	static int alpha, gamma;
 }
 // === end ===
 
@@ -1225,9 +1485,7 @@ class T {
 
 // === case: fix_order_bottom_to_top ===
 class T {
-	int[] a = {1};
-	int[] b = {2};
-	int[] c = {3};
+	int[] a = {1}, b = {2}, c = {3};
 }
 // === end ===
 
@@ -1235,6 +1493,28 @@ class T {
 class T {
 	void f() {
 		final int x, y;
+	}
+}
+// === end ===
+
+// === case: insert_missing_import_anchor_import_closes_block_comment ===
+/* disabled for now
+*/ import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+class T {
+	void f(Object o, boolean flag) {
+		assertTrue(flag);
+		assertInstanceOf(String.class, o);
+	}
+}
+// === end ===
+
+// === case: insert_missing_import_jls_whitespace_not_duplicated ===
+import static org.junit.jupiter.api.Assertions . assertInstanceOf ;
+class T {
+	void f(Object o) {
+		assertInstanceOf(Integer.class, o);
+		assertInstanceOf(String.class, o);
 	}
 }
 // === end ===
@@ -1437,7 +1717,8 @@ class T {
 class T {
 	enum E {
 		A,
-		B
+		B,
+		C
 	}
 	int a, b;
 }
@@ -1619,6 +1900,19 @@ class T {
 }
 // === end ===
 
+// === case: no_unnecessary_this_six_reads_on_one_line ===
+import java.util.Objects;
+
+class T {
+	int a, b, c, d, e, f;
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(a, b, c, d, e, f);
+	}
+}
+// === end ===
+
 // === case: postfix_decrement ===
 class T {
 	void run() {
@@ -1696,6 +1990,26 @@ import java.util.Arrays;
 class T {
 	void f(int[] arr, int[] a, int[] b) {
 		Arrays.fill(arr, -a[b[0]]);
+	}
+}
+// === end ===
+
+// === case: prefer_bulk_operation_collections_add_all_object_array ===
+import java.util.Collections;
+import java.util.List;
+class T {
+	void f(List<String> target, String[] source) {
+		Collections.addAll(target, source);
+	}
+}
+// === end ===
+
+// === case: prefer_bulk_operation_collections_add_all_varargs ===
+import java.util.Collections;
+import java.util.List;
+class T {
+	void f(List<String> target, String... source) {
+		Collections.addAll(target, source);
 	}
 }
 // === end ===
@@ -1837,14 +2151,14 @@ class T {
 // === case: prefer_collection_interface_multi_same_line ===
 import java.util.List;
 import java.util.Map;
-class T {
+final class T {
 	void f(List<String> a, Map<String, Integer> b) {}
 }
 // === end ===
 
 // === case: prefer_collection_interface_param ===
 import java.util.Set;
-class T {
+final class T {
 	void f(Set<String> s) {}
 }
 // === end ===
@@ -1853,7 +2167,7 @@ class T {
 import java.util.ArrayList;
 import java.util.List;
 class T {
-	List<String> f() {
+	private List<String> f() {
 		return new ArrayList<>();
 	}
 }
@@ -1863,7 +2177,7 @@ class T {
 import java.util.ArrayList;
 import java.util.List;
 class T {
-	List<String> f() {
+	private List<String> f() {
 		return new ArrayList<>();
 	}
 }
@@ -1895,10 +2209,48 @@ class T {
 }
 // === end ===
 
+// === case: prefer_direct_boolean_return_code_before_if ===
+class T {
+	boolean set;
+
+	boolean f(boolean flag) {
+		set = flag; return flag;
+	}
+}
+// === end ===
+
 // === case: prefer_direct_boolean_return_combine_and ===
 class T {
 	boolean f(boolean flag, String s) {
 		return flag && s.isEmpty();
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_combine_or ===
+class T {
+	boolean f(boolean flag, String s) {
+		return flag || s.isEmpty();
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_comment_relocation ===
+class T {
+	boolean f(boolean flag) {
+		return flag; // why then otherwise
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_deep_tab_indent ===
+class T {
+	static class Inner {
+		boolean f(boolean flag, boolean other) {
+			if (other)
+				return flag;
+			return other;
+		}
 	}
 }
 // === end ===
@@ -1928,6 +2280,22 @@ class T {
 }
 // === end ===
 
+// === case: prefer_direct_boolean_return_mixed_tabs_and_spaces ===
+class T {
+	boolean f(boolean flag) {
+	    return flag;
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_nested_collapse_two_passes ===
+class T {
+	boolean f(boolean a, boolean b) {
+		return a && b;
+	}
+}
+// === end ===
+
 // === case: prefer_direct_boolean_return_next_line_with_else ===
 class T {
 	boolean f(boolean flag) {
@@ -1948,6 +2316,168 @@ class T {
 class T {
 	boolean f(boolean flag) {
 		return true;
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_span_ends_mid_line ===
+class T {
+	boolean f(boolean flag) {
+		return flag; }
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_two_statements_with_inline_else ===
+class T {
+	boolean f(boolean a) {
+		return a;
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_unbraced_parent_comment ===
+class T {
+	boolean f(boolean a, String s) {
+		if (a)
+			{
+				if (s.isEmpty())
+					s.isBlank();
+				return true;
+			} // why
+		return false;
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_unbraced_parent_cuddled_while ===
+class T {
+	boolean f(boolean a, String s) {
+		do
+			{
+				if (s.isEmpty())
+					s.isBlank();
+				return true;
+			} while (a);
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_unbraced_parent_dangling_else ===
+class T {
+	boolean f(boolean a, String s) {
+		if (a)
+			{
+				if (s.isEmpty())
+					s.isBlank();
+				return true;
+			}
+		else
+			return false;
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_unbraced_parent_else_if ===
+class T {
+	boolean f(boolean a, String s) {
+		if (a)
+			return false;
+		else {
+			if (s.isEmpty())
+				s.isBlank();
+			return true;
+		}
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_unbraced_parent_else_suffix ===
+class T {
+	boolean f(boolean a) {
+		if (a) {
+			log();
+			return true;
+		}
+		else
+			return false;
+	}
+
+	boolean log() {
+		return true;
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_unbraced_parent_hoist ===
+class T {
+	boolean f(boolean a, String s) {
+		if (a)
+			{
+				if (s.isEmpty())
+					s.isBlank();
+				return true;
+			}
+		return false;
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_unbraced_parent_mixed_tabs ===
+class T {
+	boolean f(boolean a, String s) {
+		if (a)
+	        {
+	        	if (s.isEmpty())
+	        		s.isBlank();
+	        	return true;
+	        }
+		return false;
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_unbraced_parent_nested_for ===
+class T {
+	boolean f(boolean a, String s) {
+		if (a) {
+			for (var i = 0; i < 2; ++i)
+				{
+					if (s.isEmpty())
+						s.isBlank();
+					return true;
+				}
+		}
+		return false;
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_unbraced_parent_single_statement ===
+class T {
+	boolean f(boolean a, boolean b) {
+		if (a)
+			return true;
+		throw new IllegalStateException();
+	}
+}
+// === end ===
+
+// === case: prefer_direct_boolean_return_unbraced_parent_two_hoists ===
+class T {
+	boolean f(boolean a, boolean b, String s) {
+		if (a)
+			{
+				if (s.isEmpty())
+					s.isBlank();
+				return true;
+			}
+		if (b)
+			{
+				if (s.isEmpty())
+					s.isBlank();
+				return true;
+			}
+		return false;
 	}
 }
 // === end ===
@@ -1975,6 +2505,50 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 class T {
 	void f(Object o) {
 		assertInstanceOf(String.class, o, "should be a string");
+	}
+}
+// === end ===
+
+// === case: prefer_exact_assertion_lookalike_assert_wildcard_with_junit5 ===
+import static com.foo.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+class T {
+	void f(boolean flag) {
+		assertNotNull(flag);
+		assertFalse(flag);
+	}
+}
+// === end ===
+
+// === case: prefer_exact_assertion_lookalike_assertions_import_before_real ===
+import static com.example.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+class T {
+	void f(Object o) {
+		assertEquals(1, 2);
+		assertInstanceOf(String.class, o);
+	}
+}
+// === end ===
+
+// === case: prefer_exact_assertion_lookalike_assertions_wildcard_negation ===
+import static com.example.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+class T {
+	void f(boolean flag) {
+		assertNotNull(flag);
+		assertFalse(flag);
+	}
+}
+// === end ===
+
+// === case: prefer_exact_assertion_lookalike_with_junit4_negation ===
+import static com.example.Assertions.assertEquals;
+import static org.junit.Assert.assertFalse;
+class T {
+	void f(boolean flag) {
+		assertEquals(1, 2);
+		assertFalse(flag);
 	}
 }
 // === end ===
@@ -2020,6 +2594,14 @@ class T {
 	void f(Object o) {
 		assertInstanceOf(String.class, o);
 	}
+}
+// === end ===
+
+// === case: prefer_import_inside_field_consolidation_span_keeps_import ===
+import java.util.Map;
+
+class T {
+	Map<String, Integer> alpha, zeta;
 }
 // === end ===
 
@@ -2451,6 +3033,22 @@ class T {
 }
 // === end ===
 
+// === case: prefer_specific_api_replace_all_escaped_replacement ===
+class T {
+	String run(String s) {
+		return s.replace("foo", "a\\b");
+	}
+}
+// === end ===
+
+// === case: prefer_specific_api_replace_all_whole_match_replacement ===
+class T {
+	String run(String s) {
+		return s.replace("foo", "[foo]");
+	}
+}
+// === end ===
+
 // === case: prefer_specific_api_size_is_empty ===
 import java.util.List;
 class T {
@@ -2546,26 +3144,18 @@ class T {
 }
 // === end ===
 
-// === case: prefer_specific_api_trim_is_blank ===
+// === case: prefer_specific_api_trim_is_empty_negated ===
 class T {
 	boolean run(String s) {
-		return s.isBlank();
+		return !s.trim().isEmpty();
 	}
 }
 // === end ===
 
-// === case: prefer_specific_api_trim_is_blank_negated ===
+// === case: prefer_specific_api_trim_is_empty_reversed ===
 class T {
 	boolean run(String s) {
-		return !s.isBlank();
-	}
-}
-// === end ===
-
-// === case: prefer_specific_api_trim_is_blank_reversed ===
-class T {
-	boolean run(String s) {
-		return s.isBlank();
+		return s.trim().isEmpty();
 	}
 }
 // === end ===
@@ -2573,7 +3163,7 @@ class T {
 // === case: prefer_specific_api_trim_length_less_than_one ===
 class T {
 	boolean run(String s) {
-		return s.isBlank();
+		return s.trim().isEmpty();
 	}
 }
 // === end ===
@@ -2650,9 +3240,7 @@ class T {
 import static foo.Foo.X;
 
 class T {
-	private int a;
-
-	private int b;
+	private int a, b;
 
 	int f() {
 		return X + a + b;
@@ -3115,7 +3703,25 @@ class T {
 // === case: redundant_cast_widening ===
 class T {
 	void f(int x) {
-		final var y = x;
+		final long y = x;
+	}
+}
+// === end ===
+
+// === case: redundant_cast_widening_to_double ===
+class T {
+	double f(int x) {
+		final double y = x;
+		return y / 3;
+	}
+}
+// === end ===
+
+// === case: redundant_cast_widening_to_float ===
+class T {
+	float f(int x) {
+		final float y = x;
+		return y / 3;
 	}
 }
 // === end ===
@@ -3210,8 +3816,7 @@ class T {
 // === case: redundant_numeric_suffix_hex_and_binary_and_float ===
 class T {
 	float b = 100;
-	long a = 0xFF;
-	long c = 0b1010;
+	long a = 0xFF, c = 0b1010;
 }
 // === end ===
 
@@ -3297,6 +3902,15 @@ class T {
 }
 // === end ===
 
+// === case: unused_import_held_back_by_deferral_deleted_next_pass ===
+import java.util.Map;
+
+class T {
+	int alpha, zeta;
+	Map<String, Integer> counts;
+}
+// === end ===
+
 // === case: unused_import_orphaned_in_group_removes_blank_line ===
 package p;
 
@@ -3324,5 +3938,11 @@ class T {
 // === case: upper_ell_hex ===
 class T {
 	long x = 0xB00000000L;
+}
+// === end ===
+
+// === case: upper_ell_past_supplementary_character_and_tab ===
+class T {
+	/* 𝑥𝑥𝑥 */	long x = 3000000000L;
 }
 // === end ===

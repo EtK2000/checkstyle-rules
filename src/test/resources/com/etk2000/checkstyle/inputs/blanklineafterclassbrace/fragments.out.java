@@ -1,3 +1,14 @@
+// === case: delete_blank_after_brace_below_text_block ===
+class T {
+	String s = """
+		x
+		""";
+}
+class U {
+	int y;
+}
+// === end ===
+
 // === case: delete_mixed_whitespace_blanks ===
 class T {
 	int x;

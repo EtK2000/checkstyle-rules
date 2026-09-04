@@ -28,7 +28,7 @@ class InputPreferImportAnnotationFqnSliceViolation {}
 
 // === case: annotation_fqn_wildcard ===
 // imports: java.util.*
-// skip-reason: the short name is a java.lang type but a wildcard import in scope could bind the same simple name
+// skip-reason: cannot shorten the name: the short name is a java.lang type but a wildcard import in scope could bind the same simple name
 @java.lang.SuppressWarnings("unused")
 class InputPreferImportAnnotationFqnWildcardSliceViolation {}
 // === end ===
@@ -42,7 +42,7 @@ class InputPreferImportArrayOfGenericTypeArgSliceViolation {
 // === end ===
 
 // === case: block_comment_package_masked ===
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
+// skip-reason: cannot shorten the name: no single-type import, same-package type, or java.lang type binds the short name (adding an import is the general PreferImport fixer's job)
 class InputPreferImportBlockCommentPackageMaskedSliceViolation {
 	/*
 package com.etk2000.checkstyle.gradle.fix;
@@ -90,7 +90,7 @@ class InputPreferImportClassLiteralFqnSliceViolation {
 
 // === case: collision_different_fqn ===
 // imports: java.util.List
-// skip-reason: the short name resolves to a different type than the qualified name (a single-type import, same-package type, or dependency type with the same simple name shadows it)
+// skip-reason: cannot shorten the name: the short name resolves to a different type than the qualified name (a single-type import, same-package type, or dependency type with the same simple name shadows it)
 class InputPreferImportCollisionDifferentFqnSliceViolation {
 	com.foo.List<String> field;
 }
@@ -167,7 +167,7 @@ class InputPreferImportLocalVarTypeSliceViolation {
 comment
 */
 // imports: foo.*
-// skip-reason: the short name is a java.lang type but a wildcard import in scope could bind the same simple name
+// skip-reason: cannot shorten the name: the short name is a java.lang type but a wildcard import in scope could bind the same simple name
 class InputPreferImportMaskNoLeakNextLineWildcardSliceViolation {
 	java.lang.Runnable task;
 }
@@ -232,16 +232,14 @@ class InputPreferImportMixedFqnAndNestedSliceViolation {
 }
 // === end ===
 
-// === case: nested_annotation ===
+// === case: nested_annotation_warns ===
 // imports: java.util.Map
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
 @Map.Entry
 class InputPreferImportNestedAnnotationSliceViolation {}
 // === end ===
 
-// === case: nested_extends ===
+// === case: nested_extends_warns ===
 // imports: java.util.Map
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
 class InputPreferImportNestedExtendsSliceViolation
 		extends Map.Entry {}
 // === end ===
@@ -256,23 +254,20 @@ class InputPreferImportNestedGenericSliceViolation {
 }
 // === end ===
 
-// === case: nested_implements ===
+// === case: nested_implements_warns ===
 // imports: java.util.Map
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
 class InputPreferImportNestedImplementsSliceViolation
 		implements Map.Entry {}
 // === end ===
 
-// === case: nested_java_lang ===
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
+// === case: nested_java_lang_warns ===
 class InputPreferImportNestedJavaLangSliceViolation {
 	Thread.State state;
 }
 // === end ===
 
-// === case: nested_new ===
+// === case: nested_new_warns ===
 // imports: java.util.Map
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
 class InputPreferImportNestedNewSliceViolation {
 	void m() {
 		final var e = new Map.Entry();
@@ -313,16 +308,14 @@ class InputPreferImportNestedSameFileDeclKindsSliceViolation {
 }
 // === end ===
 
-// === case: nested_single_import ===
+// === case: nested_single_import_warns ===
 // imports: java.util.Map
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
 class InputPreferImportNestedSingleImportSliceViolation {
 	Map.Entry<String, Integer> entry;
 }
 // === end ===
 
-// === case: nested_three_segment ===
-// skip-reason: the short name is shadowed by a type declaration or type parameter in this file
+// === case: nested_three_segment_warns ===
 class InputPreferImportNestedThreeSegmentOuter {
 	static class Mid {
 		static class Leaf {}
@@ -334,18 +327,16 @@ class InputPreferImportNestedThreeSegmentSliceViolation {
 }
 // === end ===
 
-// === case: nested_throws ===
+// === case: nested_throws_warns ===
 // imports: java.util.Map
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
 class InputPreferImportNestedThrowsSliceViolation {
 	void m() throws Map.Entry {}
 }
 // === end ===
 
-// === case: nested_type_arg ===
+// === case: nested_type_arg_warns ===
 // imports: java.util.List
 // imports: java.util.Map
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
 class InputPreferImportNestedTypeArgSliceViolation {
 	List<Map.Entry> field;
 }
@@ -361,24 +352,22 @@ class InputPreferImportNestedTypeExactSliceViolation {
 
 // === case: nested_type_prefix ===
 // imports: java.util.Map
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
+// skip-reason: cannot shorten the name: no single-type import, same-package type, or java.lang type binds the short name (adding an import is the general PreferImport fixer's job)
 class InputPreferImportNestedTypePrefixSliceViolation {
 	java.util.Map.Entry<String, Integer> entry;
 }
 // === end ===
 
-// === case: nested_wildcard_bound ===
+// === case: nested_wildcard_bound_warns ===
 // imports: java.util.List
 // imports: java.util.Map
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
 class InputPreferImportNestedWildcardBoundSliceViolation {
 	List<? extends Map.Entry> field;
 }
 // === end ===
 
-// === case: nested_wildcard_import ===
+// === case: nested_wildcard_import_warns ===
 // imports: java.util.*
-// skip-reason: resolution depends on a wildcard import whose contents cannot be confirmed from this file
 class InputPreferImportNestedWildcardImportSliceViolation {
 	Map.Entry<String, Integer> entry;
 }
@@ -386,7 +375,7 @@ class InputPreferImportNestedWildcardImportSliceViolation {
 
 // === case: nested_wildcard_no_bind ===
 // imports: java.io.*
-// skip-reason: resolution depends on a wildcard import whose contents cannot be confirmed from this file
+// skip-reason: cannot shorten the name: resolution depends on a wildcard import whose contents cannot be confirmed from this file
 class InputPreferImportNestedWildcardNoBindSliceViolation {
 	Map.Entry<String, Integer> entry;
 }
@@ -405,7 +394,7 @@ class InputPreferImportNewExpressionSliceViolation {
 // === case: new_expression_nested_type_arg ===
 // imports: java.util.ArrayList
 // imports: java.util.Map
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
+// skip-reason: cannot shorten the name: no single-type import, same-package type, or java.lang type binds the short name (adding an import is the general PreferImport fixer's job)
 class InputPreferImportNewExpressionNestedTypeArgSliceViolation {
 	void m() {
 		new ArrayList<java.util.Map.Entry>();
@@ -425,7 +414,7 @@ class InputPreferImportNewExpressionTypeArgSliceViolation {
 
 // === case: new_expression_type_arg_offclasspath ===
 // imports: java.util.ArrayList
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
+// skip-reason: cannot shorten the name: no single-type import, same-package type, or java.lang type binds the short name (adding an import is the general PreferImport fixer's job)
 class InputPreferImportNewExpressionTypeArgOffclasspathSliceViolation {
 	void m() {
 		new ArrayList<com.foo.Unknown>();
@@ -435,7 +424,7 @@ class InputPreferImportNewExpressionTypeArgOffclasspathSliceViolation {
 
 // === case: real_import_collision_unmasked ===
 // imports: some.other.PreferImportFixer
-// skip-reason: the short name resolves to a different type than the qualified name (a single-type import, same-package type, or dependency type with the same simple name shadows it)
+// skip-reason: cannot shorten the name: the short name resolves to a different type than the qualified name (a single-type import, same-package type, or dependency type with the same simple name shadows it)
 class InputPreferImportRealImportCollisionUnmaskedSliceViolation {
 	com.etk2000.checkstyle.gradle.fix.PreferImportFixer fixer;
 }
@@ -443,7 +432,7 @@ class InputPreferImportRealImportCollisionUnmaskedSliceViolation {
 
 // === case: real_wildcard_blocks_java_lang ===
 // imports: foo.*
-// skip-reason: the short name is a java.lang type but a wildcard import in scope could bind the same simple name
+// skip-reason: cannot shorten the name: the short name is a java.lang type but a wildcard import in scope could bind the same simple name
 class InputPreferImportRealWildcardBlocksJavaLangSliceViolation {
 	java.lang.Runnable task;
 }
@@ -451,7 +440,7 @@ class InputPreferImportRealWildcardBlocksJavaLangSliceViolation {
 
 // === case: reflection_dependency_collision ===
 // package: com.etk2000.checkstyle.gradle.fix
-// skip-reason: the short name resolves to a different type than the qualified name (a single-type import, same-package type, or dependency type with the same simple name shadows it)
+// skip-reason: cannot shorten the name: the short name resolves to a different type than the qualified name (a single-type import, same-package type, or dependency type with the same simple name shadows it)
 class InputPreferImportReflectionDependencyCollisionSliceViolation {
 	some.other.PreferImportFixer fixer;
 }
@@ -485,7 +474,7 @@ import some.other.PreferImportFixer;
 // === end ===
 
 // === case: shadow_annotation_type ===
-// skip-reason: the short name is shadowed by a type declaration or type parameter in this file
+// skip-reason: cannot shorten the name: the short name is shadowed by a type declaration or type parameter in this file
 class InputPreferImportShadowAnnotationTypeSliceViolation {
 	@interface Map {}
 
@@ -494,7 +483,7 @@ class InputPreferImportShadowAnnotationTypeSliceViolation {
 // === end ===
 
 // === case: shadow_enum_type ===
-// skip-reason: the short name is shadowed by a type declaration or type parameter in this file
+// skip-reason: cannot shorten the name: the short name is shadowed by a type declaration or type parameter in this file
 class InputPreferImportShadowEnumTypeSliceViolation {
 	enum Map { A }
 
@@ -503,7 +492,7 @@ class InputPreferImportShadowEnumTypeSliceViolation {
 // === end ===
 
 // === case: shadow_interface_type ===
-// skip-reason: the short name is shadowed by a type declaration or type parameter in this file
+// skip-reason: cannot shorten the name: the short name is shadowed by a type declaration or type parameter in this file
 class InputPreferImportShadowInterfaceTypeSliceViolation {
 	interface List {}
 
@@ -512,7 +501,7 @@ class InputPreferImportShadowInterfaceTypeSliceViolation {
 // === end ===
 
 // === case: shadow_nested_type ===
-// skip-reason: the short name is shadowed by a type declaration or type parameter in this file
+// skip-reason: cannot shorten the name: the short name is shadowed by a type declaration or type parameter in this file
 class InputPreferImportShadowNestedTypeSliceViolation {
 	static final class List {}
 
@@ -521,7 +510,7 @@ class InputPreferImportShadowNestedTypeSliceViolation {
 // === end ===
 
 // === case: shadow_record_type ===
-// skip-reason: the short name is shadowed by a type declaration or type parameter in this file
+// skip-reason: cannot shorten the name: the short name is shadowed by a type declaration or type parameter in this file
 class InputPreferImportShadowRecordTypeSliceViolation {
 	record List() {}
 
@@ -530,7 +519,7 @@ class InputPreferImportShadowRecordTypeSliceViolation {
 // === end ===
 
 // === case: shadow_type_param ===
-// skip-reason: the short name is shadowed by a type declaration or type parameter in this file
+// skip-reason: cannot shorten the name: the short name is shadowed by a type declaration or type parameter in this file
 class InputPreferImportShadowTypeParamSliceViolation<List> {
 	java.util.List<String> field;
 }
@@ -573,7 +562,7 @@ class InputPreferImportStaticFieldFqnSliceViolation {
 // === end ===
 
 // === case: text_block_package_masked ===
-// skip-reason: no single-type import, same-package type, or java.lang type binds the short name; adding a new import is the general PreferImport fixer's job
+// skip-reason: cannot shorten the name: no single-type import, same-package type, or java.lang type binds the short name (adding an import is the general PreferImport fixer's job)
 class InputPreferImportTextBlockPackageMaskedSliceViolation {
 	com.etk2000.checkstyle.gradle.fix.PreferImportFixer fixer;
 	String s = """
@@ -608,7 +597,7 @@ class InputPreferImportTypeArgTwoFqnsOneLineSliceViolation {
 // === end ===
 
 // === case: whitespace_split_qualified_name ===
-// skip-reason: the qualified name is not contiguous at the violation column (comments or unusual whitespace split the dotted run)
+// skip-reason: cannot shorten the name: the qualified name is not contiguous at the violation column (comments or unusual whitespace split the dotted run)
 class InputPreferImportWhitespaceSplitSliceViolation {
 	java . util . List field;
 }
@@ -624,7 +613,7 @@ class InputPreferImportWildcardLowerBoundTypeArgSliceViolation {
 
 // === case: wildcard_only ===
 // imports: java.util.*
-// skip-reason: resolution depends on a wildcard import whose contents cannot be confirmed from this file
+// skip-reason: cannot shorten the name: resolution depends on a wildcard import whose contents cannot be confirmed from this file
 class InputPreferImportWildcardOnlySliceViolation {
 	java.util.Map<String, Integer> field;
 }

@@ -18,8 +18,8 @@ is "what would the strictest reader cut?" not "what scrap of context could
 justify keeping this?" A comment that adds only a sliver of
 internal-mechanism detail is slop, not "useful context."
 
-Two failure modes you have been under-catching, both now spelled out in
-`deslop.md`'s Default stance and Patterns:
+Two failure modes to watch for, both spelled out in `deslop.md`'s Default
+stance and Patterns:
 
 1. **Length/polish bias.** A long, finished, authoritative-looking
    production Javadoc is NOT exempt. The most common surviving slop in this
@@ -96,7 +96,7 @@ even to comments you would otherwise leave alone.
   exists but no longer matches the current code (see the "Stale comments /
   Javadocs" pattern in `deslop.md`) — it does not author documentation for
   something previously undocumented or add a comment to un-commented code.
-- Do not "fix" intentional anti-patterns in `Input*Violation.java` fixtures.
+- Do not "fix" intentional anti-patterns in violation fixtures.
 - Do not remove or edit `// violation:` or `// violation (warning):` markers.
 - Do not make changes outside the scope of slop cleanup — no refactoring
   "while I'm here", no new features, no silent bug fixes. If you spot a
@@ -160,8 +160,7 @@ If `<N>` is 0, omit the per-file block. If `<K>` is 0, omit the Skipped
 block. Do not include verbatim diffs, do not narrate exploration, do not
 list files you looked at and decided not to touch.
 
-When you modify an `Input*Violation.java` (or any fixture with
-`// violation` markers), you are responsible for leaving the corresponding
+When you modify a fixture carrying `// violation` markers, you are responsible for leaving the corresponding
 test passing — count the removed comment lines and update every affected
 `assertEquals(<line>, ...)` in the same edit. Do not flag fixture edits
 "for verification"; the agent's contract is that its output compiles and
@@ -172,7 +171,7 @@ its tests pass.
 ```
 deslop-fixer: 2 files modified, 6 edits.
   src/main/java/com/etk2000/checkstyle/FooCheck.java — 3 comment removals; 1 intermediate variable inlining
-  src/test/resources/.../inputs/foo/InputFooViolation.java — 1 comment removal; 1 test assertion shift
+  src/test/resources/.../inputs/foo/cases.in.java — 1 comment removal; 1 test assertion shift
 Skipped: 1
   src/main/java/com/etk2000/checkstyle/BarCheck.java:127 — comment explains a workaround for a known checkstyle bug, not slop
 ```

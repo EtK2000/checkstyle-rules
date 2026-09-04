@@ -23,42 +23,47 @@ public class PreferVarFixerTest {
 
 	@Test
 	public void testChainReceiverDiamondWithoutAnAst() throws Exception {
-		assertSkipResult(fixer, TOPIC, "chain_receiver_diamond_without_an_ast", "declared type arguments belong to a diamond this fixer cannot reach");
+		assertSkipResult(fixer, TOPIC, "chain_receiver_diamond_without_an_ast", "cannot use a diamond: the declared type arguments belong to a diamond this fixer cannot reach");
 	}
 
 	@Test
 	public void testColumnAtExactEnd() throws Exception {
-		assertSkipResult(fixer, TOPIC, "column_at_exact_end", "reported column does not resolve on this line");
+		assertSkipResult(fixer, TOPIC, "column_at_exact_end", "cannot rewrite the declaration: the reported column does not resolve on this line");
 	}
 
 	@Test
 	public void testColumnAtNonIdentifier() throws Exception {
-		assertSkipResult(fixer, TOPIC, "column_at_non_identifier", "reported position is not a declaration this fixer recognises");
+		assertSkipResult(fixer, TOPIC, "column_at_non_identifier", "cannot rewrite the declaration: the reported position is not a declaration this fixer recognizes");
 	}
 
 	@Test
 	public void testColumnMidIdentifier() throws Exception {
-		assertSkipResult(fixer, TOPIC, "column_mid_identifier", "reported position is not a declaration this fixer recognises");
+		assertSkipResult(fixer, TOPIC, "column_mid_identifier", "cannot rewrite the declaration: the reported position is not a declaration this fixer recognizes");
 	}
 
 	@Test
 	public void testDeclarationTypeInsideStringLiteral() throws Exception {
-		assertSkipResult(fixer, TOPIC, "declaration_type_inside_string_literal", "reported position is not a declaration this fixer recognises");
+		assertSkipResult(fixer, TOPIC, "declaration_type_inside_string_literal", "cannot rewrite the declaration: the reported position is not a declaration this fixer recognizes");
 	}
 
 	@Test
 	public void testDiamondNoNewKeyword() throws Exception {
-		assertSkipResult(fixer, TOPIC, "diamond_no_new_keyword", "declaration already uses 'var'");
+		assertSkipResult(fixer, TOPIC, "diamond_no_new_keyword", "cannot use 'var': the declaration already uses it");
 	}
 
 	@Test
 	public void testDiamondUnbalancedAngleBrackets() throws Exception {
-		assertSkipResult(fixer, TOPIC, "diamond_unbalanced_angle_brackets", "declaration already uses 'var'");
+		assertSkipResult(fixer, TOPIC, "diamond_unbalanced_angle_brackets", "cannot use 'var': the declaration already uses it");
+	}
+
+	@Test
+	public void testDottedExpressionIsNotADeclaration() throws Exception {
+		assertSkipResult(fixer, TOPIC, "dotted_expression_is_not_a_declaration", "cannot rewrite the declaration: the reported position is not a declaration this fixer recognizes");
 	}
 
 	@Test
 	public void testDoubleEqualsAfterName() throws Exception {
-		assertSkipResult(fixer, TOPIC, "double_equals_after_name", "reported position is not a declaration this fixer recognises");
+		assertSkipResult(fixer, TOPIC, "double_equals_after_name", "cannot rewrite the declaration: the reported position is not a declaration this fixer recognizes");
 	}
 
 	@Test
@@ -69,7 +74,7 @@ public class PreferVarFixerTest {
 
 	@Test
 	public void testEqualsOnlyDoubleEquals() throws Exception {
-		assertSkipResult(fixer, TOPIC, "equals_only_double_equals", "declaration already uses 'var'");
+		assertSkipResult(fixer, TOPIC, "equals_only_double_equals", "cannot use 'var': the declaration already uses it");
 	}
 
 	@Test
@@ -80,22 +85,22 @@ public class PreferVarFixerTest {
 
 	@Test
 	public void testExplicitArrayInitNoBraceVar() throws Exception {
-		assertSkipResult(fixer, TOPIC, "explicit_array_init_no_brace_var", "declaration already uses 'var'");
+		assertSkipResult(fixer, TOPIC, "explicit_array_init_no_brace_var", "cannot use 'var': the declaration already uses it");
 	}
 
 	@Test
 	public void testExplicitArrayInitUnbalancedAngleBrackets() throws Exception {
-		assertSkipResult(fixer, TOPIC, "explicit_array_init_unbalanced_angle_brackets", "declaration already uses 'var'");
+		assertSkipResult(fixer, TOPIC, "explicit_array_init_unbalanced_angle_brackets", "cannot use 'var': the declaration already uses it");
 	}
 
 	@Test
 	public void testExplicitArrayInitUnbalancedParen() throws Exception {
-		assertSkipResult(fixer, TOPIC, "explicit_array_init_unbalanced_paren", "declaration already uses 'var'");
+		assertSkipResult(fixer, TOPIC, "explicit_array_init_unbalanced_paren", "cannot use 'var': the declaration already uses it");
 	}
 
 	@Test
 	public void testMultiVarTextFallback() throws Exception {
-		assertSkipResult(fixer, TOPIC, "multi_var_text_fallback", "reported position is not a declaration this fixer recognises");
+		assertSkipResult(fixer, TOPIC, "multi_var_text_fallback", "cannot rewrite the declaration: the reported position is not a declaration this fixer recognizes");
 	}
 
 	@Test
@@ -104,7 +109,7 @@ public class PreferVarFixerTest {
 				fixer,
 				TOPIC,
 				"unterminated_generic_declaration",
-				"declared type arguments belong to a diamond this fixer cannot reach"
+				"cannot use a diamond: the declared type arguments belong to a diamond this fixer cannot reach"
 		);
 	}
 

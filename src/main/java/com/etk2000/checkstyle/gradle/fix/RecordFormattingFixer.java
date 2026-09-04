@@ -38,18 +38,13 @@ class RecordFormattingFixer implements CheckstyleFixer {
 
 	private static final LexerState IN_BLOCK_COMMENT = new LexerState(true, false);
 
-	private static final String SKIP_EMPTY_BODY_CONTENT = "cannot collapse empty record body without losing surrounding content";
-	private static final String SKIP_HEADER_LINE_COMMENT = "cannot reformat a record header that contains a line comment";
-	private static final String SKIP_HEADER_MULTILINE_SPAN = "cannot reformat a record header that spans a multi-line comment or text block";
-	private static final String SKIP_OPEN_BRACE_ANCHOR_COMMENT = "anchor line ends in a comment or unterminated literal";
-
 	@CheckReturnValue
 	@Nullable
 	private static FixAttempt collapseEmptyBodyClose(@Nonnull List<String> lines, int lineIndex, int column) {
 		final var rcurlyLine = lines.get(lineIndex);
 		if (!stripTrailingWhitespace(rcurlyLine.substring(0, column)).isEmpty()
 				|| !rcurlyLine.substring(column + 1).isBlank())
-			return new SkipResult(SKIP_EMPTY_BODY_CONTENT);
+			return new SkipResult(SkipMessages.RECORD_FORMATTING_SKIP_EMPTY_BODY_CONTENT);
 
 		// Mask the whole file once so the backward brace scan reads each line with its true cross-line
 		// lexer state: a `{` on a line interior to a multi-line block comment or text block is blanked,
@@ -62,13 +57,13 @@ class RecordFormattingFixer implements CheckstyleFixer {
 			final var col = maskedLines.get(i).lastIndexOf('{');
 			if (col >= 0) {
 				if (!prev.substring(col + 1).isBlank())
-					return new SkipResult(SKIP_EMPTY_BODY_CONTENT);
+					return new SkipResult(SkipMessages.RECORD_FORMATTING_SKIP_EMPTY_BODY_CONTENT);
 				lcurlyLineIdx = i;
 				lcurlyCol = col;
 				break;
 			}
 			if (!prev.isBlank())
-				return new SkipResult(SKIP_EMPTY_BODY_CONTENT);
+				return new SkipResult(SkipMessages.RECORD_FORMATTING_SKIP_EMPTY_BODY_CONTENT);
 		}
 		if (lcurlyLineIdx < 0)
 			return null;
@@ -118,8 +113,6 @@ class RecordFormattingFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	private static int findMatchingOpenBrace(@Nonnull String line, int closeCol) {
 		final var prefix = line.substring(0, closeCol);
-		// An unterminated literal/comment or a `//` before the `}` swallows it: the group can't be
-		// matched safely.
 		if (endsInComment(prefix))
 			return -1;
 		final var masked = JavaLineScanner.stripCommentsAndStrings(prefix, LexerState.NONE);
@@ -158,10 +151,7 @@ class RecordFormattingFixer implements CheckstyleFixer {
 						return new RparenScan(lineIdx, i, false);
 				}
 			}
-			// Closing paren wasn't on this line. Each line is scanned fresh (no cross-line literal
-			// state), so a block comment or text block that spills to the next line can't be tracked:
-			// signal the span. An unterminated string/char bails to null; a trailing `//` is not a
-			// spill (it just ends the line), so continue past it.
+			// a trailing `//` is not a spill (it just ends the line), so continue past it
 			final var end = JavaLineScanner.stateAfter(line, LexerState.NONE);
 			if (end.inBlockComment() || end.inTextBlock())
 				return new RparenScan(-1, -1, true);
@@ -254,23 +244,21 @@ class RecordFormattingFixer implements CheckstyleFixer {
 		if (rparen == null)
 			return null;
 		if (rparen.multilineSpan())
-			return new SkipResult(SKIP_HEADER_MULTILINE_SPAN);
+			return new SkipResult(SkipMessages.RECORD_FORMATTING_SKIP_HEADER_MULTILINE_SPAN);
 		final var rparenLineIdx = rparen.lineIdx();
 		final var rparenCol = rparen.col();
 
 		// Bail if any line in the header range contains a `//` line comment, since collapsing would
-		// either swallow code into the comment or silently drop the comment. findMatchingRparen
-		// deliberately scans past a trailing `//` (it is not a multi-line spill), so this is the only
-		// guard that stops a header line comment from being collapsed away.
+		// either swallow code into the comment or silently drop the comment.
 		if (recordLineIdx != rparenLineIdx) {
 			if (containsLineComment(recordLine, lparenCol + 1, recordLine.length()))
-				return new SkipResult(SKIP_HEADER_LINE_COMMENT);
+				return new SkipResult(SkipMessages.RECORD_FORMATTING_SKIP_HEADER_LINE_COMMENT);
 			for (var i = recordLineIdx + 1; i < rparenLineIdx; ++i) {
 				if (containsLineComment(lines.get(i), 0, lines.get(i).length()))
-					return new SkipResult(SKIP_HEADER_LINE_COMMENT);
+					return new SkipResult(SkipMessages.RECORD_FORMATTING_SKIP_HEADER_LINE_COMMENT);
 			}
 			if (containsLineComment(lines.get(rparenLineIdx), 0, rparenCol))
-				return new SkipResult(SKIP_HEADER_LINE_COMMENT);
+				return new SkipResult(SkipMessages.RECORD_FORMATTING_SKIP_HEADER_LINE_COMMENT);
 		}
 
 		final var inner = new StringBuilder();
@@ -332,10 +320,8 @@ class RecordFormattingFixer implements CheckstyleFixer {
 		}
 		if (trailing.isEmpty())
 			return null;
-		// Refuse to append ` {` to a line that ends inside a comment or unterminated literal; the `{`
-		// would be swallowed.
 		if (endsInComment(trailing))
-			return new SkipResult(SKIP_OPEN_BRACE_ANCHOR_COMMENT);
+			return new SkipResult(SkipMessages.RECORD_FORMATTING_SKIP_OPEN_BRACE_ANCHOR);
 
 		final var afterBrace = line.substring(column);
 		final var newAnchorLine = trailing + " " + afterBrace;
@@ -349,8 +335,6 @@ class RecordFormattingFixer implements CheckstyleFixer {
 	@CheckReturnValue
 	@Nonnull
 	private static List<String> splitComponents(@Nonnull String inner) {
-		// An unterminated string/char/comment/text-block or a `//` leaves the header in a state we
-		// can't split safely.
 		if (endsInComment(inner))
 			return List.of();
 		// Split at commas located in the masked text (literal/comment commas blanked), but slice the
@@ -425,16 +409,16 @@ class RecordFormattingFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
 		final var line = lines.get(lineIndex);
-		if (column < 0 || column >= line.length())
+		if (charColumn < 0 || charColumn >= line.length())
 			return null;
 
-		final var c = line.charAt(column);
+		final var c = line.charAt(charColumn);
 		if (c == '{')
-			return fixOpenBrace(lines, lineIndex, column);
+			return fixOpenBrace(lines, lineIndex, charColumn);
 		if (c == '}')
-			return fixCloseBrace(lines, lineIndex, column);
+			return fixCloseBrace(lines, lineIndex, charColumn);
 		return fixComponentLayout(lines, lineIndex);
 	}
 }
