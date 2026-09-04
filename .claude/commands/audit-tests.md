@@ -9,7 +9,7 @@ Run the `test-coverage-auditor` agent to audit test coverage for: $ARGUMENTS
 Expand it into an explicit file set:
 - The source file(s) under audit (e.g. `src/main/java/com/etk2000/checkstyle/FooCheck.java`)
 - All test files for it (e.g. `src/test/java/com/etk2000/checkstyle/FooCheckTest.java`, plus tier/variant tests if any)
-- All input resource files for it (e.g. `src/test/resources/com/etk2000/checkstyle/inputs/foo/Input*.java`)
+- All input resource files for it (e.g. `src/test/resources/com/etk2000/checkstyle/inputs/foo/cases.*.java`, `fragments.*.java`, and any `Input*.java` companions)
 - Any related fixer + fixer test (under `src/main/java/com/etk2000/checkstyle/gradle/fix/` and its test path)
 - Any cross-check counterparts (per testing.md "Cross-check testing")
 
@@ -28,7 +28,7 @@ b. Filter the union to **this audit's scope**:
    - `src/main/java/com/etk2000/checkstyle/*Check.java` — in scope
    - `src/main/java/com/etk2000/checkstyle/gradle/fix/*Fixer.java` — in scope (though primary scope for /audit-security)
    - `src/test/java/com/etk2000/checkstyle/**/*Test.java` — in scope
-   - `src/test/resources/com/etk2000/checkstyle/inputs/**/Input*.java` — in scope
+   - `src/test/resources/com/etk2000/checkstyle/inputs/**/*.java` — in scope
    - Shared utils (`AstUtil.java`, `ReflectionUtil.java`, etc.) — in scope
    - Anything else — out of scope, drop it
 
@@ -41,7 +41,7 @@ e. If the filtered set is NON-EMPTY, show it as a numbered list with the source 
    Proposed audit scope:
      1. FooCheck.java           [session edit, already committed]
      2. FooCheckTest.java       [session edit, uncommitted]
-     3. InputFooClean.java      [session edit, uncommitted]
+     3. foo/cases.in.java       [session edit, uncommitted]
      4. BarCheck.java           [recent commit — possibly from a different session, confirm]
    Audit these? (y = all, n = cancel, or list numbers / ranges to audit a subset)
    ```

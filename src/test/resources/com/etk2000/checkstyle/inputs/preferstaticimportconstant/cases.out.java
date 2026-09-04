@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.inputs.preferstaticimportconstant;
 
 // === case: annotated_alias ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: com.etk2000.checkstyle.inputs.preferstaticimportconstant.support.AnchorClass
 class InputPreferStaticImportConstantAnnotatedAliasSliceViolation {
 	@Deprecated
@@ -17,7 +17,7 @@ class InputPreferStaticImportConstantAnnotationArgContainingEqualsBeforeRealEqua
 // === end ===
 
 // === case: annotation_arg_containing_private_string_does_not_misidentify_visibility ===
-// skip-reason: cannot auto-fix non-private alias: it may be referenced from outside the class
+// skip-reason: cannot replace the alias: it is not private and may be referenced from outside the class
 // imports: foo.Foo
 class InputPreferStaticImportConstantAnnotationArgContainingPrivateStringDoesNotMisidentifyVisibilitySliceViolation {
 	@SuppressWarnings("private-key") static final int X = Foo.X;
@@ -25,7 +25,7 @@ class InputPreferStaticImportConstantAnnotationArgContainingPrivateStringDoesNot
 // === end ===
 
 // === case: annotation_arg_unbalanced_paren_inside_string_does_not_misidentify_visibility ===
-// skip-reason: cannot auto-fix non-private alias: it may be referenced from outside the class
+// skip-reason: cannot replace the alias: it is not private and may be referenced from outside the class
 // imports: foo.Foo
 class InputPreferStaticImportConstantAnnotationArgUnbalancedParenInsideStringDoesNotMisidentifyVisibilitySliceViolation {
 	@Description("foo) private bar(") static final int X = Foo.X;
@@ -40,7 +40,7 @@ class InputPreferStaticImportConstantArrayAliasSliceViolation {
 // === end ===
 
 // === case: block_comment_straddling_into_multi_var_decl_returns_skip ===
-// skip-reason: multi-variable declaration contains content that can't be safely rebuilt (typically a // line comment within the declaration); remove the comment or split into separate declarations, then re-run
+// skip-reason: cannot replace the alias: the multi-variable declaration contains content that cannot be safely rebuilt, typically a // comment (remove the comment or split the declaration, then re-run)
 // imports: foo.Foo
 class InputPreferStaticImportConstantBlockCommentStraddlingIntoMultiVarDeclSliceViolation {
 	/* note
@@ -49,7 +49,7 @@ class InputPreferStaticImportConstantBlockCommentStraddlingIntoMultiVarDeclSlice
 // === end ===
 
 // === case: block_comment_straddling_into_separated_annotation_returns_skip ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.Foo
 class InputPreferStaticImportConstantBlockCommentStraddlingIntoSeparatedAnnotationSliceViolation {
 	/* note
@@ -114,7 +114,7 @@ class InputPreferStaticImportConstantCharLiteralInMethodBodyIsPreservedDuringRew
 // === end ===
 
 // === case: cinit_assignment_sharing_line_with_trailing_statement_returns_cinit_skip ===
-// skip-reason: could not auto-fix the split-assignment cinit alias (ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly); manually remove both the field and the cinit assignment, then add the static import
+// skip-reason: cannot replace the split-assignment cinit alias: ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly (remove both the field and the cinit assignment manually, then add the static import)
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitAssignmentSharingLineWithTrailingStatementReturnsCinitSkipSliceViolation {
 	private static final int X;
@@ -126,7 +126,7 @@ class InputPreferStaticImportConstantCinitAssignmentSharingLineWithTrailingState
 // === end ===
 
 // === case: cinit_assignment_spanning_multiple_lines_returns_cinit_skip ===
-// skip-reason: could not auto-fix the split-assignment cinit alias (ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly); manually remove both the field and the cinit assignment, then add the static import
+// skip-reason: cannot replace the split-assignment cinit alias: ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly (remove both the field and the cinit assignment manually, then add the static import)
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitAssignmentSpanningMultipleLinesReturnsCinitSkipSliceViolation {
 	private static final int X;
@@ -139,7 +139,7 @@ class InputPreferStaticImportConstantCinitAssignmentSpanningMultipleLinesReturns
 // === end ===
 
 // === case: cinit_assignment_with_leading_assignment_statement_on_same_line_returns_cinit_skip ===
-// skip-reason: could not auto-fix the split-assignment cinit alias (ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly); manually remove both the field and the cinit assignment, then add the static import
+// skip-reason: cannot replace the split-assignment cinit alias: ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly (remove both the field and the cinit assignment manually, then add the static import)
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitAssignmentWithLeadingAssignmentStatementOnSameLineReturnsCinitSkipSliceViolation {
 	private static final int X;
@@ -158,7 +158,7 @@ class InputPreferStaticImportConstantCinitBlankFinalIsAutoFixedSliceViolation {
 // === end ===
 
 // === case: cinit_blank_final_with_block_comment_closing_on_decl_line_returns_skip ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitBlankFinalWithBlockCommentClosingOnDeclLineReturnsSkipSliceViolation {
 	/* opens
@@ -338,7 +338,7 @@ class InputPreferStaticImportConstantCinitMultiLineAnnotatedFieldWithBlockCommen
 // === end ===
 
 // === case: cinit_multi_line_annotated_field_with_content_before_annotation_returns_cinit_skip ===
-// skip-reason: could not auto-fix the split-assignment cinit alias (ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly); manually remove both the field and the cinit assignment, then add the static import
+// skip-reason: cannot replace the split-assignment cinit alias: ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly (remove both the field and the cinit assignment manually, then add the static import)
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitMultiLineAnnotatedFieldWithContentBeforeAnnotationReturnsCinitSkipSliceViolation {
 	int z; @SuppressWarnings("u")
@@ -358,7 +358,7 @@ class InputPreferStaticImportConstantCinitMultiLineAnnotatedFieldWithIntermediat
 // === end ===
 
 // === case: cinit_multi_line_annotated_field_with_intermediate_comment_line_returns_cinit_skip ===
-// skip-reason: could not auto-fix the split-assignment cinit alias (ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly); manually remove both the field and the cinit assignment, then add the static import
+// skip-reason: cannot replace the split-assignment cinit alias: ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly (remove both the field and the cinit assignment manually, then add the static import)
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitMultiLineAnnotatedFieldWithIntermediateCommentLineReturnsCinitSkipSliceViolation {
 	@SuppressWarnings("u")
@@ -379,7 +379,7 @@ class InputPreferStaticImportConstantCinitMultiLineAnnotatedFieldWithTrailingBlo
 // === end ===
 
 // === case: cinit_multi_line_annotated_field_with_trailing_statement_after_field_semi_returns_cinit_skip ===
-// skip-reason: could not auto-fix the split-assignment cinit alias (ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly); manually remove both the field and the cinit assignment, then add the static import
+// skip-reason: cannot replace the split-assignment cinit alias: ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly (remove both the field and the cinit assignment manually, then add the static import)
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitMultiLineAnnotatedFieldWithTrailingStatementAfterFieldSemiReturnsCinitSkipSliceViolation {
 	@SuppressWarnings("u")
@@ -406,7 +406,7 @@ class InputPreferStaticImportConstantCinitMultiLineBlankFinalWithTrailingLineCom
 // === end ===
 
 // === case: cinit_non_private_blank_final_returns_visibility_skip ===
-// skip-reason: cannot auto-fix non-private alias: it may be referenced from outside the class
+// skip-reason: cannot replace the alias: it is not private and may be referenced from outside the class
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitNonPrivateBlankFinalReturnsVisibilitySkipSliceViolation {
 	public static final int X;
@@ -425,7 +425,7 @@ class InputPreferStaticImportConstantCinitQualifiedLhsWithInternalWhitespaceIsAu
 // === end ===
 
 // === case: cinit_renamed_alias_shadowed_by_local_returns_shadow_skip ===
-// skip-reason: renamed alias's local name clashes with a local variable elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a local variable elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitRenamedAliasShadowedByLocalReturnsShadowSkipSliceViolation {
 	private static final int RENAMED;
@@ -442,7 +442,7 @@ class InputPreferStaticImportConstantCinitRenamedAliasShadowedByLocalReturnsShad
 // === end ===
 
 // === case: cinit_renamed_alias_shadowed_by_nested_class_field_between_decl_and_cinit_returns_shadow_skip ===
-// skip-reason: renamed alias's local name clashes with a field with the same name elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a field with the same name elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitRenamedAliasShadowedByNestedClassFieldBetweenDeclAndCinitReturnsShadowSkipSliceViolation {
 	private static final int RENAMED;
@@ -457,7 +457,7 @@ class InputPreferStaticImportConstantCinitRenamedAliasShadowedByNestedClassField
 // === end ===
 
 // === case: cinit_renamed_alias_target_collides_returns_rename_target_skip ===
-// skip-reason: rename target collides with existing identifier 'X'
+// skip-reason: cannot replace the alias: the rename target collides with existing identifier 'X'
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitRenamedAliasTargetCollidesReturnsRenameTargetSkipSliceViolation {
 	private static final int RENAMED;
@@ -516,7 +516,7 @@ class InputPreferStaticImportConstantCinitSameLineDeclAndCinitNoWhitespaceAround
 // === end ===
 
 // === case: cinit_same_line_decl_and_cinit_renamed_target_collides_returns_rename_target_skip ===
-// skip-reason: rename target collides with existing identifier 'X'
+// skip-reason: cannot replace the alias: the rename target collides with existing identifier 'X'
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitSameLineDeclAndCinitRenamedTargetCollidesReturnsRenameTargetSkipSliceViolation { private static final int RENAMED; static { RENAMED = Foo.X; } int X() { return 0; } }
 // === end ===
@@ -546,7 +546,7 @@ class InputPreferStaticImportConstantCinitSameLineDeclAndCinitWithAnnotatedField
 // === end ===
 
 // === case: cinit_same_line_decl_and_cinit_with_annotation_on_prior_line_returns_cinit_skip ===
-// skip-reason: could not auto-fix the split-assignment cinit alias (ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly); manually remove both the field and the cinit assignment, then add the static import
+// skip-reason: cannot replace the split-assignment cinit alias: ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly (remove both the field and the cinit assignment manually, then add the static import)
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitSameLineDeclAndCinitWithAnnotationOnPriorLineReturnsCinitSkipSliceViolation {
 	@SuppressWarnings("unused")
@@ -567,7 +567,7 @@ class InputPreferStaticImportConstantCinitSameLineDeclAndCinitWithExtraStatement
 // === end ===
 
 // === case: cinit_same_line_decl_and_cinit_with_multi_line_static_block_returns_cinit_skip ===
-// skip-reason: could not auto-fix the split-assignment cinit alias (ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly); manually remove both the field and the cinit assignment, then add the static import
+// skip-reason: cannot replace the split-assignment cinit alias: ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly (remove both the field and the cinit assignment manually, then add the static import)
 // imports: foo.Foo
 class InputPreferStaticImportConstantCinitSameLineDeclAndCinitWithMultiLineStaticBlockReturnsCinitSkipSliceViolation { private static final int X; static { X = Foo.X;
 }
@@ -737,7 +737,7 @@ class InputPreferStaticImportConstantFindStatementEndAcceptsTrailingBlockComment
 // === end ===
 
 // === case: find_statement_end_handles_escaped_quote_in_string_literal ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.Foo
 class InputPreferStaticImportConstantFindStatementEndHandlesEscapedQuoteInStringLiteralSliceViolation {
 	String A = "a\";b"; private static final int X = Foo.X;
@@ -752,7 +752,7 @@ class InputPreferStaticImportConstantFindStatementEndSkipsBlockCommentSpanningLi
 // === end ===
 
 // === case: find_statement_end_skips_escaped_quote_in_char_literal ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.Foo
 class InputPreferStaticImportConstantFindStatementEndSkipsEscapedQuoteInCharLiteralSliceViolation {
 	char Q = '\''; private static final int X = Foo.X;
@@ -767,7 +767,7 @@ class InputPreferStaticImportConstantFindStatementEndSkipsLineCommentOnSameLineS
 // === end ===
 
 // === case: find_statement_end_skips_semicolon_in_char_literal ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.Foo
 class InputPreferStaticImportConstantFindStatementEndSkipsSemicolonInCharLiteralSliceViolation {
 	char SEMI = ';'; private static final int X = Foo.X;
@@ -775,7 +775,7 @@ class InputPreferStaticImportConstantFindStatementEndSkipsSemicolonInCharLiteral
 // === end ===
 
 // === case: find_statement_end_skips_semicolon_in_string_literal ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.Foo
 class InputPreferStaticImportConstantFindStatementEndSkipsSemicolonInStringLiteralSliceViolation {
 	String A = "a;b;c"; private static final int X = Foo.X;
@@ -783,7 +783,7 @@ class InputPreferStaticImportConstantFindStatementEndSkipsSemicolonInStringLiter
 // === end ===
 
 // === case: find_statement_end_starts_in_block_comment_for_single_var_returns_skip ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.Foo
 class InputPreferStaticImportConstantFindStatementEndStartsInBlockCommentForSingleVarReturnsSkipSliceViolation {
 	/* opens
@@ -880,7 +880,7 @@ class InputPreferStaticImportConstantJavaLangWhitelistWinsOverSingleWildcardFall
 // === end ===
 
 // === case: leading_annotation_above_returns_skip ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.Foo
 class InputPreferStaticImportConstantLeadingAnnotationAboveReturnsSkipSliceViolation {
 	@Deprecated
@@ -889,7 +889,7 @@ class InputPreferStaticImportConstantLeadingAnnotationAboveReturnsSkipSliceViola
 // === end ===
 
 // === case: leading_javadoc_above_returns_skip ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.Foo
 class InputPreferStaticImportConstantLeadingJavadocAboveReturnsSkipSliceViolation {
 	/** Important note. */
@@ -898,7 +898,7 @@ class InputPreferStaticImportConstantLeadingJavadocAboveReturnsSkipSliceViolatio
 // === end ===
 
 // === case: leading_javadoc_continuation_above_returns_skip ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.Foo
 class InputPreferStaticImportConstantLeadingJavadocContinuationAboveReturnsSkipSliceViolation {
 	/**
@@ -909,7 +909,7 @@ class InputPreferStaticImportConstantLeadingJavadocContinuationAboveReturnsSkipS
 // === end ===
 
 // === case: leading_line_comment_above_returns_skip ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.Foo
 class InputPreferStaticImportConstantLeadingLineCommentAboveReturnsSkipSliceViolation {
 	// explains why
@@ -975,7 +975,7 @@ class InputPreferStaticImportConstantMultiLineAliasWithWhitespaceAroundDotSliceV
 // === end ===
 
 // === case: multi_statement_on_alias_line_returns_skip ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.Foo
 class InputPreferStaticImportConstantMultiStatementOnAliasLineReturnsSkipSliceViolation {
 	private static final int X = Foo.X; int leftover = 7;
@@ -983,7 +983,7 @@ class InputPreferStaticImportConstantMultiStatementOnAliasLineReturnsSkipSliceVi
 // === end ===
 
 // === case: multi_statement_with_mid_line_block_comment_returns_skip ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.Foo
 class Holder { private static final int X = Foo.X; /* note */ }
 // === end ===
@@ -1117,7 +1117,7 @@ class InputPreferStaticImportConstantMultiVarCharLiteralWithEscapeInSiblingIsPre
 // === end ===
 
 // === case: multi_var_comment_on_decl_line_returns_multi_var_skip ===
-// skip-reason: multi-variable declaration contains content that can't be safely rebuilt (typically a // line comment within the declaration); remove the comment or split into separate declarations, then re-run
+// skip-reason: cannot replace the alias: the multi-variable declaration contains content that cannot be safely rebuilt, typically a // comment (remove the comment or split the declaration, then re-run)
 // imports: foo.Foo
 // imports: foo.Bar
 class InputPreferStaticImportConstantMultiVarCommentOnDeclLineReturnsMultiVarSkipSliceViolation {
@@ -1259,7 +1259,7 @@ class InputPreferStaticImportConstantMultiVarMultiLineBlockCommentAboveDeclDoesN
 // === end ===
 
 // === case: multi_var_non_private_returns_visibility_skip ===
-// skip-reason: cannot auto-fix non-private alias: it may be referenced from outside the class
+// skip-reason: cannot replace the alias: it is not private and may be referenced from outside the class
 // imports: foo.Foo
 // imports: foo.Bar
 class InputPreferStaticImportConstantMultiVarNonPrivateReturnsVisibilitySkipSliceViolation {
@@ -1322,7 +1322,7 @@ class InputPreferStaticImportConstantMultiVarRenamedAliasRewritesUsagesSliceViol
 // === end ===
 
 // === case: multi_var_renamed_alias_shadowed_by_local_returns_shadow_skip ===
-// skip-reason: renamed alias's local name clashes with a local variable elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a local variable elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 // imports: foo.Bar
 class InputPreferStaticImportConstantMultiVarRenamedAliasShadowedByLocalReturnsShadowSkipSliceViolation {
@@ -1336,7 +1336,7 @@ class InputPreferStaticImportConstantMultiVarRenamedAliasShadowedByLocalReturnsS
 // === end ===
 
 // === case: multi_var_renamed_alias_shadowed_by_nested_class_field_returns_shadow_skip ===
-// skip-reason: renamed alias's local name clashes with a field with the same name elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a field with the same name elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 // imports: foo.Bar
 class InputPreferStaticImportConstantMultiVarRenamedAliasShadowedByNestedClassFieldReturnsShadowSkipSliceViolation {
@@ -1349,7 +1349,7 @@ class InputPreferStaticImportConstantMultiVarRenamedAliasShadowedByNestedClassFi
 // === end ===
 
 // === case: multi_var_renamed_sibling_rename_target_collides_returns_skip ===
-// skip-reason: rename target collides with existing identifier 'Y'
+// skip-reason: cannot replace the alias: the rename target collides with existing identifier 'Y'
 // imports: foo.Foo
 // imports: foo.Bar
 class InputPreferStaticImportConstantMultiVarRenamedSiblingRenameTargetCollidesReturnsSkipSliceViolation {
@@ -1376,7 +1376,7 @@ class InputPreferStaticImportConstantMultiVarRenamedSiblingRewritesSiblingUsageS
 // === end ===
 
 // === case: multi_var_sibling_member_name_collides_returns_conflict_skip ===
-// skip-reason: cannot add static import: file already imports a different constant with the same name statically
+// skip-reason: cannot add the static import: the file already statically imports a different constant with the same name
 // imports: foo.Foo
 // imports: foo.Bar
 class InputPreferStaticImportConstantMultiVarSiblingMemberNameCollidesReturnsConflictSkipSliceViolation {
@@ -1595,7 +1595,7 @@ class InputPreferStaticImportConstantMultiVarWithAnnotationOnSeparatedLineAboveD
 // === end ===
 
 // === case: multi_var_with_block_comment_closing_on_decl_line_does_not_confuse_find_declaration_start ===
-// skip-reason: multi-variable declaration contains content that can't be safely rebuilt (typically a // line comment within the declaration); remove the comment or split into separate declarations, then re-run
+// skip-reason: cannot replace the alias: the multi-variable declaration contains content that cannot be safely rebuilt, typically a // comment (remove the comment or split the declaration, then re-run)
 // imports: foo.Foo
 // imports: foo.Bar
 class InputPreferStaticImportConstantMultiVarWithBlockCommentClosingOnDeclLineDoesNotConfuseFindDeclarationStartSliceViolation {
@@ -1614,7 +1614,7 @@ class InputPreferStaticImportConstantMultiVarWithParensRemovesLastVariableSliceV
 // === end ===
 
 // === case: multi_wildcard ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: com.etk2000.checkstyle.inputs.preferstaticimportconstant.support.*
 // imports: java.util.*
 class InputPreferStaticImportConstantMultipleWildcardImportsFireFromCheckSliceViolation {
@@ -1663,7 +1663,7 @@ class InputPreferStaticImportConstantMultipleUsageLinesWithIntermediateLinePrese
 // === end ===
 
 // === case: multiple_wildcards_returns_skip ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: foo.*
 // imports: bar.*
 class InputPreferStaticImportConstantMultipleWildcardsReturnsSkipSliceViolation {
@@ -1722,7 +1722,7 @@ class InputPreferStaticImportConstantTriSliceViolation {
 // === end ===
 
 // === case: nested_annotation_arg_does_not_misidentify_visibility ===
-// skip-reason: cannot auto-fix non-private alias: it may be referenced from outside the class
+// skip-reason: cannot replace the alias: it is not private and may be referenced from outside the class
 // imports: foo.Foo
 class InputPreferStaticImportConstantNestedAnnotationArgDoesNotMisidentifyVisibilitySliceViolation {
 	@MyAnno(@Other("private")) static final int X = Foo.X;
@@ -1797,7 +1797,7 @@ class InputPreferStaticImportConstantNonConflictingStaticImportSucceedsSliceViol
 // === end ===
 
 // === case: other_suppress_key ===
-// skip-reason: initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved
+// skip-reason: cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved
 // imports: com.etk2000.checkstyle.inputs.preferstaticimportconstant.support.AnchorClass
 class InputPreferStaticImportConstantOtherSuppressKeySliceViolation {
 	@SuppressWarnings("unused")
@@ -1806,7 +1806,7 @@ class InputPreferStaticImportConstantOtherSuppressKeySliceViolation {
 // === end ===
 
 // === case: package_private_alias_fires ===
-// skip-reason: cannot auto-fix non-private alias: it may be referenced from outside the class
+// skip-reason: cannot replace the alias: it is not private and may be referenced from outside the class
 // imports: com.etk2000.checkstyle.inputs.preferstaticimportconstant.support.AnchorClass
 // imports: static com.etk2000.checkstyle.inputs.preferstaticimportconstant.support.AnchorClass.X1
 class InputPreferStaticImportConstantPackagePrivateAliasFiresSliceViolation {
@@ -1815,7 +1815,7 @@ class InputPreferStaticImportConstantPackagePrivateAliasFiresSliceViolation {
 // === end ===
 
 // === case: package_private_alias_returns_visibility_skip ===
-// skip-reason: cannot auto-fix non-private alias: it may be referenced from outside the class
+// skip-reason: cannot replace the alias: it is not private and may be referenced from outside the class
 // imports: foo.Foo
 class InputPreferStaticImportConstantPackagePrivateAliasReturnsVisibilitySkipSliceViolation {
 	static final int X = Foo.X;
@@ -1837,7 +1837,7 @@ class InputPreferStaticImportConstantParenthesizedAliasSliceViolation {
 // === end ===
 
 // === case: private_inside_comment_does_not_misidentify_visibility ===
-// skip-reason: cannot auto-fix non-private alias: it may be referenced from outside the class
+// skip-reason: cannot replace the alias: it is not private and may be referenced from outside the class
 // imports: foo.Foo
 class InputPreferStaticImportConstantPrivateInsideCommentDoesNotMisidentifyVisibilitySliceViolation {
 	public /* private */ static final int X = Foo.X;
@@ -1845,7 +1845,7 @@ class InputPreferStaticImportConstantPrivateInsideCommentDoesNotMisidentifyVisib
 // === end ===
 
 // === case: protected_alias_fires ===
-// skip-reason: cannot auto-fix non-private alias: it may be referenced from outside the class
+// skip-reason: cannot replace the alias: it is not private and may be referenced from outside the class
 // imports: com.etk2000.checkstyle.inputs.preferstaticimportconstant.support.AnchorClass
 // imports: static com.etk2000.checkstyle.inputs.preferstaticimportconstant.support.AnchorClass.X2
 class InputPreferStaticImportConstantProtectedAliasFiresSliceViolation {
@@ -1854,7 +1854,7 @@ class InputPreferStaticImportConstantProtectedAliasFiresSliceViolation {
 // === end ===
 
 // === case: protected_alias_returns_visibility_skip ===
-// skip-reason: cannot auto-fix non-private alias: it may be referenced from outside the class
+// skip-reason: cannot replace the alias: it is not private and may be referenced from outside the class
 // imports: foo.Foo
 class InputPreferStaticImportConstantProtectedAliasReturnsVisibilitySkipSliceViolation {
 	protected static final int X = Foo.X;
@@ -1862,7 +1862,7 @@ class InputPreferStaticImportConstantProtectedAliasReturnsVisibilitySkipSliceVio
 // === end ===
 
 // === case: public_alias_fires ===
-// skip-reason: cannot auto-fix non-private alias: it may be referenced from outside the class
+// skip-reason: cannot replace the alias: it is not private and may be referenced from outside the class
 // imports: com.etk2000.checkstyle.inputs.preferstaticimportconstant.support.AnchorClass
 // imports: static com.etk2000.checkstyle.inputs.preferstaticimportconstant.support.AnchorClass.X3
 class InputPreferStaticImportConstantPublicAliasFiresSliceViolation {
@@ -1871,7 +1871,7 @@ class InputPreferStaticImportConstantPublicAliasFiresSliceViolation {
 // === end ===
 
 // === case: public_alias_returns_visibility_skip ===
-// skip-reason: cannot auto-fix non-private alias: it may be referenced from outside the class
+// skip-reason: cannot replace the alias: it is not private and may be referenced from outside the class
 // imports: foo.Foo
 class InputPreferStaticImportConstantPublicAliasReturnsVisibilitySkipSliceViolation {
 	public static final int X = Foo.X;
@@ -2026,7 +2026,7 @@ class InputPreferStaticImportConstantRecordFieldWithStraySemicolonSiblingSliceVi
 // === end ===
 
 // === case: rename_target_collides_in_multi_var_skips_fix ===
-// skip-reason: rename target collides with existing identifier 'X'
+// skip-reason: cannot replace the alias: the rename target collides with existing identifier 'X'
 // imports: foo.Foo
 class InputPreferStaticImportConstantRenameTargetCollidesInMultiVarSkipsFixSliceViolation {
 	private static final int A = Foo.A, RENAMED = Foo.X;
@@ -2205,7 +2205,7 @@ class InputPreferStaticImportConstantSeparatedAnnotationWithTrailingLineCommentA
 // === end ===
 
 // === case: shadowing_annotation_type_with_same_name_skips_fix ===
-// skip-reason: rename target collides with existing identifier 'X'
+// skip-reason: cannot replace the alias: the rename target collides with existing identifier 'X'
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingAnnotationTypeWithSameNameSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2215,7 +2215,7 @@ class InputPreferStaticImportConstantShadowingAnnotationTypeWithSameNameSkipsFix
 // === end ===
 
 // === case: shadowing_array_type_local_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a local variable elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a local variable elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingArrayTypeLocalSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2227,7 +2227,7 @@ class InputPreferStaticImportConstantShadowingArrayTypeLocalSkipsFixSliceViolati
 // === end ===
 
 // === case: shadowing_catch_parameter_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a catch parameter elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a catch parameter elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingCatchParameterSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2239,7 +2239,7 @@ class InputPreferStaticImportConstantShadowingCatchParameterSkipsFixSliceViolati
 // === end ===
 
 // === case: shadowing_constructor_parameter_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a constructor parameter elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a constructor parameter elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingConstructorParameterSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2249,7 +2249,7 @@ class InputPreferStaticImportConstantShadowingConstructorParameterSkipsFixSliceV
 // === end ===
 
 // === case: shadowing_enum_constant_with_same_name_skips_fix ===
-// skip-reason: rename target collides with existing identifier 'X'
+// skip-reason: cannot replace the alias: the rename target collides with existing identifier 'X'
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingEnumConstantWithSameNameSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2259,7 +2259,7 @@ class InputPreferStaticImportConstantShadowingEnumConstantWithSameNameSkipsFixSl
 // === end ===
 
 // === case: shadowing_for_each_var_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a for-each variable elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a for-each variable elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingForEachVarSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2271,7 +2271,7 @@ class InputPreferStaticImportConstantShadowingForEachVarSkipsFixSliceViolation {
 // === end ===
 
 // === case: shadowing_for_init_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a for-loop variable elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a for-loop variable elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingForInitSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2283,7 +2283,7 @@ class InputPreferStaticImportConstantShadowingForInitSkipsFixSliceViolation {
 // === end ===
 
 // === case: shadowing_generic_reference_type_local_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a local variable elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a local variable elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingGenericReferenceTypeLocalSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2295,7 +2295,7 @@ class InputPreferStaticImportConstantShadowingGenericReferenceTypeLocalSkipsFixS
 // === end ===
 
 // === case: shadowing_lambda_multi_param_without_types_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a lambda parameter elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a lambda parameter elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingLambdaMultiParamWithoutTypesSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2307,7 +2307,7 @@ class InputPreferStaticImportConstantShadowingLambdaMultiParamWithoutTypesSkipsF
 // === end ===
 
 // === case: shadowing_lambda_single_param_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a lambda parameter elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a lambda parameter elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingLambdaSingleParamSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2319,7 +2319,7 @@ class InputPreferStaticImportConstantShadowingLambdaSingleParamSkipsFixSliceViol
 // === end ===
 
 // === case: shadowing_local_declaration_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a local variable elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a local variable elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingLocalDeclarationSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2332,7 +2332,7 @@ class InputPreferStaticImportConstantShadowingLocalDeclarationSkipsFixSliceViola
 // === end ===
 
 // === case: shadowing_method_with_same_name_skips_fix ===
-// skip-reason: rename target collides with existing identifier 'X'
+// skip-reason: cannot replace the alias: the rename target collides with existing identifier 'X'
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingMethodWithSameNameSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2342,7 +2342,7 @@ class InputPreferStaticImportConstantShadowingMethodWithSameNameSkipsFixSliceVio
 // === end ===
 
 // === case: shadowing_nested_class_with_same_name_skips_fix ===
-// skip-reason: rename target collides with existing identifier 'X'
+// skip-reason: cannot replace the alias: the rename target collides with existing identifier 'X'
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingNestedClassWithSameNameSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2352,7 +2352,7 @@ class InputPreferStaticImportConstantShadowingNestedClassWithSameNameSkipsFixSli
 // === end ===
 
 // === case: shadowing_nested_enum_with_same_name_skips_fix ===
-// skip-reason: rename target collides with existing identifier 'X'
+// skip-reason: cannot replace the alias: the rename target collides with existing identifier 'X'
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingNestedEnumWithSameNameSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2362,7 +2362,7 @@ class InputPreferStaticImportConstantShadowingNestedEnumWithSameNameSkipsFixSlic
 // === end ===
 
 // === case: shadowing_nested_field_with_same_name_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a field with the same name elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a field with the same name elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingNestedFieldWithSameNameSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2374,7 +2374,7 @@ class InputPreferStaticImportConstantShadowingNestedFieldWithSameNameSkipsFixSli
 // === end ===
 
 // === case: shadowing_nested_generic_reference_type_local_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a local variable elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a local variable elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingNestedGenericReferenceTypeLocalSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2386,7 +2386,7 @@ class InputPreferStaticImportConstantShadowingNestedGenericReferenceTypeLocalSki
 // === end ===
 
 // === case: shadowing_nested_interface_with_same_name_skips_fix ===
-// skip-reason: rename target collides with existing identifier 'X'
+// skip-reason: cannot replace the alias: the rename target collides with existing identifier 'X'
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingNestedInterfaceWithSameNameSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2396,7 +2396,7 @@ class InputPreferStaticImportConstantShadowingNestedInterfaceWithSameNameSkipsFi
 // === end ===
 
 // === case: shadowing_nested_record_with_same_name_skips_fix ===
-// skip-reason: rename target collides with existing identifier 'X'
+// skip-reason: cannot replace the alias: the rename target collides with existing identifier 'X'
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingNestedRecordWithSameNameSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2406,7 +2406,7 @@ class InputPreferStaticImportConstantShadowingNestedRecordWithSameNameSkipsFixSl
 // === end ===
 
 // === case: shadowing_parameter_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a method parameter elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a method parameter elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingParameterSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2418,7 +2418,7 @@ class InputPreferStaticImportConstantShadowingParameterSkipsFixSliceViolation {
 // === end ===
 
 // === case: shadowing_reference_type_local_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a local variable elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a local variable elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingReferenceTypeLocalSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2431,7 +2431,7 @@ class InputPreferStaticImportConstantShadowingReferenceTypeLocalSkipsFixSliceVio
 // === end ===
 
 // === case: shadowing_try_with_resources_variable_skips_fix ===
-// skip-reason: renamed alias's local name clashes with a try-with-resources variable elsewhere; rename manually to avoid scope conflicts
+// skip-reason: cannot replace the alias: its local name clashes with a try-with-resources variable elsewhere (rename it manually to avoid scope conflicts)
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingTryWithResourcesVariableSkipsFixSliceViolation {
 	private static final int RENAMED = Foo.X;
@@ -2443,7 +2443,7 @@ class InputPreferStaticImportConstantShadowingTryWithResourcesVariableSkipsFixSl
 // === end ===
 
 // === case: shadowing_type_parameter_with_same_name_skips_fix ===
-// skip-reason: rename target collides with existing identifier 'X'
+// skip-reason: cannot replace the alias: the rename target collides with existing identifier 'X'
 // imports: foo.Foo
 class InputPreferStaticImportConstantShadowingTypeParameterWithSameNameSkipsFixSliceViolation<X> {
 	private static final int RENAMED = Foo.X;

@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -89,7 +90,7 @@ public class ConstructorAssignmentOrderCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	@Nullable
 	public static DetailAST bodyAt(@Nonnull DetailAST root, int line, int column) {
-		final var expr = AstUtil.findNodeAt(root, line, column, node -> node.getType() == TokenTypes.EXPR);
+		final var expr = AstQuery.findNodeAt(root, line, column, node -> node.getType() == TokenTypes.EXPR);
 		if (expr == null)
 			return null;
 		final var body = expr.getParent();
@@ -146,7 +147,7 @@ public class ConstructorAssignmentOrderCheck extends AbstractAstCheck {
 							ident.getText(),
 							varDeclCount,
 							child.getLineNo() - 1,
-							AstUtil.lastLine(child) - 1,
+							AstQuery.lastLine(child) - 1,
 							Set.copyOf(varUsedVars)
 					));
 					localVarNames.add(ident.getText());
@@ -167,7 +168,7 @@ public class ConstructorAssignmentOrderCheck extends AbstractAstCheck {
 					final int group;
 					final int subGroup;
 					if (usedVars.isEmpty()) {
-						group = AstUtil.lastLine(child) > child.getLineNo() ? GROUP_MULTI : GROUP_SIMPLE;
+						group = AstQuery.lastLine(child) > child.getLineNo() ? GROUP_MULTI : GROUP_SIMPLE;
 						subGroup = -1;
 					}
 					else {
@@ -186,14 +187,14 @@ public class ConstructorAssignmentOrderCheck extends AbstractAstCheck {
 							Set.of(),
 							Set.copyOf(usedVars),
 							child.getLineNo() - 1,
-							AstUtil.lastLine(child) - 1
+							AstQuery.lastLine(child) - 1
 					));
 					continue;
 				}
 			}
 
 			if (child.getType() != TokenTypes.RCURLY && child.getType() != TokenTypes.SEMI) {
-				for (var ln = child.getLineNo(); ln <= AstUtil.lastLine(child); ++ln)
+				for (var ln = child.getLineNo(); ln <= AstQuery.lastLine(child); ++ln)
 					statementLines.add(ln - 1);
 			}
 		}

@@ -1,10 +1,14 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkip;
-import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkipResult;
 
 import org.junit.jupiter.api.Test;
 
+/**
+ * The positions no located cast can be classified at. The first three buffers are bare statements
+ * that do not parse as a compilation unit, so the AST prologue answers null before any of the shapes
+ * their names describe is reached; they pin that one refusal rather than three.
+ */
 public class PreferLiteralSuffixFixerTest {
 	private static final String TOPIC = "preferliteralsuffix";
 
@@ -17,11 +21,16 @@ public class PreferLiteralSuffixFixerTest {
 
 	@Test
 	public void testForwardSubjectAtEol() throws Exception {
-		assertSkipResult(fixer, TOPIC, "forward_subject_at_eol", "complex-cast-subject");
+		assertSkip(fixer, TOPIC, "forward_subject_at_eol");
 	}
 
 	@Test
 	public void testMalformedCastNoExpression() throws Exception {
-		assertSkipResult(fixer, TOPIC, "malformed_cast_no_expression", "malformed-cast-no-expression");
+		assertSkip(fixer, TOPIC, "malformed_cast_no_expression");
+	}
+
+	@Test
+	public void testStaleColumnAfterSiblingFix() throws Exception {
+		assertSkip(fixer, TOPIC, "stale_column_after_sibling_fix");
 	}
 }

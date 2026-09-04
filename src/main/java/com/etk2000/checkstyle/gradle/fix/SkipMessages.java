@@ -1,6 +1,9 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
 
@@ -12,9 +15,21 @@ import javax.annotation.Nonnull;
 final class SkipMessages {
 	private static final Map<Object, Object> PROPS = loadProps();
 
-	static final String ANNOTATION_SYNTAX_SKIP = get("annotation.syntax.skip");
+	static final String ANNOTATION_SAME_LINE_SKIP_UNFOLDABLE = get("annotation.same.line.skip.unfoldable");
+	static final String ANNOTATION_SYNTAX_SKIP_COMMENT = get("annotation.syntax.skip.comment");
+	static final String ANNOTATION_SYNTAX_SKIP_LINE_BUDGET = get("annotation.syntax.skip.line.budget");
+	static final String ANNOTATION_SYNTAX_SKIP_LINE_COMMENT = get("annotation.syntax.skip.line.comment");
+	static final String ARRAY_TYPE_STYLE_SKIP_ANNOTATED_BRACKETS = get("array.type.style.skip.annotated.brackets");
+	static final String ARRAY_TYPE_STYLE_SKIP_COMMENT_BEFORE_BRACKETS = get("array.type.style.skip.comment.before.brackets");
+	static final String ARRAY_TYPE_STYLE_SKIP_MULTI_VARIABLE = get("array.type.style.skip.multi.variable");
+	static final String ARRAY_TYPE_STYLE_SKIP_NOT_DECLARATOR = get("array.type.style.skip.not.declarator");
+	static final String ARRAY_TYPE_STYLE_SKIP_TEXT_BLOCK = get("array.type.style.skip.text.block");
+	static final String ARRAY_TYPE_STYLE_SKIP_UNICODE_ESCAPE = get("array.type.style.skip.unicode.escape");
+	static final String ARRAY_TYPE_STYLE_SKIP_UNPARSEABLE = get("array.type.style.skip.unparseable");
 	static final String AVOID_SUPER_SKIP = get("avoid.super.skip");
+	static final String BLANK_LINE_SKIP_TEXT_BLOCK = get("blank.line.skip.text.block");
 	static final String COLLECTION_INTERFACE_SKIP = get("prefer.collection.interface.skip");
+	static final String COLLECTION_INTERFACE_STALE = get("prefer.collection.interface.skip.stale");
 	static final String CONSTRUCTOR_ASSIGN_SKIP_COMMENT = get("constructor.assign.skip.comment");
 	static final String CONSTRUCTOR_ASSIGN_SKIP_CYCLE = get("constructor.assign.skip.cycle");
 	static final String CONSTRUCTOR_ASSIGN_SKIP_DUPLICATE_FIELD = get("constructor.assign.skip.duplicate.field");
@@ -25,6 +40,7 @@ final class SkipMessages {
 	static final String CONTROL_FLOW_SKIP_CLOSE_BRACE = get("control.flow.skip.close.brace");
 	static final String CONTROL_FLOW_SKIP_COMMENT_ONLY = get("control.flow.skip.comment.only");
 	static final String CONTROL_FLOW_SKIP_DECLARATION_BODY = get("control.flow.skip.declaration.body");
+	static final String CONTROL_FLOW_SKIP_ELSE_REBIND = get("control.flow.skip.else.rebind");
 	static final String CONTROL_FLOW_SKIP_EMPTY_BODY = get("control.flow.skip.empty.body");
 	static final String CONTROL_FLOW_SKIP_MULTILINE_BRACED = get("control.flow.skip.multiline.braced");
 	static final String CONTROL_FLOW_SKIP_MULTILINE_HEADER = get("control.flow.skip.multiline.header");
@@ -37,46 +53,98 @@ final class SkipMessages {
 	static final String CONTROL_FLOW_SKIP_TEXT_BLOCK = get("control.flow.skip.text.block");
 	static final String CONTROL_FLOW_SKIP_UNTERMINATED_LITERAL = get("control.flow.skip.unterminated.literal");
 	static final String CONTROL_FLOW_SKIP_WHILE_LINE_BODY = get("control.flow.skip.while.line.body");
+	static final String DIRECT_BOOLEAN_SKIP_CLASS_BODY = get("prefer.direct.boolean.return.skip.class.body");
+	static final String DIRECT_BOOLEAN_SKIP_TEXT_BLOCK = get("prefer.direct.boolean.return.skip.text.block");
+	static final String EMPTY_SKIP_COMMENT_IN_SPAN = get("empty.skip.comment.in.span");
+	static final String EMPTY_SKIP_ELSE_BRANCH = get("empty.skip.else.branch");
+	static final String EMPTY_SKIP_ELSE_REBIND = get("empty.skip.else.rebind");
+	static final String EMPTY_SKIP_HOIST_MULTILINE = get("empty.skip.hoist.multiline");
+	static final String EMPTY_SKIP_HOIST_OUT_OF_ELSE = get("empty.skip.hoist.out.of.else");
+	static final String EMPTY_SKIP_HOIST_SHORT_CIRCUIT = get("empty.skip.hoist.short.circuit");
+	static final String EMPTY_SKIP_LOOP_SIDE_EFFECT = get("empty.skip.loop.side.effect");
+	static final String EMPTY_SKIP_NO_NODE = get("empty.skip.no.node");
+	static final String EMPTY_SKIP_REQUIRED_CLAUSE_BODY = get("empty.skip.required.clause.body");
+	static final String EMPTY_SKIP_SHARED_LINE = get("empty.skip.shared.line");
 	static final String EXPLICIT_INIT_SKIP = get("explicit.init.skip");
-	static final String FIELD_SORTING_SKIP_ANON_CLASS_REFERENCED_FIELD = get("field.sorting.skip.anon.class.referenced.field");
+	static final String EXPLICIT_INIT_SKIP_STALE = get("explicit.init.skip.stale");
 	static final String FIELD_SORTING_SKIP_C_STYLE_ARRAY = get("field.sorting.skip.c.style.array");
 	static final String FIELD_SORTING_SKIP_DEPENDENCY_CYCLE = get("field.sorting.skip.dependency.cycle");
+	static final String FIELD_SORTING_SKIP_DEPENDENCY_LATER_CHUNK = get("field.sorting.skip.dependency.later.chunk");
+	static final String FIELD_SORTING_SKIP_DETACHED_DIRECTIVE = get("field.sorting.skip.detached.directive");
 	static final String FIELD_SORTING_SKIP_ENUM_SPLIT_COMMENT = get("field.sorting.skip.enum.split.comment");
+	static final String FIELD_SORTING_SKIP_ENUM_SPLIT_DIRECTIVE = get("field.sorting.skip.enum.split.directive");
 	static final String FIELD_SORTING_SKIP_ENUM_TRAILING_MULTILINE = get("field.sorting.skip.enum.trailing.multiline");
+	static final String FIELD_SORTING_SKIP_INIT_FORWARD_READ = get("field.sorting.skip.init.forward.read");
 	static final String FIELD_SORTING_SKIP_INTERLEAVED_STATIC = get("field.sorting.skip.interleaved.static");
+	static final String FIELD_SORTING_SKIP_MULTI_VAR_ANON_MIXED = get("field.sorting.skip.multi.var.anon.mixed");
+	static final String FIELD_SORTING_SKIP_MULTI_VAR_ANON_READER_MIXED = get("field.sorting.skip.multi.var.anon.reader.mixed");
 	static final String FIELD_SORTING_SKIP_MULTI_VAR_COMMENT = get("field.sorting.skip.multi.var.comment");
 	static final String FIELD_SORTING_SKIP_MULTI_VAR_DEPENDENCY = get("field.sorting.skip.multi.var.dependency");
+	static final String FIELD_SORTING_SKIP_MULTI_VAR_DIRECTIVE = get("field.sorting.skip.multi.var.directive");
 	static final String FIELD_SORTING_SKIP_MULTI_VAR_INITIALIZED = get("field.sorting.skip.multi.var.initialized");
 	static final String FIELD_SORTING_SKIP_MULTI_VAR_INTERLEAVED = get("field.sorting.skip.multi.var.interleaved");
+	static final String FIELD_SORTING_SKIP_ORPHANED_COMMENT = get("field.sorting.skip.orphaned.comment");
+	static final String FIELD_SORTING_SKIP_PINNED = get("field.sorting.skip.pinned");
+	static final String FIELD_SORTING_SKIP_RANGE_DIRECTIVE = get("field.sorting.skip.range.directive");
+	static final String FIELD_SORTING_SKIP_SHARED_LINE = get("field.sorting.skip.shared.line");
 	static final String FIELD_SORTING_SKIP_STATIC_FIELD = get("field.sorting.skip.static.field");
+	static final String FIELD_SORTING_SKIP_UNACCOUNTED_LINE = get("field.sorting.skip.unaccounted.line");
+	static final String FIELD_SORTING_SKIP_UNVERIFIED = get("field.sorting.skip.unverified");
 	static final String FINAL_LOCAL_ALREADY_FINAL = get("final.local.skip.already.final");
 	static final String FINAL_LOCAL_MULTI_VAR = get("final.local.skip.multi.var");
 	static final String FINAL_LOCAL_NO_TYPE_LINE = get("final.local.skip.no.type.line");
 	static final String FIX_BOUNDS = get("fix.bounds");
 	static final String FIX_ERROR = get("fix.error");
+	static final String FIX_NO_CHANGE = get("fix.no.change");
 	static final String FIX_NO_FIXER = get("fix.no.fixer");
 	static final String FIX_NOT_FIXABLE = get("fix.not.fixable");
 	static final String FIX_SEVERITY = get("fix.severity");
 	static final String FIX_SUPPRESSED = get("fix.suppressed");
+	static final String IMPORT_SKIP_INHERITED_MEMBER_TYPE = get("prefer.import.skip.inherited.member.type");
+	static final String IMPORT_SKIP_INHERITED_MEMBER_TYPE_UNKNOWN = get("prefer.import.skip.inherited.member.type.unknown");
 	static final String IMPORT_SKIP_NAME_COLLISION = get("prefer.import.skip.name.collision");
 	static final String IMPORT_SKIP_NON_CONTIGUOUS = get("prefer.import.skip.non.contiguous");
 	static final String IMPORT_SKIP_SHADOW = get("prefer.import.skip.shadow");
+	static final String IMPORT_SKIP_STATIC_IMPORT_MEMBER_TYPE = get("prefer.import.skip.static.import.member.type");
+	static final String IMPORT_SKIP_STATIC_IMPORT_MEMBER_TYPE_UNKNOWN = get("prefer.import.skip.static.import.member.type.unknown");
 	static final String IMPORT_SKIP_UNPARSEABLE = get("prefer.import.skip.unparseable");
 	static final String IMPORT_SKIP_UNRESOLVABLE = get("prefer.import.skip.unresolvable");
 	static final String IMPORT_SKIP_WILDCARD = get("prefer.import.skip.wildcard");
 	static final String IMPORT_SKIP_WILDCARD_AMBIGUITY = get("prefer.import.skip.wildcard.ambiguity");
-	static final String LAMBDA_PARAM_SKIP = get("lambda.param.skip");
 	static final String MATH_METHOD_SKIP = get("prefer.math.method.skip");
+	static final String MATH_METHOD_SKIP_FLOAT_ZERO = get("prefer.math.method.skip.float.zero");
 	static final String MATH_METHOD_SKIP_IF = get("prefer.math.method.skip.if");
+	static final String MULTILINE_ARGS_SKIP_COMMENT_JOIN = get("multiline.args.skip.comment.join");
+	static final String MULTILINE_ARGS_SKIP_LITERAL_SEPARATOR = get("multiline.args.skip.literal.separator");
+	static final String MULTILINE_ARGS_SKIP_SPECIAL_ARG = get("multiline.args.skip.special.arg");
+	static final String MULTILINE_ARGS_SKIP_STALE = get("multiline.args.skip.stale");
 	static final String MULTILINE_PUT_SKIP_COMMENT = get("multiline.put.skip.comment");
 	static final String MULTILINE_PUT_SKIP_COMMENT_JOIN = get("multiline.put.skip.comment.join");
 	static final String MULTILINE_PUT_SKIP_STALE = get("multiline.put.skip.stale");
 	static final String MULTILINE_PUT_SKIP_UNSUPPORTED = get("multiline.put.skip.unsupported");
 	static final String MULTILINE_TERNARY_SKIP_COMMENT_JOIN = get("multiline.ternary.skip.comment.join");
+	static final String NO_UNNECESSARY_THIS_SKIP_UNSLICEABLE = get("no.unnecessary.this.skip.unsliceable");
 	static final String PREFER_API_SKIP = get("prefer.api.skip");
-	static final String PREFER_ASSERT_SKIP = get("prefer.assert.skip");
+	static final String PREFER_ASSERT_SKIP_ANNOTATED_TYPE = get("prefer.assert.skip.annotated.type");
+	static final String PREFER_ASSERT_SKIP_ARITY = get("prefer.assert.skip.arity");
+	static final String PREFER_ASSERT_SKIP_COMPARISON = get("prefer.assert.skip.comparison");
+	static final String PREFER_ASSERT_SKIP_GENERIC_TYPE = get("prefer.assert.skip.generic.type");
+	static final String PREFER_ASSERT_SKIP_IMPORT_AMBIGUOUS = get("prefer.assert.skip.import.ambiguous");
+	static final String PREFER_ASSERT_SKIP_IMPORT_UNRESOLVED = get("prefer.assert.skip.import.unresolved");
+	static final String PREFER_ASSERT_SKIP_MULTI_TARGET = get("prefer.assert.skip.multi.target");
+	static final String PREFER_ASSERT_SKIP_RECORD_PATTERN = get("prefer.assert.skip.record.pattern");
+	static final String PREFER_ASSERT_SKIP_UNSLICEABLE = get("prefer.assert.skip.unsliceable");
+	static final String PREFER_DO_WHILE_SKIP_LINE_BUDGET = get("prefer.do.while.skip.line.budget");
+	static final String PREFER_DO_WHILE_SKIP_UNSLICEABLE = get("prefer.do.while.skip.unsliceable");
+	static final String PREFER_LITERAL_SUFFIX_SKIP_LINE_BUDGET = get("prefer.literal.suffix.skip.line.budget");
+	static final String PREFER_LITERAL_SUFFIX_SKIP_UNSLICEABLE = get("prefer.literal.suffix.skip.unsliceable");
 	static final String PREFER_PREFIX_SKIP_MULTILINE_OPERAND = get("prefer.prefix.skip.multiline.operand");
 	static final String PREFER_STANDARD_CHARSETS_SKIP = get("prefer.standard.charsets.skip");
+	static final String PREFER_STANDARD_CHARSETS_SKIP_CAUGHT = get("prefer.standard.charsets.skip.caught");
+	static final String PREFER_STANDARD_CHARSETS_SKIP_FOR_NAME_COMMENT = get("prefer.standard.charsets.skip.for.name.comment");
+	static final String PREFER_STANDARD_CHARSETS_SKIP_FOR_NAME_MULTILINE = get("prefer.standard.charsets.skip.for.name.multiline");
+	static final String PREFER_STANDARD_CHARSETS_SKIP_FOR_NAME_STATEMENT = get("prefer.standard.charsets.skip.for.name.statement");
+	static final String PREFER_STANDARD_CHARSETS_SKIP_UNPROVEN = get("prefer.standard.charsets.skip.unproven");
 	static final String PREFER_STANDARD_CHARSETS_SKIP_VARIABLE = get("prefer.standard.charsets.skip.variable");
 	static final String PREFER_STATIC_IMPORT_CONSTANT_SKIP = get("prefer.static.import.constant.skip");
 	static final String PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT = get("prefer.static.import.constant.skip.cinit");
@@ -88,11 +156,26 @@ final class SkipMessages {
 	static final String PREFER_STATIC_IMPORT_SKIP = get("prefer.static.import.skip");
 	static final String PREFER_VAR_ALREADY_VAR = get("prefer.var.skip.already.var");
 	static final String PREFER_VAR_SKIP = get("prefer.var.skip");
+	static final String PREFER_VAR_SKIP_ARRAY_INITIALIZER_UNPROVEN = get("prefer.var.skip.array.initializer.unproven");
 	static final String PREFER_VAR_SKIP_SPLIT_ARRAY_INITIALIZER = get("prefer.var.skip.split.array.initializer");
 	static final String PREFER_VAR_SKIP_STALE_COLUMN = get("prefer.var.skip.stale.column");
+	static final String PREFER_VAR_SKIP_TYPE_UNPINNED = get("prefer.var.skip.type.unpinned");
+	static final String PREFER_VAR_SKIP_TYPE_UNPROVEN = get("prefer.var.skip.type.unproven");
 	static final String PREFER_VAR_SKIP_UNREACHABLE_DIAMOND = get("prefer.var.skip.unreachable.diamond");
+	static final String PREFER_VAR_SKIP_UNREADABLE_ARRAY_INITIALIZER = get("prefer.var.skip.unreadable.array.initializer");
 	static final String PREFER_VAR_SKIP_UNRECOGNIZED = get("prefer.var.skip.unrecognized");
 	static final String PREFER_VAR_SKIP_WRAPPED_TYPE_ARGUMENTS = get("prefer.var.skip.wrapped.type.arguments");
+	static final String RECORD_FORMATTING_SKIP_EMPTY_BODY_CONTENT = get("record.formatting.skip.empty.body.content");
+	static final String RECORD_FORMATTING_SKIP_HEADER_LINE_COMMENT = get("record.formatting.skip.header.line.comment");
+	static final String RECORD_FORMATTING_SKIP_HEADER_MULTILINE_SPAN = get("record.formatting.skip.header.multiline.span");
+	static final String RECORD_FORMATTING_SKIP_OPEN_BRACE_ANCHOR = get("record.formatting.skip.open.brace.anchor");
+	static final String RECORD_PAIR_DEFERRED = get("prefer.collection.interface.skip.record.pair");
+	static final String RECORD_PAIR_HALF = get("prefer.collection.interface.skip.record.half");
+	static final String REDUNDANT_ARRAY_CREATION_SKIP_COMMENT = get("redundant.array.creation.skip.comment");
+	static final String REDUNDANT_ARRAY_CREATION_SKIP_LINE_BUDGET = get("redundant.array.creation.skip.line.length");
+	static final String REDUNDANT_ARRAY_CREATION_SKIP_NESTED_INITIALIZER = get("redundant.array.creation.skip.nested.initializer");
+	static final String REDUNDANT_ARRAY_CREATION_SKIP_TEXT_BLOCK = get("redundant.array.creation.skip.text.block");
+	static final String REDUNDANT_CAST_SKIP_UNSLICEABLE = get("redundant.cast.skip.unsliceable");
 	static final String REDUNDANT_EQUALITY_SKIP_COMMENT = get("redundant.equality.skip.comment");
 	static final String REDUNDANT_MODIFIER_STALE_COLUMN = get("redundant.modifier.skip.stale.column");
 	static final String UNUSED_IMPORTS_MALFORMED = get("unused.imports.skip.malformed");
@@ -110,10 +193,12 @@ final class SkipMessages {
 	private static Map<Object, Object> loadProps() {
 		final var props = new Properties();
 		try (var in = SkipMessages.class.getResourceAsStream("/com/etk2000/checkstyle/messages.properties")) {
-			if (in != null)
-				props.load(in);
+			if (in == null)
+				throw new IllegalStateException("messages.properties not found on the classpath of " + SkipMessages.class.getName());
+			props.load(new InputStreamReader(in, StandardCharsets.UTF_8));
 		}
-		catch (IOException ignored) {
+		catch (IOException e) {
+			throw new UncheckedIOException("Failed to load messages.properties", e);
 		}
 		return props;
 	}

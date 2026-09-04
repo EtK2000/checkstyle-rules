@@ -1,7 +1,6 @@
 package com.etk2000.checkstyle.gradle.fix;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.etk2000.checkstyle.TestResources;
 
@@ -18,10 +17,6 @@ public class LambdaParameterTypeFixerTest {
 	public void testNoArrow() throws Exception {
 		final var fx = TestResources.loadSnippet(TOPIC, "no_arrow_skip");
 		final var t = fx.firstTarget();
-		final var result = assertInstanceOf(
-				SkipResult.class,
-				fixer.fix(new ArrayList<>(fx.inputLines()), t.line(), t.column())
-		);
-		assertEquals(SkipMessages.LAMBDA_PARAM_SKIP, result.reason());
+		assertNull(fixer.fix(new ArrayList<>(fx.inputLines()), t.line(), t.column()));
 	}
 }

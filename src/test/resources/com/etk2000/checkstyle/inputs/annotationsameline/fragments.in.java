@@ -1,4 +1,4 @@
-// === case: annotation_unterminated_paren_skips_join ===
+// === case: unparseable_buffer ===
 // target: col=0
 		@Foo(
 		String param

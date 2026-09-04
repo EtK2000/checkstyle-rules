@@ -11,7 +11,8 @@ import javax.annotation.Nullable;
 class PreferPrefixIncrementFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
+		final var column = LineText.columnOfCharIndex(lines.get(lineIndex), charColumn);
 		final var root = FixerAst.parseOrNull(lines);
 		if (root == null)
 			return null;

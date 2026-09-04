@@ -1,6 +1,8 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
+import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.LineText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 
 import java.util.List;
@@ -30,6 +32,18 @@ final class FixerAst {
 	}
 
 	/**
+	 * A check's positional classifier: whatever it recognizes at {@code (line, column)}, or null
+	 * when nothing it recognizes sits there. {@code line} is a 0-based line index and {@code column}
+	 * a 0-based code-point column, the pair {@code AstQuery.findNodeAt} takes and every locator in
+	 * the repo is written against.
+	 */
+	@FunctionalInterface
+	interface Locator<T> {
+		@Nullable
+		T locate(@Nonnull DetailAST root, int line, int column) throws CheckstyleException;
+	}
+
+	/**
 	 * A parser that may fail the way checkstyle's does. Exists so the firewall's
 	 * error arms can be driven in a test without a buffer that provokes each one
 	 * from the real parser.
@@ -45,12 +59,17 @@ final class FixerAst {
 	 * later in-place edit to the caller's list cannot make it silently match.
 	 */
 	private static final ThreadLocal<List<String>> CACHED_LINES = new ThreadLocal<>();
+	private static final ThreadLocal<List<String>> CACHED_MASK = new ThreadLocal<>();
+	private static final ThreadLocal<List<String>> CACHED_MASK_LINES = new ThreadLocal<>();
 	private static final ThreadLocal<ThrowingParser> CACHED_PARSER = new ThreadLocal<>();
 	private static final ThreadLocal<DetailAST> CACHED_ROOT = new ThreadLocal<>();
+	// the caller's own list the cached root was parsed from, and its buffer version then
+	private static final ThreadLocal<List<String>> CACHED_SOURCE = new ThreadLocal<>();
+	private static final ThreadLocal<Integer> CACHED_VERSION = new ThreadLocal<>();
 
 	// held as a constant rather than a fresh method reference per call so the cache
 	// can compare parser identity without missing on every production lookup
-	private static final ThrowingParser DEFAULT_PARSER = PreferStaticImportConstantFixer::parseLinesToAst;
+	static final ThrowingParser DEFAULT_PARSER = PreferStaticImportConstantFixer::parseLinesToAst;
 
 	/**
 	 * Drops this thread's cached parse. The cache only has to outlive one file's
@@ -59,8 +78,86 @@ final class FixerAst {
 	 */
 	static void clearCache() {
 		CACHED_LINES.remove();
+		CACHED_MASK.remove();
+		CACHED_MASK_LINES.remove();
 		CACHED_PARSER.remove();
 		CACHED_ROOT.remove();
+		CACHED_SOURCE.remove();
+		CACHED_VERSION.remove();
+	}
+
+	/**
+	 * Whether {@code guard} holds over the parsed buffer, or cannot tell: false only when it answers
+	 * false, true when it answers true, throws or answers null, and when the buffer does not parse,
+	 * without asking it. For a guard that stops a fix whose premise may be gone, where a classifier
+	 * that failed, or a buffer it cannot read, is no evidence the premise still holds
+	 * ({@link #withAst} reads all three as null): the fix is skipped, and retried on the next pass.
+	 */
+	@CheckReturnValue
+	static boolean holdsOrFails(@Nonnull List<String> lines, @Nonnull AstFunction<Boolean> guard) {
+		return parseOrNull(lines) == null || !Boolean.FALSE.equals(withAst(lines, guard));
+	}
+
+	/**
+	 * True when {@code lines} is the buffer the cached root was parsed from: the same list at the
+	 * same {@linkplain FixContext#getBufferVersion buffer version} inside {@code applyFixes}, which
+	 * edits only through applied fixes, else equal line for line. Comparing every line on every
+	 * event would make a pass over a file with many refused violations cost O(violations x lines).
+	 */
+	@CheckReturnValue
+	private static boolean isCachedBuffer(@Nonnull List<String> lines) {
+		final var version = FixContext.getBufferVersion();
+		if (version != null && CACHED_SOURCE.get() == lines && version.equals(CACHED_VERSION.get()))
+			return true;
+		final var cachedLines = CACHED_LINES.get();
+		if (cachedLines == null || !cachedLines.equals(lines))
+			return false;
+		CACHED_SOURCE.set(lines);
+		CACHED_VERSION.set(version);
+		return true;
+	}
+
+	/**
+	 * What {@code locator} recognizes at the violation's position, or null when the position names
+	 * no line of {@code lines}, the buffer does not parse, or the locator recognizes nothing there.
+	 *
+	 * <p>The prologue every fixer dispatching on a check's locator shares. {@code charColumn} arrives
+	 * as an index into the line's chars while an AST position counts code points, so the conversion
+	 * happens here, exactly once, and the line is handed on 0-based so every locator agrees on the
+	 * base. The {@code lineIndex} test comes first because {@code lines.get} would throw ahead of
+	 * either: {@link CheckstyleFixAction#applyFixes} already rejects an out-of-range event before
+	 * calling a fixer, so this only guards one driven directly, but a throw there fails a whole test
+	 * run rather than skipping a fix.
+	 */
+	@CheckReturnValue
+	@Nullable
+	static <T> T locate(@Nonnull List<String> lines, int lineIndex, int charColumn, @Nonnull Locator<T> locator) {
+		if (lineIndex < 0 || lineIndex >= lines.size())
+			return null;
+		final var column = LineText.columnOfCharIndex(lines.get(lineIndex), charColumn);
+		return withAst(lines, root -> locator.locate(root, lineIndex, column));
+	}
+
+	/**
+	 * {@link JavaLineScanner#maskAll} over {@code lines}, served from a cache when the buffer is
+	 * unchanged. Cached for the same reason {@link #parseOrNull} caches its AST: the pipeline calls a
+	 * fixer once per violation, so re-masking the whole file each time makes a pass cost
+	 * O(violations x file size). Keyed on buffer equality rather than an invalidation call, so a
+	 * stale mask cannot outlive an edit. The result is immutable: masked lines are read-only to every
+	 * caller, and sharing one instance is what makes the cache worth having.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static List<String> maskAll(@Nonnull List<String> lines) {
+		final var cachedLines = CACHED_MASK_LINES.get();
+		final var cachedMask = CACHED_MASK.get();
+		if (cachedLines != null && cachedMask != null && cachedLines.equals(lines))
+			return cachedMask;
+
+		final var masked = List.copyOf(JavaLineScanner.maskAll(lines));
+		CACHED_MASK_LINES.set(List.copyOf(lines));
+		CACHED_MASK.set(masked);
+		return masked;
 	}
 
 	/**
@@ -74,9 +171,8 @@ final class FixerAst {
 	 * unit each time makes a fix pass cost O(violations x file size). The cache is
 	 * keyed on buffer equality rather than an invalidation call so a stale AST
 	 * cannot outlive an edit, and it is thread-confined to match {@link FixContext}.
-	 * Equality is cheap despite comparing every line: the pipeline reuses the same
-	 * {@code String} objects for lines it did not touch, and {@code String.equals}
-	 * short-circuits on identity.
+	 * Inside the pipeline the buffer version settles it without comparing lines
+	 * ({@link #isCachedBuffer}).
 	 */
 	@CheckReturnValue
 	@Nullable
@@ -90,8 +186,7 @@ final class FixerAst {
 		// the parser is part of the key: keyed on the buffer alone, an injected parser
 		// would be served an AST it never produced, and its result would then be handed
 		// back to the production path for the same buffer
-		final var cachedLines = CACHED_LINES.get();
-		if (cachedLines != null && cachedLines.equals(lines) && CACHED_PARSER.get() == parser)
+		if (CACHED_PARSER.get() == parser && isCachedBuffer(lines))
 			return CACHED_ROOT.get();
 
 		DetailAST root;
@@ -106,6 +201,8 @@ final class FixerAst {
 		CACHED_LINES.set(List.copyOf(lines));
 		CACHED_PARSER.set(parser);
 		CACHED_ROOT.set(root);
+		CACHED_SOURCE.set(lines);
+		CACHED_VERSION.set(FixContext.getBufferVersion());
 		return root;
 	}
 

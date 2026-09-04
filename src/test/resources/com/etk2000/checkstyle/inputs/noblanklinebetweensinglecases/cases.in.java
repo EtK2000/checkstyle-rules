@@ -1,5 +1,51 @@
 package com.etk2000.checkstyle.inputs.noblanklinebetweensinglecases;
 
+// === case: arrow_blank_after_braced_case ===
+class InputArrowBlankAfterBracedCaseSliceViolation {
+	int method(int x) {
+		return switch (x) {
+			case 1 -> {
+				final var y = x + 1;
+				yield y;
+			}
+
+			case 2 -> 2; // violation: Remove the blank line after the braced case (the closing brace provides separation).
+			default -> 0;
+		};
+	}
+}
+// === end ===
+
+// === case: arrow_blank_between_single_cases ===
+class InputArrowBlankBetweenSingleCasesSliceViolation {
+	int method(int x) {
+		return switch (x) {
+			case 1 -> 1;
+
+			case 2 -> 2; // violation: Remove the blank line between single-line switch cases.
+			default -> 0;
+		};
+	}
+}
+// === end ===
+
+// === case: blank_and_comment_between_cases ===
+class InputBlankAndCommentBetweenCasesSliceViolation {
+	int method(int x) {
+		switch (x) {
+			case 1:
+				return 1;
+
+			// a note about case 2
+			case 2: // violation: Remove the blank line between single-line switch cases.
+				return 2;
+			default:
+				return 0;
+		}
+	}
+}
+// === end ===
+
 // === case: bracedcaseblankline_case ===
 class InputBracedCaseBlankLineCaseSliceViolation {
 	int method(int x) {
@@ -8,7 +54,7 @@ class InputBracedCaseBlankLineCaseSliceViolation {
 				return x + 1;
 			}
 
-			case 2: { // violation: Remove blank line after braced case (closing brace provides separation).
+			case 2: { // violation: Remove the blank line after the braced case (the closing brace provides separation).
 				return x + 2;
 			}
 		}
@@ -25,7 +71,7 @@ class InputBracedCaseBlankLineDefaultSliceViolation {
 				return x + 1;
 			}
 
-			default: // violation: Remove blank line after braced case (closing brace provides separation).
+			default: // violation: Remove the blank line after the braced case (the closing brace provides separation).
 				return 0;
 		}
 	}
@@ -41,7 +87,7 @@ class InputRemoveSingleBlankLineViolation {
 			case "b":
 				return 2;
 
-			case "c": // violation: Remove blank line between single-line switch cases.
+			case "c": // violation: Remove the blank line between single-line switch cases.
 				return 3;
 			default:
 				return 0;
@@ -57,7 +103,7 @@ class InputSingleCaseViolation {
 			case 1:
 				return 1;
 
-			case 2: // violation: Remove blank line between single-line switch cases.
+			case 2: // violation: Remove the blank line between single-line switch cases.
 				return 2;
 			default:
 				return 0;
@@ -73,7 +119,7 @@ class InputSingleCaseThrowViolation {
 			case 1:
 				throw new RuntimeException("one");
 
-			case 2: // violation: Remove blank line between single-line switch cases.
+			case 2: // violation: Remove the blank line between single-line switch cases.
 				throw new RuntimeException("two");
 			default:
 				throw new RuntimeException("default");
@@ -89,7 +135,7 @@ class InputSingleCaseYieldViolation {
 			case 1:
 				yield 1;
 
-			case 2: // violation: Remove blank line between single-line switch cases.
+			case 2: // violation: Remove the blank line between single-line switch cases.
 				yield 2;
 			default:
 				yield 0;

@@ -1,9 +1,15 @@
-// === case: column_equals_line_length ===
-// target: col=7
-this.x;
+// === case: stale_column_after_sibling_edit ===
+// target: line=4 col=11
+class S {
+	String name;
+
+	String m() {
+		return name + this.name;
+	}
+}
 // === end ===
 
-// === case: this_start_minus_one ===
-// target: col=3
- this.x;
+// === case: unparseable_buffer ===
+// target: col=7
+this.x;
 // === end ===

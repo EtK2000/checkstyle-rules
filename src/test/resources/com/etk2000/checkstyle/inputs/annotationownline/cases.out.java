@@ -6,6 +6,7 @@ package com.etk2000.checkstyle.inputs.annotationownline;
 @interface V {
 	String[] value();
 }
+@interface Ä {}
 
 // === case: annotation_with_char_literal ===
 class InputAnnotationOwnLineAnnotationWithCharLiteralViolation {
@@ -35,6 +36,22 @@ class InputAnnotationOwnLineAnnotationWithNestedParensViolation {
 class InputAnnotationOwnLineAnnotationWithStringParamsViolation {
 	@Override
 	@SuppressWarnings("unchecked")
+	void f() {}
+}
+// === end ===
+
+// === case: blank_after_column_past_last_line_end ===
+class InputAnnotationOwnLineBlankAfterColumnPastLastLineEndViolation {
+				@V(
+"a")
+	void f() {}
+}
+// === end ===
+
+// === case: blank_after_nested_annotation_decoy ===
+class InputAnnotationOwnLineBlankAfterNestedAnnotationDecoyViolation {
+	@V(
+	@A)
 	void f() {}
 }
 // === end ===
@@ -156,6 +173,57 @@ class InputAnnotationOwnLineBlankLineInsideBlockCommentNoBlankAfterViolation {
 }
 // === end ===
 
+// === case: blankline_blank_before_annotation_field ===
+@interface InputAnnotationOwnLineBlanklineBlankBeforeAnnotationFieldViolation {
+	@A
+	int priority();
+}
+// === end ===
+
+// === case: blankline_blank_before_annotation_type ===
+class InputAnnotationOwnLineBlanklineBlankBeforeAnnotationTypeViolation {
+	@A
+	@interface Meta {}
+}
+// === end ===
+
+// === case: blankline_blank_before_class ===
+class InputAnnotationOwnLineBlanklineBlankBeforeClassViolation {
+	@A
+	static class Inner {}
+}
+// === end ===
+
+// === case: blankline_blank_before_compact_ctor ===
+record InputAnnotationOwnLineBlanklineBlankBeforeCompactCtorViolation(int value) {
+	@A
+	InputAnnotationOwnLineBlanklineBlankBeforeCompactCtorViolation {}
+}
+// === end ===
+
+// === case: blankline_blank_before_ctor ===
+class InputAnnotationOwnLineBlanklineBlankBeforeCtorViolation {
+	@A
+	InputAnnotationOwnLineBlanklineBlankBeforeCtorViolation() {}
+}
+// === end ===
+
+// === case: blankline_blank_before_enum ===
+class InputAnnotationOwnLineBlanklineBlankBeforeEnumViolation {
+	@A
+	enum Inner {
+		X
+	}
+}
+// === end ===
+
+// === case: blankline_blank_before_enum_constant ===
+enum InputAnnotationOwnLineBlanklineBlankBeforeEnumConstantViolation {
+	@A
+	RED
+}
+// === end ===
+
 // === case: blankline_blank_before_field ===
 class InputAnnotationOwnLineBlanklineBlankBeforeFieldViolation {
 	@A
@@ -163,10 +231,34 @@ class InputAnnotationOwnLineBlanklineBlankBeforeFieldViolation {
 }
 // === end ===
 
+// === case: blankline_blank_before_interface ===
+class InputAnnotationOwnLineBlanklineBlankBeforeInterfaceViolation {
+	@A
+	interface Inner {}
+}
+// === end ===
+
+// === case: blankline_blank_before_local ===
+class InputAnnotationOwnLineBlanklineBlankBeforeLocalViolation {
+	void f() {
+		@A
+		final var local = 1;
+		assert local > 0;
+	}
+}
+// === end ===
+
 // === case: blankline_blank_before_method ===
 class InputAnnotationOwnLineBlanklineBlankBeforeMethodViolation {
 	@A
 	void m() {}
+}
+// === end ===
+
+// === case: blankline_blank_before_record ===
+class InputAnnotationOwnLineBlanklineBlankBeforeRecordViolation {
+	@A
+	record Inner(int x) {}
 }
 // === end ===
 
@@ -423,6 +515,128 @@ class InputAnnotationOwnLineEscapedQuoteInStringParamViolation {
 }
 // === end ===
 
+// === case: internal_blank_annotation_field ===
+@interface InputAnnotationOwnLineInternalBlankAnnotationFieldViolation {
+	@V({
+		"a"
+	})
+	int priority();
+}
+// === end ===
+
+// === case: internal_blank_annotation_type ===
+class InputAnnotationOwnLineInternalBlankAnnotationTypeViolation {
+	@V({
+		"a"
+	})
+	@interface Meta {}
+}
+// === end ===
+
+// === case: internal_blank_before_text_block ===
+class InputAnnotationOwnLineInternalBlankBeforeTextBlockViolation {
+	@V(
+			"""
+			a""")
+	void f() {}
+}
+// === end ===
+
+// === case: internal_blank_class ===
+class InputAnnotationOwnLineInternalBlankClassViolation {
+	@V({
+		"a"
+	})
+	static class Inner {}
+}
+// === end ===
+
+// === case: internal_blank_compact_ctor ===
+record InputAnnotationOwnLineInternalBlankCompactCtorViolation(int value) {
+	@V({
+		"a"
+	})
+	InputAnnotationOwnLineInternalBlankCompactCtorViolation {}
+}
+// === end ===
+
+// === case: internal_blank_ctor ===
+class InputAnnotationOwnLineInternalBlankCtorViolation {
+	@V({
+		"a"
+	})
+	InputAnnotationOwnLineInternalBlankCtorViolation() {}
+}
+// === end ===
+
+// === case: internal_blank_enum ===
+class InputAnnotationOwnLineInternalBlankEnumViolation {
+	@V({
+		"a"
+	})
+	enum Inner {
+		X
+	}
+}
+// === end ===
+
+// === case: internal_blank_enum_constant ===
+enum InputAnnotationOwnLineInternalBlankEnumConstantViolation {
+	@V({
+		"a"
+	})
+	RED
+}
+// === end ===
+
+// === case: internal_blank_field ===
+class InputAnnotationOwnLineInternalBlankFieldViolation {
+	@V({
+		"a"
+	})
+	int field;
+}
+// === end ===
+
+// === case: internal_blank_inside_block_comment ===
+class InputAnnotationOwnLineInternalBlankInsideBlockCommentViolation {
+	@V({ /* x
+			y */ "a"
+	})
+	void f() {}
+}
+// === end ===
+
+// === case: internal_blank_interface ===
+class InputAnnotationOwnLineInternalBlankInterfaceViolation {
+	@V({
+		"a"
+	})
+	interface Inner {}
+}
+// === end ===
+
+// === case: internal_blank_local ===
+class InputAnnotationOwnLineInternalBlankLocalViolation {
+	void f() {
+		@V({
+			"a"
+		})
+		final var local = 1;
+		assert local > 0;
+	}
+}
+// === end ===
+
+// === case: internal_blank_record ===
+class InputAnnotationOwnLineInternalBlankRecordViolation {
+	@V({
+		"a"
+	})
+	record Inner(int x) {}
+}
+// === end ===
+
 // === case: leading_and_embedded_annotations ===
 class InputAnnotationOwnLineLeadingAndEmbeddedAnnotationsViolation {
 	void m() {
@@ -520,11 +734,105 @@ class InputAnnotationOwnLineOrderViolation {
 }
 // === end ===
 
+// === case: order_annotation_field ===
+@interface InputAnnotationOwnLineOrderAnnotationFieldViolation {
+	@A
+	@B
+	int priority();
+}
+// === end ===
+
+// === case: order_annotation_type ===
+class InputAnnotationOwnLineOrderAnnotationTypeViolation {
+	@A
+	@B
+	@interface Meta {}
+}
+// === end ===
+
+// === case: order_argument_bearing ===
+class InputAnnotationOwnLineOrderArgumentBearingViolation {
+	@A({"x"})
+	@B
+	void f() {}
+}
+// === end ===
+
+// === case: order_class ===
+class InputAnnotationOwnLineOrderClassViolation {
+	@A
+	@B
+	static class Inner {}
+}
+// === end ===
+
+// === case: order_comment_line_between_annotations ===
+class InputAnnotationOwnLineOrderCommentLineBetweenAnnotationsViolation {
+	/* why A */
+	@A
+	@B
+	void f() {}
+}
+// === end ===
+
+// === case: order_compact_ctor ===
+record InputAnnotationOwnLineOrderCompactCtorViolation(int value) {
+	@A
+	@B
+	InputAnnotationOwnLineOrderCompactCtorViolation {}
+}
+// === end ===
+
+// === case: order_ctor ===
+class InputAnnotationOwnLineOrderCtorViolation {
+	@A
+	@B
+	InputAnnotationOwnLineOrderCtorViolation() {}
+}
+// === end ===
+
+// === case: order_enum ===
+class InputAnnotationOwnLineOrderEnumViolation {
+	@A
+	@B
+	enum Inner {
+		X
+	}
+}
+// === end ===
+
+// === case: order_enum_constant ===
+enum InputAnnotationOwnLineOrderEnumConstantViolation {
+	@A
+	@B
+	RED
+}
+// === end ===
+
 // === case: order_field ===
 class InputAnnotationOwnLineOrderFieldViolation {
 	@A
 	@B
 	int fieldOrder;
+}
+// === end ===
+
+// === case: order_interface ===
+class InputAnnotationOwnLineOrderInterfaceViolation {
+	@A
+	@B
+	interface Inner {}
+}
+// === end ===
+
+// === case: order_local ===
+class InputAnnotationOwnLineOrderLocalViolation {
+	void f() {
+		@A
+		@B
+		final var local = 1;
+		assert local > 0;
+	}
 }
 // === end ===
 
@@ -534,6 +842,104 @@ class InputAnnotationOwnLineOrderMethodWithThreeViolation {
 	@B
 	@C
 	void methodOrder() {}
+}
+// === end ===
+
+// === case: order_multi_declarator ===
+class InputAnnotationOwnLineOrderMultiDeclaratorViolation {
+	@A
+	@B
+	int alpha, beta;
+}
+// === end ===
+
+// === case: order_multi_line_annotation_with_comment ===
+class InputAnnotationOwnLineOrderMultiLineAnnotationWithCommentViolation {
+	@B
+	@V({
+			/* why */ "a"})
+	void f() {}
+}
+// === end ===
+
+// === case: order_non_ascii_name ===
+class InputAnnotationOwnLineOrderNonAsciiNameViolation {
+	@B
+	@Ä
+	void f() {}
+}
+// === end ===
+
+// === case: order_record ===
+class InputAnnotationOwnLineOrderRecordViolation {
+	@A
+	@B
+	record Inner(int x) {}
+}
+// === end ===
+
+// === case: order_space_after_at ===
+class InputAnnotationOwnLineOrderSpaceAfterAtViolation {
+	@ A
+	@B
+	void f() {}
+}
+// === end ===
+
+// === case: order_split_argument ===
+class InputAnnotationOwnLineOrderSplitArgumentViolation {
+	@A({ "x"})
+	@B
+	void f() {}
+}
+// === end ===
+
+// === case: order_split_qualified_name ===
+class InputAnnotationOwnLineOrderSplitQualifiedNameViolation {
+	@B
+	@java.lang.Deprecated
+	void f() {}
+}
+// === end ===
+
+// === case: order_text_block_argument ===
+class InputAnnotationOwnLineOrderTextBlockArgumentViolation {
+	@B
+	@V("""
+			a""")
+	void f() {}
+}
+// === end ===
+
+// === case: order_trailing_line_comment ===
+class InputAnnotationOwnLineOrderTrailingLineCommentViolation {
+	@A
+	@B // why B
+	void f() {}
+}
+// === end ===
+
+// === case: own_line_and_order_split_argument ===
+class InputAnnotationOwnLineOwnLineAndOrderSplitArgumentViolation {
+	@A({ "x"})
+	@C
+	void f() {}
+}
+// === end ===
+
+// === case: own_line_multi_declarator ===
+class InputAnnotationOwnLineOwnLineMultiDeclaratorViolation {
+	@A
+	@B
+	int alpha, beta;
+}
+// === end ===
+
+// === case: own_line_split_qualified_name ===
+class InputAnnotationOwnLineOwnLineSplitQualifiedNameViolation {
+	@A
+	java.util
+			.List<String> field;
 }
 // === end ===
 
@@ -606,6 +1012,16 @@ class InputAnnotationOwnLineSamelineEnumConstantTwoAnnotationsViolation {
 }
 // === end ===
 
+// === case: sameline_group_after_block_comment_tail ===
+class InputAnnotationOwnLineSamelineGroupAfterBlockCommentTailViolation {
+	/* note
+	can't */
+	@A
+	@B
+	void f() {}
+}
+// === end ===
+
 // === case: sameline_inline_constructor ===
 class InputAnnotationOwnLineSamelineInlineConstructorViolation {
 	@A
@@ -639,8 +1055,7 @@ class InputAnnotationOwnLineSamelineInlineInnerAnnotationMethodViolation {
 // === case: sameline_inline_inner_annotation_type ===
 class InputAnnotationOwnLineSamelineInlineInnerAnnotationTypeViolation {
 	@A
-	@interface
-	InlineMeta {}
+	@interface InlineMeta {}
 }
 // === end ===
 
@@ -663,6 +1078,33 @@ class InputAnnotationOwnLineSamelineInlineRecordViolation {
 	@A
 	@B
 	record InlineRec(int x) {}
+}
+// === end ===
+
+// === case: sameline_interior_opener_closed_before_declaration ===
+class InputAnnotationOwnLineSamelineInteriorOpenerClosedBeforeDeclarationViolation {
+	@B
+	/* TODO: make this
+	package-private */
+	public void f() {}
+}
+// === end ===
+
+// === case: sameline_interior_opener_closed_before_modifier ===
+class InputAnnotationOwnLineSamelineInteriorOpenerClosedBeforeModifierViolation {
+	@B
+	/* note
+	*/
+	public static void f() {}
+}
+// === end ===
+
+// === case: sameline_line_comment_on_modifier ===
+class InputAnnotationOwnLineSamelineLineCommentOnModifierViolation {
+	@A
+	@B
+	// TODO: narrow
+	public static void f() {}
 }
 // === end ===
 
@@ -704,6 +1146,16 @@ class InputAnnotationOwnLineSamelineLocalTwoAnnotationsViolation {
 }
 // === end ===
 
+// === case: sameline_opened_gap_leading_fragment ===
+class InputAnnotationOwnLineSamelineOpenedGapLeadingFragmentViolation {
+	@A
+	@B
+	/* TODO: fix
+	this later */
+	void f() {}
+}
+// === end ===
+
 // === case: sameline_three_annotation_field ===
 class InputAnnotationOwnLineSamelineThreeAnnotationFieldViolation {
 	@A
@@ -726,6 +1178,16 @@ class InputAnnotationOwnLineSamelineThreeAnnotationMethodViolation {
 @A
 @B
 class InputAnnotationOwnLineSamelineTopLevelClassViolation {}
+// === end ===
+
+// === case: sameline_trailing_block_comment_opener ===
+class InputAnnotationOwnLineSamelineTrailingBlockCommentOpenerViolation {
+	@A
+	@B
+	/* TODO: fix
+	this later */
+	void f() {}
+}
 // === end ===
 
 // === case: sameline_two_annotation_field ===

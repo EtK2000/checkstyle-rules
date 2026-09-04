@@ -96,7 +96,7 @@ class InputAvoidNoArgumentSuperCallExtraCodeSliceViolation {
 // === end ===
 
 // === case: skip_super_multiline ===
-// skip-reason: super() call spans multiple lines
+// skip-reason: cannot remove the super() call: it spans multiple lines
 class InputAvoidNoArgumentSuperCallMultilineSliceViolation {
 	InputAvoidNoArgumentSuperCallMultilineSliceViolation() {
 		super( // violation: Unnecessary call to superclass constructor with no arguments.

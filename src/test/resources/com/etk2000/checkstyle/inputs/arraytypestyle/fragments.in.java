@@ -1,3 +1,8 @@
+// === case: annotated_base_dimension_unparseable_skips ===
+// target: col=24
+run(() -> { int @A [] ab[]; int cd; }
+// === end ===
+
 // === case: block_comment_after_method_return_brackets_returns_null ===
 // target: col=7
 int m()[] /* c
@@ -7,6 +12,41 @@ int m()[] /* c
 // === case: bracket_at_line_start_returns_null ===
 // target: col=0
 [] x;
+// === end ===
+
+// === case: call_argument_lambda_initialized_multi_var_unparseable_skips ===
+// target: col=18
+run(() -> { int ab[] = {f(1, 2)}, cd = 3; }
+// === end ===
+
+// === case: call_argument_lambda_initializer_closes_block_unparseable_skips ===
+// target: col=18
+run(() -> { int ab[] = x }
+// === end ===
+
+// === case: call_argument_lambda_multi_var_unparseable_skips ===
+// target: col=18
+run(() -> { int ab[], cd; }
+// === end ===
+
+// === case: call_argument_lambda_same_depth_unparseable_skips ===
+// target: col=18
+run(() -> { int ab[], cd[]; }
+// === end ===
+
+// === case: call_argument_lambda_single_var_unparseable_skips ===
+// target: col=18
+run(() -> { int ab[]; int cd; }
+// === end ===
+
+// === case: call_argument_lambda_three_declarators_unparseable_skips ===
+// target: col=18
+run(() -> { int ab[], cd, ef; }
+// === end ===
+
+// === case: cast_unparseable_skips ===
+// target: col=28
+run(() -> { Byte b[] = (Byte[]) o; }
 // === end ===
 
 // === case: catch_keyword_not_treated_as_param_list ===
@@ -19,7 +59,7 @@ catch (int x[] = a, b) {}
 do (int x[] = a, b);
 // === end ===
 
-// === case: escaped_backslash_at_eol_in_string ===
+// === case: escaped_backslash_at_eol_in_string_skips ===
 // target: line=2 col=5
 String s = "abc\
 more";
@@ -41,23 +81,23 @@ int m()[] foo;
 obj.bar()[]
 // === end ===
 
-// === case: field_init_call_ends_in_paren_multi_var_returns_null ===
+// === case: field_init_call_ends_in_paren_multi_var_skips ===
 // target: line=1 col=0
 int x = compute()
 [], y = 1;
 // === end ===
 
-// === case: generic_record_multi_component ===
+// === case: generic_record_multi_component_skips ===
 // target: col=17
 record R<T>(int x[], String s) {}
 // === end ===
 
-// === case: generic_record_multi_type_param ===
+// === case: generic_record_multi_type_param_skips ===
 // target: col=20
 record R<K, V>(int x[], V v) {}
 // === end ===
 
-// === case: generic_record_nested_type_bounds ===
+// === case: generic_record_nested_type_bounds_skips ===
 // target: col=38
 record R<T extends List<String>>(int x[], int y) {}
 // === end ===
@@ -82,7 +122,7 @@ int m()[] thrown;
 int m()[] throwsException;
 // === end ===
 
-// === case: method_return_with_type_use_annotation_returns_null ===
+// === case: method_return_with_type_use_annotation_skips ===
 // target: col=11
 int m() @A []
 // === end ===
@@ -93,14 +133,14 @@ int x
 [abc];
 // === end ===
 
-// === case: multi_line_decl_ending_at_closing_brace_treated_as_terminator ===
+// === case: multi_line_decl_ending_at_closing_brace_unparseable_skips ===
 // target: line=1 col=2
 int x
 		[]
 }
 // === end ===
 
-// === case: multi_line_eof_without_terminator ===
+// === case: multi_line_eof_without_terminator_skips ===
 // target: line=1 col=2
 int x
 		[]
@@ -141,13 +181,13 @@ super X
 		[];
 // === end ===
 
-// === case: multi_line_text_block_on_bracket_line_returns_null ===
+// === case: multi_line_text_block_on_bracket_line_skips ===
 // target: line=1 col=2
 String x
 		[] = """
 // === end ===
 
-// === case: multi_line_text_block_on_later_line_returns_null ===
+// === case: multi_line_text_block_on_later_line_skips ===
 // target: line=1 col=2
 int x
 		[] = a
@@ -173,17 +213,22 @@ int x
 		[];
 // === end ===
 
+// === case: multi_var_same_depth_unparseable_skips ===
+// target: col=9
+int alpha[], beta[]
+// === end ===
+
 // === case: no_suffix_returns_null ===
 // target: col=5
 int x[]
 // === end ===
 
-// === case: open_paren_at_line_start_treated_as_parens ===
+// === case: open_paren_at_line_start_unparseable_skips ===
 // target: col=6
 (int x[])
 // === end ===
 
-// === case: orphan_close_paren_ignored ===
+// === case: orphan_close_paren_unparseable_skips ===
 // target: col=7
 ) int x[];
 // === end ===
@@ -191,6 +236,16 @@ int x[]
 // === case: orphan_close_paren_without_match_returns_null ===
 // target: col=2
 })[];
+// === end ===
+
+// === case: param_list_unparseable_annotated_next_param_skips ===
+// target: col=13
+void m(int ab[], @A int cd) {
+// === end ===
+
+// === case: param_list_unparseable_comma_at_line_end_skips ===
+// target: col=13
+void m(int ab[],
 // === end ===
 
 // === case: permits_keyword_single_line_returns_null ===
@@ -234,12 +289,12 @@ int m() throws E[];
 try (int x[] = a, b) {}
 // === end ===
 
-// === case: type_use_annotation_in_parameter_returns_null ===
+// === case: type_use_annotation_in_parameter_skips ===
 // target: col=16
 void m(int x @A [])
 // === end ===
 
-// === case: type_use_annotation_in_record_returns_null ===
+// === case: type_use_annotation_in_record_skips ===
 // target: col=18
 record R(int x @A [])
 // === end ===

@@ -1,3 +1,16 @@
+// === case: delete_blank_after_brace_below_text_block ===
+// target: line=5 col=0
+class T {
+	String s = """
+		x
+		""";
+}
+class U {
+
+	int y;
+}
+// === end ===
+
 // === case: delete_mixed_whitespace_blanks ===
 // target: col=0
 class T {
@@ -66,5 +79,16 @@ class T
 // target: col=0
 record R(int x) {
 
+}
+// === end ===
+
+// === case: skip_brace_inside_text_block ===
+// target: line=2 col=0
+class T {
+	String json = """
+		class X {
+
+		}
+		""";
 }
 // === end ===

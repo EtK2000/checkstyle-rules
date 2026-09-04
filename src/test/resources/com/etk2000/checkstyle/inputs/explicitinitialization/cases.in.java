@@ -19,6 +19,13 @@ class InputExplicitInitMultiDeclarationFirstVarCommaInCommentSliceViolation {
 }
 // === end ===
 
+// === case: multi_declaration_first_var_wrapped ===
+class InputExplicitInitMultiDeclarationFirstVarWrappedSliceViolation {
+	int x = 0, // violation: Variable 'x' explicitly initialized to '0' (default value for its type).
+			y;
+}
+// === end ===
+
 // === case: multi_declaration_second_var ===
 class InputExplicitInitMultiDeclarationSecondVarSliceViolation {
 	int x, y = 0; // violation: Variable 'y' explicitly initialized to '0' (default value for its type).

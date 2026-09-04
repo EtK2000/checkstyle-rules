@@ -114,8 +114,22 @@ class InputRedundantEqualityAssignTrailingLineNotReturnVarSliceViolation {
 }
 // === end ===
 
+// === case: block_comment_before_if_skip ===
+// skip-reason: cannot collapse the if-else: a comment in it would be lost
+class InputRedundantEqualityBlockCommentBeforeIfSkipSliceViolation {
+	int r;
+
+	void m(int a, int b) {
+		/* note */ if (a == b)
+			r = a;
+		else
+			r = b;
+	}
+}
+// === end ===
+
 // === case: block_comment_spans_lines_skip ===
-// skip-reason: cannot collapse: a comment in the if-else would be lost
+// skip-reason: cannot collapse the if-else: a comment in it would be lost
 class InputRedundantEqualityBlockCommentSpansLinesSkipSliceViolation {
 	int m(int a, int b) {
 		if (a == b)
@@ -174,7 +188,7 @@ class InputRedundantEqualityBracedThenOnlyAssignSliceViolation {
 // === end ===
 
 // === case: comment_inside_body_skip ===
-// skip-reason: cannot collapse: a comment in the if-else would be lost
+// skip-reason: cannot collapse the if-else: a comment in it would be lost
 class InputRedundantEqualityCommentInsideBodySkipSliceViolation {
 	int r;
 
@@ -184,6 +198,204 @@ class InputRedundantEqualityCommentInsideBodySkipSliceViolation {
 			r = a;
 		else
 			r = b;
+	}
+}
+// === end ===
+
+// === case: cuddled_else_if_braced ===
+class InputRedundantEqualityCuddledElseIfBracedSliceViolation {
+	int r;
+
+	void m(int a, int b, boolean c) {
+		if (c) {
+			r = 0;
+		} else
+			r = b;
+	}
+}
+// === end ===
+
+// === case: decl_annotated_bare_collapses ===
+class InputRedundantEqualityDeclAnnotatedSliceViolation {
+	int m(int a, int b) {
+		@SuppressWarnings("unused")
+		final int r;
+		r = b;
+		return r;
+	}
+}
+// === end ===
+
+// === case: decl_beside_another_declarator_bare_collapses ===
+class InputRedundantEqualityDeclBesideAnotherDeclaratorSliceViolation {
+	int compute() {
+		return 1;
+	}
+
+	int m(int a, int b) {
+		final int s = compute(), r;
+		r = b;
+		return r;
+	}
+}
+// === end ===
+
+// === case: decl_beside_another_declarator_not_equal_bare_collapses ===
+class InputRedundantEqualityDeclBesideAnotherDeclaratorNotEqualSliceViolation {
+	int compute() {
+		return 1;
+	}
+
+	int m(int b) {
+		final int s = compute(), r;
+		r = s;
+		return r;
+	}
+}
+// === end ===
+
+// === case: decl_collapse_after_open_brace ===
+class InputRedundantEqualityDeclCollapseAfterOpenBraceSliceViolation {
+	int m(int a, int b) {
+		return b;
+	}
+}
+// === end ===
+
+// === case: decl_collapse_comment_on_if_line ===
+class InputRedundantEqualityDeclCollapseCommentOnIfLineSliceViolation {
+	int m(int a, int b) {
+		return b; // note
+	}
+}
+// === end ===
+
+// === case: decl_collapse_tail_brace ===
+class InputRedundantEqualityDeclCollapseTailBraceSliceViolation {
+	int m(int a, int b) {
+		return b; }
+}
+// === end ===
+
+// === case: decl_first_of_two_declarators_bare_collapses ===
+class InputRedundantEqualityDeclFirstOfTwoDeclaratorsSliceViolation {
+	int m(int a, int b) {
+		final int r, s;
+		s = b;
+		return s;
+	}
+}
+// === end ===
+
+// === case: decl_in_arrow_case_collapses ===
+class InputRedundantEqualityDeclInArrowCaseSliceViolation {
+	int m(int x, int a, int b) {
+		switch (x) {
+			case 1 -> {
+				return b;
+			}
+			default -> {
+				return 0;
+			}
+		}
+	}
+}
+// === end ===
+
+// === case: decl_in_lambda_bare_collapses ===
+// imports: java.util.function.IntBinaryOperator
+class InputRedundantEqualityDeclInLambdaSliceViolation {
+	final IntBinaryOperator pick = (a, b) -> {
+		final int r;
+		r = b;
+		return r;
+	};
+}
+// === end ===
+
+// === case: decl_type_differs_from_return_type_bare_collapses ===
+class InputRedundantEqualityDeclTypeDiffersFromReturnTypeSliceViolation {
+	Object m(int a, int b) {
+		final double r;
+		r = b;
+		return r;
+	}
+}
+// === end ===
+
+// === case: else_if_assign_equal ===
+class InputRedundantEqualityElseIfAssignEqualSliceViolation {
+	int r;
+
+	void m(int a, int b, boolean c) {
+		if (c)
+			r = 0;
+		else
+			r = b;
+	}
+}
+// === end ===
+
+// === case: else_if_return_equal ===
+class InputRedundantEqualityElseIfReturnEqualSliceViolation {
+	int m(int a, int b, boolean c) {
+		if (c)
+			return 0;
+		else
+			return b;
+	}
+}
+// === end ===
+
+// === case: if_after_do ===
+class InputRedundantEqualityIfAfterDoSliceViolation {
+	int r;
+
+	void m(int a, int b) {
+		do
+			r = b; while (r < 0);
+	}
+}
+// === end ===
+
+// === case: if_after_label ===
+class InputRedundantEqualityIfAfterLabelSliceViolation {
+	int r;
+
+	void m(int a, int b) {
+		out:
+			r = b;
+	}
+}
+// === end ===
+
+// === case: if_after_open_brace ===
+class InputRedundantEqualityIfAfterOpenBraceSliceViolation {
+	int r;
+
+	void m(int a, int b) {
+		r = b; }
+}
+// === end ===
+
+// === case: if_after_outer_if_header ===
+class InputRedundantEqualityIfAfterOuterIfHeaderSliceViolation {
+	int r;
+
+	void m(int a, int b, boolean c) {
+		if (c)
+			r = b;
+	}
+}
+// === end ===
+
+// === case: if_after_statement ===
+class InputRedundantEqualityIfAfterStatementSliceViolation {
+	int r;
+
+	void m(int a, int b) {
+		r = 1;
+		r = b;
 	}
 }
 // === end ===
@@ -263,7 +475,7 @@ class InputRedundantEqualityIfLineBlockCommentAssignSliceViolation {
 // === end ===
 
 // === case: if_line_code_after_comment_skip ===
-// skip-reason: cannot collapse: a comment in the if-else would be lost
+// skip-reason: cannot collapse the if-else: a comment in it would be lost
 class InputRedundantEqualityIfLineCodeAfterCommentSkipSliceViolation {
 	int r;
 
@@ -294,7 +506,7 @@ class InputRedundantEqualityMultilineConditionReturnSliceViolation {
 // === end ===
 
 // === case: multiple_comments_span_skip ===
-// skip-reason: cannot collapse: a comment in the if-else would be lost
+// skip-reason: cannot collapse the if-else: a comment in it would be lost
 class InputRedundantEqualityMultipleCommentsSpanSkipSliceViolation {
 	int r;
 
@@ -303,6 +515,60 @@ class InputRedundantEqualityMultipleCommentsSpanSkipSliceViolation {
 			r = a;
 		else
 			r = b; // trailing
+	}
+}
+// === end ===
+
+// === case: single_line_tail_code_and_comment ===
+class InputRedundantEqualitySingleLineTailCodeAndCommentSliceViolation {
+	int count, r;
+
+	void m(int a, int b) {
+		r = b; ++count; // note
+	}
+}
+// === end ===
+
+// === case: supplementary_char_ahead_of_collapse ===
+class InputRedundantEqualitySupplementaryCharAheadOfCollapseSliceViolation {
+	int count, r;
+	String s;
+
+	void m(int a, int b) {
+		s = "𝑥";
+		r = b; ++count;
+	}
+}
+// === end ===
+
+// === case: tail_brace_after_else ===
+class InputRedundantEqualityTailBraceAfterElseSliceViolation {
+	int r;
+
+	void m(int a, int b) {
+		r = b; }
+}
+// === end ===
+
+// === case: tail_brace_with_if_line_comment ===
+class InputRedundantEqualityTailBraceWithIfLineCommentSliceViolation {
+	int r;
+
+	void m(int a, int b) {
+		r = b; } // note
+}
+// === end ===
+
+// === case: text_block_closer_lead ===
+class InputRedundantEqualityTextBlockCloserLeadSliceViolation {
+	int r;
+	String s;
+
+	void m(int a, int b) {
+		s = """
+			x
+			""";
+		r = b; // keep me
 	}
 }
 // === end ===
@@ -355,5 +621,12 @@ class InputRedundantEqualityTrailingNotEqualSwappedSliceViolation {
 	int m(int a, int b) {
 		return b;
 	}
+}
+// === end ===
+
+// === case: trailing_return_tail_brace ===
+class InputRedundantEqualityTrailingReturnTailBraceSliceViolation {
+	int m(int a, int b) {
+		return b; }
 }
 // === end ===

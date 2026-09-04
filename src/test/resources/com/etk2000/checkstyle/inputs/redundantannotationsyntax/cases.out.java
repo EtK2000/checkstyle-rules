@@ -10,6 +10,22 @@ package com.etk2000.checkstyle.inputs.redundantannotationsyntax;
 @interface D {
 	B value();
 }
+@interface Dbl {
+	double value();
+}
+@interface E {
+	B[] value();
+}
+@interface F {
+	D value();
+}
+@interface G {
+	D[] value();
+}
+@interface Ä {
+	int value() default 0;
+}
+class 𝕏Box {}
 
 // === case: closed_annotation_comment_then_value_code ===
 class InputRedundantAnnotationSyntaxClosedAnnotationCommentThenValueCodeSliceViolation {
@@ -27,9 +43,30 @@ class InputRedundantAnnotationSyntaxEmptyParensSliceViolation {
 }
 // === end ===
 
+// === case: empty_parens_among_modifiers_embedded ===
+class InputRedundantAnnotationSyntaxEmptyParensAmongModifiersEmbeddedSliceViolation {
+	public @B static int field;
+}
+// === end ===
+
 // === case: empty_parens_before_declaration ===
 class InputRedundantAnnotationSyntaxEmptyParensBeforeDeclarationSliceViolation {
 	@Override void f() {}
+}
+// === end ===
+
+// === case: empty_parens_below_javadoc ===
+class InputRedundantAnnotationSyntaxEmptyParensBelowJavadocSliceViolation {
+	/** Doc. */
+	@B
+	int field;
+}
+// === end ===
+
+// === case: empty_parens_comment_after_at ===
+class InputRedundantAnnotationSyntaxEmptyParensCommentAfterAtSliceViolation {
+	@/* c */B
+	int field;
 }
 // === end ===
 
@@ -93,6 +130,51 @@ class InputRedundantAnnotationSyntaxEmptyParensEmptyCommentInteriorSliceViolatio
 }
 // === end ===
 
+// === case: empty_parens_fold_over_limit ===
+// skip-reason: cannot simplify the annotation: joining its lines would run past the line length limit
+class InputRedundantAnnotationSyntaxEmptyParensFoldOverLimitSliceViolation {
+	@B( /* a comment this long is what makes the folded line cross the limit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa */
+	) int field;
+}
+// === end ===
+
+// === case: empty_parens_in_array_init ===
+class InputRedundantAnnotationSyntaxEmptyParensInArrayInitSliceViolation {
+	@E({@B, @B})
+	int field;
+}
+// === end ===
+
+// === case: empty_parens_in_array_init_last ===
+class InputRedundantAnnotationSyntaxEmptyParensInArrayInitLastSliceViolation {
+	@E({@B, @B})
+	int field;
+}
+// === end ===
+
+// === case: empty_parens_inside_anonymous_class ===
+class InputRedundantAnnotationSyntaxEmptyParensInsideAnonymousClassSliceViolation {
+	Object anon = new Object() {
+		@B
+		int field;
+	};
+}
+// === end ===
+
+// === case: empty_parens_multi_declarator ===
+class InputRedundantAnnotationSyntaxEmptyParensMultiDeclaratorSliceViolation {
+	@B
+	int first, second;
+}
+// === end ===
+
+// === case: empty_parens_name_then_parens_next_line ===
+class InputRedundantAnnotationSyntaxEmptyParensNameThenParensNextLineSliceViolation {
+	@B
+	int field;
+}
+// === end ===
+
 // === case: empty_parens_nested_annotation_value ===
 class InputRedundantAnnotationSyntaxEmptyParensNestedAnnotationValueSliceViolation {
 	@D(@B)
@@ -106,9 +188,43 @@ class InputRedundantAnnotationSyntaxEmptyParensNoSeparatorAnnotationSliceViolati
 }
 // === end ===
 
+// === case: empty_parens_no_separator_astral_ident ===
+class InputRedundantAnnotationSyntaxEmptyParensNoSeparatorAstralIdentSliceViolation {
+	void m(@B 𝕏Box param) {}
+}
+// === end ===
+
 // === case: empty_parens_no_separator_ident ===
 class InputRedundantAnnotationSyntaxEmptyParensNoSeparatorIdentSliceViolation {
 	void m(@B String param) {}
+}
+// === end ===
+
+// === case: empty_parens_non_ascii_name ===
+class InputRedundantAnnotationSyntaxEmptyParensNonAsciiNameSliceViolation {
+	@Ä
+	int field;
+}
+// === end ===
+
+// === case: empty_parens_on_annotation_type ===
+@B
+@interface InputRedundantAnnotationSyntaxEmptyParensOnAnnotationTypeSliceViolation {
+	@B
+	String key();
+}
+// === end ===
+
+// === case: empty_parens_on_catch_param ===
+class InputRedundantAnnotationSyntaxEmptyParensOnCatchParamSliceViolation {
+	void m() {
+		try {
+			throw new IllegalStateException();
+		}
+		catch (@B IllegalStateException e) {
+			return;
+		}
+	}
 }
 // === end ===
 
@@ -117,10 +233,46 @@ class InputRedundantAnnotationSyntaxEmptyParensNoSeparatorIdentSliceViolation {
 class InputRedundantAnnotationSyntaxEmptyParensOnClassSliceViolation {}
 // === end ===
 
+// === case: empty_parens_on_constructor ===
+class InputRedundantAnnotationSyntaxEmptyParensOnConstructorSliceViolation {
+	@B
+	InputRedundantAnnotationSyntaxEmptyParensOnConstructorSliceViolation() {}
+}
+// === end ===
+
+// === case: empty_parens_on_enum_and_constant ===
+@B
+enum InputRedundantAnnotationSyntaxEmptyParensOnEnumAndConstantSliceViolation {
+	@B ALPHA
+}
+// === end ===
+
 // === case: empty_parens_on_field ===
 class InputRedundantAnnotationSyntaxEmptyParensOnFieldSliceViolation {
 	@B
 	int field;
+}
+// === end ===
+
+// === case: empty_parens_on_for_each_var ===
+class InputRedundantAnnotationSyntaxEmptyParensOnForEachVarSliceViolation {
+	int count;
+
+	void m(Iterable<String> list) {
+		for (@B var s : list)
+			count += s.length();
+	}
+}
+// === end ===
+
+// === case: empty_parens_on_interface ===
+@B
+interface InputRedundantAnnotationSyntaxEmptyParensOnInterfaceSliceViolation {}
+// === end ===
+
+// === case: empty_parens_on_lambda_param ===
+class InputRedundantAnnotationSyntaxEmptyParensOnLambdaParamSliceViolation {
+	java.util.function.IntUnaryOperator op = (@B var x) -> x;
 }
 // === end ===
 
@@ -133,9 +285,51 @@ class InputRedundantAnnotationSyntaxEmptyParensOnLocalSliceViolation {
 }
 // === end ===
 
+// === case: empty_parens_on_multi_catch ===
+class InputRedundantAnnotationSyntaxEmptyParensOnMultiCatchSliceViolation {
+	void m() {
+		try {
+			throw new IllegalStateException();
+		}
+		catch (@B IllegalStateException | IllegalArgumentException e) {
+			return;
+		}
+	}
+}
+// === end ===
+
 // === case: empty_parens_on_param ===
 class InputRedundantAnnotationSyntaxEmptyParensOnParamSliceViolation {
 	void m(@B String param) {}
+}
+// === end ===
+
+// === case: empty_parens_on_record ===
+@B
+record InputRedundantAnnotationSyntaxEmptyParensOnRecordSliceViolation(
+		@B int x
+) {}
+// === end ===
+
+// === case: empty_parens_on_try_resource ===
+class InputRedundantAnnotationSyntaxEmptyParensOnTryResourceSliceViolation {
+	void m(java.io.Closeable open) throws java.io.IOException {
+		try (@B var in = open) {
+			in.hashCode();
+		}
+	}
+}
+// === end ===
+
+// === case: empty_parens_on_type_parameter ===
+class InputRedundantAnnotationSyntaxEmptyParensOnTypeParameterSliceViolation {
+	<@B T> void m(T t) {}
+}
+// === end ===
+
+// === case: empty_parens_on_varargs_param ===
+class InputRedundantAnnotationSyntaxEmptyParensOnVarargsParamSliceViolation {
+	void m(@B String... parts) {}
 }
 // === end ===
 
@@ -149,6 +343,21 @@ class InputRedundantAnnotationSyntaxEmptyParensQualifiedSliceViolation {
 // === case: empty_parens_qualified_spaced ===
 class InputRedundantAnnotationSyntaxEmptyParensQualifiedSpacedSliceViolation {
 	@com.example.A
+	int field;
+}
+// === end ===
+
+// === case: empty_parens_qualified_split_lines ===
+class InputRedundantAnnotationSyntaxEmptyParensQualifiedSplitLinesSliceViolation {
+	@com.example
+			.A
+	int field;
+}
+// === end ===
+
+// === case: empty_parens_space_after_at ===
+class InputRedundantAnnotationSyntaxEmptyParensSpaceAfterAtSliceViolation {
+	@ B
 	int field;
 }
 // === end ===
@@ -192,6 +401,21 @@ class InputRedundantAnnotationSyntaxEmptyParensStringInteriorSurvivesSiblingFixS
 }
 // === end ===
 
+// === case: empty_parens_tail_block_comment ===
+class InputRedundantAnnotationSyntaxEmptyParensTailBlockCommentSliceViolation {
+	@B/* c */int field;
+}
+// === end ===
+
+// === case: empty_parens_text_block_decoy ===
+class InputRedundantAnnotationSyntaxEmptyParensTextBlockDecoySliceViolation {
+	@B
+	String field = """
+			@X()
+			value = y""";
+}
+// === end ===
+
 // === case: empty_parens_trailing_line_comment_decoy ===
 class InputRedundantAnnotationSyntaxEmptyParensTrailingLineCommentDecoySliceViolation {
 	@B // @X()
@@ -199,10 +423,121 @@ class InputRedundantAnnotationSyntaxEmptyParensTrailingLineCommentDecoySliceViol
 }
 // === end ===
 
+// === case: empty_parens_type_use_array_level ===
+class InputRedundantAnnotationSyntaxEmptyParensTypeUseArrayLevelSliceViolation {
+	String @B [] field;
+}
+// === end ===
+
+// === case: empty_parens_type_use_cast ===
+class InputRedundantAnnotationSyntaxEmptyParensTypeUseCastSliceViolation {
+	int m(Object o) {
+		return ((@B String) o).length();
+	}
+}
+// === end ===
+
+// === case: empty_parens_type_use_instanceof ===
+class InputRedundantAnnotationSyntaxEmptyParensTypeUseInstanceofSliceViolation {
+	boolean m(Object o) {
+		return o instanceof @B String s && !s.isEmpty();
+	}
+}
+// === end ===
+
+// === case: empty_parens_type_use_nested_generic ===
+class InputRedundantAnnotationSyntaxEmptyParensTypeUseNestedGenericSliceViolation {
+	java.util.Map<String, java.util.List<@B Integer>> field;
+}
+// === end ===
+
+// === case: empty_parens_type_use_new ===
+class InputRedundantAnnotationSyntaxEmptyParensTypeUseNewSliceViolation {
+	Object field = new @B Object();
+}
+// === end ===
+
+// === case: empty_parens_type_use_qualified_inner ===
+class InputRedundantAnnotationSyntaxEmptyParensTypeUseQualifiedInnerSliceViolation {
+	class Inner {}
+
+	InputRedundantAnnotationSyntaxEmptyParensTypeUseQualifiedInnerSliceViolation.@B Inner field;
+}
+// === end ===
+
+// === case: empty_parens_type_use_throws ===
+class InputRedundantAnnotationSyntaxEmptyParensTypeUseThrowsSliceViolation {
+	void m() throws @B Exception {}
+}
+// === end ===
+
+// === case: empty_parens_type_use_type_arg ===
+class InputRedundantAnnotationSyntaxEmptyParensTypeUseTypeArgSliceViolation {
+	java.util.List<@B String> field;
+}
+// === end ===
+
+// === case: empty_parens_type_use_wildcard_bound ===
+class InputRedundantAnnotationSyntaxEmptyParensTypeUseWildcardBoundSliceViolation {
+	java.util.List<? extends @B Number> field;
+}
+// === end ===
+
 // === case: entry_state_annotation_after_block_comment_close ===
 class InputRedundantAnnotationSyntaxEntryStateAnnotationAfterBlockCommentCloseSliceViolation {
 	/*
 	*/ @B // @X()
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_already_over_limit ===
+class InputRedundantAnnotationSyntaxExplicitValueAlreadyOverLimitSliceViolation {
+	@A("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_break_after_eq ===
+class InputRedundantAnnotationSyntaxExplicitValueBreakAfterEqSliceViolation {
+	@C(1)
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_cast_value ===
+class InputRedundantAnnotationSyntaxExplicitValueCastValueSliceViolation {
+	@C((int) 1.5)
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_char_literal_decoys ===
+class InputRedundantAnnotationSyntaxExplicitValueCharLiteralDecoysSliceViolation {
+	@C('(')
+	int open;
+
+	@C('"')
+	int quote;
+
+	@C('/')
+	int slash;
+
+	@C('\'')
+	int tick;
+}
+// === end ===
+
+// === case: explicit_value_comment_after_at ===
+class InputRedundantAnnotationSyntaxExplicitValueCommentAfterAtSliceViolation {
+	@/* c */A("x")
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_comment_after_at_multiline ===
+class InputRedundantAnnotationSyntaxExplicitValueCommentAfterAtMultilineSliceViolation {
+	@/* keep */C(1)
 	int field;
 }
 // === end ===
@@ -242,6 +577,41 @@ class InputRedundantAnnotationSyntaxExplicitValueCommentValueDecoySliceViolation
 }
 // === end ===
 
+// === case: explicit_value_escaped_quote_value ===
+class InputRedundantAnnotationSyntaxExplicitValueEscapedQuoteValueSliceViolation {
+	@A("a\"b")
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_in_array_init ===
+class InputRedundantAnnotationSyntaxExplicitValueInArrayInitSliceViolation {
+	@G({@D(@B)})
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_nested_both_value_keys ===
+class InputRedundantAnnotationSyntaxExplicitValueNestedBothValueKeysSliceViolation {
+	@F(@D(@B))
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_nested_empty_parens ===
+class InputRedundantAnnotationSyntaxExplicitValueNestedEmptyParensSliceViolation {
+	@D(@B)
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_nested_empty_parens_multiline ===
+class InputRedundantAnnotationSyntaxExplicitValueNestedEmptyParensMultilineSliceViolation {
+	@D(@B)
+	int field;
+}
+// === end ===
+
 // === case: explicit_value_no_spaces ===
 class InputRedundantAnnotationSyntaxExplicitValueNoSpacesSliceViolation {
 	@A("x")
@@ -256,10 +626,97 @@ class InputRedundantAnnotationSyntaxExplicitValueNoSpacesQualifiedSliceViolation
 }
 // === end ===
 
+// === case: explicit_value_non_ascii_name ===
+class InputRedundantAnnotationSyntaxExplicitValueNonAsciiNameSliceViolation {
+	@Ä(1)
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_numeric_edge_values ===
+class InputRedundantAnnotationSyntaxExplicitValueNumericEdgeValuesSliceViolation {
+	@Dbl(-0.0)
+	int negativeZero;
+
+	@Dbl(Double.NaN)
+	int notANumber;
+
+	@C(Integer.MIN_VALUE)
+	int smallestInt;
+
+	@C(-1)
+	int unaryMinus;
+}
+// === end ===
+
+// === case: explicit_value_numeric_literal_forms ===
+class InputRedundantAnnotationSyntaxExplicitValueNumericLiteralFormsSliceViolation {
+	@C(0b1010)
+	int binary;
+
+	@C(1_000)
+	int grouped;
+
+	@C(0xFF)
+	int hex;
+}
+// === end ===
+
+// === case: explicit_value_pair_split_lines ===
+class InputRedundantAnnotationSyntaxExplicitValuePairSplitLinesSliceViolation {
+	@C(1)
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_qualified_constant ===
+class InputRedundantAnnotationSyntaxExplicitValueQualifiedConstantSliceViolation {
+	@C(Integer.MAX_VALUE)
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_qualified_split_lines ===
+class InputRedundantAnnotationSyntaxExplicitValueQualifiedSplitLinesSliceViolation {
+	@com.example.A("x")
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_qualified_split_lines_comment ===
+class InputRedundantAnnotationSyntaxExplicitValueQualifiedSplitLinesCommentSliceViolation {
+	@com.example // c
+			.A("x")
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_space_after_at ===
+class InputRedundantAnnotationSyntaxExplicitValueSpaceAfterAtSliceViolation {
+	@ A("x")
+	int field;
+}
+// === end ===
+
 // === case: explicit_value_string_contains_value_decoy ===
 class InputRedundantAnnotationSyntaxExplicitValueStringContainsValueDecoySliceViolation {
 	@A("value = x")
 	int field;
+}
+// === end ===
+
+// === case: explicit_value_ternary_value ===
+class InputRedundantAnnotationSyntaxExplicitValueTernaryValueSliceViolation {
+	static final boolean FLAG = true;
+
+	@C(FLAG ? 1 : 2)
+	int field;
+}
+// === end ===
+
+// === case: explicit_value_type_use_type_arg ===
+class InputRedundantAnnotationSyntaxExplicitValueTypeUseTypeArgSliceViolation {
+	java.util.List<@C(1) String> field;
 }
 // === end ===
 
@@ -333,7 +790,7 @@ class InputRedundantAnnotationSyntaxMultiLineEmptyParensLineCommentOpenSliceViol
 // === end ===
 
 // === case: multi_line_empty_parens_line_comment_open_then_block ===
-// skip-reason: complex multiline annotation
+// skip-reason: cannot simplify the annotation: joining its lines would comment out the text after a // comment
 class InputRedundantAnnotationSyntaxMultiLineEmptyParensLineCommentOpenThenBlockSliceViolation {
 	@B( // note
 	/* d */)
@@ -342,7 +799,7 @@ class InputRedundantAnnotationSyntaxMultiLineEmptyParensLineCommentOpenThenBlock
 // === end ===
 
 // === case: multi_line_empty_parens_line_comment_open_then_code ===
-// skip-reason: complex multiline annotation
+// skip-reason: cannot simplify the annotation: joining its lines would comment out the text after a // comment
 class InputRedundantAnnotationSyntaxMultiLineEmptyParensLineCommentOpenThenCodeSliceViolation {
 	@B( // note
 	) int field;
@@ -350,7 +807,7 @@ class InputRedundantAnnotationSyntaxMultiLineEmptyParensLineCommentOpenThenCodeS
 // === end ===
 
 // === case: multi_line_empty_parens_multiline_block_comment_between ===
-// skip-reason: complex multiline annotation
+// skip-reason: cannot simplify the annotation: a block comment inside it runs across lines
 class InputRedundantAnnotationSyntaxMultiLineEmptyParensMultilineBlockCommentBetweenSliceViolation {
 	@B(
 	/*
@@ -364,6 +821,16 @@ class InputRedundantAnnotationSyntaxMultiLineEmptyParensMultilineBlockCommentBet
 // === case: multi_line_empty_parens_open_line_annotation_decoy ===
 class InputRedundantAnnotationSyntaxMultiLineEmptyParensOpenLineAnnotationDecoySliceViolation {
 	@B /* @X() */
+	int field;
+}
+// === end ===
+
+// === case: multi_line_explicit_value_already_over_limit ===
+class InputRedundantAnnotationSyntaxMultiLineExplicitValueAlreadyOverLimitSliceViolation {
+	@A(
+			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+			+ "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	)
 	int field;
 }
 // === end ===
@@ -389,9 +856,94 @@ class InputRedundantAnnotationSyntaxMultiLineExplicitValueBlockCommentBeforeSlic
 }
 // === end ===
 
+// === case: multi_line_explicit_value_block_comment_before_value_fallback ===
+class InputRedundantAnnotationSyntaxMultiLineExplicitValueBlockCommentBeforeValueFallbackSliceViolation {
+	@A( // note
+			/* keep */ "x"
+	)
+	int field;
+}
+// === end ===
+
+// === case: multi_line_explicit_value_block_comment_before_value_on_value_line ===
+class InputRedundantAnnotationSyntaxMultiLineExplicitValueBlockCommentBeforeValueOnValueLineSliceViolation {
+	@A(/* keep */ "x")
+	int field;
+}
+// === end ===
+
+// === case: multi_line_explicit_value_block_comment_crosses_before_value ===
+// skip-reason: cannot simplify the annotation: a block comment inside it runs across lines
+class InputRedundantAnnotationSyntaxMultiLineExplicitValueBlockCommentCrossesBeforeValueSliceViolation {
+	@A(
+			value = /*
+			note */ "x"
+	)
+	int field;
+}
+// === end ===
+
 // === case: multi_line_explicit_value_close_on_value_line ===
 class InputRedundantAnnotationSyntaxMultiLineExplicitValueCloseOnValueLineSliceViolation {
 	@C(5)
+	int field;
+}
+// === end ===
+
+// === case: multi_line_explicit_value_comment_after_eq ===
+class InputRedundantAnnotationSyntaxMultiLineExplicitValueCommentAfterEqSliceViolation {
+	@A(/* keep */ "x")
+	int field;
+}
+// === end ===
+
+// === case: multi_line_explicit_value_comment_after_value ===
+class InputRedundantAnnotationSyntaxMultiLineExplicitValueCommentAfterValueSliceViolation {
+	@A("x" /* keep */)
+	int field;
+}
+// === end ===
+
+// === case: multi_line_explicit_value_comment_pushes_over_limit ===
+class InputRedundantAnnotationSyntaxMultiLineExplicitValueCommentPushesOverLimitSliceViolation {
+	@A(
+			/* a comment long enough that folding it in is what crosses the limit */
+			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	)
+	int field;
+}
+// === end ===
+
+// === case: multi_line_explicit_value_deep_tab_indent_over_limit ===
+class InputRedundantAnnotationSyntaxMultiLineExplicitValueDeepTabIndentOverLimitSliceViolation {
+	static class Inner {
+		static class Deeper {
+			@A(
+					"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+					+ "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+			)
+			int field;
+		}
+	}
+}
+// === end ===
+
+// === case: multi_line_explicit_value_line_comment_after_eq ===
+// skip-reason: cannot simplify the annotation: joining its lines would comment out the text after a // comment
+class InputRedundantAnnotationSyntaxMultiLineExplicitValueLineCommentAfterEqSliceViolation {
+	@A(
+			value = // note
+			"x"
+	)
+	int field;
+}
+// === end ===
+
+// === case: multi_line_explicit_value_line_comment_after_value ===
+class InputRedundantAnnotationSyntaxMultiLineExplicitValueLineCommentAfterValueSliceViolation {
+	@A(
+			"x" // note
+	)
 	int field;
 }
 // === end ===
@@ -470,6 +1022,16 @@ class InputRedundantAnnotationSyntaxMultiLineExplicitValueOpenLineCommentSliceVi
 // === case: multi_line_explicit_value_paren_value ===
 class InputRedundantAnnotationSyntaxMultiLineExplicitValueParenValueSliceViolation {
 	@C((1 + 2) * 3)
+	int field;
+}
+// === end ===
+
+// === case: multi_line_explicit_value_text_block ===
+class InputRedundantAnnotationSyntaxMultiLineExplicitValueTextBlockSliceViolation {
+	@A(
+			"""
+			x"""
+	)
 	int field;
 }
 // === end ===

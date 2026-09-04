@@ -1,11 +1,10 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstResolve;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
-import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
-
-import java.util.HashSet;
-import java.util.Set;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -20,24 +19,48 @@ import javax.annotation.Nullable;
  * varargs before flagging. Primitive arrays passed to reference-type varargs
  * are skipped because removing the array wrapper would change autoboxing
  * behavior.
+ *
+ * <p>Reflection loads the target through this check's own class loader, which carries the JDK and
+ * the rule jar's dependencies and not the sources being analysed. A target declared in the
+ * compilation unit under check therefore never resolves, and nothing is reported against it.
  */
-public class RedundantArrayCreationCheck extends AbstractAstCheck {
+public class RedundantArrayCreationCheck extends AbstractResolvingCheck {
+	/**
+	 * A varargs argument list's redundant array creation: the {@code new}, the {@code {...}} it
+	 * wraps the arguments in, and the method or class name the violation names.
+	 */
+	public record ArrayArgTarget(
+			@Nonnull DetailAST literalNew,
+			@Nonnull DetailAST arrayInit,
+			@Nonnull String targetName
+	) {}
+
 	private static final String MSG = "redundant.array.creation";
 
+	/**
+	 * {@code elist}'s last argument, or null when it is not an {@code EXPR}. Only the last argument
+	 * can be the varargs one, and the parser leaves a lambda argument unwrapped, so scanning for
+	 * the last {@code EXPR} instead would read a creation written <em>before</em> a lambda as the
+	 * last argument.
+	 */
 	@CheckReturnValue
 	@Nullable
 	private static DetailAST findLastExpr(@Nonnull DetailAST elist) {
 		DetailAST last = null;
 		for (var child = elist.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.EXPR)
+			if (child.getType() != TokenTypes.COMMA)
 				last = child;
 		}
-		return last;
+		return last != null && last.getType() == TokenTypes.EXPR ? last : null;
 	}
 
+	/**
+	 * The {@code {...}} of the array creation {@code elist} ends with, or null when its last
+	 * argument is not one.
+	 */
 	@CheckReturnValue
 	@Nullable
-	private static DetailAST findRedundantArrayArg(@Nonnull DetailAST elist) {
+	private static DetailAST findRedundantArrayInit(@Nonnull DetailAST elist) {
 		final var lastExpr = findLastExpr(elist);
 		if (lastExpr == null)
 			return null;
@@ -46,10 +69,42 @@ public class RedundantArrayCreationCheck extends AbstractAstCheck {
 		if (inner == null || inner.getType() != TokenTypes.LITERAL_NEW)
 			return null;
 
-		if (inner.findFirstToken(TokenTypes.ARRAY_INIT) == null)
-			return null;
+		return inner.findFirstToken(TokenTypes.ARRAY_INIT);
+	}
 
-		return inner;
+	/**
+	 * Whether {@code arrayInit} holds exactly one element whose type cannot be proven to be
+	 * neither an array nor {@code null}.
+	 *
+	 * <p>The wrapper is load-bearing for a lone element. {@code f(new T[]{e})} always passes an
+	 * array of one, but {@code f(e)} is resolved by strict invocation first, so when {@code e} is
+	 * assignable to {@code T[]} it becomes the whole varargs array instead of its first element.
+	 * Measured: {@code Arrays.asList(new Object[]{row}).size()} is 1 and
+	 * {@code Arrays.asList(row).size()} is 2, and {@code Arrays.asList(new Object[]{null})} is a
+	 * one-element list while {@code Arrays.asList(null)} throws. Two or more elements cannot bind
+	 * the fixed-arity form and zero elements pass an empty array either way, so only this cell is
+	 * unsafe.
+	 *
+	 * <p>Answered from the shape of the element alone, by listing the forms that cannot produce an
+	 * array rather than by resolving its type: an unresolved type would have to be read as safe to
+	 * keep the common cases firing, and a wrong answer here rewrites a call into one that means
+	 * something else. Anything outside the list keeps its wrapper, which is a deliberate false
+	 * negative.
+	 */
+	@CheckReturnValue
+	private static boolean hasUnprovenLoneElement(@Nonnull DetailAST arrayInit) {
+		final var element = arrayInit.getFirstChild();
+		if (element == null || element.getType() != TokenTypes.EXPR)
+			return false;
+
+		var next = element.getNextSibling();
+		if (next != null && next.getType() == TokenTypes.COMMA)
+			next = next.getNextSibling();
+		if (next == null || next.getType() != TokenTypes.RCURLY)
+			return false;
+
+		final var value = element.getFirstChild();
+		return value == null || !isProvablyNotAnArray(value);
 	}
 
 	@CheckReturnValue
@@ -66,102 +121,128 @@ public class RedundantArrayCreationCheck extends AbstractAstCheck {
 		return false;
 	}
 
-	private final Set<String> imports = new HashSet<>();
+	/**
+	 * Whether {@code value} is a form the language cannot give an array type, so that unwrapping it
+	 * out of a lone-element initializer cannot re-bind it as the varargs array.
+	 */
+	@CheckReturnValue
+	private static boolean isProvablyNotAnArray(@Nonnull DetailAST value) {
+		return switch (value.getType()) {
+			// arithmetic and shifts yield a number, comparisons and the logical operators a boolean,
+			// a method reference a functional interface, and no literal is an array
+			case TokenTypes.BAND, TokenTypes.BNOT, TokenTypes.BOR, TokenTypes.BSR, TokenTypes.BXOR,
+			     TokenTypes.CHAR_LITERAL, TokenTypes.DIV, TokenTypes.EQUAL, TokenTypes.GE,
+			     TokenTypes.GT, TokenTypes.LE, TokenTypes.LITERAL_FALSE, TokenTypes.LITERAL_INSTANCEOF,
+			     TokenTypes.LITERAL_THIS, TokenTypes.LITERAL_TRUE, TokenTypes.LNOT, TokenTypes.LT,
+			     TokenTypes.METHOD_REF, TokenTypes.MINUS, TokenTypes.MOD, TokenTypes.NOT_EQUAL,
+			     TokenTypes.NUM_DOUBLE, TokenTypes.NUM_FLOAT, TokenTypes.NUM_INT, TokenTypes.NUM_LONG,
+			     TokenTypes.PLUS, TokenTypes.SL, TokenTypes.SR, TokenTypes.STAR,
+			     TokenTypes.STRING_LITERAL, TokenTypes.TEXT_BLOCK_LITERAL_BEGIN,
+			     TokenTypes.UNARY_MINUS, TokenTypes.UNARY_PLUS -> true;
+			case TokenTypes.LITERAL_NEW -> value.findFirstToken(TokenTypes.ARRAY_DECLARATOR) == null
+					&& value.findFirstToken(TokenTypes.ARRAY_INIT) == null;
+			case TokenTypes.TYPECAST -> {
+				final var type = value.findFirstToken(TokenTypes.TYPE);
+				yield type != null && type.findFirstToken(TokenTypes.ARRAY_DECLARATOR) == null;
+			}
+			default -> false;
+		};
+	}
 
-	private String packageName;
+	/** The fully qualified name of {@code methodCall}'s receiver type, resolved through {@code scope}. */
+	@CheckReturnValue
+	@Nullable
+	private static String receiverClassName(@Nonnull DetailAST methodCall, @Nonnull ResolutionScope scope) {
+		final var receiverTypeName = AstResolve.getReceiverTypeName(methodCall, scope.packageName(), scope.imports());
+		return receiverTypeName == null
+				? null
+				: ReflectionUtil.resolveClassName(receiverTypeName, scope.packageName(), scope.imports());
+	}
+
+	/**
+	 * The redundant array creation whose {@code new} stands at {@code (line, column)}, or null when
+	 * nothing there is one the check reports. {@code line} is 0-based and {@code column} is a
+	 * 0-based code-point column.
+	 *
+	 * <p>The position is the array creation's, because that is the node {@link #visitScopedToken}
+	 * logs against.
+	 */
+	@CheckReturnValue
+	@Nullable
+	public static ArrayArgTarget redundantArrayAt(@Nonnull DetailAST root, int line, int column) {
+		final var arrayNew = AstQuery.findNodeAt(
+				root,
+				line,
+				column,
+				ast -> ast.getType() == TokenTypes.LITERAL_NEW && ast.findFirstToken(TokenTypes.ARRAY_INIT) != null
+		);
+		if (arrayNew == null)
+			return null;
+
+		final var expr = arrayNew.getParent();
+		final var elist = expr == null ? null : expr.getParent();
+		if (elist == null || elist.getType() != TokenTypes.ELIST)
+			return null;
+
+		final var owner = elist.getParent();
+		final var target = owner == null ? null : targetFor(owner, ResolutionScope.of(root));
+		return target != null && target.literalNew() == arrayNew ? target : null;
+	}
+
+	/** The redundant array creation {@code owner}'s argument list ends with, or null when there is none. */
+	@CheckReturnValue
+	@Nullable
+	private static ArrayArgTarget targetFor(@Nonnull DetailAST owner, @Nonnull ResolutionScope scope) {
+		final var elist = owner.findFirstToken(TokenTypes.ELIST);
+		if (elist == null)
+			return null;
+
+		final var arrayInit = findRedundantArrayInit(elist);
+		if (arrayInit == null || hasUnprovenLoneElement(arrayInit))
+			return null;
+
+		final var constructor = owner.getType() == TokenTypes.LITERAL_NEW;
+		final var name = constructor ? AstText.findNewClassName(owner) : AstQuery.getMethodName(owner);
+		if (name == null)
+			return null;
+
+		final var fqcn = constructor
+				? ReflectionUtil.resolveClassName(name, scope.packageName(), scope.imports())
+				: receiverClassName(owner, scope);
+		if (fqcn == null)
+			return null;
+
+		final var componentType = ReflectionUtil.getVarArgsComponentType(
+				fqcn, constructor ? "new" : name, AstQuery.countArguments(elist)
+		);
+		final var literalNew = arrayInit.getParent();
+		return componentType == null || isPrimitiveArray(literalNew) && !componentType.isPrimitive()
+				? null
+				: new ArrayArgTarget(literalNew, arrayInit, name);
+	}
+
+	private ResolutionScope scope = ResolutionScope.EMPTY;
 
 	@Override
-	public void beginTree(@Nonnull DetailAST rootAST) {
-		imports.clear();
-		packageName = null;
+	protected void beginFile(@Nullable DetailAST rootAST) {
+		scope = ResolutionScope.of(rootAST);
+	}
+
+	@Override
+	protected void finishFile(@Nullable DetailAST rootAST) {
+		scope = ResolutionScope.EMPTY;
 	}
 
 	@Nonnull
 	@Override
 	public int[] getDefaultTokens() {
-		return new int[]{
-				TokenTypes.IMPORT,
-				TokenTypes.LITERAL_NEW,
-				TokenTypes.METHOD_CALL,
-				TokenTypes.PACKAGE_DEF
-		};
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private String getReceiverClassName(@Nonnull DetailAST methodCall) {
-		final var receiverTypeName = AstUtil.getReceiverTypeName(methodCall, packageName, imports);
-		if (receiverTypeName == null)
-			return null;
-		return ReflectionUtil.resolveClassName(receiverTypeName, packageName, imports);
-	}
-
-	private void visitConstructorCall(@Nonnull DetailAST ast) {
-		final var elist = ast.findFirstToken(TokenTypes.ELIST);
-		if (elist == null)
-			return;
-
-		final var arrayNew = findRedundantArrayArg(elist);
-		if (arrayNew == null)
-			return;
-
-		final var className = AstUtil.findNewClassName(ast);
-		if (className == null)
-			return;
-
-		final var fqcn = ReflectionUtil.resolveClassName(className, packageName, imports);
-		if (fqcn == null)
-			return;
-
-		final var argCount = AstUtil.countArguments(elist);
-		final var componentType = ReflectionUtil.getVarArgsComponentType(fqcn, "new", argCount);
-		if (componentType == null)
-			return;
-
-		if (isPrimitiveArray(arrayNew) && !componentType.isPrimitive())
-			return;
-
-		log(arrayNew, MSG, className);
-	}
-
-	private void visitMethodCall(@Nonnull DetailAST ast) {
-		final var elist = ast.findFirstToken(TokenTypes.ELIST);
-		if (elist == null)
-			return;
-
-		final var arrayNew = findRedundantArrayArg(elist);
-		if (arrayNew == null)
-			return;
-
-		final var methodName = AstUtil.getMethodName(ast);
-		if (methodName == null)
-			return;
-
-		final var fqcn = getReceiverClassName(ast);
-		if (fqcn == null)
-			return;
-
-		final var argCount = AstUtil.countArguments(elist);
-		final var componentType = ReflectionUtil.getVarArgsComponentType(fqcn, methodName, argCount);
-		if (componentType == null)
-			return;
-
-		if (isPrimitiveArray(arrayNew) && !componentType.isPrimitive())
-			return;
-
-		log(arrayNew, MSG, methodName);
+		return new int[]{TokenTypes.LITERAL_NEW, TokenTypes.METHOD_CALL};
 	}
 
 	@Override
-	public void visitToken(@Nonnull DetailAST ast) {
-		switch (ast.getType()) {
-			case TokenTypes.IMPORT -> imports.add(FullIdent.createFullIdentBelow(ast).getText());
-			case TokenTypes.LITERAL_NEW -> visitConstructorCall(ast);
-			case TokenTypes.METHOD_CALL -> visitMethodCall(ast);
-			case TokenTypes.PACKAGE_DEF -> {
-				final var ident = ast.getLastChild().getPreviousSibling();
-				packageName = FullIdent.createFullIdent(ident).getText();
-			}
-		}
+	protected void visitScopedToken(@Nonnull DetailAST ast) {
+		final var target = targetFor(ast, scope);
+		if (target != null)
+			log(target.literalNew(), MSG, target.targetName());
 	}
 }

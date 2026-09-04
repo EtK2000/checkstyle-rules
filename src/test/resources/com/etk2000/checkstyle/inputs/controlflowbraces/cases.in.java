@@ -3,7 +3,7 @@ package com.etk2000.checkstyle.inputs.controlflowbraces;
 // === case: brace_on_own_line_do_block_comment_before_brace ===
 class InputControlFlowBracesBraceOnOwnLineDoBlockCommentBeforeBraceSliceViolation {
 	void m(int x) {
-		do // violation: Remove unnecessary braces from single-line control flow body.
+		do // violation: Remove the unnecessary braces from the single-line control flow body.
 			/* multi
 			   line */
 		{
@@ -17,7 +17,7 @@ class InputControlFlowBracesBraceOnOwnLineDoBlockCommentBeforeBraceSliceViolatio
 // === case: brace_on_own_line_do_block_comment_blank_line_before_brace ===
 class InputControlFlowBracesBraceOnOwnLineDoBlockCommentBlankLineBeforeBraceSliceViolation {
 	void m(int x) {
-		do // violation: Remove unnecessary braces from single-line control flow body.
+		do // violation: Remove the unnecessary braces from the single-line control flow body.
 			/* multi
 
 			   line */
@@ -30,10 +30,10 @@ class InputControlFlowBracesBraceOnOwnLineDoBlockCommentBlankLineBeforeBraceSlic
 // === end ===
 
 // === case: brace_on_own_line_do_body_on_brace_line ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineDoBodyOnBraceLineSliceViolation {
 	void m(int x) {
-		do // violation: Remove unnecessary braces from single-line control flow body.
+		do // violation: Remove the unnecessary braces from the single-line control flow body.
 		{ --x;
 		} while (x > 0);
 	}
@@ -43,7 +43,7 @@ class InputControlFlowBracesBraceOnOwnLineDoBodyOnBraceLineSliceViolation {
 // === case: brace_on_own_line_do_close_brace_shares_while ===
 class InputControlFlowBracesBraceOnOwnLineDoCloseBraceSharesWhileSliceViolation {
 	void m(int x) {
-		do // violation: Remove unnecessary braces from single-line control flow body.
+		do // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			--x;
 		} while (x > 0);
@@ -54,7 +54,7 @@ class InputControlFlowBracesBraceOnOwnLineDoCloseBraceSharesWhileSliceViolation 
 // === case: brace_on_own_line_do_comment_before_brace ===
 class InputControlFlowBracesBraceOnOwnLineDoCommentBeforeBraceSliceViolation {
 	void m(int x) {
-		do // violation: Remove unnecessary braces from single-line control flow body.
+		do // violation: Remove the unnecessary braces from the single-line control flow body.
 			// note
 		{
 			--x;
@@ -65,10 +65,10 @@ class InputControlFlowBracesBraceOnOwnLineDoCommentBeforeBraceSliceViolation {
 // === end ===
 
 // === case: brace_on_own_line_do_comment_on_brace_line ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineDoCommentOnBraceLineSliceViolation {
 	void m(int x) {
-		do // violation: Remove unnecessary braces from single-line control flow body.
+		do // violation: Remove the unnecessary braces from the single-line control flow body.
 		/* note */ {
 			--x;
 		}
@@ -80,7 +80,7 @@ class InputControlFlowBracesBraceOnOwnLineDoCommentOnBraceLineSliceViolation {
 // === case: brace_on_own_line_do_tier2 ===
 class InputControlFlowBracesBraceOnOwnLineDoTier2SliceViolation {
 	void m(int x) {
-		do // violation: Remove unnecessary braces from single-line control flow body.
+		do // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			--x;
 		}
@@ -92,7 +92,7 @@ class InputControlFlowBracesBraceOnOwnLineDoTier2SliceViolation {
 // === case: brace_on_own_line_do_tier3 ===
 class InputControlFlowBracesBraceOnOwnLineDoTier3SliceViolation {
 	void m(int x, int y) {
-		do // violation: Remove unnecessary braces from single-line control flow body.
+		do // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			x = x + y;
 		}
@@ -104,7 +104,7 @@ class InputControlFlowBracesBraceOnOwnLineDoTier3SliceViolation {
 // === case: brace_on_own_line_do_tier3_with_comment_on_do ===
 class InputControlFlowBracesBraceOnOwnLineDoTier3WithCommentOnDoSliceViolation {
 	void m(int x, int y) {
-		do // note // violation: Remove unnecessary braces from single-line control flow body.
+		do // note // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			x = x + y;
 		}
@@ -116,7 +116,7 @@ class InputControlFlowBracesBraceOnOwnLineDoTier3WithCommentOnDoSliceViolation {
 // === case: brace_on_own_line_do_with_comment_on_do ===
 class InputControlFlowBracesBraceOnOwnLineDoWithCommentOnDoSliceViolation {
 	void m(int x) {
-		do // note // violation: Remove unnecessary braces from single-line control flow body.
+		do // note // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			--x;
 		}
@@ -126,10 +126,10 @@ class InputControlFlowBracesBraceOnOwnLineDoWithCommentOnDoSliceViolation {
 // === end ===
 
 // === case: brace_on_own_line_do_with_comment_on_do_and_body ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineDoWithCommentOnDoAndBodySliceViolation {
 	void m(int x) {
-		do // note // violation: Remove unnecessary braces from single-line control flow body.
+		do // note // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			--x; // pending
 		}
@@ -139,10 +139,10 @@ class InputControlFlowBracesBraceOnOwnLineDoWithCommentOnDoAndBodySliceViolation
 // === end ===
 
 // === case: brace_on_own_line_do_with_comment_on_do_and_brace ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineDoWithCommentOnDoAndBraceSliceViolation {
 	void m(int x) {
-		do // note // violation: Remove unnecessary braces from single-line control flow body.
+		do // note // violation: Remove the unnecessary braces from the single-line control flow body.
 		{ // brace note
 			--x;
 		}
@@ -156,7 +156,7 @@ class InputControlFlowBracesBraceOnOwnLineElseSliceViolation {
 	void m(int x) {
 		if (x > 0)
 			--x;
-		else // violation: Remove unnecessary braces from single-line control flow body.
+		else // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			++x;
 		}
@@ -167,7 +167,7 @@ class InputControlFlowBracesBraceOnOwnLineElseSliceViolation {
 // === case: brace_on_own_line_for ===
 class InputControlFlowBracesBraceOnOwnLineForSliceViolation {
 	void m(int x) {
-		for (var i = 0; i < x; ++i) // violation: Remove unnecessary braces from single-line control flow body.
+		for (var i = 0; i < x; ++i) // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			System.out.println(i);
 		}
@@ -179,7 +179,7 @@ class InputControlFlowBracesBraceOnOwnLineForSliceViolation {
 // imports: java.util.List
 class InputControlFlowBracesBraceOnOwnLineForEachSliceViolation {
 	void m(List<String> list) {
-		for (var item : list) // violation: Remove unnecessary braces from single-line control flow body.
+		for (var item : list) // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			System.out.println(item);
 		}
@@ -190,7 +190,7 @@ class InputControlFlowBracesBraceOnOwnLineForEachSliceViolation {
 // === case: brace_on_own_line_if ===
 class InputControlFlowBracesBraceOnOwnLineIfSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			--x;
 		}
@@ -199,11 +199,11 @@ class InputControlFlowBracesBraceOnOwnLineIfSliceViolation {
 // === end ===
 
 // === case: brace_on_own_line_if_close_brace_after_text_block ===
-// skip-reason: the block does not end where the body does
+// skip-reason: cannot reshape the body: the block does not end where the body does
 class InputControlFlowBracesBraceOnOwnLineIfCloseBraceAfterTextBlockSliceViolation {
 	void m(int x) {
 		var s = "";
-		if (x > 0) // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			s = """
 } """; }
@@ -215,7 +215,7 @@ class InputControlFlowBracesBraceOnOwnLineIfCloseBraceAfterTextBlockSliceViolati
 // === case: brace_on_own_line_if_comment_before_brace ===
 class InputControlFlowBracesBraceOnOwnLineIfCommentBeforeBraceSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) // violation: Remove the unnecessary braces from the single-line control flow body.
 			// only when positive
 		{
 			--x;
@@ -225,10 +225,10 @@ class InputControlFlowBracesBraceOnOwnLineIfCommentBeforeBraceSliceViolation {
 // === end ===
 
 // === case: brace_on_own_line_if_comment_before_close_brace ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineIfCommentBeforeCloseBraceSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			--x;
 		/* trailing note */ }
@@ -237,10 +237,10 @@ class InputControlFlowBracesBraceOnOwnLineIfCommentBeforeCloseBraceSliceViolatio
 // === end ===
 
 // === case: brace_on_own_line_if_comment_on_brace_line ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineIfCommentOnBraceLineSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) // violation: Remove the unnecessary braces from the single-line control flow body.
 		/* note */ {
 			--x;
 		}
@@ -251,7 +251,7 @@ class InputControlFlowBracesBraceOnOwnLineIfCommentOnBraceLineSliceViolation {
 // === case: brace_on_own_line_if_with_else ===
 class InputControlFlowBracesBraceOnOwnLineIfWithElseSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			--x;
 		} else {
@@ -265,7 +265,7 @@ class InputControlFlowBracesBraceOnOwnLineIfWithElseSliceViolation {
 // === case: brace_on_own_line_while ===
 class InputControlFlowBracesBraceOnOwnLineWhileSliceViolation {
 	void m(int x) {
-		while (x > 0) // violation: Remove unnecessary braces from single-line control flow body.
+		while (x > 0) // violation: Remove the unnecessary braces from the single-line control flow body.
 		{
 			--x;
 		}
@@ -274,10 +274,10 @@ class InputControlFlowBracesBraceOnOwnLineWhileSliceViolation {
 // === end ===
 
 // === case: brace_on_own_line_with_block_comment_on_brace ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBraceOnOwnLineWithBlockCommentOnBraceSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) // violation: Remove the unnecessary braces from the single-line control flow body.
 		{ /* important */
 			--x;
 		}
@@ -288,7 +288,7 @@ class InputControlFlowBracesBraceOnOwnLineWithBlockCommentOnBraceSliceViolation 
 // === case: braced_body_block_comment_before_while ===
 class InputControlFlowBracesBracedBodyBlockCommentBeforeWhileSliceViolation {
 	void m(int x) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		} /* loop while positive */ while (x > 0);
 	}
@@ -296,10 +296,10 @@ class InputControlFlowBracesBracedBodyBlockCommentBeforeWhileSliceViolation {
 // === end ===
 
 // === case: braced_body_block_comment_opens_on_close_brace_line ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesBracedBodyBlockCommentOpensOnCloseBraceLineSliceViolation {
 	void m(int x) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		} /* multi
 		     line */
@@ -309,10 +309,10 @@ class InputControlFlowBracesBracedBodyBlockCommentOpensOnCloseBraceLineSliceViol
 // === end ===
 
 // === case: braced_body_block_comment_opens_on_do_brace_line ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesBracedBodyBlockCommentOpensOnDoBraceLineSliceViolation {
 	void m(int x) {
-		do { /* multi // violation: Remove unnecessary braces from single-line control flow body.
+		do { /* multi // violation: Remove the unnecessary braces from the single-line control flow body.
 			line */ --x;
 		} while (x > 0);
 	}
@@ -320,10 +320,10 @@ class InputControlFlowBracesBracedBodyBlockCommentOpensOnDoBraceLineSliceViolati
 // === end ===
 
 // === case: braced_body_comment_before_close_brace ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBracedBodyCommentBeforeCloseBraceSliceViolation {
 	void m(int x) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		/* trailing note */ } while (x > 0);
 	}
@@ -333,7 +333,7 @@ class InputControlFlowBracesBracedBodyCommentBeforeCloseBraceSliceViolation {
 // === case: braced_body_containing_char_with_comment_delimiters ===
 class InputControlFlowBracesBracedBodyContainingCharWithCommentDelimitersSliceViolation {
 	void m(int[] arr, int i, boolean cond) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			arr[i] = '/';
 		} while (cond);
 	}
@@ -343,7 +343,7 @@ class InputControlFlowBracesBracedBodyContainingCharWithCommentDelimitersSliceVi
 // === case: braced_body_containing_string_with_line_comment_delimiters ===
 class InputControlFlowBracesBracedBodyContainingStringWithLineCommentDelimitersSliceViolation {
 	void m(String s, boolean cond) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			s = "// not a comment";
 		} while (cond);
 	}
@@ -353,7 +353,7 @@ class InputControlFlowBracesBracedBodyContainingStringWithLineCommentDelimitersS
 // === case: braced_body_no_space_after_do ===
 class InputControlFlowBracesBracedBodyNoSpaceAfterDoSliceViolation {
 	void m(int x) {
-		do{ // violation: Remove unnecessary braces from single-line control flow body.
+		do{ // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		}while (x > 0);
 	}
@@ -361,10 +361,10 @@ class InputControlFlowBracesBracedBodyNoSpaceAfterDoSliceViolation {
 // === end ===
 
 // === case: braced_body_on_open_brace_line ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesBracedBodyOnOpenBraceLineSliceViolation {
 	void m(int x) {
-		if (x > 0) { --x; // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) { --x; // violation: Remove the unnecessary braces from the single-line control flow body.
 		}
 	}
 }
@@ -373,7 +373,7 @@ class InputControlFlowBracesBracedBodyOnOpenBraceLineSliceViolation {
 // === case: braced_body_while_word_in_close_line_comment ===
 class InputControlFlowBracesBracedBodyWhileWordInCloseLineCommentSliceViolation {
 	void m(int x) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		} // meanwhile, keep counting
 		while (x > 0);
@@ -384,7 +384,7 @@ class InputControlFlowBracesBracedBodyWhileWordInCloseLineCommentSliceViolation 
 // === case: braced_body_with_comment_line_before_while ===
 class InputControlFlowBracesBracedBodyWithCommentLineBeforeWhileSliceViolation {
 	void m(int x) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		}
 		// count down
@@ -396,7 +396,7 @@ class InputControlFlowBracesBracedBodyWithCommentLineBeforeWhileSliceViolation {
 // === case: braced_body_with_comment_on_do_brace ===
 class InputControlFlowBracesBracedBodyWithCommentOnDoBraceSliceViolation {
 	void m(int x) {
-		do { // guard // violation: Remove unnecessary braces from single-line control flow body.
+		do { // guard // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		} while (x > 0);
 	}
@@ -406,7 +406,7 @@ class InputControlFlowBracesBracedBodyWithCommentOnDoBraceSliceViolation {
 // === case: braced_body_with_line_comment_inside_block ===
 class InputControlFlowBracesBracedBodyWithLineCommentInsideBlockSliceViolation {
 	void m(int x, boolean cond) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			/* contains // tricky */ x = 5;
 		} while (cond);
 	}
@@ -416,7 +416,7 @@ class InputControlFlowBracesBracedBodyWithLineCommentInsideBlockSliceViolation {
 // === case: braced_comment_bracketed_code ===
 class InputControlFlowBracesBracedCommentBracketedCodeSliceViolation {
 	void m(int x) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			/* pre */ x = 5; /* post */
 		} while (x > 0);
 	}
@@ -426,7 +426,7 @@ class InputControlFlowBracesBracedCommentBracketedCodeSliceViolation {
 // === case: braced_simple_bare_method_call ===
 class InputControlFlowBracesBracedSimpleBareMethodCallSliceViolation {
 	void m(int x) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			next();
 		} while (x > 0);
 	}
@@ -438,7 +438,7 @@ class InputControlFlowBracesBracedSimpleBareMethodCallSliceViolation {
 // === case: braced_statement_with_line_comment_containing_block_opener ===
 class InputControlFlowBracesBracedStatementWithLineCommentContainingBlockOpenerSliceViolation {
 	void m(int x, boolean cond) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x; // contains /* note
 		} while (cond);
 	}
@@ -448,7 +448,7 @@ class InputControlFlowBracesBracedStatementWithLineCommentContainingBlockOpenerS
 // === case: braced_statement_with_trailing_comment ===
 class InputControlFlowBracesBracedStatementWithTrailingCommentSliceViolation {
 	void m(int x) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x; // pending
 		} while (x > 0);
 	}
@@ -458,7 +458,7 @@ class InputControlFlowBracesBracedStatementWithTrailingCommentSliceViolation {
 // === case: braced_statement_with_trailing_comment_while_on_separate_line ===
 class InputControlFlowBracesBracedStatementWithTrailingCommentWhileOnSeparateLineSliceViolation {
 	void m(int x) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x; // pending
 		}
 		while (x > 0);
@@ -469,7 +469,7 @@ class InputControlFlowBracesBracedStatementWithTrailingCommentWhileOnSeparateLin
 // === case: braced_tab_before_brace ===
 class InputControlFlowBracesBracedTabBeforeBraceSliceViolation {
 	void m(int x) {
-		do	{ // violation: Remove unnecessary braces from single-line control flow body.
+		do	{ // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		} while (x > 0);
 	}
@@ -486,7 +486,7 @@ class InputControlFlowBracesBracedTier2DottedMethodCallSliceViolation {
 	void m() {
 		final var list = List.of("a");
 		final var item = "b";
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			list.add(item);
 		} while (hasNext());
 	}
@@ -498,7 +498,7 @@ class InputControlFlowBracesBracedTier2DottedMethodCallSliceViolation {
 class InputControlFlowBracesBracedTier3ChainedCallSliceViolation {
 	void m(int x) {
 		final var list = List.of("a");
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			list.stream().close();
 		} while (x > 0);
 	}
@@ -508,7 +508,7 @@ class InputControlFlowBracesBracedTier3ChainedCallSliceViolation {
 // === case: braced_tier3_complex_rhs ===
 class InputControlFlowBracesBracedTier3ComplexRhsSliceViolation {
 	void m(int x, int y) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			x += 5 * y;
 		} while (x < 100);
 	}
@@ -518,7 +518,7 @@ class InputControlFlowBracesBracedTier3ComplexRhsSliceViolation {
 // === case: braced_tier3_new_object ===
 class InputControlFlowBracesBracedTier3NewObjectSliceViolation {
 	void m(int x) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			new Object();
 		} while (x > 0);
 	}
@@ -534,7 +534,7 @@ class InputControlFlowBracesBracedTier3ThisChainedCallSliceViolation {
 	}
 
 	void m(int x) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			this.helper().chain();
 		} while (x > 0);
 	}
@@ -544,7 +544,7 @@ class InputControlFlowBracesBracedTier3ThisChainedCallSliceViolation {
 // === case: braced_while_on_separate_line ===
 class InputControlFlowBracesBracedWhileOnSeparateLineSliceViolation {
 	void m(int x) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			++x;
 		}
 		while (x < 10);
@@ -557,7 +557,7 @@ class InputControlFlowBracesDeepIndentSliceViolation {
 	void m(int x) {
 		if (true) {
 			if (true) {
-				do { // violation: Remove unnecessary braces from single-line control flow body.
+				do { // violation: Remove the unnecessary braces from the single-line control flow body.
 					--x;
 				} while (x > 0);
 			}
@@ -569,7 +569,7 @@ class InputControlFlowBracesDeepIndentSliceViolation {
 // === case: do_while_tier2_assign_unary_minus_rhs ===
 class InputControlFlowBracesDoWhileTier2AssignUnaryMinusRhsSliceViolation {
 	void m(int x) {
-		do x = -x; while (x > 0); // violation: Do-while while clause must be on its own line.
+		do x = -x; while (x > 0); // violation: Do-while 'while' clause must be on its own line.
 	}
 }
 // === end ===
@@ -579,7 +579,7 @@ class InputControlFlowBracesDoWhileTier2AssignUnaryMinusRhsSliceViolation {
 class InputControlFlowBracesDoWhileTier2WhileSameLineListAddSliceViolation {
 	void m() {
 		final var list = List.of("a");
-		do list.add("b"); while (list.size() < 10); // violation: Do-while while clause must be on its own line.
+		do list.add("b"); while (list.size() < 10); // violation: Do-while 'while' clause must be on its own line.
 	}
 }
 // === end ===
@@ -587,7 +587,7 @@ class InputControlFlowBracesDoWhileTier2WhileSameLineListAddSliceViolation {
 // === case: do_while_tier2_while_same_line_simple ===
 class InputControlFlowBracesDoWhileTier2WhileSameLineSimpleSliceViolation {
 	void m(int x) {
-		do --x; while (x > 0); // violation: Do-while while clause must be on its own line.
+		do --x; while (x > 0); // violation: Do-while 'while' clause must be on its own line.
 	}
 }
 // === end ===
@@ -595,7 +595,7 @@ class InputControlFlowBracesDoWhileTier2WhileSameLineSimpleSliceViolation {
 // === case: do_while_tier3_as_tier2_complex_rhs ===
 class InputControlFlowBracesDoWhileTier3AsTier2ComplexRhsSliceViolation {
 	void m(int x, int y) {
-		do x += 5 * y; // violation: Move control flow body to its own line (one-liners not allowed).
+		do x += 5 * y; // violation: Control flow body must be on its own line.
 		while (x < 100);
 	}
 }
@@ -606,7 +606,7 @@ class InputControlFlowBracesDoWhileTier3AsTier2ComplexRhsSliceViolation {
 class InputControlFlowBracesDoWhileTier3AsTier2DottedChainSliceViolation {
 	void m() {
 		final var list = List.of("a");
-		do list.subList(0, 1).clear(); // violation: Move control flow body to its own line (one-liners not allowed).
+		do list.subList(0, 1).clear(); // violation: Control flow body must be on its own line.
 		while (!list.isEmpty());
 	}
 }
@@ -617,7 +617,7 @@ class InputControlFlowBracesDoWhileTier3AsTier2DottedChainSliceViolation {
 class InputControlFlowBracesDoWhileTier3AssignChainedRhsSliceViolation {
 	void m(int x) {
 		final var list = List.of("a");
-		do x = list.subList(0, 1).size(); while (x > 0); // violation: Move control flow body to its own line (one-liners not allowed).
+		do x = list.subList(0, 1).size(); while (x > 0); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -625,7 +625,7 @@ class InputControlFlowBracesDoWhileTier3AssignChainedRhsSliceViolation {
 // === case: do_while_tier3_assign_new_rhs ===
 class InputControlFlowBracesDoWhileTier3AssignNewRhsSliceViolation {
 	void m(int x, Object o) {
-		do o = new Object(); while (x > 0); // violation: Move control flow body to its own line (one-liners not allowed).
+		do o = new Object(); while (x > 0); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -633,7 +633,7 @@ class InputControlFlowBracesDoWhileTier3AssignNewRhsSliceViolation {
 // === case: do_while_tier3_one_liner_assign ===
 class InputControlFlowBracesDoWhileTier3OneLinerAssignSliceViolation {
 	void m(int x, int y) {
-		do x = x + y; while (x < 100); // violation: Move control flow body to its own line (one-liners not allowed).
+		do x = x + y; while (x < 100); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -641,7 +641,7 @@ class InputControlFlowBracesDoWhileTier3OneLinerAssignSliceViolation {
 // === case: do_while_tier3_one_liner_braced_for ===
 class InputControlFlowBracesDoWhileTier3OneLinerBracedForSliceViolation {
 	void m(int x) {
-		do for (;;) { break; } while (x > 0); // violation: Move control flow body to its own line (one-liners not allowed).
+		do for (;;) { break; } while (x > 0); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -649,7 +649,7 @@ class InputControlFlowBracesDoWhileTier3OneLinerBracedForSliceViolation {
 // === case: do_while_tier3_one_liner_braced_if ===
 class InputControlFlowBracesDoWhileTier3OneLinerBracedIfSliceViolation {
 	void m(int x) {
-		do if (x > 5) { --x; } while (x > 0); // violation: Move control flow body to its own line (one-liners not allowed).
+		do if (x > 5) { --x; } while (x > 0); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -657,7 +657,7 @@ class InputControlFlowBracesDoWhileTier3OneLinerBracedIfSliceViolation {
 // === case: do_while_tier3_one_liner_braced_if_block_comment_brace ===
 class InputControlFlowBracesDoWhileTier3OneLinerBracedIfBlockCommentBraceSliceViolation {
 	void m(int x) {
-		do if (x > 5) { --x; } /* } */ while (x > 0); // violation: Move control flow body to its own line (one-liners not allowed).
+		do if (x > 5) { --x; } /* } */ while (x > 0); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -665,7 +665,7 @@ class InputControlFlowBracesDoWhileTier3OneLinerBracedIfBlockCommentBraceSliceVi
 // === case: do_while_tier3_one_liner_braced_if_trailing_comment ===
 class InputControlFlowBracesDoWhileTier3OneLinerBracedIfTrailingCommentSliceViolation {
 	void m(int x) {
-		do if (x > 5) { --x; } // violation: Move control flow body to its own line (one-liners not allowed).
+		do if (x > 5) { --x; } // violation: Control flow body must be on its own line.
 		while (x > 0);
 	}
 }
@@ -674,7 +674,7 @@ class InputControlFlowBracesDoWhileTier3OneLinerBracedIfTrailingCommentSliceViol
 // === case: do_while_tier3_one_liner_braced_switch ===
 class InputControlFlowBracesDoWhileTier3OneLinerBracedSwitchSliceViolation {
 	void m(int x) {
-		do switch (x) { default -> --x; } while (x > 0); // violation: Move control flow body to its own line (one-liners not allowed).
+		do switch (x) { default -> --x; } while (x > 0); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -683,7 +683,7 @@ class InputControlFlowBracesDoWhileTier3OneLinerBracedSwitchSliceViolation {
 class InputControlFlowBracesDoWhileTier3OneLinerBracedSynchronizedSliceViolation {
 	void m(int x) {
 		final var lock = new Object();
-		do synchronized (lock) { --x; } while (x > 0); // violation: Move control flow body to its own line (one-liners not allowed).
+		do synchronized (lock) { --x; } while (x > 0); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -692,7 +692,7 @@ class InputControlFlowBracesDoWhileTier3OneLinerBracedSynchronizedSliceViolation
 // imports: java.io.StringReader
 class InputControlFlowBracesDoWhileTier3OneLinerBracedTryWithResourcesSliceViolation {
 	void m(int x) {
-		do try (var r = new StringReader("a")) { --x; } while (x > 0); // violation: Move control flow body to its own line (one-liners not allowed).
+		do try (var r = new StringReader("a")) { --x; } while (x > 0); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -700,7 +700,7 @@ class InputControlFlowBracesDoWhileTier3OneLinerBracedTryWithResourcesSliceViola
 // === case: do_while_tier3_one_liner_braced_while ===
 class InputControlFlowBracesDoWhileTier3OneLinerBracedWhileSliceViolation {
 	void m(int x) {
-		do while (x > 5) { --x; } while (x > 0); // violation: Move control flow body to its own line (one-liners not allowed).
+		do while (x > 5) { --x; } while (x > 0); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -710,7 +710,7 @@ class InputControlFlowBracesDoWhileTier3OneLinerBracedWhileSliceViolation {
 class InputControlFlowBracesDoWhileTier3OneLinerDottedChainSliceViolation {
 	void m(int x) {
 		final var list = List.of("a");
-		do list.subList(0, 1).clear(); while (x > 0); // violation: Move control flow body to its own line (one-liners not allowed).
+		do list.subList(0, 1).clear(); while (x > 0); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -718,7 +718,7 @@ class InputControlFlowBracesDoWhileTier3OneLinerDottedChainSliceViolation {
 // === case: do_while_tier3_one_liner_new ===
 class InputControlFlowBracesDoWhileTier3OneLinerNewSliceViolation {
 	void m(int x) {
-		do new Object(); while (x > 0); // violation: Move control flow body to its own line (one-liners not allowed).
+		do new Object(); while (x > 0); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -726,7 +726,7 @@ class InputControlFlowBracesDoWhileTier3OneLinerNewSliceViolation {
 // === case: do_while_tier3_while_same_line_chained_call ===
 class InputControlFlowBracesDoWhileTier3WhileSameLineChainedCallSliceViolation {
 	void m(int x) {
-		do // violation: Do-while while clause must be on its own line.
+		do // violation: Do-while 'while' clause must be on its own line.
 			x = text().trim().length(); while (x > 0);
 	}
 
@@ -739,7 +739,7 @@ class InputControlFlowBracesDoWhileTier3WhileSameLineChainedCallSliceViolation {
 // === case: do_while_tier3_while_same_line_complex_rhs ===
 class InputControlFlowBracesDoWhileTier3WhileSameLineComplexRhsSliceViolation {
 	void m(int x, int y) {
-		do // violation: Do-while while clause must be on its own line.
+		do // violation: Do-while 'while' clause must be on its own line.
 			x = x + y; while (x < 100);
 	}
 }
@@ -750,7 +750,7 @@ class InputControlFlowBracesMissingBracesControlBodyThenCatchPrefixedIdentifierS
 	int catchCount;
 
 	void m(boolean cond, int x) {
-		while (cond) // violation: Braceless control flow has multi-line body, add braces.
+		while (cond) // violation: Multi-line control flow body must have braces.
 			if (x > 0) {
 				System.out.println(x);
 				System.out.println(-x);
@@ -765,7 +765,7 @@ class InputControlFlowBracesMissingBracesControlBodyThenElsePrefixedIdentifierSl
 	boolean elseFlag;
 
 	void m(boolean cond, int x) {
-		while (cond) // violation: Braceless control flow has multi-line body, add braces.
+		while (cond) // violation: Multi-line control flow body must have braces.
 			if (x > 0) {
 				System.out.println(x);
 				System.out.println(-x);
@@ -780,7 +780,7 @@ class InputControlFlowBracesMissingBracesControlBodyThenElseSupplementaryIdentif
 	boolean else𝐀;
 
 	void m(boolean cond, int x) {
-		while (cond) // violation: Braceless control flow has multi-line body, add braces.
+		while (cond) // violation: Multi-line control flow body must have braces.
 			if (x > 0) {
 				System.out.println(x);
 				System.out.println(-x);
@@ -795,7 +795,7 @@ class InputControlFlowBracesMissingBracesControlBodyThenFinallyPrefixedIdentifie
 	boolean finallyRan;
 
 	void m(boolean cond, int x) {
-		while (cond) // violation: Braceless control flow has multi-line body, add braces.
+		while (cond) // violation: Multi-line control flow body must have braces.
 			if (x > 0) {
 				System.out.println(x);
 				System.out.println(-x);
@@ -808,7 +808,7 @@ class InputControlFlowBracesMissingBracesControlBodyThenFinallyPrefixedIdentifie
 // === case: missing_braces_control_body_with_array_init ===
 class InputControlFlowBracesMissingBracesControlBodyWithArrayInitSliceViolation {
 	void m(boolean cond, int[] arr) {
-		while (cond) // violation: Braceless control flow has multi-line body, add braces.
+		while (cond) // violation: Multi-line control flow body must have braces.
 			if (arr == null)
 				arr = new int[]{1, 2};
 		System.out.println(arr);
@@ -829,7 +829,7 @@ class InputControlFlowBracesMissingBracesControlBodyWithMultilineAnonClassSliceV
 	}
 
 	void m(boolean cond, int x) {
-		while (cond) // violation: Braceless control flow has multi-line body, add braces.
+		while (cond) // violation: Multi-line control flow body must have braces.
 			submit(new Task() {
 				@Override
 				void go() {
@@ -853,7 +853,7 @@ class InputControlFlowBracesMissingBracesControlBodyWithMultilineLambdaSliceViol
 	}
 
 	void m(boolean cond, int x) {
-		while (cond) // violation: Braceless control flow has multi-line body, add braces.
+		while (cond) // violation: Multi-line control flow body must have braces.
 			run(() -> {
 				System.out.println(x);
 				System.out.println(-x);
@@ -868,7 +868,7 @@ class InputControlFlowBracesMissingBracesControlBodyWithSplitBlockCommentSliceVi
 	int x;
 
 	void m(boolean cond) {
-		while (cond) // violation: Braceless control flow has multi-line body, add braces.
+		while (cond) // violation: Multi-line control flow body must have braces.
 			x = /* multi
 				line */ x + 1;
 	}
@@ -878,7 +878,7 @@ class InputControlFlowBracesMissingBracesControlBodyWithSplitBlockCommentSliceVi
 // === case: missing_braces_do_body_with_cuddled_while ===
 class InputControlFlowBracesMissingBracesDoBodyWithCuddledWhileSliceViolation {
 	void m(int x, int z) {
-		do // violation: Braceless control flow has multi-line body, add braces.
+		do // violation: Multi-line control flow body must have braces.
 			if (x > 0)
 				--x;
 			else
@@ -893,7 +893,7 @@ class InputControlFlowBracesMissingBracesDoBodyWithCuddledWhileSliceViolation {
 // imports: java.util.List
 class InputControlFlowBracesMissingBracesDoBodyWithDottedContinuationSliceViolation {
 	void m(List<Integer> list) {
-		do // violation: Braceless control flow has multi-line body, add braces.
+		do // violation: Multi-line control flow body must have braces.
 			list
 					.add(1);
 		while (list.size() < 10);
@@ -904,7 +904,7 @@ class InputControlFlowBracesMissingBracesDoBodyWithDottedContinuationSliceViolat
 // === case: missing_braces_do_body_with_inner_while ===
 class InputControlFlowBracesMissingBracesDoBodyWithInnerWhileSliceViolation {
 	void m(int x, boolean inner) {
-		do // violation: Braceless control flow has multi-line body, add braces.
+		do // violation: Multi-line control flow body must have braces.
 			while (inner)
 				--x;
 		while (x > 0);
@@ -915,7 +915,7 @@ class InputControlFlowBracesMissingBracesDoBodyWithInnerWhileSliceViolation {
 // === case: missing_braces_do_body_with_multiline_block_comment ===
 class InputControlFlowBracesMissingBracesDoBodyWithMultilineBlockCommentSliceViolation {
 	void m(int x) {
-		do // violation: Braceless control flow has multi-line body, add braces.
+		do // violation: Multi-line control flow body must have braces.
 			x = /* multi
 				line */ x + 1;
 		while (x > 0);
@@ -926,7 +926,7 @@ class InputControlFlowBracesMissingBracesDoBodyWithMultilineBlockCommentSliceVio
 // === case: missing_braces_do_with_if ===
 class InputControlFlowBracesMissingBracesDoWithIfSliceViolation {
 	void m(int x) {
-		do // violation: Braceless control flow has multi-line body, add braces.
+		do // violation: Multi-line control flow body must have braces.
 			if (x > 0)
 				--x;
 		while (x > 0);
@@ -939,7 +939,7 @@ class InputControlFlowBracesMissingBracesElseWithForSliceViolation {
 	void m(int x) {
 		if (x > 0)
 			System.out.println("positive");
-		else // violation: Braceless control flow has multi-line body, add braces.
+		else // violation: Multi-line control flow body must have braces.
 			for (int i = 0; i < x; ++i)
 				System.out.println(i);
 	}
@@ -949,7 +949,7 @@ class InputControlFlowBracesMissingBracesElseWithForSliceViolation {
 // === case: missing_braces_for_with_braced_switch ===
 class InputControlFlowBracesMissingBracesForWithBracedSwitchSliceViolation {
 	void m(int x) {
-		for (int i = 0; i < x; ++i) // violation: Braceless control flow has multi-line body, add braces.
+		for (int i = 0; i < x; ++i) // violation: Multi-line control flow body must have braces.
 			switch (i) {
 				case 0 -> System.out.println(i);
 				default -> System.out.println(-i);
@@ -962,7 +962,7 @@ class InputControlFlowBracesMissingBracesForWithBracedSwitchSliceViolation {
 // === case: missing_braces_for_with_braced_try_finally ===
 class InputControlFlowBracesMissingBracesForWithBracedTryFinallySliceViolation {
 	void m(int x) {
-		for (int i = 0; i < x; ++i) // violation: Braceless control flow has multi-line body, add braces.
+		for (int i = 0; i < x; ++i) // violation: Multi-line control flow body must have braces.
 			try {
 				System.out.println(i);
 				System.out.println(-i);
@@ -979,7 +979,7 @@ class InputControlFlowBracesMissingBracesForWithBracedTryFinallySliceViolation {
 // === case: missing_braces_for_with_if ===
 class InputControlFlowBracesMissingBracesForWithIfSliceViolation {
 	void m(int x) {
-		for (int i = 0; i < x; ++i) // violation: Braceless control flow has multi-line body, add braces.
+		for (int i = 0; i < x; ++i) // violation: Multi-line control flow body must have braces.
 			if (i > 0)
 				System.out.println(i);
 	}
@@ -989,7 +989,7 @@ class InputControlFlowBracesMissingBracesForWithIfSliceViolation {
 // === case: missing_braces_for_with_if_braced_else ===
 class InputControlFlowBracesMissingBracesForWithIfBracedElseSliceViolation {
 	void m(int x) {
-		for (var i = 0; i < x; ++i) // violation: Braceless control flow has multi-line body, add braces.
+		for (var i = 0; i < x; ++i) // violation: Multi-line control flow body must have braces.
 			if (i > 0)
 				System.out.println(i);
 			else {
@@ -1003,7 +1003,7 @@ class InputControlFlowBracesMissingBracesForWithIfBracedElseSliceViolation {
 // === case: missing_braces_for_with_if_else ===
 class InputControlFlowBracesMissingBracesForWithIfElseSliceViolation {
 	void m(int x) {
-		for (var i = 0; i < x; ++i) // violation: Braceless control flow has multi-line body, add braces.
+		for (var i = 0; i < x; ++i) // violation: Multi-line control flow body must have braces.
 			if (i > 0)
 				System.out.println(i);
 			else
@@ -1015,7 +1015,7 @@ class InputControlFlowBracesMissingBracesForWithIfElseSliceViolation {
 // === case: missing_braces_for_with_if_else_if_chain ===
 class InputControlFlowBracesMissingBracesForWithIfElseIfChainSliceViolation {
 	void m(int x) {
-		for (var i = 0; i < x; ++i) // violation: Braceless control flow has multi-line body, add braces.
+		for (var i = 0; i < x; ++i) // violation: Multi-line control flow body must have braces.
 			if (i > 5)
 				System.out.println("big");
 			else if (i > 0)
@@ -1030,8 +1030,8 @@ class InputControlFlowBracesMissingBracesForWithIfElseIfChainSliceViolation {
 // multi-fix-expected
 class InputControlFlowBracesMissingBracesForWithNestedIfElseSliceViolation {
 	void m(int x) {
-		for (var i = 0; i < x; ++i) // violation: Braceless control flow has multi-line body, add braces.
-			if (i > 5) // violation: Braceless control flow has multi-line body, add braces.
+		for (var i = 0; i < x; ++i) // violation: Multi-line control flow body must have braces.
+			if (i > 5) // violation: Multi-line control flow body must have braces.
 				if (i > 10)
 					System.out.println("huge");
 				else
@@ -1047,7 +1047,7 @@ class InputControlFlowBracesMissingBracesForWithNestedIfElseSliceViolation {
 class InputControlFlowBracesMissingBracesForeachWithIfSliceViolation {
 	void m() {
 		final var list = List.of("a");
-		for (var item : list) // violation: Braceless control flow has multi-line body, add braces.
+		for (var item : list) // violation: Multi-line control flow body must have braces.
 			if (item != null)
 				System.out.println(item);
 	}
@@ -1058,7 +1058,7 @@ class InputControlFlowBracesMissingBracesForeachWithIfSliceViolation {
 // imports: java.util.List
 class InputControlFlowBracesMissingBracesForeachWithIfElseSliceViolation {
 	void m(List<String> list) {
-		for (var item : list) // violation: Braceless control flow has multi-line body, add braces.
+		for (var item : list) // violation: Multi-line control flow body must have braces.
 			if (item != null)
 				System.out.println(item);
 			else
@@ -1070,7 +1070,7 @@ class InputControlFlowBracesMissingBracesForeachWithIfElseSliceViolation {
 // === case: missing_braces_if_compact_multi_line_body ===
 class InputControlFlowBracesMissingBracesIfCompactMultiLineBodySliceViolation {
 	void m(int x) {
-		if(x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if(x > 0) // violation: Multi-line control flow body must have braces.
 			for (int i = 0; i < x; ++i)
 				System.out.println(i);
 	}
@@ -1080,7 +1080,7 @@ class InputControlFlowBracesMissingBracesIfCompactMultiLineBodySliceViolation {
 // === case: missing_braces_if_for_body_with_outer_else ===
 class InputControlFlowBracesMissingBracesIfForBodyWithOuterElseSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			for (var i = 0; i < x; ++i)
 				System.out.println(i);
 		else
@@ -1090,10 +1090,10 @@ class InputControlFlowBracesMissingBracesIfForBodyWithOuterElseSliceViolation {
 // === end ===
 
 // === case: missing_braces_if_keyword_line_unterminated_block_comment ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesMissingBracesIfKeywordLineUnterminatedBlockCommentSliceViolation {
 	void m(int x) {
-		if (x > 0) /* multi // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) /* multi // violation: Multi-line control flow body must have braces.
 		   line */
 			if (x > 5)
 				--x;
@@ -1102,10 +1102,10 @@ class InputControlFlowBracesMissingBracesIfKeywordLineUnterminatedBlockCommentSl
 // === end ===
 
 // === case: missing_braces_if_with_block_comment_after_body_terminator ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesMissingBracesIfWithBlockCommentAfterBodyTerminatorSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			if (x > 5)
 				--x; /* multi
 				        line */
@@ -1116,7 +1116,7 @@ class InputControlFlowBracesMissingBracesIfWithBlockCommentAfterBodyTerminatorSl
 // === case: missing_braces_if_with_block_comment_containing_slash_slash ===
 class InputControlFlowBracesMissingBracesIfWithBlockCommentContainingSlashSlashSliceViolation {
 	void m(int x) {
-		if (x > 0) /* contains // tricky */ // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) /* contains // tricky */ // violation: Multi-line control flow body must have braces.
 			for (int i = 0; i < x; ++i)
 				System.out.println(i);
 	}
@@ -1126,7 +1126,7 @@ class InputControlFlowBracesMissingBracesIfWithBlockCommentContainingSlashSlashS
 // === case: missing_braces_if_with_block_comment_then_braced_inner ===
 class InputControlFlowBracesMissingBracesIfWithBlockCommentThenBracedInnerSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			/* note */ for (int i = 0; i < x; ++i) {
 				System.out.println(i);
 				System.out.println(-i);
@@ -1139,7 +1139,7 @@ class InputControlFlowBracesMissingBracesIfWithBlockCommentThenBracedInnerSliceV
 // === case: missing_braces_if_with_braced_inner_then_trailing_stmt ===
 class InputControlFlowBracesMissingBracesIfWithBracedInnerThenTrailingStmtSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			for (int i = 0; i < x; ++i) {
 				System.out.println(i);
 				System.out.println(-i);
@@ -1152,7 +1152,7 @@ class InputControlFlowBracesMissingBracesIfWithBracedInnerThenTrailingStmtSliceV
 // === case: missing_braces_if_with_braced_while_then_trailing_stmt ===
 class InputControlFlowBracesMissingBracesIfWithBracedWhileThenTrailingStmtSliceViolation {
 	void m(boolean cond, int x) {
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			while (cond) {
 				System.out.println(x);
 				System.out.println(-x);
@@ -1166,8 +1166,8 @@ class InputControlFlowBracesMissingBracesIfWithBracedWhileThenTrailingStmtSliceV
 // multi-fix-expected
 class InputControlFlowBracesMissingBracesIfWithBracelessDoThenElseSliceViolation {
 	void m(boolean c, int p, int q) {
-		if (p > 0) // violation: Braceless control flow has multi-line body, add braces.
-			do // violation: Braceless control flow has multi-line body, add braces.
+		if (p > 0) // violation: Multi-line control flow body must have braces.
+			do // violation: Multi-line control flow body must have braces.
 				if (q > 0)
 					--q;
 			while (c);
@@ -1181,7 +1181,7 @@ class InputControlFlowBracesMissingBracesIfWithBracelessDoThenElseSliceViolation
 // imports: java.util.List
 class InputControlFlowBracesMissingBracesIfWithBracelessDoWhileBodySliceViolation {
 	void m(boolean a, int x, List<Integer> list) {
-		if (a) // violation: Braceless control flow has multi-line body, add braces.
+		if (a) // violation: Multi-line control flow body must have braces.
 			do
 				list.subList(0, 1).clear();
 			while (x > 0);
@@ -1196,7 +1196,7 @@ class InputControlFlowBracesMissingBracesIfWithCodeAfterBodyTerminatorSliceViola
 	private void g() { }
 
 	void m(boolean a) {
-		if (a) // violation: Braceless control flow has multi-line body, add braces.
+		if (a) // violation: Multi-line control flow body must have braces.
 			f(
 					1,
 					2
@@ -1210,7 +1210,7 @@ class InputControlFlowBracesMissingBracesIfWithCommentAfterBodyTerminatorSliceVi
 	private void f(int a, int b) { }
 
 	void m(boolean a) {
-		if (a) // violation: Braceless control flow has multi-line body, add braces.
+		if (a) // violation: Multi-line control flow body must have braces.
 			f(
 					1,
 					2
@@ -1222,7 +1222,7 @@ class InputControlFlowBracesMissingBracesIfWithCommentAfterBodyTerminatorSliceVi
 // === case: missing_braces_if_with_comment_ending_in_semicolon ===
 class InputControlFlowBracesMissingBracesIfWithCommentEndingInSemicolonSliceViolation {
 	void m(int x) {
-		if (x > 0) // note; // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // note; // violation: Multi-line control flow body must have braces.
 			if (x > 5)
 				--x;
 	}
@@ -1232,7 +1232,7 @@ class InputControlFlowBracesMissingBracesIfWithCommentEndingInSemicolonSliceViol
 // === case: missing_braces_if_with_comment_then_braced_inner ===
 class InputControlFlowBracesMissingBracesIfWithCommentThenBracedInnerSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			// leading comment before the inner statement
 			for (int i = 0; i < x; ++i) {
 				System.out.println(i);
@@ -1247,7 +1247,7 @@ class InputControlFlowBracesMissingBracesIfWithCommentThenBracedInnerSliceViolat
 // imports: java.util.List
 class InputControlFlowBracesMissingBracesIfWithDottedContinuationSliceViolation {
 	void m(int x, List<Integer> list) {
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			list
 					.add(1);
 	}
@@ -1257,7 +1257,7 @@ class InputControlFlowBracesMissingBracesIfWithDottedContinuationSliceViolation 
 // === case: missing_braces_if_with_for ===
 class InputControlFlowBracesMissingBracesIfWithForSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			for (int i = 0; i < x; ++i)
 				System.out.println(i);
 	}
@@ -1267,7 +1267,7 @@ class InputControlFlowBracesMissingBracesIfWithForSliceViolation {
 // === case: missing_braces_if_with_if_else ===
 class InputControlFlowBracesMissingBracesIfWithIfElseSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			if (x > 5)
 				--x;
 			else
@@ -1279,7 +1279,7 @@ class InputControlFlowBracesMissingBracesIfWithIfElseSliceViolation {
 // === case: missing_braces_if_with_if_suffixed_call_then_else ===
 class InputControlFlowBracesMissingBracesIfWithIfSuffixedCallThenElseSliceViolation {
 	void m(boolean cond, int x) {
-		if (cond) // violation: Braceless control flow has multi-line body, add braces.
+		if (cond) // violation: Multi-line control flow body must have braces.
 			while (x > 0)
 				not𝐀if(x);
 		else
@@ -1295,7 +1295,7 @@ class InputControlFlowBracesMissingBracesIfWithIfSuffixedCallThenElseSliceViolat
 // === case: missing_braces_if_with_inner_braced_else_then_outer_else ===
 class InputControlFlowBracesMissingBracesIfWithInnerBracedElseThenOuterElseSliceViolation {
 	void m(int x, int y) {
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			if (x > 5)
 				--x;
 			else {
@@ -1311,7 +1311,7 @@ class InputControlFlowBracesMissingBracesIfWithInnerBracedElseThenOuterElseSlice
 // === case: missing_braces_if_with_inner_braced_for_then_outer_else ===
 class InputControlFlowBracesMissingBracesIfWithInnerBracedForThenOuterElseSliceViolation {
 	void m(int x, int y) {
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			for (var i = 0; i < x; ++i) {
 				--x;
 				++y;
@@ -1325,7 +1325,7 @@ class InputControlFlowBracesMissingBracesIfWithInnerBracedForThenOuterElseSliceV
 // === case: missing_braces_if_with_inner_braced_if_then_outer_else ===
 class InputControlFlowBracesMissingBracesIfWithInnerBracedIfThenOuterElseSliceViolation {
 	void m(int x, int y) {
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			if (x > 5) {
 				--x;
 				++y;
@@ -1341,7 +1341,7 @@ class InputControlFlowBracesMissingBracesIfWithInnerBracedIfThenOuterElseSliceVi
 // === case: missing_braces_if_with_multiline_block_comment_then_braced_inner ===
 class InputControlFlowBracesMissingBracesIfWithMultilineBlockCommentThenBracedInnerSliceViolation {
 	void m(int x) {
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			/*
 			 * note line one
 			 * note line two
@@ -1358,7 +1358,7 @@ class InputControlFlowBracesMissingBracesIfWithMultilineBlockCommentThenBracedIn
 // === case: missing_braces_if_with_quote_char_literal ===
 class InputControlFlowBracesMissingBracesIfWithQuoteCharLiteralSliceViolation {
 	void m(char ch, int x) {
-		if (ch == '"') // guard // violation: Braceless control flow has multi-line body, add braces.
+		if (ch == '"') // guard // violation: Multi-line control flow body must have braces.
 			if (x > 0)
 				System.out.println('"');
 	}
@@ -1368,7 +1368,7 @@ class InputControlFlowBracesMissingBracesIfWithQuoteCharLiteralSliceViolation {
 // === case: missing_braces_if_with_trailing_block_comment ===
 class InputControlFlowBracesMissingBracesIfWithTrailingBlockCommentSliceViolation {
 	void m(int x) {
-		if (x > 0) /* guard */ // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) /* guard */ // violation: Multi-line control flow body must have braces.
 			for (int i = 0; i < x; ++i)
 				System.out.println(i);
 	}
@@ -1378,7 +1378,7 @@ class InputControlFlowBracesMissingBracesIfWithTrailingBlockCommentSliceViolatio
 // === case: missing_braces_if_with_trailing_block_then_line_comment ===
 class InputControlFlowBracesMissingBracesIfWithTrailingBlockThenLineCommentSliceViolation {
 	void m(int x) {
-		if (x > 0) /* note */ // guard // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) /* note */ // guard // violation: Multi-line control flow body must have braces.
 			for (int i = 0; i < x; ++i)
 				System.out.println(i);
 	}
@@ -1388,7 +1388,7 @@ class InputControlFlowBracesMissingBracesIfWithTrailingBlockThenLineCommentSlice
 // === case: missing_braces_if_with_trailing_comment ===
 class InputControlFlowBracesMissingBracesIfWithTrailingCommentSliceViolation {
 	void m(int x) {
-		if (x > 0) // guard // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // guard // violation: Multi-line control flow body must have braces.
 			for (int i = 0; i < x; ++i)
 				System.out.println(i);
 	}
@@ -1399,7 +1399,7 @@ class InputControlFlowBracesMissingBracesIfWithTrailingCommentSliceViolation {
 class InputControlFlowBracesMissingBracesTextBlockBodySliceViolation {
 	void m(int x) {
 		var s = "";
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			s = """
 					text
 					""";
@@ -1412,7 +1412,7 @@ class InputControlFlowBracesMissingBracesTextBlockBodySliceViolation {
 class InputControlFlowBracesMissingBracesTextBlockBodyWithQuoteInContentSliceViolation {
 	void m(int x) {
 		var s = "";
-		if (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		if (x > 0) // violation: Multi-line control flow body must have braces.
 			s = """
 					a " b
 					""";
@@ -1424,7 +1424,7 @@ class InputControlFlowBracesMissingBracesTextBlockBodyWithQuoteInContentSliceVio
 // === case: missing_braces_while_with_braced_do_while ===
 class InputControlFlowBracesMissingBracesWhileWithBracedDoWhileSliceViolation {
 	void m(boolean cond, int x) {
-		while (cond) // violation: Braceless control flow has multi-line body, add braces.
+		while (cond) // violation: Multi-line control flow body must have braces.
 			do {
 				System.out.println(x);
 				System.out.println(-x);
@@ -1438,7 +1438,7 @@ class InputControlFlowBracesMissingBracesWhileWithBracedDoWhileSliceViolation {
 // === case: missing_braces_while_with_braced_if_else ===
 class InputControlFlowBracesMissingBracesWhileWithBracedIfElseSliceViolation {
 	void m(boolean cond, int x) {
-		while (cond) // violation: Braceless control flow has multi-line body, add braces.
+		while (cond) // violation: Multi-line control flow body must have braces.
 			if (x > 0) {
 				System.out.println(x);
 				System.out.println(-x);
@@ -1455,7 +1455,7 @@ class InputControlFlowBracesMissingBracesWhileWithBracedIfElseSliceViolation {
 // === case: missing_braces_while_with_braced_if_else_block_comment ===
 class InputControlFlowBracesMissingBracesWhileWithBracedIfElseBlockCommentSliceViolation {
 	void m(boolean cond, int x) {
-		while (cond) // violation: Braceless control flow has multi-line body, add braces.
+		while (cond) // violation: Multi-line control flow body must have braces.
 			if (x > 0) {
 				System.out.println(x);
 				System.out.println(-x);
@@ -1472,7 +1472,7 @@ class InputControlFlowBracesMissingBracesWhileWithBracedIfElseBlockCommentSliceV
 // === case: missing_braces_while_with_braced_synchronized ===
 class InputControlFlowBracesMissingBracesWhileWithBracedSynchronizedSliceViolation {
 	void m(boolean cond, int x, Object lock) {
-		while (cond) // violation: Braceless control flow has multi-line body, add braces.
+		while (cond) // violation: Multi-line control flow body must have braces.
 			synchronized (lock) {
 				System.out.println(x);
 				System.out.println(-x);
@@ -1485,7 +1485,7 @@ class InputControlFlowBracesMissingBracesWhileWithBracedSynchronizedSliceViolati
 // === case: missing_braces_while_with_braced_try_catch ===
 class InputControlFlowBracesMissingBracesWhileWithBracedTryCatchSliceViolation {
 	void m(boolean cond, int x) {
-		while (cond) // violation: Braceless control flow has multi-line body, add braces.
+		while (cond) // violation: Multi-line control flow body must have braces.
 			try {
 				System.out.println(x);
 				System.out.println(-x);
@@ -1502,7 +1502,7 @@ class InputControlFlowBracesMissingBracesWhileWithBracedTryCatchSliceViolation {
 // === case: missing_braces_while_with_if ===
 class InputControlFlowBracesMissingBracesWhileWithIfSliceViolation {
 	void m(int x) {
-		while (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		while (x > 0) // violation: Multi-line control flow body must have braces.
 			if (x > 5)
 				--x;
 	}
@@ -1512,7 +1512,7 @@ class InputControlFlowBracesMissingBracesWhileWithIfSliceViolation {
 // === case: missing_braces_while_with_if_else ===
 class InputControlFlowBracesMissingBracesWhileWithIfElseSliceViolation {
 	void m(int x) {
-		while (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		while (x > 0) // violation: Multi-line control flow body must have braces.
 			if (x > 5)
 				--x;
 			else
@@ -1524,7 +1524,7 @@ class InputControlFlowBracesMissingBracesWhileWithIfElseSliceViolation {
 // === case: missing_braces_while_with_if_else_word_in_string ===
 class InputControlFlowBracesMissingBracesWhileWithIfElseWordInStringSliceViolation {
 	void m(int x, String s) {
-		while (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		while (x > 0) // violation: Multi-line control flow body must have braces.
 			if (x > 5)
 				s = "a; else b";
 			else
@@ -1536,7 +1536,7 @@ class InputControlFlowBracesMissingBracesWhileWithIfElseWordInStringSliceViolati
 // === case: missing_braces_while_with_if_then_else_prefixed_identifier ===
 class InputControlFlowBracesMissingBracesWhileWithIfThenElsePrefixedIdentifierSliceViolation {
 	void m(int x, boolean elseFlag) {
-		while (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		while (x > 0) // violation: Multi-line control flow body must have braces.
 			if (x > 5)
 				--x;
 		elseFlag = false;
@@ -1547,7 +1547,7 @@ class InputControlFlowBracesMissingBracesWhileWithIfThenElsePrefixedIdentifierSl
 // === case: missing_braces_while_with_if_then_else_supplementary_identifier ===
 class InputControlFlowBracesMissingBracesWhileWithIfThenElseSupplementaryIdentifierSliceViolation {
 	void m(int x, boolean else𝐀) {
-		while (x > 0) // violation: Braceless control flow has multi-line body, add braces.
+		while (x > 0) // violation: Multi-line control flow body must have braces.
 			if (x > 5)
 				--x;
 		else𝐀 = false;
@@ -1558,7 +1558,7 @@ class InputControlFlowBracesMissingBracesWhileWithIfThenElseSupplementaryIdentif
 // === case: missing_braces_while_with_label_on_own_line ===
 class InputControlFlowBracesMissingBracesWhileWithLabelOnOwnLineSliceViolation {
 	void m(boolean c, int x) {
-		while (c) // violation: Braceless control flow has multi-line body, add braces.
+		while (c) // violation: Multi-line control flow body must have braces.
 			loop:
 			for (var i = 0; i < 2; ++i) {
 				System.out.println(i);
@@ -1572,7 +1572,7 @@ class InputControlFlowBracesMissingBracesWhileWithLabelOnOwnLineSliceViolation {
 // === case: missing_braces_while_with_labeled_for_then_trailing_stmt ===
 class InputControlFlowBracesMissingBracesWhileWithLabeledForThenTrailingStmtSliceViolation {
 	void m(boolean c, int x) {
-		while (c) // violation: Braceless control flow has multi-line body, add braces.
+		while (c) // violation: Multi-line control flow body must have braces.
 			loop: for (var i = 0; i < 2; ++i) {
 				System.out.println(i);
 				break loop;
@@ -1585,7 +1585,7 @@ class InputControlFlowBracesMissingBracesWhileWithLabeledForThenTrailingStmtSlic
 // === case: missing_braces_while_with_stacked_labels ===
 class InputControlFlowBracesMissingBracesWhileWithStackedLabelsSliceViolation {
 	void m(boolean c, int x) {
-		while (c) // violation: Braceless control flow has multi-line body, add braces.
+		while (c) // violation: Multi-line control flow body must have braces.
 			outer: inner: for (var i = 0; i < 2; ++i) {
 				System.out.println(i);
 				break outer;
@@ -1598,7 +1598,7 @@ class InputControlFlowBracesMissingBracesWhileWithStackedLabelsSliceViolation {
 // === case: missing_braces_while_with_supplementary_label ===
 class InputControlFlowBracesMissingBracesWhileWithSupplementaryLabelSliceViolation {
 	void m(boolean c, int x) {
-		while (c) // violation: Braceless control flow has multi-line body, add braces.
+		while (c) // violation: Multi-line control flow body must have braces.
 			loop𝐀: for (var i = 0; i < 2; ++i) {
 				System.out.println(i);
 				break loop𝐀;
@@ -1609,10 +1609,10 @@ class InputControlFlowBracesMissingBracesWhileWithSupplementaryLabelSliceViolati
 // === end ===
 
 // === case: multiline_header_missing_braces ===
-// skip-reason: control-flow header spans lines
+// skip-reason: cannot reshape the body: the control flow header spans multiple lines
 class InputControlFlowBracesMultilineHeaderMissingBracesSliceViolation {
 	void m(boolean a, boolean b, int x) {
-		if (a // violation: Braceless control flow has multi-line body, add braces.
+		if (a // violation: Multi-line control flow body must have braces.
 				&& b)
 			if (x > 0)
 				--x;
@@ -1621,10 +1621,10 @@ class InputControlFlowBracesMultilineHeaderMissingBracesSliceViolation {
 // === end ===
 
 // === case: multiline_header_unnecessary_braces ===
-// skip-reason: control-flow header spans lines
+// skip-reason: cannot reshape the body: the control flow header spans multiple lines
 class InputControlFlowBracesMultilineHeaderUnnecessaryBracesSliceViolation {
 	void m(boolean a, boolean b) {
-		if (a // violation: Remove unnecessary braces from single-line control flow body.
+		if (a // violation: Remove the unnecessary braces from the single-line control flow body.
 				&& b) {
 			System.out.println(a);
 		}
@@ -1636,7 +1636,7 @@ class InputControlFlowBracesMultilineHeaderUnnecessaryBracesSliceViolation {
 class InputControlFlowBracesNestedInnerForWithIfSliceViolation {
 	void m(int x) {
 		if (x > 0) {
-			for (int i = 0; i < x; ++i) // violation: Braceless control flow has multi-line body, add braces.
+			for (int i = 0; i < x; ++i) // violation: Multi-line control flow body must have braces.
 				if (i > 0)
 					System.out.println(i);
 		}
@@ -1647,7 +1647,7 @@ class InputControlFlowBracesNestedInnerForWithIfSliceViolation {
 // === case: no_indent ===
 class InputControlFlowBracesNoIndentSliceViolation {
 void m(int x) {
-do { // violation: Remove unnecessary braces from single-line control flow body.
+do { // violation: Remove the unnecessary braces from the single-line control flow body.
 	--x;
 } while (x > 0);
 }
@@ -1661,24 +1661,24 @@ class InputControlFlowBracesNonDoWhileOneLinersSliceViolation {
 	void elseOneLiner(int x) {
 		if (x > 0)
 			System.out.println("positive");
-		else System.out.println("negative"); // violation: Move control flow body to its own line (one-liners not allowed).
+		else System.out.println("negative"); // violation: Control flow body must be on its own line.
 	}
 
 	void method(int x) {
-		if (x > 0) System.out.println("positive"); // violation: Move control flow body to its own line (one-liners not allowed).
-		while (x > 0) --x; // violation: Move control flow body to its own line (one-liners not allowed).
-		for (int i = 0; i < x; ++i) System.out.println(i); // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) System.out.println("positive"); // violation: Control flow body must be on its own line.
+		while (x > 0) --x; // violation: Control flow body must be on its own line.
+		for (int i = 0; i < x; ++i) System.out.println(i); // violation: Control flow body must be on its own line.
 		final var list = List.of("a");
-		for (var item : list) System.out.println(item); // violation: Move control flow body to its own line (one-liners not allowed).
+		for (var item : list) System.out.println(item); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
 
 // === case: on_do_line_block_comment_opens ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesOnDoLineBlockCommentOpensSliceViolation {
 	void m(int x) {
-		do /* multi // violation: Do-while body must be on the do line.
+		do /* multi // violation: Do-while body must be on the 'do' line.
 		   line */
 			x = 5;
 		while (x > 0);
@@ -1689,7 +1689,7 @@ class InputControlFlowBracesOnDoLineBlockCommentOpensSliceViolation {
 // === case: on_do_line_body_call_ending_in_do_word ===
 class InputControlFlowBracesOnDoLineBodyCallEndingInDoWordSliceViolation {
 	void m(int x) {
-		do undo(); while (x > 0); // violation: Do-while while clause must be on its own line.
+		do undo(); while (x > 0); // violation: Do-while 'while' clause must be on its own line.
 	}
 
 	private void undo() { }
@@ -1701,7 +1701,7 @@ class InputControlFlowBracesOnDoLineBodyCallStartingWithDoWordSliceViolation {
 	private void doWork() { }
 
 	void m(int x) {
-		do doWork(); while (x > 0); // violation: Do-while while clause must be on its own line.
+		do doWork(); while (x > 0); // violation: Do-while 'while' clause must be on its own line.
 	}
 }
 // === end ===
@@ -1711,7 +1711,7 @@ class InputControlFlowBracesOnDoLineBodyCallSupplementaryAfterDoWordSliceViolati
 	private void do𝐀() { }
 
 	void m(int x) {
-		do do𝐀(); while (x > 0); // violation: Do-while while clause must be on its own line.
+		do do𝐀(); while (x > 0); // violation: Do-while 'while' clause must be on its own line.
 	}
 }
 // === end ===
@@ -1719,7 +1719,7 @@ class InputControlFlowBracesOnDoLineBodyCallSupplementaryAfterDoWordSliceViolati
 // === case: on_do_line_body_call_supplementary_before_do_word ===
 class InputControlFlowBracesOnDoLineBodyCallSupplementaryBeforeDoWordSliceViolation {
 	void m(int x) {
-		do 𝐀do(); while (x > 0); // violation: Do-while while clause must be on its own line.
+		do 𝐀do(); while (x > 0); // violation: Do-while 'while' clause must be on its own line.
 	}
 
 	private void 𝐀do() { }
@@ -1727,21 +1727,21 @@ class InputControlFlowBracesOnDoLineBodyCallSupplementaryBeforeDoWordSliceViolat
 // === end ===
 
 // === case: on_do_line_body_runs_onto_while_line ===
-// skip-reason: do-while body runs onto the line its closing while shares
+// skip-reason: cannot reshape the do-while body: it runs onto the line its closing while shares
 // imports: java.util.List
 class InputControlFlowBracesOnDoLineBodyRunsOntoWhileLineSliceViolation {
 	void m(List<Integer> list) {
-		do list // violation: Braceless control flow has multi-line body, add braces.
+		do list // violation: Multi-line control flow body must have braces.
 				.add(1); while (list.size() < 10);
 	}
 }
 // === end ===
 
 // === case: on_do_line_body_spans_lines ===
-// skip-reason: do-while body does not end in a semicolon
+// skip-reason: cannot reshape the do-while body: it does not end in a semicolon
 class InputControlFlowBracesOnDoLineBodySpansLinesSliceViolation {
 	void m(int x) {
-		do x = x // violation: Braceless control flow has multi-line body, add braces.
+		do x = x // violation: Multi-line control flow body must have braces.
 				+ 1;
 		while (x > 0);
 	}
@@ -1752,7 +1752,7 @@ class InputControlFlowBracesOnDoLineBodySpansLinesSliceViolation {
 class InputControlFlowBracesOnDoLineBodyStartingWithWhileWordSliceViolation {
 	void m(int x) {
 		var whileCount = 0;
-		do whileCount = x + 1; // violation: Move control flow body to its own line (one-liners not allowed).
+		do whileCount = x + 1; // violation: Control flow body must be on its own line.
 		while (x > 0);
 	}
 }
@@ -1761,7 +1761,7 @@ class InputControlFlowBracesOnDoLineBodyStartingWithWhileWordSliceViolation {
 // === case: on_do_line_comment_line_before_while ===
 class InputControlFlowBracesOnDoLineCommentLineBeforeWhileSliceViolation {
 	void m(int x, int y) {
-		do x = x + y; // violation: Move control flow body to its own line (one-liners not allowed).
+		do x = x + y; // violation: Control flow body must be on its own line.
 		// keep going
 		while (x > 0);
 	}
@@ -1773,7 +1773,7 @@ class InputControlFlowBracesOnDoLineFalseWhileInBodySliceViolation {
 	void m() {
 		final int whileTimer = 5;
 		var whileVar = 0;
-		do ++whileVar; while (whileTimer > 0); // violation: Do-while while clause must be on its own line.
+		do ++whileVar; while (whileTimer > 0); // violation: Do-while 'while' clause must be on its own line.
 	}
 }
 // === end ===
@@ -1781,16 +1781,16 @@ class InputControlFlowBracesOnDoLineFalseWhileInBodySliceViolation {
 // === case: on_do_line_nested_do_while_terminator ===
 class InputControlFlowBracesOnDoLineNestedDoWhileTerminatorSliceViolation {
 	void m(int x) {
-		do do { --x; ++x; } while (x > 5); while (x > 0); // violation: Move control flow body to its own line (one-liners not allowed).
+		do do { --x; ++x; } while (x > 5); while (x > 0); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
 
 // === case: on_do_line_preceded_by_sibling_do_while ===
-// skip-reason: do-while shares its line with another do-while
+// skip-reason: cannot reshape the do-while: it shares its line with another do-while
 class InputControlFlowBracesOnDoLinePrecededBySiblingDoWhileSliceViolation {
 	void m(int x, int y) {
-		do; while (x > 0); do --y; while (y > 0); // violation: Do-while while clause must be on its own line.
+		do; while (x > 0); do --y; while (y > 0); // violation: Do-while 'while' clause must be on its own line.
 	}
 }
 // === end ===
@@ -1798,7 +1798,7 @@ class InputControlFlowBracesOnDoLinePrecededBySiblingDoWhileSliceViolation {
 // === case: on_do_line_sibling_while_loop_after_terminator ===
 class InputControlFlowBracesOnDoLineSiblingWhileLoopAfterTerminatorSliceViolation {
 	void m(int x, int y) {
-		do --x; while (x > 0); while (y > 0) { --y; } // violation: Do-while while clause must be on its own line.
+		do --x; while (x > 0); while (y > 0) { --y; } // violation: Do-while 'while' clause must be on its own line.
 	}
 }
 // === end ===
@@ -1806,7 +1806,7 @@ class InputControlFlowBracesOnDoLineSiblingWhileLoopAfterTerminatorSliceViolatio
 // === case: on_do_line_while_deeper_indent ===
 class InputControlFlowBracesOnDoLineWhileDeeperIndentSliceViolation {
 	void m(int x, int y) {
-		do x = x + y; // violation: Move control flow body to its own line (one-liners not allowed).
+		do x = x + y; // violation: Control flow body must be on its own line.
 			while (x < 100);
 	}
 }
@@ -1815,7 +1815,7 @@ class InputControlFlowBracesOnDoLineWhileDeeperIndentSliceViolation {
 // === case: on_do_line_while_inside_comment_body ===
 class InputControlFlowBracesOnDoLineWhileInsideCommentBodySliceViolation {
 	void m(int x, int y) {
-		do x = x + y; // ; while // violation: Move control flow body to its own line (one-liners not allowed).
+		do x = x + y; // ; while // violation: Control flow body must be on its own line.
 		while (x > 0);
 	}
 }
@@ -1826,7 +1826,7 @@ class InputControlFlowBracesOnDoLineWhileInsideCommentBodySliceViolation {
 class InputControlFlowBracesOnDoLineWhileInsideStringBodySliceViolation {
 	void m(List<String> list) {
 		String s;
-		do s = list.getFirst().replace("; while", ""); // violation: Move control flow body to its own line (one-liners not allowed).
+		do s = list.getFirst().replace("; while", ""); // violation: Control flow body must be on its own line.
 		while (s != null);
 	}
 }
@@ -1835,7 +1835,7 @@ class InputControlFlowBracesOnDoLineWhileInsideStringBodySliceViolation {
 // === case: on_do_line_while_nested_in_braced_body ===
 class InputControlFlowBracesOnDoLineWhileNestedInBracedBodySliceViolation {
 	void m(int x, int d) {
-		do if (d > 0) { --x; while (d > 0) { --d; } } while (x > 0); // violation: Move control flow body to its own line (one-liners not allowed).
+		do if (d > 0) { --x; while (d > 0) { --d; } } while (x > 0); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -1848,7 +1848,7 @@ class InputControlFlowBracesOnDoLineWhileNestedInConditionLambdaSliceViolation {
 	private void b() { }
 
 	void m() {
-		do b(); while (test(() -> { if (a) { b(); } while (c) { b(); } return true; })); // violation: Do-while while clause must be on its own line.
+		do b(); while (test(() -> { if (a) { b(); } while (c) { b(); } return true; })); // violation: Do-while 'while' clause must be on its own line.
 	}
 
 	private boolean test(BooleanSupplier s) {
@@ -1861,7 +1861,7 @@ class InputControlFlowBracesOnDoLineWhileNestedInConditionLambdaSliceViolation {
 class InputControlFlowBracesOnDoLineWhileWordInsideBodySliceViolation {
 	void m(int x) {
 		final var whileCount = 0;
-		do x = whileCount + 1; // violation: Move control flow body to its own line (one-liners not allowed).
+		do x = whileCount + 1; // violation: Control flow body must be on its own line.
 		while (x > 0);
 	}
 }
@@ -1871,7 +1871,7 @@ class InputControlFlowBracesOnDoLineWhileWordInsideBodySliceViolation {
 class InputControlFlowBracesOneLinerAfterBlockCommentCloseReadingDoSliceViolation {
 	void m(int x) {
 		/* note:
-		do the decrement */ if (x > 0) --x; // violation: Move control flow body to its own line (one-liners not allowed).
+		do the decrement */ if (x > 0) --x; // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -1879,7 +1879,7 @@ class InputControlFlowBracesOneLinerAfterBlockCommentCloseReadingDoSliceViolatio
 // === case: one_liner_body_spanning_lines ===
 class InputControlFlowBracesOneLinerBodySpanningLinesSliceViolation {
 	void m(int x) {
-		if (x > 0) for (var i = 0; i < 10; ++i) // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) for (var i = 0; i < 10; ++i) // violation: Control flow body must be on its own line.
 			System.out.println(i);
 	}
 }
@@ -1889,11 +1889,11 @@ class InputControlFlowBracesOneLinerBodySpanningLinesSliceViolation {
 // multi-fix-expected
 class InputControlFlowBracesOneLinerCommentsAndHeaderBracesSliceViolation {
 	void m(int x) {
-		for (var s : new String[]{"a"}) System.out.println(s); // violation: Move control flow body to its own line (one-liners not allowed).
-		if (x > 0) /* pre */ --x; // violation: Move control flow body to its own line (one-liners not allowed).
-		if (x > 1) --x; // note // violation: Move control flow body to its own line (one-liners not allowed).
-		if (x > 2) --x; /* note */ // violation: Move control flow body to its own line (one-liners not allowed).
-		if (x > 3) --x; ++x; // violation: Move control flow body to its own line (one-liners not allowed).
+		for (var s : new String[]{"a"}) System.out.println(s); // violation: Control flow body must be on its own line.
+		if (x > 0) /* pre */ --x; // violation: Control flow body must be on its own line.
+		if (x > 1) --x; // note // violation: Control flow body must be on its own line.
+		if (x > 2) --x; /* note */ // violation: Control flow body must be on its own line.
+		if (x > 3) --x; ++x; // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -1904,7 +1904,7 @@ class InputControlFlowBracesOneLinerCuddledElseSliceViolation {
 		if (x > 0) {
 			--x;
 			++x;
-		} else --x; // violation: Move control flow body to its own line (one-liners not allowed).
+		} else --x; // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -1916,7 +1916,7 @@ class InputControlFlowBracesOneLinerDoWhileBodySliceViolation {
 	}
 
 	void m(int x) {
-		if (x > 0) do // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) do // violation: Control flow body must be on its own line.
 			x = helper().value();
 		while (x > 0);
 	}
@@ -1931,7 +1931,7 @@ class InputControlFlowBracesOneLinerDoWhileBodySliceViolation {
 // imports: java.util.List
 class InputControlFlowBracesOneLinerDottedContinuationBodySliceViolation {
 	void m(int x, List<Integer> list) {
-		if (x > 0) list // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) list // violation: Control flow body must be on its own line.
 				.add(1);
 	}
 }
@@ -1946,11 +1946,11 @@ class InputControlFlowBracesOneLinerElseTextBlockBlankLineSliceViolation {
 	private void b() { }
 
 	void m() {
-		if (a) b(); // violation: Move control flow body to its own line (one-liners not allowed).
+		if (a) b(); // violation: Control flow body must be on its own line.
 		else s = """
 
 				t
-				"""; // violation@opener: Move control flow body to its own line (one-liners not allowed).
+				"""; // violation@opener: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -1962,7 +1962,7 @@ class InputControlFlowBracesOneLinerElseWithTrailingStatementSliceViolation {
 			--x;
 			++x;
 		}
-		else for (var i = 0; i < 2; ++i) // violation: Move control flow body to its own line (one-liners not allowed).
+		else for (var i = 0; i < 2; ++i) // violation: Control flow body must be on its own line.
 			--x; System.out.println(x);
 	}
 }
@@ -1971,7 +1971,7 @@ class InputControlFlowBracesOneLinerElseWithTrailingStatementSliceViolation {
 // === case: one_liner_for_loop ===
 class InputControlFlowBracesOneLinerForLoopSliceViolation {
 	void m() {
-		for (int i = 0; i < 10; ++i) System.out.println(i); // violation: Move control flow body to its own line (one-liners not allowed).
+		for (int i = 0; i < 10; ++i) System.out.println(i); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -1979,7 +1979,7 @@ class InputControlFlowBracesOneLinerForLoopSliceViolation {
 // === case: one_liner_if_else_if_same_line ===
 class InputControlFlowBracesOneLinerIfElseIfSameLineSliceViolation {
 	void m(int x) {
-		if (x > 0) --x; else if (x < 0) ++x; // violation: Move control flow body to its own line (one-liners not allowed). // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) --x; else if (x < 0) ++x; // violation: Control flow body must be on its own line. // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -1987,7 +1987,7 @@ class InputControlFlowBracesOneLinerIfElseIfSameLineSliceViolation {
 // === case: one_liner_if_else_same_line ===
 class InputControlFlowBracesOneLinerIfElseSameLineSliceViolation {
 	void m(int x) {
-		if (x > 0) --x; else ++x; // violation: Move control flow body to its own line (one-liners not allowed). // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) --x; else ++x; // violation: Control flow body must be on its own line. // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -1995,7 +1995,7 @@ class InputControlFlowBracesOneLinerIfElseSameLineSliceViolation {
 // === case: one_liner_if_statement ===
 class InputControlFlowBracesOneLinerIfStatementSliceViolation {
 	void m(int x) {
-		if (x > 0) --x; // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) --x; // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -2003,7 +2003,7 @@ class InputControlFlowBracesOneLinerIfStatementSliceViolation {
 // === case: one_liner_if_with_else_on_next_line ===
 class InputControlFlowBracesOneLinerIfWithElseOnNextLineSliceViolation {
 	void m(int x) {
-		if (x > 0) --x; // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) --x; // violation: Control flow body must be on its own line.
 		else
 			++x;
 	}
@@ -2017,7 +2017,7 @@ class InputControlFlowBracesOneLinerLambdaBlockBodySliceViolation {
 	}
 
 	void m(int x) {
-		if (x > 0) run(() -> { // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) run(() -> { // violation: Control flow body must be on its own line.
 			System.out.println(x);
 
 			System.out.println(-x);
@@ -2029,7 +2029,7 @@ class InputControlFlowBracesOneLinerLambdaBlockBodySliceViolation {
 // === case: one_liner_multi_line_body_then_else ===
 class InputControlFlowBracesOneLinerMultiLineBodyThenElseSliceViolation {
 	void m(int x) {
-		if (x > 0) for (var i = 0; i < 2; ++i) // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) for (var i = 0; i < 2; ++i) // violation: Control flow body must be on its own line.
 			--x; else {
 			++x;
 			System.out.println(x);
@@ -2049,7 +2049,7 @@ class InputControlFlowBracesOneLinerMultiLineBodyThenStatementSliceViolation {
 	}
 
 	void m(int x) {
-		if (x > 0) run(() -> { // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) run(() -> { // violation: Control flow body must be on its own line.
 			log(x);
 		}); log(-x);
 	}
@@ -2057,10 +2057,10 @@ class InputControlFlowBracesOneLinerMultiLineBodyThenStatementSliceViolation {
 // === end ===
 
 // === case: one_liner_multi_line_body_unterminated_block_comment ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesOneLinerMultiLineBodyUnterminatedBlockCommentSliceViolation {
 	void m(int x) {
-		if (x > 0) x = x // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) x = x // violation: Control flow body must be on its own line.
 				+ 1; /* multi
 				       line */
 		System.out.println(x);
@@ -2071,7 +2071,7 @@ class InputControlFlowBracesOneLinerMultiLineBodyUnterminatedBlockCommentSliceVi
 // === case: one_liner_nested_for ===
 class InputControlFlowBracesOneLinerNestedForSliceViolation {
 	void m() {
-		for (var i = 0; i < 3; ++i) for (var j = 0; j < 3; ++j) System.out.println(i + j); // violation: Move control flow body to its own line (one-liners not allowed). // violation: Move control flow body to its own line (one-liners not allowed).
+		for (var i = 0; i < 3; ++i) for (var j = 0; j < 3; ++j) System.out.println(i + j); // violation: Control flow body must be on its own line. // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -2079,7 +2079,7 @@ class InputControlFlowBracesOneLinerNestedForSliceViolation {
 // === case: one_liner_nested_if ===
 class InputControlFlowBracesOneLinerNestedIfSliceViolation {
 	void m(int x) {
-		if (x > 0) if (x > 5) --x; // violation: Move control flow body to its own line (one-liners not allowed). // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) if (x > 5) --x; // violation: Control flow body must be on its own line. // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -2087,7 +2087,7 @@ class InputControlFlowBracesOneLinerNestedIfSliceViolation {
 // === case: one_liner_nested_if_with_else ===
 class InputControlFlowBracesOneLinerNestedIfWithElseSliceViolation {
 	void m(int x) {
-		if (x > 0) if (x > 5) --x; else ++x; // violation: Move control flow body to its own line (one-liners not allowed). // violation: Move control flow body to its own line (one-liners not allowed). // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) if (x > 5) --x; else ++x; // violation: Control flow body must be on its own line. // violation: Control flow body must be on its own line. // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -2095,7 +2095,7 @@ class InputControlFlowBracesOneLinerNestedIfWithElseSliceViolation {
 // === case: one_liner_semicolon_on_next_line ===
 class InputControlFlowBracesOneLinerSemicolonOnNextLineSliceViolation {
 	void m(int x) {
-		if (x > 0) System.out.println(x) // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) System.out.println(x) // violation: Control flow body must be on its own line.
 				;
 	}
 }
@@ -2107,13 +2107,13 @@ class InputControlFlowBracesOneLinerStatementKindsSliceViolation {
 	void m(int x) {
 		int[] arr = {1, 2};
 		var name = "a";
-		if (x > 0) return; // violation: Move control flow body to its own line (one-liners not allowed).
-		if (x < 0) throw new IllegalStateException(); // violation: Move control flow body to its own line (one-liners not allowed).
-		if (x > 5) arr = new int[]{3, 4}; // violation: Move control flow body to its own line (one-liners not allowed).
-		if (x > 6) name = ";"; // violation: Move control flow body to its own line (one-liners not allowed).
-		if (x > 7) System.out.println(/* ; */ name + arr.length); // violation: Move control flow body to its own line (one-liners not allowed).
-		while (x > 8) break; // violation: Move control flow body to its own line (one-liners not allowed).
-		for (var i = 0; i < x; ++i) continue; // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) return; // violation: Control flow body must be on its own line.
+		if (x < 0) throw new IllegalStateException(); // violation: Control flow body must be on its own line.
+		if (x > 5) arr = new int[]{3, 4}; // violation: Control flow body must be on its own line.
+		if (x > 6) name = ";"; // violation: Control flow body must be on its own line.
+		if (x > 7) System.out.println(/* ; */ name + arr.length); // violation: Control flow body must be on its own line.
+		while (x > 8) break; // violation: Control flow body must be on its own line.
+		for (var i = 0; i < x; ++i) continue; // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -2121,7 +2121,7 @@ class InputControlFlowBracesOneLinerStatementKindsSliceViolation {
 // === case: one_liner_supplementary_char ===
 class InputControlFlowBracesOneLinerSupplementaryCharSliceViolation {
 	void m(int 𝐀) {
-		if (𝐀 > 0) System.out.println(𝐀); // violation: Move control flow body to its own line (one-liners not allowed).
+		if (𝐀 > 0) System.out.println(𝐀); // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -2129,7 +2129,7 @@ class InputControlFlowBracesOneLinerSupplementaryCharSliceViolation {
 // === case: one_liner_supplementary_char_before_else ===
 class InputControlFlowBracesOneLinerSupplementaryCharBeforeElseSliceViolation {
 	void m(int 𝐀) {
-		if (𝐀 > 0) --𝐀; else ++𝐀; // violation: Move control flow body to its own line (one-liners not allowed). // violation: Move control flow body to its own line (one-liners not allowed).
+		if (𝐀 > 0) --𝐀; else ++𝐀; // violation: Control flow body must be on its own line. // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -2137,7 +2137,7 @@ class InputControlFlowBracesOneLinerSupplementaryCharBeforeElseSliceViolation {
 // === case: one_liner_switch_body ===
 class InputControlFlowBracesOneLinerSwitchBodySliceViolation {
 	void m(int x) {
-		if (x > 0) switch (x) { // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) switch (x) { // violation: Control flow body must be on its own line.
 			case 1 -> System.out.println(1);
 			default -> System.out.println(x);
 		}
@@ -2148,7 +2148,7 @@ class InputControlFlowBracesOneLinerSwitchBodySliceViolation {
 // === case: one_liner_tab_after_keyword ===
 class InputControlFlowBracesOneLinerTabAfterKeywordSliceViolation {
 	void m(int x) {
-		if	(x > 0) --x; // violation: Move control flow body to its own line (one-liners not allowed).
+		if	(x > 0) --x; // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -2159,7 +2159,7 @@ class InputControlFlowBracesOneLinerTextBlockBodySliceViolation {
 		var s = "";
 		if (x > 0) s = """
 				text
-				"""; // violation@opener: Move control flow body to its own line (one-liners not allowed).
+				"""; // violation@opener: Control flow body must be on its own line.
 		System.out.println(s);
 	}
 }
@@ -2168,7 +2168,7 @@ class InputControlFlowBracesOneLinerTextBlockBodySliceViolation {
 // === case: one_liner_try_body ===
 class InputControlFlowBracesOneLinerTryBodySliceViolation {
 	void m(int x) {
-		if (x > 0) try { // violation: Move control flow body to its own line (one-liners not allowed).
+		if (x > 0) try { // violation: Control flow body must be on its own line.
 			System.out.println(x);
 		}
 		finally {
@@ -2181,7 +2181,7 @@ class InputControlFlowBracesOneLinerTryBodySliceViolation {
 // === case: one_liner_while_loop ===
 class InputControlFlowBracesOneLinerWhileLoopSliceViolation {
 	void m(int x) {
-		while (x > 0) --x; // violation: Move control flow body to its own line (one-liners not allowed).
+		while (x > 0) --x; // violation: Control flow body must be on its own line.
 	}
 }
 // === end ===
@@ -2189,7 +2189,7 @@ class InputControlFlowBracesOneLinerWhileLoopSliceViolation {
 // === case: own_line_blank_line_before_while ===
 class InputControlFlowBracesOwnLineBlankLineBeforeWhileSliceViolation {
 	void m(int x) {
-		do // violation: Do-while body must be on the do line.
+		do // violation: Do-while body must be on the 'do' line.
 			--x;
 
 		while (x > 0);
@@ -2200,7 +2200,7 @@ class InputControlFlowBracesOwnLineBlankLineBeforeWhileSliceViolation {
 // === case: own_line_body_with_cuddled_while ===
 class InputControlFlowBracesOwnLineBodyWithCuddledWhileSliceViolation {
 	void m(int x) {
-		do // violation: Do-while body must be on the do line.
+		do // violation: Do-while body must be on the 'do' line.
 			--x; while (x > 0);
 	}
 }
@@ -2209,7 +2209,7 @@ class InputControlFlowBracesOwnLineBodyWithCuddledWhileSliceViolation {
 // === case: own_line_comment_before_multi_line_body ===
 class InputControlFlowBracesOwnLineCommentBeforeMultiLineBodySliceViolation {
 	void m(boolean c, int x) {
-		do // violation: Braceless control flow has multi-line body, add braces.
+		do // violation: Multi-line control flow body must have braces.
 			// note
 			if (x > 0)
 				--x;
@@ -2221,7 +2221,7 @@ class InputControlFlowBracesOwnLineCommentBeforeMultiLineBodySliceViolation {
 // === case: own_line_comment_bracketed_code ===
 class InputControlFlowBracesOwnLineCommentBracketedCodeSliceViolation {
 	void m(int x) {
-		do // violation: Do-while body must be on the do line.
+		do // violation: Do-while body must be on the 'do' line.
 			/* pre */ x = 5; /* post */
 		while (x > 0);
 	}
@@ -2231,7 +2231,7 @@ class InputControlFlowBracesOwnLineCommentBracketedCodeSliceViolation {
 // === case: own_line_comment_on_while_line ===
 class InputControlFlowBracesOwnLineCommentOnWhileLineSliceViolation {
 	void m(int x) {
-		do // violation: Do-while body must be on the do line.
+		do // violation: Do-while body must be on the 'do' line.
 			--x;
 		/* note */ while (x > 0);
 	}
@@ -2241,7 +2241,7 @@ class InputControlFlowBracesOwnLineCommentOnWhileLineSliceViolation {
 // === case: own_line_statement_with_trailing_comment ===
 class InputControlFlowBracesOwnLineStatementWithTrailingCommentSliceViolation {
 	void m(int x) {
-		do // violation: Do-while body must be on the do line.
+		do // violation: Do-while body must be on the 'do' line.
 			--x; // pending
 		while (x > 0);
 	}
@@ -2249,10 +2249,10 @@ class InputControlFlowBracesOwnLineStatementWithTrailingCommentSliceViolation {
 // === end ===
 
 // === case: own_line_while_on_block_comment_close_line ===
-// skip-reason: block comment or text block does not close on the line it opened
+// skip-reason: cannot reshape the body: a block comment or text block does not close on the line it opens
 class InputControlFlowBracesOwnLineWhileOnBlockCommentCloseLineSliceViolation {
 	void m(int x) {
-		do // violation: Do-while body must be on the do line.
+		do // violation: Do-while body must be on the 'do' line.
 			x = 1; /* multi
 			line */ while (x > 0);
 	}
@@ -2262,7 +2262,7 @@ class InputControlFlowBracesOwnLineWhileOnBlockCommentCloseLineSliceViolation {
 // === case: own_line_with_comment_on_do ===
 class InputControlFlowBracesOwnLineWithCommentOnDoSliceViolation {
 	void m(int x) {
-		do // note // violation: Do-while body must be on the do line.
+		do // note // violation: Do-while body must be on the 'do' line.
 			--x;
 		while (x > 0);
 	}
@@ -2270,12 +2270,12 @@ class InputControlFlowBracesOwnLineWithCommentOnDoSliceViolation {
 // === end ===
 
 // === case: text_block_body_refused ===
-// skip-reason: do-while body contains a text block the fixer cannot reformat
+// skip-reason: cannot reshape the do-while body: it contains a text block
 class InputControlFlowTextBlockBodySliceViolation {
 	void m(String s) {
 		do s = """
 				text
-				"""; // violation@opener: Braceless control flow has multi-line body, add braces.
+				"""; // violation@opener: Multi-line control flow body must have braces.
 		while (true);
 	}
 }
@@ -2284,7 +2284,7 @@ class InputControlFlowTextBlockBodySliceViolation {
 // === case: tier_simple_body_on_own_line_decrement ===
 class InputControlFlowBracesTierSimpleBodyOnOwnLineDecrementSliceViolation {
 	void m(int x) {
-		do // violation: Do-while body must be on the do line.
+		do // violation: Do-while body must be on the 'do' line.
 			--x;
 		while (x > 0);
 	}
@@ -2296,7 +2296,7 @@ class InputControlFlowBracesTierSimpleBodyOnOwnLineDecrementSliceViolation {
 class InputControlFlowBracesTierSimpleBodyOnOwnLineListAddSliceViolation {
 	void m() {
 		final var list = List.of("a");
-		do // violation: Do-while body must be on the do line.
+		do // violation: Do-while body must be on the 'do' line.
 			list.add("b");
 		while (list.size() < 10);
 	}
@@ -2306,7 +2306,7 @@ class InputControlFlowBracesTierSimpleBodyOnOwnLineListAddSliceViolation {
 // === case: tier_simple_body_on_own_line_method_call ===
 class InputControlFlowBracesTierSimpleBodyOnOwnLineMethodCallSliceViolation {
 	void m(int x) {
-		do // violation: Do-while body must be on the do line.
+		do // violation: Do-while body must be on the 'do' line.
 			next(x);
 		while (x > 0);
 	}
@@ -2318,11 +2318,11 @@ class InputControlFlowBracesTierSimpleBodyOnOwnLineMethodCallSliceViolation {
 // === end ===
 
 // === case: unnecessary_braces_close_brace_after_text_block ===
-// skip-reason: the block does not end where the body does
+// skip-reason: cannot reshape the body: the block does not end where the body does
 class InputControlFlowBracesUnnecessaryBracesCloseBraceAfterTextBlockSliceViolation {
 	void m(int x) {
 		var s = "";
-		if (x > 0) { // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			s = """
 } """; }
 		System.out.println(s);
@@ -2331,10 +2331,10 @@ class InputControlFlowBracesUnnecessaryBracesCloseBraceAfterTextBlockSliceViolat
 // === end ===
 
 // === case: unnecessary_braces_close_brace_in_block_comment ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesUnnecessaryBracesCloseBraceInBlockCommentSliceViolation {
 	void m(int x) {
-		if (x > 0) { // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x; /* note
 		} */ }
 	}
@@ -2342,10 +2342,10 @@ class InputControlFlowBracesUnnecessaryBracesCloseBraceInBlockCommentSliceViolat
 // === end ===
 
 // === case: unnecessary_braces_comment_before_close_brace ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesUnnecessaryBracesCommentBeforeCloseBraceSliceViolation {
 	void m(int x) {
-		if (x > 0) { // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		/* trailing note */ }
 	}
@@ -2355,7 +2355,7 @@ class InputControlFlowBracesUnnecessaryBracesCommentBeforeCloseBraceSliceViolati
 // === case: unnecessary_braces_do_while ===
 class InputControlFlowBracesUnnecessaryBracesDoWhileSliceViolation {
 	void m(int x) {
-		do { // violation: Remove unnecessary braces from single-line control flow body.
+		do { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		} while (x > 0);
 	}
@@ -2367,9 +2367,101 @@ class InputControlFlowBracesUnnecessaryBracesElseSliceViolation {
 	void m(int x) {
 		if (x > 0)
 			++x;
-		else { // violation: Remove unnecessary braces from single-line control flow body.
+		else { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		}
+	}
+}
+// === end ===
+
+// === case: unnecessary_braces_else_rebind_boundary_no_dangling_if ===
+class InputControlFlowBracesUnnecessaryBracesElseRebindBoundaryNoDanglingIfSliceViolation {
+	void m(boolean a) {
+		if (a) { // violation: Remove the unnecessary braces from the single-line control flow body.
+			x();
+		}
+		else
+			y();
+	}
+
+	void x() {
+	}
+
+	void y() {
+	}
+}
+// === end ===
+
+// === case: unnecessary_braces_else_rebind_boundary_no_enclosing_else ===
+class InputControlFlowBracesUnnecessaryBracesElseRebindBoundaryNoEnclosingElseSliceViolation {
+	boolean advance() {
+		return true;
+	}
+
+	void m(int x, boolean a) {
+		if (a) { // violation: Remove the unnecessary braces from the single-line control flow body.
+			if (x > 0 && advance());
+		}
+	}
+}
+// === end ===
+
+// === case: unnecessary_braces_else_rebind_dangling_if ===
+// skip-reason: cannot remove the braces: a following else would bind to an if inside them
+class InputControlFlowBracesUnnecessaryBracesElseRebindDanglingIfSliceViolation {
+	boolean advance() {
+		return true;
+	}
+
+	void m(int x, boolean a) {
+		if (a) { // violation: Remove the unnecessary braces from the single-line control flow body.
+			if (x > 0 && advance());
+		}
+		else
+			y();
+	}
+
+	void y() {
+	}
+}
+// === end ===
+
+// === case: unnecessary_braces_else_rebind_labeled_statement ===
+// skip-reason: cannot remove the braces: a following else would bind to an if inside them
+class InputControlFlowBracesUnnecessaryBracesElseRebindLabeledStatementSliceViolation {
+	boolean advance() {
+		return true;
+	}
+
+	void m(int x, boolean a) {
+		if (a) { // violation: Remove the unnecessary braces from the single-line control flow body.
+			skip: if (x > 0 && advance());
+		}
+		else
+			y();
+	}
+
+	void y() {
+	}
+}
+// === end ===
+
+// === case: unnecessary_braces_else_rebind_through_while ===
+class InputControlFlowBracesUnnecessaryBracesElseRebindThroughWhileSliceViolation {
+	boolean advance() {
+		return true;
+	}
+
+	void m(int x, boolean a, boolean c) {
+		if (a) // violation: Multi-line control flow body must have braces.
+			while (c) { // violation: Remove the unnecessary braces from the single-line control flow body.
+				if (x > 0 && advance());
+			}
+		else
+			y();
+	}
+
+	void y() {
 	}
 }
 // === end ===
@@ -2378,7 +2470,7 @@ class InputControlFlowBracesUnnecessaryBracesElseSliceViolation {
 class InputControlFlowBracesUnnecessaryBracesFinalPrefixedIdentifierBodySliceViolation {
 	void m(int x) {
 		var finalCount = 1;
-		if (x > 0) { // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			finalCount = 2;
 		}
 		System.out.println(finalCount);
@@ -2391,12 +2483,12 @@ class InputControlFlowBracesUnnecessaryBracesFinalPrefixedIdentifierBodySliceVio
 // multi-fix-expected
 class InputControlFlowBracesUnnecessaryBracesForLoopsSliceViolation {
 	void m(int x) {
-		for (int i = 0; i < x; ++i) { // violation: Remove unnecessary braces from single-line control flow body.
+		for (int i = 0; i < x; ++i) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			System.out.println(i);
 		}
 
 		final var list = List.of("a", "b");
-		for (var item : list) { // violation: Remove unnecessary braces from single-line control flow body.
+		for (var item : list) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			System.out.println(item);
 		}
 	}
@@ -2406,7 +2498,7 @@ class InputControlFlowBracesUnnecessaryBracesForLoopsSliceViolation {
 // === case: unnecessary_braces_if ===
 class InputControlFlowBracesUnnecessaryBracesIfSliceViolation {
 	void m(int x) {
-		if (x > 0) { // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			System.out.println("positive");
 		}
 	}
@@ -2416,7 +2508,7 @@ class InputControlFlowBracesUnnecessaryBracesIfSliceViolation {
 // === case: unnecessary_braces_if_cuddled_else ===
 class InputControlFlowBracesUnnecessaryBracesIfCuddledElseSliceViolation {
 	void m(int x) {
-		if (x > 0) { // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		} else {
 			++x;
@@ -2430,10 +2522,10 @@ class InputControlFlowBracesUnnecessaryBracesIfCuddledElseSliceViolation {
 // multi-fix-expected
 class InputControlFlowBracesUnnecessaryBracesIfElsePairSliceViolation {
 	void m(int x) {
-		if (x > 0) { // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			System.out.println("positive");
 		}
-		else { // violation: Remove unnecessary braces from single-line control flow body.
+		else { // violation: Remove the unnecessary braces from the single-line control flow body.
 			System.out.println("negative");
 		}
 	}
@@ -2444,7 +2536,7 @@ class InputControlFlowBracesUnnecessaryBracesIfElsePairSliceViolation {
 // multi-fix-expected
 class InputControlFlowBracesUnnecessaryBracesStatementKindsSliceViolation {
 	void asserts(int x) {
-		if (x > 0) { // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			assert x > 0;
 		}
 	}
@@ -2452,13 +2544,13 @@ class InputControlFlowBracesUnnecessaryBracesStatementKindsSliceViolation {
 	void labelledJumps(int x) {
 		outer:
 		for (var i = 0; i < x; ++i) {
-			while (x > 0) { // violation: Remove unnecessary braces from single-line control flow body.
+			while (x > 0) { // violation: Remove the unnecessary braces from the single-line control flow body.
 				break outer;
 			}
 		}
 		inner:
 		for (var i = 0; i < x; ++i) {
-			while (x > 0) { // violation: Remove unnecessary braces from single-line control flow body.
+			while (x > 0) { // violation: Remove the unnecessary braces from the single-line control flow body.
 				continue inner;
 			}
 		}
@@ -2466,22 +2558,22 @@ class InputControlFlowBracesUnnecessaryBracesStatementKindsSliceViolation {
 
 	void loops(int x) {
 		for (var i = 0; i < x; ++i) {
-			if (i > 5) { // violation: Remove unnecessary braces from single-line control flow body.
+			if (i > 5) { // violation: Remove the unnecessary braces from the single-line control flow body.
 				break;
 			}
 		}
 		for (var i = 0; i < x; ++i) {
-			if (i > 5) { // violation: Remove unnecessary braces from single-line control flow body.
+			if (i > 5) { // violation: Remove the unnecessary braces from the single-line control flow body.
 				continue;
 			}
 		}
 	}
 
 	void returnsAndThrows(int x) {
-		if (x > 0) { // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			return;
 		}
-		if (x < -1) { // violation: Remove unnecessary braces from single-line control flow body.
+		if (x < -1) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			throw new IllegalStateException();
 		}
 	}
@@ -2492,7 +2584,7 @@ class InputControlFlowBracesUnnecessaryBracesStatementKindsSliceViolation {
 class InputControlFlowBracesUnnecessaryBracesVarPrefixedIdentifierBodySliceViolation {
 	void m(int x) {
 		var varCount = 1;
-		if (x > 0) { // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			varCount = 2;
 		}
 		System.out.println(varCount);
@@ -2503,7 +2595,7 @@ class InputControlFlowBracesUnnecessaryBracesVarPrefixedIdentifierBodySliceViola
 // === case: unnecessary_braces_while ===
 class InputControlFlowBracesUnnecessaryBracesWhileSliceViolation {
 	void m(int x) {
-		while (x > 0) { // violation: Remove unnecessary braces from single-line control flow body.
+		while (x > 0) { // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		}
 	}
@@ -2511,10 +2603,10 @@ class InputControlFlowBracesUnnecessaryBracesWhileSliceViolation {
 // === end ===
 
 // === case: unnecessary_braces_with_block_comment_on_brace ===
-// skip-reason: cannot remove braces without losing other content on the brace line
+// skip-reason: cannot remove the braces: other content shares the brace line
 class InputControlFlowBracesUnnecessaryBracesWithBlockCommentOnBraceSliceViolation {
 	void m(int x) {
-		if (x > 0) { /* guard */ // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) { /* guard */ // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		}
 	}
@@ -2524,7 +2616,7 @@ class InputControlFlowBracesUnnecessaryBracesWithBlockCommentOnBraceSliceViolati
 // === case: unnecessary_braces_with_comment_on_brace ===
 class InputControlFlowBracesUnnecessaryBracesWithCommentOnBraceSliceViolation {
 	void m(int x) {
-		if (x > 0) { // guard // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) { // guard // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		}
 	}
@@ -2534,7 +2626,7 @@ class InputControlFlowBracesUnnecessaryBracesWithCommentOnBraceSliceViolation {
 // === case: unnecessary_braces_with_comment_on_brace_after_block_comment ===
 class InputControlFlowBracesUnnecessaryBracesWithCommentOnBraceAfterBlockCommentSliceViolation {
 	void m(int x) {
-		if (x > 0) /* note */ { // guard // violation: Remove unnecessary braces from single-line control flow body.
+		if (x > 0) /* note */ { // guard // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		}
 	}
@@ -2544,7 +2636,7 @@ class InputControlFlowBracesUnnecessaryBracesWithCommentOnBraceAfterBlockComment
 // === case: unnecessary_braces_with_comment_on_brace_and_char_literal ===
 class InputControlFlowBracesUnnecessaryBracesWithCommentOnBraceAndCharLiteralSliceViolation {
 	void m(char ch, int x) {
-		if (ch == '"') { // guard // violation: Remove unnecessary braces from single-line control flow body.
+		if (ch == '"') { // guard // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		}
 	}
@@ -2554,7 +2646,7 @@ class InputControlFlowBracesUnnecessaryBracesWithCommentOnBraceAndCharLiteralSli
 // === case: unnecessary_braces_with_comment_on_brace_and_string_literal ===
 class InputControlFlowBracesUnnecessaryBracesWithCommentOnBraceAndStringLiteralSliceViolation {
 	void m(String s, int x) {
-		if (s.equals("//")) { // guard // violation: Remove unnecessary braces from single-line control flow body.
+		if (s.equals("//")) { // guard // violation: Remove the unnecessary braces from the single-line control flow body.
 			--x;
 		}
 	}
@@ -2566,7 +2658,7 @@ class InputControlFlowBracesUnnecessaryBracesYieldBodySliceViolation {
 	void m(int k, int a, int b, boolean c) {
 		final var v = switch (k) {
 			default -> {
-				if (c) { // violation: Remove unnecessary braces from single-line control flow body.
+				if (c) { // violation: Remove the unnecessary braces from the single-line control flow body.
 					yield a;
 				}
 				yield b;

@@ -6,6 +6,7 @@ Deletes `(Type)` plus trailing whitespace at the violation column, preserving an
 
 | Pattern | Reason |
 | --- | --- |
-| Multi-line cast, or a cast with no expression on the same line | The cast span can't be resolved on a single line |
+| Multi-line cast (the cast's `(` and `)` on different lines) | The cast span can't be resolved on a single line |
+| Cast with no expression after it on the violation line | The expression the cast applies to is not on that line |
 
 Part of [auto-fix coverage](../auto-fix-coverage.md).

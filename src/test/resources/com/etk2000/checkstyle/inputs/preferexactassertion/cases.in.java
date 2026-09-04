@@ -1,7 +1,20 @@
 package com.etk2000.checkstyle.inputs.preferexactassertion;
 
+// === case: annotated_instanceof_type_skipped ===
+// skip-reason: cannot rewrite the assertion: the instanceof type is annotated
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class AnnotatedInstanceofTypeSkippedSlice {
+	@interface Tagged {
+	}
+
+	void m(Object o) {
+		assertTrue(o instanceof @Tagged String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
 // === case: assert_false_equal ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertFalse
 class AssertFalseEqualSlice {
 	void m() {
@@ -11,7 +24,7 @@ class AssertFalseEqualSlice {
 // === end ===
 
 // === case: assert_false_ge ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertFalse
 class AssertFalseGeSlice {
 	void m() {
@@ -21,7 +34,7 @@ class AssertFalseGeSlice {
 // === end ===
 
 // === case: assert_false_gt ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertFalse
 class AssertFalseGtSlice {
 	void m() {
@@ -76,7 +89,7 @@ class AssertFalseInstanceOfNestedSlice {
 // === end ===
 
 // === case: assert_false_le ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertFalse
 class AssertFalseLeSlice {
 	void m() {
@@ -86,7 +99,7 @@ class AssertFalseLeSlice {
 // === end ===
 
 // === case: assert_false_lt ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertFalse
 class AssertFalseLtSlice {
 	void m() {
@@ -131,7 +144,7 @@ class AssertFalseNegatedQualifiedAssertInstanceOfSlice {
 // === end ===
 
 // === case: assert_false_not_equal ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertFalse
 class AssertFalseNotEqualSlice {
 	void m() {
@@ -168,7 +181,7 @@ class AssertTrueComplexLhsInstanceOfSlice {
 // === end ===
 
 // === case: assert_true_equal ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class AssertTrueEqualSlice {
 	void m() {
@@ -178,7 +191,7 @@ class AssertTrueEqualSlice {
 // === end ===
 
 // === case: assert_true_ge ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class AssertTrueGeSlice {
 	void m() {
@@ -188,7 +201,7 @@ class AssertTrueGeSlice {
 // === end ===
 
 // === case: assert_true_gt ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class AssertTrueGtSlice {
 	void m() {
@@ -243,7 +256,7 @@ class AssertTrueInstanceOfNestedSlice {
 // === end ===
 
 // === case: assert_true_le ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class AssertTrueLeSlice {
 	void m() {
@@ -253,7 +266,7 @@ class AssertTrueLeSlice {
 // === end ===
 
 // === case: assert_true_lt ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class AssertTrueLtSlice {
 	void m() {
@@ -387,7 +400,7 @@ class AssertTrueNegatedWithMessageLastSlice {
 // === end ===
 
 // === case: assert_true_not_equal ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class AssertTrueNotEqualSlice {
 	void m() {
@@ -452,6 +465,18 @@ class CharWithSlashInArgsFixedSlice {
 }
 // === end ===
 
+// === case: comparison_with_negated_message_skipped ===
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class ComparisonWithNegatedMessageSkippedSlice {
+	void m(int count, boolean quiet) {
+		// the regression case: the old text fixer took the first argument whose stripped text started
+		// with `!`, which here is the MESSAGE, and flipped assertTrue to assertFalse around it
+		assertTrue(count > 0, !quiet ? "count was " + count : ""); // violation: Use 'assertEquals' instead of 'assertTrue' with '>'.
+	}
+}
+// === end ===
+
 // === case: complex_lhs_preserved ===
 // imports: java.io.IOException
 // imports: static org.junit.jupiter.api.Assertions.*
@@ -468,6 +493,16 @@ class ComplexLhsPreservedSlice {
 class DollarInImportFqnParsedSlice {
 	void m(Object o) {
 		assertTrue(o instanceof String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
+// === case: explicit_type_arg_in_args_fixed ===
+// imports: java.util.Map
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class ExplicitTypeArgInArgsFixedSlice {
+	void m() {
+		assertTrue(Map.<String, Integer>of() instanceof Map); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
 	}
 }
 // === end ===
@@ -494,11 +529,103 @@ class FullyQualifiedTypePreservedSlice {
 // === end ===
 
 // === case: generic_type_skipped ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: the instanceof type is generic
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class GenericTypeSkippedSlice {
 	void m(Object o) {
 		assertTrue(o instanceof java.util.List<?>); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
+// === case: import_line_commented_out_junit4_import_ignored ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class ImportLineCommentedOutJunit4ImportIgnoredSlice {
+	// import static org.junit.Assert.assertFalse;
+	void m(boolean flag) {
+		assertTrue(!flag); // violation: Use 'assertFalse' instead of 'assertTrue' with a negated argument.
+	}
+}
+// === end ===
+
+// === case: import_line_inside_block_comment_ignored ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+/* temporarily disabled:
+import static org.junit.Assert.assertFalse;
+*/
+class ImportLineInsideBlockCommentIgnoredSlice {
+	void m(boolean flag) {
+		assertTrue(!flag); // violation: Use 'assertFalse' instead of 'assertTrue' with a negated argument.
+	}
+}
+// === end ===
+
+// === case: import_line_inside_block_comment_not_used_for_class_inference ===
+/* replaced:
+import static com.example.Assertions.assertTrue;
+*/
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class ImportLineInsideBlockCommentNotUsedForClassInferenceSlice {
+	void m(Object o) {
+		assertTrue(o instanceof String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
+// === case: import_line_inside_text_block_ignored ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class ImportLineInsideTextBlockIgnoredSlice {
+	void m(boolean flag) {
+		assertTrue(!flag, """
+			import static org.junit.Assert.assertFalse;
+			"""); // violation@opener: Use 'assertFalse' instead of 'assertTrue' with a negated argument.
+	}
+}
+// === end ===
+
+// === case: import_member_not_a_known_assertion_skips ===
+// skip-reason: cannot rewrite the assertion: no static import says which class the replacement comes from
+// imports: static org.junit.jupiter.api.Assertions.assertThrowsExactly
+class ImportMemberNotAKnownAssertionSkipsSlice {
+	void m(Object o) {
+		assertTrue(o instanceof String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
+// === case: import_member_not_a_known_assertion_skips_negation ===
+// skip-reason: cannot rewrite the assertion: no static import says which class the replacement comes from
+// imports: static org.junit.jupiter.api.Assertions.assertThrowsExactly
+class ImportMemberNotAKnownAssertionSkipsNegationSlice {
+	void m(boolean flag) {
+		assertTrue(!flag); // violation: Use 'assertFalse' instead of 'assertTrue' with a negated argument.
+	}
+}
+// === end ===
+
+// === case: instanceof_comment_abutting_keyword_fixed ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class InstanceofCommentAbuttingKeywordFixedSlice {
+	void m(Object o) {
+		assertTrue(o/* c */instanceof String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
+// === case: instanceof_comment_abutting_type_fixed ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class InstanceofCommentAbuttingTypeFixedSlice {
+	void m(Object o) {
+		assertTrue(o instanceof/* c */String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
+// === case: instanceof_comment_abutting_type_no_spaces_fixed ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class InstanceofCommentAbuttingTypeNoSpacesFixedSlice {
+	void m(Object o) {
+		assertTrue(o instanceof/*c*/String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
 	}
 }
 // === end ===
@@ -511,6 +638,15 @@ class InstanceofInsideParensInOtherArgIgnoredSlice {
 
 	void m(Object x) {
 		assertTrue("got: " + (x instanceof Y), x instanceof Y); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
+// === case: instanceof_text_block_abutting_keyword_fixed ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class InstanceofTextBlockAbuttingKeywordFixedSlice {
+	void m() {
+		assertTrue("""some text"""instanceof String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
 	}
 }
 // === end ===
@@ -569,6 +705,18 @@ class Junit5MessageLastShapeSlice {
 class Junit5WildcardFollowedByStaticAssertImportSkipsAddSlice {
 	void m(Object o) {
 		assertTrue(o instanceof String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
+// === case: lambda_body_assertion_fixed ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class LambdaBodyAssertionFixedSlice {
+	void m(Object o) {
+		runLater(() -> assertTrue(o instanceof String)); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+
+	private void runLater(Runnable task) {
 	}
 }
 // === end ===
@@ -657,6 +805,18 @@ class MultiLineCallNegatedFixedSlice {
 }
 // === end ===
 
+// === case: multi_line_call_open_paren_on_own_line_fixed ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class MultiLineCallOpenParenOnOwnLineFixedSlice {
+	void m(Object o) {
+		assertTrue
+		( // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+				o instanceof String
+		);
+	}
+}
+// === end ===
+
 // === case: multi_line_call_semi_on_own_line_fixed ===
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class MultiLineCallSemiOnOwnLineFixedSlice {
@@ -678,6 +838,19 @@ class MultiLineCallSpaceBeforeOpenParenFixedSlice {
 }
 // === end ===
 
+// === case: multi_line_call_string_literal_containing_name_ignored ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class MultiLineCallStringLiteralContainingNameIgnoredSlice {
+	void m(Object o) {
+		final var s = "earlier: assertTrue";
+		assertTrue
+		( // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+			o instanceof String
+		);
+	}
+}
+// === end ===
+
 // === case: multi_line_call_with_block_comment_before_open_paren_fixed ===
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class MultiLineCallWithBlockCommentBeforeOpenParenFixedSlice {
@@ -687,23 +860,53 @@ class MultiLineCallWithBlockCommentBeforeOpenParenFixedSlice {
 }
 // === end ===
 
-// === case: multi_line_call_with_comment_between_close_and_semi_skipped ===
-// skip-reason: complex assertion form
+// === case: multi_line_call_with_comment_between_close_and_semi_fixed ===
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
-class MultiLineCallWithCommentBetweenCloseAndSemiSkippedSlice {
+class MultiLineCallWithCommentBetweenCloseAndSemiFixedSlice {
 	void m(Object o) {
 		assertTrue(o instanceof String) /* note */ ; // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
 	}
 }
 // === end ===
 
-// === case: multi_line_call_with_line_comment_between_close_and_semi_skipped ===
-// skip-reason: complex assertion form
+// === case: multi_line_call_with_line_comment_before_open_paren_fixed ===
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
-class MultiLineCallWithLineCommentBetweenCloseAndSemiSkippedSlice {
+class MultiLineCallWithLineCommentBeforeOpenParenFixedSlice {
+	void m(Object o) {
+		assertTrue // note
+		(o instanceof String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
+// === case: multi_line_call_with_line_comment_between_close_and_semi_fixed ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class MultiLineCallWithLineCommentBetweenCloseAndSemiFixedSlice {
 	void m(Object o) {
 		assertTrue(o instanceof String) // note // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
 		;
+	}
+}
+// === end ===
+
+// === case: multi_line_negated_instance_of_fixed ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class MultiLineNegatedInstanceOfFixedSlice {
+	void m(Object o) {
+		assertTrue(!( // violation: Use 'assertNotInstanceOf' instead of 'assertTrue' with 'instanceof'.
+				o instanceof String
+		));
+	}
+}
+// === end ===
+
+// === case: multi_line_outer_paren_arg_fixed ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class MultiLineOuterParenArgFixedSlice {
+	void m(Object o) {
+		assertTrue(( // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+				o instanceof String
+		));
 	}
 }
 // === end ===
@@ -746,11 +949,59 @@ class MultiLineQualifiedChainFallsBackToNegationAssertFalseSlice {
 }
 // === end ===
 
+// === case: multi_target_position_skipped ===
+// skip-reason: cannot rewrite the assertion: more than one assertion violation at this position
+class MultiTargetPositionSkippedSlice {
+	private static class Assertions {
+		static void assertTrue(boolean condition, boolean other) {
+		}
+	}
+
+	void m(boolean flag, int a, int b) {
+		Assertions.assertTrue(!flag, a == b); // violation: Use 'assertEquals' instead of 'assertTrue' with '=='. // violation: Use 'assertFalse' instead of 'assertTrue' with a negated argument.
+	}
+}
+// === end ===
+
+// === case: nan_comparison_skipped ===
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class NanComparisonSkippedSlice {
+	void m(double x) {
+		// a tripwire: assertEquals(Double.NaN, x) PASSES where this assertion fails, so rewriting
+		// a comparison without the operand types inverts the test
+		assertTrue(Double.NaN == x); // violation: Use 'assertEquals' instead of 'assertTrue' with '=='.
+	}
+}
+// === end ===
+
+// === case: negated_operand_comparison_skipped ===
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class NegatedOperandComparisonSkippedSlice {
+	void m(boolean a, boolean b) {
+		// reads like a negation but parses as `(!a) == b`, so the comparison rule owns it
+		assertTrue(!a == b); // violation: Use 'assertEquals' instead of 'assertTrue' with '=='.
+	}
+}
+// === end ===
+
 // === case: negation_instance_of_junit4_fallback ===
 // imports: static org.junit.Assert.assertTrue
 class NegationInstanceOfJunit4FallbackSlice {
 	void m(Object o) {
 		assertTrue(!(o instanceof String)); // violation: Use 'assertFalse' instead of 'assertTrue' with a negated argument.
+	}
+}
+// === end ===
+
+// === case: negative_zero_comparison_skipped ===
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class NegativeZeroComparisonSkippedSlice {
+	void m() {
+		// the mirror tripwire: assertEquals(0.0, -0.0) FAILS where this assertion passes
+		assertTrue(0.0 == -0.0); // violation: Use 'assertEquals' instead of 'assertTrue' with '=='.
 	}
 }
 // === end ===
@@ -792,7 +1043,7 @@ class ParensAroundNegatedInstanceOfFixedSlice {
 // === end ===
 
 // === case: parenthesized_comparison_fires ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class ParenthesizedComparisonFiresSlice {
 	void m() {
@@ -847,7 +1098,7 @@ class ParenthesizedInstanceOfFiresSlice {
 // === end ===
 
 // === case: qualified_assert_false_call ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 class QualifiedAssertFalseCallSlice {
 	void m() {
 		org.junit.Assert.assertFalse(1 > 0); // violation: Use 'assertEquals' instead of 'assertFalse' with '>'.
@@ -864,7 +1115,7 @@ class QualifiedAssertNegatedInstanceOfFallsBackToNegationSlice {
 // === end ===
 
 // === case: qualified_assert_true_call ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 class QualifiedAssertTrueCallSlice {
 	void m() {
 		org.junit.Assert.assertTrue(1 > 0); // violation: Use 'assertEquals' instead of 'assertTrue' with '>'.
@@ -881,7 +1132,7 @@ class QualifiedAssertWithSpaceBetweenDotAndMethodSlice {
 // === end ===
 
 // === case: qualified_junit5_assert_false ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 class QualifiedJunit5AssertFalseSlice {
 	void m() {
 		org.junit.jupiter.api.Assertions.assertFalse(1 > 0); // violation: Use 'assertEquals' instead of 'assertFalse' with '>'.
@@ -890,7 +1141,7 @@ class QualifiedJunit5AssertFalseSlice {
 // === end ===
 
 // === case: qualified_junit5_assert_false_ne ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 class QualifiedJunit5AssertFalseNeSlice {
 	void m() {
 		org.junit.jupiter.api.Assertions.assertFalse(1 != 2); // violation: Use 'assertEquals' instead of 'assertFalse' with '!='.
@@ -907,7 +1158,7 @@ class QualifiedJunit5AssertFalseNegatedInstanceOfSlice {
 // === end ===
 
 // === case: qualified_junit5_assert_true ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 class QualifiedJunit5AssertTrueSlice {
 	void m() {
 		org.junit.jupiter.api.Assertions.assertTrue(1 > 0); // violation: Use 'assertEquals' instead of 'assertTrue' with '>'.
@@ -916,7 +1167,7 @@ class QualifiedJunit5AssertTrueSlice {
 // === end ===
 
 // === case: qualified_junit5_assert_true_eq ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 class QualifiedJunit5AssertTrueEqSlice {
 	void m() {
 		org.junit.jupiter.api.Assertions.assertTrue(1 == 1); // violation: Use 'assertEquals' instead of 'assertTrue' with '=='.
@@ -945,6 +1196,18 @@ class QualifiedJunit5AssertTrueNegatedInstanceOfSlice {
 class QualifiedJunit5CallPreservesPrefixSlice {
 	void m(Object o) {
 		Assertions.assertTrue(o instanceof String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
+// === case: record_pattern_skipped ===
+// skip-reason: cannot rewrite the assertion: record pattern with bindings
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class RecordPatternSkippedSlice {
+	record Point(int x, int y) {}
+
+	void m(Object o) {
+		assertTrue(o instanceof Point(int x, int y)); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
 	}
 }
 // === end ===
@@ -1001,6 +1264,16 @@ class StringWithSlashSlashInArgsFixedSlice {
 }
 // === end ===
 
+// === case: structural_line_comment_in_args_fixed ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class StructuralLineCommentInArgsFixedSlice {
+	void m(boolean flag) {
+		assertTrue(!flag // dangerous // violation: Use 'assertFalse' instead of 'assertTrue' with a negated argument.
+		);
+	}
+}
+// === end ===
+
 // === case: text_block_comma_in_message_not_split ===
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class TextBlockCommaInMessageNotSplitSlice {
@@ -1041,11 +1314,36 @@ class TextBlockSingleLineArgFixedSlice {
 // === end ===
 
 // === case: three_args_skipped ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: it has more arguments than a condition and a message
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class ThreeArgsSkippedSlice {
 	void m(Object o) {
 		assertTrue(o instanceof String, "msg", "extra"); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
+// === case: trailing_stmt_after_assert_split ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class TrailingStmtAfterAssertSplitSlice {
+	void m(Object o) {
+		assertTrue(o instanceof String); System.out.println(o); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
+// === case: trailing_text_block_after_assert_keeps_comment ===
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class TrailingTextBlockAfterAssertKeepsCommentSlice {
+	void m(boolean flag) {
+		// the trailing statement moves to its own line, so nothing follows the relocated comment and
+		// appending it is safe even though the suffix opens a text block
+		assertTrue(/* why */ !flag); log("""
+				text
+				"""); // violation@opener: Use 'assertFalse' instead of 'assertTrue' with a negated argument.
+	}
+
+	private void log(String message) {
 	}
 }
 // === end ===
@@ -1060,7 +1358,7 @@ class TripleNegationFlipsLikeSingleSlice {
 // === end ===
 
 // === case: two_arg_junit5_assert_false ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertFalse
 class TwoArgJunit5AssertFalseSlice {
 	void m() {
@@ -1070,7 +1368,7 @@ class TwoArgJunit5AssertFalseSlice {
 // === end ===
 
 // === case: two_arg_junit5_assert_true ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.jupiter.api.Assertions.assertTrue
 class TwoArgJunit5AssertTrueSlice {
 	void m() {
@@ -1094,6 +1392,16 @@ class TwoArgJunit5AssertTrueInstanceOfSlice {
 class UnrelatedWildcardDoesNotBlockJunit5ScanSlice {
 	void m(Object o) {
 		assertTrue(o instanceof String); // violation: Use 'assertInstanceOf' instead of 'assertTrue' with 'instanceof'.
+	}
+}
+// === end ===
+
+// === case: unrelated_wildcard_does_not_block_negation_scan ===
+// imports: static java.util.Arrays.*
+// imports: static org.junit.jupiter.api.Assertions.assertTrue
+class UnrelatedWildcardDoesNotBlockNegationScanSlice {
+	void m(boolean flag) {
+		assertTrue(!flag); // violation: Use 'assertFalse' instead of 'assertTrue' with a negated argument.
 	}
 }
 // === end ===

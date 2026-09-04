@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-import com.etk2000.checkstyle.MultilineCallFormattingCheck;
+import com.etk2000.checkstyle.MultilineCallMoves;
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FileContents;
@@ -57,6 +57,14 @@ public class JavaPostDelayedReformatterTest {
 	}
 
 	@Test
+	public void reformatDeclinesLineCommentHiddenByABlockCommentOnTheOpeningLine() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\t/* disabled for now:\n\t\t   it's flaky */ handler.postDelayed( // FIXME restore\n\t\t\t\t() -> {\n\t\t\t\t\tdoThing();\n\t\t\t\t},\n\t\t\t\t1000\n\t\t);\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaPostDelayedReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findPostDelayed(root), 120, 4);
+		assertEquals(SpanReformat.Reason.COMMENT_ON_JOINED_LINE, assertInstanceOf(SpanReformat.CannotReformat.class, result).reason());
+	}
+
+	@Test
 	public void reformatDeclinesLineCommentInBody() throws Exception {
 		final var source = "class C {\n\tvoid m() {\n\t\thandler.postDelayed(() -> {\n\t\t\tdoThing(); // note\n\t\t},\n\t\t\t\t1000\n\t\t);\n\t}\n}";
 		final var root = parse(source);
@@ -66,7 +74,6 @@ public class JavaPostDelayedReformatterTest {
 
 	@Test
 	public void reformatDeclinesShiftedColumn() throws Exception {
-		// the block's `{` no longer sits at the reported column (a same-pass edit shifted the char): STALE
 		final var source = "class C {\n\tvoid m() {\n\t\thandler.postDelayed(() -> {\n\t\t\tSystem.out.println(\"x\");\n\t\t},\n\t\t\t\t1000\n\t\t);\n\t}\n}";
 		final var call = findPostDelayed(parse(source));
 		final var lines = new ArrayList<>(List.of(source.split("\n", -1)));
@@ -100,6 +107,18 @@ public class JavaPostDelayedReformatterTest {
 		final var reformatted = assertInstanceOf(SpanReformat.Reformatted.class, result);
 		assertEquals(
 				List.of("\t\thandler.postDelayed(new Runnable() {", "\t\t\tpublic void run() {", "\t\t\t\tdoThing();", "\t\t\t}", "\t\t}, 1000);"),
+				reformatted.lines()
+		);
+	}
+
+	@Test
+	public void reformatKeepsBracelessIfBodyIndentWithStackedClose() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\thandler.postDelayed(() -> {\n\t\t\tif (x)\n\t\t\t\ta();\n\t\t\tb();\n\t\t},\n\t\t\t\t1000\n\t\t);\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaPostDelayedReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findPostDelayed(root), 120, 4);
+		final var reformatted = assertInstanceOf(SpanReformat.Reformatted.class, result);
+		assertEquals(
+				List.of("\t\thandler.postDelayed(() -> {", "\t\t\tif (x)", "\t\t\t\ta();", "\t\t\tb();", "\t\t}, 1000);"),
 				reformatted.lines()
 		);
 	}
@@ -140,8 +159,8 @@ public class JavaPostDelayedReformatterTest {
 		final var root = parse(source);
 		final var call = findPostDelayed(root);
 		final var rparen = call.findFirstToken(TokenTypes.RPAREN);
-		assertSame(call, MultilineCallFormattingCheck.resolvablePostDelayed(root, call.getLineNo() - 1, call.getColumnNo()));
-		assertSame(call, MultilineCallFormattingCheck.resolvablePostDelayed(root, rparen.getLineNo() - 1, rparen.getColumnNo()));
+		assertSame(call, MultilineCallMoves.resolvablePostDelayed(root, call.getLineNo() - 1, call.getColumnNo()));
+		assertSame(call, MultilineCallMoves.resolvablePostDelayed(root, rparen.getLineNo() - 1, rparen.getColumnNo()));
 	}
 
 	@Test
@@ -149,6 +168,6 @@ public class JavaPostDelayedReformatterTest {
 		final var source = "class C {\n\tvoid m() {\n\t\thandler.postDelayed(() -> { doThing(); }, 1000);\n\t}\n}";
 		final var root = parse(source);
 		final var call = findPostDelayed(root);
-		assertNull(MultilineCallFormattingCheck.resolvablePostDelayed(root, call.getLineNo() - 1, call.getColumnNo()));
+		assertNull(MultilineCallMoves.resolvablePostDelayed(root, call.getLineNo() - 1, call.getColumnNo()));
 	}
 }

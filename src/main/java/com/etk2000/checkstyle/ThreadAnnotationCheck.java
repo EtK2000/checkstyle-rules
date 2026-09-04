@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -21,7 +22,7 @@ public class ThreadAnnotationCheck extends AbstractAstCheck {
 	@CheckReturnValue
 	private static boolean hasThreadAnnotation(@Nonnull DetailAST modifiers) {
 		for (var child = modifiers.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.ANNOTATION && THREAD_ANNOTATIONS.contains(AstUtil.annotationName(child)))
+			if (child.getType() == TokenTypes.ANNOTATION && THREAD_ANNOTATIONS.contains(AstText.annotationName(child)))
 				return true;
 		}
 		return false;

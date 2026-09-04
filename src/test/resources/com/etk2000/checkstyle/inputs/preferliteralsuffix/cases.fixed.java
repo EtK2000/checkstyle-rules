@@ -1,55 +1,25 @@
-// === case: cast_to_long_equals ===
-class InputPreferLiteralSuffixCastToLongEqualsSliceViolation {
-	boolean m(int x) {
-		return x == 100;
+// === case: cast_in_for_condition ===
+class InputPreferLiteralSuffixCastInForConditionSliceViolation {
+	long m(long total) {
+		for (var i = 1; i < 100L; ++i)
+			total += i;
+		return total;
 	}
 }
 // === end ===
 
-// === case: cast_to_long_greater_than ===
-class InputPreferLiteralSuffixCastToLongGreaterThanSliceViolation {
-	boolean m(int x) {
-		return x > 100;
+// === case: multi_line_ternary ===
+class InputPreferLiteralSuffixMultiLineTernarySliceViolation {
+	long m(boolean flag, int x) {
+		return flag ? x : 0;
 	}
 }
 // === end ===
 
-// === case: cast_to_long_greater_than_or_equal ===
-class InputPreferLiteralSuffixCastToLongGreaterThanOrEqualSliceViolation {
-	boolean m(int x) {
-		return x >= 100;
-	}
-}
-// === end ===
-
-// === case: cast_to_long_less_than ===
-class InputPreferLiteralSuffixCastToLongLessThanSliceViolation {
-	boolean m(int x) {
-		return x < 100;
-	}
-}
-// === end ===
-
-// === case: cast_to_long_less_than_or_equal ===
-class InputPreferLiteralSuffixCastToLongLessThanOrEqualSliceViolation {
-	boolean m(int x) {
-		return x <= 100;
-	}
-}
-// === end ===
-
-// === case: cast_to_long_not_equal ===
-class InputPreferLiteralSuffixCastToLongNotEqualSliceViolation {
-	boolean m(int x) {
-		return x != 100;
-	}
-}
-// === end ===
-
-// === case: literal_on_left_comparison ===
-class InputPreferLiteralSuffixLiteralOnLeftComparisonSliceViolation {
-	boolean m(int x) {
-		return 100 < x;
+// === case: nested_same_type_cast ===
+class InputPreferLiteralSuffixNestedSameTypeCastSliceViolation {
+	long m(int x) {
+		return x * 100L;
 	}
 }
 // === end ===

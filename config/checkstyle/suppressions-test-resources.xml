@@ -14,7 +14,6 @@
 	<suppress checks="ArrayTypeStyleCheck" files="inputs[\\/]lambdaparametertype[\\/]" />
 	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]arraytypestyle[\\/]" />
 	<suppress checks="ClassStructureOrderCheck" files="inputs[\\/]fieldsorting[\\/]" />
-	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]arraytypestyle[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]arraytypestyle[\\/]" />
 	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]arraytypestyle[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]arraytypestyle[\\/]" />
@@ -48,8 +47,12 @@
 	<suppress checks="ExplicitInitialization" files="inputs[\\/]explicitinitialization[\\/]" />
 	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]explicitinitialization[\\/]" />
 	<suppress checks="NumericalPrefixesInfixesSuffixesCharacterCase" files="inputs[\\/]explicitinitialization[\\/]" />
+	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]explicitinitialization[\\/]" />
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]jitinefficiency[\\/]" />
+	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]noarraytrailingcomma[\\/]" />
+	<suppress checks="FieldConsolidationCheck" files="inputs[\\/]redundantnumericsuffix[\\/]" />
 	<suppress checks="FieldSortingCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="FinalLocalVariable" files="inputs[\\/]finallocalvariable[\\/]" />
 	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]finallocalvariable[\\/]" />
@@ -75,6 +78,7 @@
 	<suppress checks="MultilineCallFormattingCheck" files="inputs[\\/]preferexactassertion[\\/]" />
 	<suppress checks="NoArrayTrailingCommaCheck" files="inputs[\\/]noarraytrailingcomma[\\/]" />
 	<suppress checks="NoEnumTrailingComma" files="inputs[\\/]fieldsorting[\\/]" />
+	<suppress checks="NoEnumTrailingComma" files="inputs[\\/]fieldconsolidation[\\/]cases\.(in|out)\.java" />
 	<suppress checks="NoEnumTrailingSemicolonCheck" files="inputs[\\/]noenumtrailingsemicolon[\\/]" />
 	<suppress checks="UpperEll" files="inputs[\\/]upperell[\\/]" />
 	<suppress checks="NoBlankLineBetweenSingleCasesCheck" files="inputs[\\/]noblanklinebetweensinglecases[\\/]" />
@@ -150,10 +154,13 @@
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]redundantannotationsyntax[\\/]" />
 	<suppress checks="AnnotationOwnLineCheck" files="inputs[\\/]redundantannotationsyntax[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]redundantannotationsyntax[\\/]" />
+	<suppress checks="PreferImportCheck" files="inputs[\\/]annotationsameline[\\/]" />
+	<suppress checks="NoFinalParametersCheck" files="inputs[\\/]annotationsameline[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]fieldconsolidation[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="RedundantAnnotationSyntaxCheck" files="inputs[\\/]preferrecord[\\/]" />
 	<suppress checks="RedundantCastCheck" files="inputs[\\/]redundantcast[\\/]" />
+	<suppress checks="RedundantModifier" files="inputs[\\/]fieldconsolidation[\\/]cases\.clean\.java" />
 	<suppress checks="RedundantModifier" files="inputs[\\/]redundantmodifier[\\/]" />
 	<suppress checks="PreferVarCheck" files="inputs[\\/]redundantmodifier[\\/]" />
 	<suppress checks="RedundantNumericSuffixCheck" files="inputs[\\/]redundantnumericsuffix[\\/]" />
@@ -189,9 +196,11 @@
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]preferspecificapi[\\/]" />
 	<suppress checks="EmptyBodyCheck" files="inputs[\\/]nounnecessarythis[\\/]" />
 	<suppress checks="EmptyLineSeparator" files="inputs[\\/]annotationownline[\\/]" />
+	<suppress checks="EmptyLineSeparator" files="inputs[\\/]fieldconsolidation[\\/]cases\.clean\.java" />
 	<suppress checks="EmptyLineSeparator" files="inputs[\\/]preferbulkoperation[\\/]" />
 	<suppress checks="EmptyLineSeparator" files="inputs[\\/]redundantnumericsuffix[\\/]" />
 	<suppress checks="EmptyLineSeparator" files="inputs[\\/]regex[\\/]" />
+	<suppress checks="ModifierOrder" files="inputs[\\/]fieldconsolidation[\\/]cases\.(in|clean)\.java" />
 	<suppress checks="EmptySwitchCheck" files="inputs[\\/]switchcaseorder[\\/]" />
 	<suppress checks="ExplicitInitialization" files="inputs[\\/]prefervar[\\/]" />
 	<suppress checks="ExplicitInitialization" files="inputs[\\/]redundantnumericsuffix[\\/]" />
@@ -216,13 +225,21 @@
 	<!-- FieldConsolidationCheck's same-line field pair guard is about two declarations sharing one
 	     physical line, so the fixture that pins it is two statements on one line by construction -->
 	<suppress checks="OneStatementPerLine" files="inputs[\\/]fieldconsolidation[\\/]" />
+	<!-- PreferDoWhileFixer replaces a span running from the pre-loop statement to the loop's last
+	     token, so what shares those two lines decides the rewrite: text ahead of the span moves to
+	     its own line, text after it is re-emitted as the suffix. Each of the three shapes that pins
+	     this (`++i; while (c)`, `while (c) ++i; foo();`, `case 1: ++i;`) is two statements on one
+	     line by construction: the shape is the test, so there is no single-statement spelling of it -->
+	<suppress checks="OneStatementPerLine" files="inputs[\\/]preferdowhile[\\/]" />
 	<suppress checks="OneStatementPerLine" files="inputs[\\/]fieldsorting[\\/]" />
 	<suppress checks="OneStatementPerLine" files="inputs[\\/]controlflowbraces[\\/]" />
 	<suppress checks="OneStatementPerLine" files="inputs[\\/]preferexactassertion[\\/]" />
 	<suppress checks="OneStatementPerLine" files="inputs[\\/]preferbulkoperation[\\/]" />
 	<suppress checks="OneStatementPerLine" files="inputs[\\/]prefervar[\\/]" />
+	<suppress checks="OneStatementPerLine" files="inputs[\\/]redundantequalitybranch[\\/]" />
 	<suppress checks="MethodAlphabeticalOrderCheck" files="inputs[\\/]preferexactassertion[\\/]" />
 	<suppress id="NoTrailingNewline" files="inputs[\\/]preferexactassertion[\\/]cases\.fixed\.java" />
+	<suppress id="NoSpaceIndent" files="inputs[\\/]fieldconsolidation[\\/]cases\.(in|out|fixed)\.java" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]astutil[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]prefercollectioninterface[\\/]" />
 	<suppress checks="PreferImportCheck" files="inputs[\\/]fieldconsolidation[\\/]" />

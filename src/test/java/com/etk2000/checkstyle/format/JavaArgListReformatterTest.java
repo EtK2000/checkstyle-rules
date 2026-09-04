@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import com.etk2000.checkstyle.MultilineCallFormattingCheck;
+import com.etk2000.checkstyle.MultilineCallMoves;
 import com.puppycrawl.tools.checkstyle.JavaParser;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FileContents;
@@ -24,12 +24,10 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 /**
- * Direct-AST tests for {@link JavaArgListReformatter} and
- * {@link MultilineCallFormattingCheck#resolvableSharedLineArgs} covering paths the slice pipeline
- * cannot reach: the {@code STALE} guard when a boundary token no longer sits at its reported column,
- * and the classifier returning {@code null} for a special-inline receiver ({@code List.of}) that is
- * exempt from the shared-line rule. Positive controls exercise the {@code METHOD_CALL} and
- * {@code METHOD_DEF} owner arms.
+ * Direct-AST tests for {@link JavaArgListReformatter#reformat}, covering its collapse and split output
+ * for each owner type, verbatim arguments, comment lifting and its refusals, and
+ * for the {@link MultilineCallMoves#resolvableArgListOwner} and
+ * {@link MultilineCallMoves#resolvableSharedLineArgs} classifiers.
  */
 public class JavaArgListReformatterTest {
 	@Nonnull
@@ -70,8 +68,6 @@ public class JavaArgListReformatterTest {
 
 	@Test
 	public void reformatAttachesLeakedCommentToVerbatimTextBlockArgument() throws Exception {
-		// the `// leaked` trails the text-block argument's `,`, so it leads arg2's slice; it is lifted back
-		// onto the text block's last verbatim line (after the hoisted `,`) while arg2 splits onto its own line
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\t\"\"\"\n\t\t\t\ttb\"\"\", // leaked\n\t\t\t\tb\n\t\t);\n\t}\n\tvoid method(String a, int b) {\n\t}\n}";
 		final var root = parse(source);
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
@@ -111,7 +107,6 @@ public class JavaArgListReformatterTest {
 	public void reformatCollapsesNestedMultilinePlainArgOntoOneLine() throws Exception {
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\t1,\n\t\t\t\tother(\n\t\t\t\t\t\t2\n\t\t\t\t)\n\t\t);\n\t}\n\tvoid method(int a, Object b) {\n\t}\n\tObject other(int x) {\n\t\treturn x;\n\t}\n}";
 		final var root = parse(source);
-		// a tiny width budget forces the split branch; the nested other(...) must still collapse to one line
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 10, 4);
 		final var reformatted = assertInstanceOf(SpanReformat.Reformatted.class, result);
 		assertEquals(List.of("\t\tmethod(", "\t\t\t\t1,", "\t\t\t\tother(2)", "\t\t);"), reformatted.lines());
@@ -169,6 +164,30 @@ public class JavaArgListReformatterTest {
 	}
 
 	@Test
+	public void reformatDeclinesSeparatorOnVerbatimLineWhoseCommentPositionIsUntrustworthy() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\t/* c1\n\t\t\t\thttp://x */ first,\n\t\t\t\t2\n\t\t);\n\t}\n\tvoid method(Object a, Object b) {\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
+		assertEquals(SpanReformat.Reason.MULTILINE_LITERAL, assertInstanceOf(SpanReformat.CannotReformat.class, result).reason());
+	}
+
+	@Test
+	public void reformatDeclinesSeparatorWhenAnApostropheMasksATrailingComment() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\tmethod(a, /* c1\n\t\t\t\tit's c2 */ b // note\n\t\t\t\t, c);\n\t}\n\tvoid method(Object a, Object b, Object c) {\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
+		assertEquals(SpanReformat.Reason.MULTILINE_LITERAL, assertInstanceOf(SpanReformat.CannotReformat.class, result).reason());
+	}
+
+	@Test
+	public void reformatDeclinesSeparatorWhenATextBlockDelimiterMasksATrailingComment() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\t\"\"\"\n\t\t\t\ttext\"\"\"  // note\n\t\t\t\t, b\n\t\t);\n\t}\n\tvoid method(String a, Object b) {\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
+		assertEquals(SpanReformat.Reason.MULTILINE_LITERAL, assertInstanceOf(SpanReformat.CannotReformat.class, result).reason());
+	}
+
+	@Test
 	public void reformatDeclinesTernaryConfigAsSpecialArg() throws Exception {
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(true\n\t\t\t\t? \"a\"\n\t\t\t\t: \"b\");\n\t}\n\tvoid method(Object a) {\n\t}\n}";
 		final var root = parse(source);
@@ -179,8 +198,6 @@ public class JavaArgListReformatterTest {
 
 	@Test
 	public void reformatEmitsCommentSwallowedSegmentVerbatim() throws Exception {
-		// arg1 is `1 // note` + `+ 2`: collapsing it would pull `+ 2` inline behind the comment, so it is
-		// emitted verbatim (its own lines) while arg2 still splits onto its own line around it
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\t1 // note\n\t\t\t\t\t\t+ 2,\n\t\t\t\t3\n\t\t);\n\t}\n\tvoid method(int a, int b) {\n\t}\n}";
 		final var root = parse(source);
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
@@ -190,13 +207,41 @@ public class JavaArgListReformatterTest {
 
 	@Test
 	public void reformatHoistsCommaBeforeNonLastArgTrailingComment() throws Exception {
-		// a trailing `//` on a non-last arg blocks the one-liner but not the split: the `,` is hoisted ahead
-		// of the comment so the argument keeps its comment on its own line
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\t1 // note\n\t\t\t\t, 2\n\t\t);\n\t}\n\tvoid method(int a, int b) {\n\t}\n}";
 		final var root = parse(source);
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
 		final var reformatted = assertInstanceOf(SpanReformat.Reformatted.class, result);
 		assertEquals(List.of("\t\tmethod(", "\t\t\t\t1, // note", "\t\t\t\t2", "\t\t);"), reformatted.lines());
+	}
+
+	/**
+	 * The tab run after the {@code ,} is the comment line's own indentation, preserved by the insert.
+	 */
+	@Test
+	public void reformatHoistsCommaBeforeOwnLineCommentAfterVerbatimArgument() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\tmethod(first, () -> {\n\t\t\t\t\tgo();\n\t\t\t\t}\n\t\t\t\t// TODO: use a method reference\n\t\t\t\t, second);\n\t}\n\tvoid method(Object a, Runnable b, Object c) {\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
+		final var reformatted = assertInstanceOf(SpanReformat.Reformatted.class, result);
+		assertEquals(
+				List.of(
+						"\t\tmethod(", "\t\t\t\tfirst,", "\t\t\t\t() -> {", "\t\t\t\t\tgo();", "\t\t\t\t}",
+						"\t\t\t\t,\t\t\t\t// TODO: use a method reference", "\t\t\t\tsecond", "\t\t);"
+				),
+				reformatted.lines()
+		);
+	}
+
+	@Test
+	public void reformatHoistsCommaWhenABlockCommentClosesBeforeATrailingCommentOnTheSameLine() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\tmethod(a, /* c1\n\t\t\t\tplain c2 */ b // note\n\t\t\t\t, c);\n\t}\n\tvoid method(Object a, Object b, Object c) {\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
+		final var reformatted = assertInstanceOf(SpanReformat.Reformatted.class, result);
+		assertEquals(
+				List.of("\t\tmethod(", "\t\t\t\ta,", "\t\t\t\t/* c1", "\t\t\t\tplain c2 */ b, // note", "\t\t\t\tc", "\t\t);"),
+				reformatted.lines()
+		);
 	}
 
 	@Test
@@ -212,7 +257,6 @@ public class JavaArgListReformatterTest {
 
 	@Test
 	public void reformatKeepsAnonClassWithFieldVerbatimInSplit() throws Exception {
-		// the anon class's multi-line span comes from a field, not a method; it is still emitted verbatim
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\tnew Object() {\n\t\t\t\t\tint n = 1;\n\t\t\t\t}, other\n\t\t);\n\t}\n\tvoid method(Object a, Object b) {\n\t}\n}";
 		final var root = parse(source);
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
@@ -244,7 +288,6 @@ public class JavaArgListReformatterTest {
 
 	@Test
 	public void reformatKeepsBracedLambdaArgumentVerbatimInSplitLastPosition() throws Exception {
-		// the braced lambda is the LAST argument, so no trailing comma is appended after its closing brace
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\tother, x -> {\n\t\t\t\t\ta();\n\t\t\t\t\tb();\n\t\t\t\t}\n\t\t);\n\t}\n\tvoid method(Object a, Runnable b) {\n\t}\n}";
 		final var root = parse(source);
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
@@ -266,22 +309,29 @@ public class JavaArgListReformatterTest {
 	}
 
 	@Test
+	public void reformatKeepsBracelessBodyIndentInVerbatimBracedLambdaArgument() throws Exception {
+		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\tother, x -> {\n\t\t\t\t\tif (x)\n\t\t\t\t\t\ta();\n\t\t\t\t\tb();\n\t\t\t\t}\n\t\t);\n\t}\n\tvoid method(Object a, Object b) {\n\t}\n}";
+		final var root = parse(source);
+		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
+		assertEquals(
+				List.of("\t\tmethod(", "\t\t\t\tother,", "\t\t\t\tx -> {", "\t\t\t\t\tif (x)", "\t\t\t\t\t\ta();", "\t\t\t\t\tb();", "\t\t\t\t}", "\t\t);"),
+				assertInstanceOf(SpanReformat.Reformatted.class, result).lines()
+		);
+	}
+
+	@Test
 	public void reformatKeepsColonSyntaxSwitchArgumentVerbatimInSplit() throws Exception {
-		// a colon-syntax switch (whose case groups are braceless SLISTs with no RCURLY child) is kept verbatim
-		// via the switch's own multi-line braces; the braceless case-group SLISTs are skipped by the predicate
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\tswitch (x) {\n\t\t\t\t\tcase 1:\n\t\t\t\t\t\ta();\n\t\t\t\t\t\tbreak;\n\t\t\t\t\tdefault:\n\t\t\t\t\t\tb();\n\t\t\t\t}, other\n\t\t);\n\t}\n\tvoid method(Object a, Object b) {\n\t}\n}";
 		final var root = parse(source);
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
 		assertEquals(
-				List.of("\t\tmethod(", "\t\t\t\tswitch (x) {", "\t\t\t\t\tcase 1:", "\t\t\t\t\ta();", "\t\t\t\t\tbreak;", "\t\t\t\t\tdefault:", "\t\t\t\t\tb();", "\t\t\t\t},", "\t\t\t\tother", "\t\t);"),
+				List.of("\t\tmethod(", "\t\t\t\tswitch (x) {", "\t\t\t\t\tcase 1:", "\t\t\t\t\t\ta();", "\t\t\t\t\t\tbreak;", "\t\t\t\t\tdefault:", "\t\t\t\t\t\tb();", "\t\t\t\t},", "\t\t\t\tother", "\t\t);"),
 				assertInstanceOf(SpanReformat.Reformatted.class, result).lines()
 		);
 	}
 
 	@Test
 	public void reformatKeepsNestedCallWithBracedBlockVerbatimInSplit() throws Exception {
-		// the multi-line braced lambda is nested inside a call argument; the predicate descends into it, so
-		// the whole wrap(...) argument is emitted verbatim rather than crammed
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\twrap(x -> {\n\t\t\t\t\ta();\n\t\t\t\t\tb();\n\t\t\t\t}), other\n\t\t);\n\t}\n\tvoid method(Object a, Object b) {\n\t}\n}";
 		final var root = parse(source);
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
@@ -304,8 +354,6 @@ public class JavaArgListReformatterTest {
 
 	@Test
 	public void reformatKeepsTextBlockAndBracedLambdaArgumentsVerbatim() throws Exception {
-		// two independent verbatim triggers coexist: a text-block argument and a braced-lambda argument are
-		// both emitted verbatim, while the plain third argument still splits around them
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\t\"\"\"\n\t\t\t\ttb\"\"\", x -> {\n\t\t\t\t\ta();\n\t\t\t\t}, plain\n\t\t);\n\t}\n\tvoid method(String a, Runnable b, Object c) {\n\t}\n}";
 		final var root = parse(source);
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
@@ -326,8 +374,6 @@ public class JavaArgListReformatterTest {
 
 	@Test
 	public void reformatLiftsLeadingCommentFromBracedBlockArgument() throws Exception {
-		// a `//` comment that leaked past the previous `,` and leads a braced-block (verbatim) argument is
-		// lifted onto the previous argument's line, not re-emitted on its own line above the block
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\ta, // leaked\n\t\t\t\t() -> {\n\t\t\t\t\tbody();\n\t\t\t\t}\n\t\t);\n\t}\n\tvoid method(Object a, Runnable b) {\n\t}\n}";
 		final var root = parse(source);
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
@@ -339,8 +385,6 @@ public class JavaArgListReformatterTest {
 
 	@Test
 	public void reformatLiftsLeadingCommentOnFirstSegmentToOpeningParenHead() throws Exception {
-		// the `// note` trails the `(` (leads the first segment), so there is no previous argument: it stays
-		// on the `(` head line (arguments on later lines never join back onto it) while they split
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod( // note\n\t\t\t\ta, b\n\t\t);\n\t}\n\tvoid method(int a, int b) {\n\t}\n}";
 		final var root = parse(source);
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
@@ -350,8 +394,6 @@ public class JavaArgListReformatterTest {
 
 	@Test
 	public void reformatLiftsLeadingCommentToPreviousArgument() throws Exception {
-		// the `// note` trails arg1's `,`, so it leads arg2's slice; it is lifted back onto arg1's line and
-		// arg2 splits onto its own line (same canonical as a comment written before the comma)
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\t1, // note\n\t\t\t\t2\n\t\t);\n\t}\n\tvoid method(int a, int b) {\n\t}\n}";
 		final var root = parse(source);
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
@@ -501,8 +543,6 @@ public class JavaArgListReformatterTest {
 
 	@Test
 	public void reformatSkipsLiftedCommentLineOnVerbatimSegment() throws Exception {
-		// arg2 both leads with a leaked `// leaked` (lifted onto arg1's line) AND has a mid-argument `// mid`
-		// that forces it verbatim; the lifted-comment line is not re-emitted in the verbatim block
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\ta, // leaked\n\t\t\t\tb // mid\n\t\t\t\t\t\t+ c,\n\t\t\t\td\n\t\t);\n\t}\n\tvoid method(int a, int b, int c) {\n\t}\n}";
 		final var root = parse(source);
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 120, 4);
@@ -514,10 +554,8 @@ public class JavaArgListReformatterTest {
 	public void reformatSplitsEachArgumentWhenTheOneLineFormExceedsTheWidth() throws Exception {
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\t1, 2,\n\t\t\t\t3\n\t\t);\n\t}\n\tvoid method(int a, int b, int c) {\n\t}\n}";
 		final var root = parse(source);
-		// a tiny width budget forces the split branch even though the one-line form is short
 		final var result = JavaArgListReformatter.reformat(new ArrayList<>(List.of(source.split("\n", -1))), findFirst(root, TokenTypes.METHOD_CALL), 10, 4);
 		final var reformatted = assertInstanceOf(SpanReformat.Reformatted.class, result);
-		// the split-path return spans the same `method(`..`);` line range as the collapse path
 		assertEquals(2, reformatted.fromIndex());
 		assertEquals(5, reformatted.toIndex());
 		assertEquals(List.of("\t\tmethod(", "\t\t\t\t1,", "\t\t\t\t2,", "\t\t\t\t3", "\t\t);"), reformatted.lines());
@@ -545,20 +583,18 @@ public class JavaArgListReformatterTest {
 
 	@Test
 	public void resolvableArgListOwnerDefersForInlineBlockArgument() throws Exception {
-		// a lambda argument off the ( line is an inline-block move (MSG_LAMBDA_NOT_ON_OPENING), not a plain one
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\tx -> {\n\t\t\t\t\tuse(x);\n\t\t\t\t});\n\t}\n\tvoid method(Consumer c) {\n\t}\n}";
 		final var root = parse(source);
 		final var arg = firstArg(root);
-		assertNull(MultilineCallFormattingCheck.resolvableArgListOwner(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo()));
+		assertNull(MultilineCallMoves.resolvableArgListOwner(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo()));
 	}
 
 	@Test
 	public void resolvableArgListOwnerDefersForTernaryArgument() throws Exception {
-		// the condition off the ( line makes this a ternary-internal move (MSG_TERNARY_NOT_ON_OPENING), not a plain one
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\ttrue\n\t\t\t\t\t\t? \"a\"\n\t\t\t\t\t\t: \"b\"\n\t\t);\n\t}\n\tvoid method(Object a) {\n\t}\n}";
 		final var root = parse(source);
 		final var arg = firstArg(root);
-		assertNull(MultilineCallFormattingCheck.resolvableArgListOwner(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo()));
+		assertNull(MultilineCallMoves.resolvableArgListOwner(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo()));
 	}
 
 	@Test
@@ -566,14 +602,13 @@ public class JavaArgListReformatterTest {
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(1,\n\t\t\t\t2\n\t\t);\n\t}\n\tvoid method(int a, int b) {\n\t}\n}";
 		final var root = parse(source);
 		final var arg = firstArg(root);
-		final var owner = MultilineCallFormattingCheck.resolvableArgListOwner(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo());
+		final var owner = MultilineCallMoves.resolvableArgListOwner(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo());
 		assertNotNull(owner);
 		assertEquals(TokenTypes.METHOD_CALL, owner.getType());
 	}
 
 	@Test
 	public void resolvableSharedLineArgsIsNullForSpecialInlineReceiver() throws Exception {
-		// List.of(...) is exempt from the shared-line rule, so the classifier must not offer it for reformat
 		final var source = "class C {\n\tvoid m() {\n\t\tList.of(\n\t\t\t\t1, 2,\n\t\t\t\t3\n\t\t);\n\t}\n}";
 		final var root = parse(source);
 		final var elist = findFirst(root, TokenTypes.ELIST);
@@ -585,7 +620,7 @@ public class JavaArgListReformatterTest {
 				break;
 			}
 		}
-		assertNull(MultilineCallFormattingCheck.resolvableSharedLineArgs(
+		assertNull(MultilineCallMoves.resolvableSharedLineArgs(
 				root, List.of(source.split("\n", -1)), secondArg.getLineNo() - 1, secondArg.getColumnNo()
 		));
 	}
@@ -595,7 +630,7 @@ public class JavaArgListReformatterTest {
 		final var source = "class C {\n\tvoid m() {\n\t\tmethod(\n\t\t\t\ta, b,\n\t\t\t\tc\n\t\t);\n\t}\n\tvoid method(Object a, Object b, Object c) {\n\t}\n}";
 		final var root = parse(source);
 		final var arg = firstArg(root);
-		final var owner = MultilineCallFormattingCheck.resolvableSharedLineArgs(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo());
+		final var owner = MultilineCallMoves.resolvableSharedLineArgs(root, List.of(source.split("\n", -1)), arg.getLineNo() - 1, arg.getColumnNo());
 		assertNotNull(owner);
 		assertEquals(TokenTypes.METHOD_CALL, owner.getType());
 	}

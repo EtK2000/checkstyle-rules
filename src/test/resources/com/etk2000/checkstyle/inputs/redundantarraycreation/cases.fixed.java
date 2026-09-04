@@ -28,6 +28,19 @@ class InputRedundantArrayCreationEmptyArrayOnlyArgumentSliceViolation {
 }
 // === end ===
 
+// === case: empty_array_two_preceding_args ===
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationEmptyArrayTwoPrecedingArgsSliceViolation {
+	String foo(int a, int b) {
+		return a + "-" + b;
+	}
+
+	void m() {
+		"%s".formatted(foo(1, 2));
+	}
+}
+// === end ===
+
 // === case: escaped_quote_in_string ===
 // imports: java.util.List
 @SuppressWarnings("unused")
@@ -38,15 +51,158 @@ class InputRedundantArrayCreationEscapedQuoteInStringSliceViolation {
 }
 // === end ===
 
-// === case: multiline_array_skipped ===
-// skip-reason: multi-line array initializer
+// === case: lone_object_creation_element ===
 // imports: java.util.List
 @SuppressWarnings("unused")
-class InputRedundantArrayCreationMultilineArraySkippedSliceViolation {
+class InputRedundantArrayCreationLoneObjectCreationElementSliceViolation {
+	void m() {
+		List.of(new StringBuilder("a"));
+	}
+}
+// === end ===
+
+// === case: lone_provable_element_forms ===
+// multi-fix-expected
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationLoneProvableElementFormsSliceViolation {
+	void booleans() {
+		"%b".formatted(true);
+		"%b".formatted(false);
+	}
+
+	void numbers() {
+		"%d".formatted(1);
+		"%d".formatted(1L);
+		"%s".formatted(1.5f);
+		"%s".formatted('c');
+	}
+
+	void operators(int a, int b) {
+		"%d".formatted(a - b);
+		"%d".formatted(a * b);
+		"%d".formatted(a / b);
+		"%d".formatted(a % b);
+		"%d".formatted(-a);
+		"%d".formatted(a & b);
+		"%d".formatted(a << b);
+		"%b".formatted(a > b);
+		"%b".formatted(a == b);
+	}
+
+	void self() {
+		"%s".formatted(this);
+	}
+}
+// === end ===
+
+// === case: main ===
+// imports: java.util.ArrayList
+// imports: java.util.Arrays
+// imports: java.util.Collections
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationViolation {
+	void arraysAsList() {
+		List.of("a", "b");
+	}
+
+	void collectionsAddAll() {
+		final var list = new ArrayList<String>();
+		Collections.addAll(list, "a", "b");
+	}
+
+	void constructorVarargs() {
+		new ProcessBuilder("cmd", "arg");
+	}
+
+	void stringFormat() {
+		"%s%s".formatted("a", "b");
+	}
+
+	void stringJoin() {
+		String.join(",", "a", "b");
+	}
+}
+// === end ===
+
+// === case: multiline_block_comment_inside_initializer ===
+// skip-reason: cannot remove the array creation: a comment inside it would be lost when the initializer is folded onto one line
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationMultilineBlockCommentInsideInitializerSliceViolation {
 	void m() {
 		List.of(new Object[]{
+			/* note */ "a", "b"
+		});
+	}
+}
+// === end ===
+
+// === case: multiline_brace_on_next_line ===
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationMultilineBraceOnNextLineSliceViolation {
+	void m() {
+		List.of("a", "b");
+	}
+}
+// === end ===
+
+// === case: multiline_comment_inside_initializer ===
+// skip-reason: cannot remove the array creation: a comment inside it would be lost when the initializer is folded onto one line
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationMultilineCommentInsideInitializerSliceViolation {
+	void m() {
+		List.of(new Object[]{
+			// note
 			"a", "b"
 		});
+	}
+}
+// === end ===
+
+// === case: multiline_fold_at_line_budget ===
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationMultilineFoldAtLineBudgetSliceViolation {
+	void m() {
+		List.of("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+	}
+}
+// === end ===
+
+// === case: multiline_fold_over_line_budget ===
+// skip-reason: cannot remove the array creation: folding the initializer onto one line would exceed the line-length budget
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationMultilineFoldOverLineBudgetSliceViolation {
+	void m() {
+		List.of(new Object[]{
+			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			"cccccccccccccccccccccccccccccccccccccccc"
+		});
+	}
+}
+// === end ===
+
+// === case: multiline_initializer_body ===
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationMultilineInitializerBodySliceViolation {
+	void m() {
+		List.of("a", "b");
+	}
+}
+// === end ===
+
+// === case: multiline_trailing_comma ===
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationMultilineTrailingCommaSliceViolation {
+	void m() {
+		List.of("a", "b");
 	}
 }
 // === end ===
@@ -69,7 +225,28 @@ class InputRedundantArrayCreationNestedParensInElementsSliceViolation {
 	}
 
 	void m() {
-		"%s".formatted(foo(1, 2));
+		"%s%s".formatted(foo(1, 2), "x");
+	}
+}
+// === end ===
+
+// === case: nested_violation_inner_and_outer ===
+// multi-fix-expected
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationNestedViolationInnerAndOuterSliceViolation {
+	void m() {
+		List.of(String.join(",", "a"), "b");
+	}
+}
+// === end ===
+
+// === case: quote_char_and_block_marker_elements ===
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationQuoteCharAndBlockMarkerElementsSliceViolation {
+	void m() {
+		List.of('"', "/*");
 	}
 }
 // === end ===
@@ -111,6 +288,21 @@ class InputRedundantArrayCreationTextBlockContinuationSliceViolation {
 	String m() {
 		return """
 				""" + List.of("a").toString();
+	}
+}
+// === end ===
+
+// === case: text_block_element_skipped ===
+// skip-reason: cannot remove the array creation: folding the initializer onto one line would break a text block inside it
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationTextBlockElementSkippedSliceViolation {
+	void m() {
+		List.of(new Object[]{
+			"""
+			a
+			"""
+		});
 	}
 }
 // === end ===

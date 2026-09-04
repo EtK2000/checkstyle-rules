@@ -72,8 +72,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindClosingBraceLineMultiLineBlockCommentWithFakeBrace() {
-		// Block comment spanning lines with a `}` inside. The scanner must preserve
-		// block-comment state across lines so the `}` inside the comment is not counted.
 		final var lines = List.of(
 				"for (var e : source.entrySet()) {",
 				"\t/* block comment",
@@ -96,8 +94,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindClosingBraceLineRespectsEscapedQuoteInStringWithBrace() {
-		// String containing an escaped quote followed by `}` must not terminate
-		// the literal early; the `}` stays inside the string.
 		final var lines = List.of(
 				"for (var item : list) {",
 				"\ttarget.add(\"\\\"}\");",
@@ -108,7 +104,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindClosingBraceLineRespectsLineComment() {
-		// `}` inside a `//` line comment must not be counted.
 		final var lines = List.of(
 				"for (var item : list) {",
 				"\ttarget.add(item); // fake }",
@@ -129,7 +124,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindClosingBraceLineRespectsTextBlock() {
-		// `}` inside a Java text block (`"""`) must not be counted.
 		final var lines = List.of(
 				"for (var i = 0; i < n; ++i) {",
 				"\tvar s = \"\"\"",
@@ -169,8 +163,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindClosingBraceLineReturnsMinus1WhenNoOpenBrace() {
-		// A stray `}` with no preceding `{` must not trigger a return; the
-		// `sawOpen` guard keeps the scan going until EOF, which yields -1.
 		final var lines = List.of(
 				"\t}"
 		);
@@ -179,8 +171,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindClosingBraceLineSingleLine() {
-		// Both `{` and `}` on the same line: the scan opens and closes within one
-		// iteration, returning startLine.
 		final var lines = List.of(
 				"for (var item : list) { target.add(item); }"
 		);
@@ -203,21 +193,18 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindClosingParenInLineBlockComment() {
-		// `)` inside a block comment must not be counted.
 		final var text = "foo(/* ) */)";
 		assertEquals(text.length() - 1, LambdaCallParser.findClosingParenInLine(text, 3));
 	}
 
 	@Test
 	public void testFindClosingParenInLineCharLiteral() {
-		// `)` inside a char literal must not be counted.
 		final var text = "foo(')')";
 		assertEquals(text.length() - 1, LambdaCallParser.findClosingParenInLine(text, 3));
 	}
 
 	@Test
 	public void testFindClosingParenInLineEscapedQuoteInString() {
-		// Escaped `"` must not terminate the string early.
 		final var text = "foo(\"a\\\")\")";
 		assertEquals(text.length() - 1, LambdaCallParser.findClosingParenInLine(text, 3));
 	}
@@ -240,14 +227,12 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindClosingParenInLineStringLiteral() {
-		// `)` inside a string literal must not be counted.
 		final var text = "foo(\")\")";
 		assertEquals(text.length() - 1, LambdaCallParser.findClosingParenInLine(text, 3));
 	}
 
 	@Test
 	public void testFindClosingParenInLineTextBlock() {
-		// `)` inside a text block must not be counted.
 		final var text = "foo(\"\"\")\"\"\")";
 		assertEquals(text.length() - 1, LambdaCallParser.findClosingParenInLine(text, 3));
 	}
@@ -273,7 +258,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindClosingParenMultiLineBlockComment() {
-		// Block comment spanning multiple lines containing a fake `)`
 		final var lines = List.of(
 				"source.forEach(/* start",
 				"    fake ) text",
@@ -287,7 +271,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindClosingParenRespectsBlockCommentSameLine() {
-		// `)` inside a same-line block comment must not be counted
 		final var lines = List.of(
 				"source.forEach(x -> foo(/* ) */ x));"
 		);
@@ -334,7 +317,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindClosingParenRespectsLineComment() {
-		// `)` inside a // line comment must not be counted
 		final var lines = List.of(
 				"source.forEach( // fake )",
 				"\tx -> foo(x)",
@@ -390,7 +372,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindClosingParenStartingFromMiddle() {
-		// startLine=1 should ignore content on line 0
 		final var lines = List.of(
 				"// first line ignored (fake (",
 				"source.forEach(x);"
@@ -421,9 +402,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindEndOfBracelessStatementBlockCommentStartsOnStartLine() {
-		// Block comment opens on the for-header line and closes on a later line.
-		// The state-establishment loop must leave `inBlockComment=true` so the
-		// second loop correctly skips the continuation line before reaching the body.
 		final var lines = List.of(
 				"for (var item : list) /* comment starts",
 				"\tcontinuation */",
@@ -500,8 +478,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindEndOfBracelessStatementMultipleStatementsOnSameLineSkipped() {
-		// Two statements on the same line (`target.add(item); x = 5;`) must NOT be
-		// claimed as the body terminator — `topLevelSemiCount` detects the extra `;`.
 		// Line 2 has no structural `;`, so overall the method returns -1.
 		final var lines = List.of(
 				"for (var item : list)",
@@ -533,8 +509,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindEndOfBracelessStatementRespectsTextBlock() {
-		// `;` inside a Java text block (`"""`) must not be treated as a statement
-		// terminator; the real terminator is after the closing `"""`.
 		final var lines = List.of(
 				"for (var item : list)",
 				"\ttarget.add(\"\"\"",
@@ -546,9 +520,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindEndOfBracelessStatementRespectsTextBlockLineEndingInSemi() {
-		// A line INSIDE a text block that ends with `;` must not be treated as the
-		// statement terminator. Regression: previously the StringBuilder approach
-		// captured text-block content and `endsWith(";")` matched on line 2.
 		final var lines = List.of(
 				"for (var i = 0; i < arr.length; ++i)",
 				"\tarr[i] = \"\"\"",
@@ -561,8 +532,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindEndOfBracelessStatementSemicolonInCharIgnored() {
-		// A `;` inside a char literal must not be treated as a statement terminator.
-		// The real terminator is the `;` after the closing `'`.
 		final var lines = List.of(
 				"for (var item : list)",
 				"\ttarget.add(';');"
@@ -572,8 +541,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindEndOfBracelessStatementSemicolonInStringIgnored() {
-		// A `;` inside a string literal must not be treated as a statement terminator.
-		// The real terminator is the `;` after the closing `"`.
 		final var lines = List.of(
 				"for (var item : list)",
 				"\ttarget.add(\";\");"
@@ -595,8 +562,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindEndOfBracelessStatementSingleLineBody() {
-		// `for (...) body;` with the entire statement on one line. The terminator is
-		// on startLine itself; the method must claim it rather than looking beyond.
 		final var lines = List.of(
 				"for (var item : list) target.add(item);"
 		);
@@ -605,8 +570,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindEndOfBracelessStatementSingleLineEmptyBodyIsNotClaimed() {
-		// `for (...)` with no body on the same line (just the header ending in `)`)
-		// must not be treated as a single-line body. The header has no trailing `;`.
 		final var lines = List.of(
 				"for (var item : list)",
 				"\ttarget.add(item);"
@@ -616,9 +579,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindEndOfBracelessStatementSingleLineIndexedForBody() {
-		// Single-line indexed for-loop (`for (var i = 0; ...) body;`). The `;` inside
-		// the for-header must not be mistaken for the body terminator; depth tracking
-		// handles that.
 		final var lines = List.of(
 				"for (var i = 0; i < arr.length; ++i) arr[i] = 0;"
 		);
@@ -627,8 +587,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testFindEndOfBracelessStatementSingleLineTrailingWhitespaceIsNotClaimed() {
-		// `for (...)` followed by only whitespace on startLine must not be claimed as
-		// a single-line body. The body is on startLine + 1.
 		final var lines = List.of(
 				"for (var item : list)   ",
 				"\ttarget.add(item);"
@@ -658,7 +616,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testHasStructuralOpenBraceFalseWhenBraceInTextBlock() {
-		// Single-line text block containing `{`: no structural brace present.
 		assertFalse(LambdaCallParser.hasStructuralOpenBrace("var s = \"\"\"{\"\"\";"));
 	}
 
@@ -754,7 +711,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testHasUnclosedParenIgnoresEscapedCharLiteral() {
-		// `'\''` has an escaped quote that must not terminate the char literal early
 		assertFalse(LambdaCallParser.hasUnclosedParen("foo('\\'') "));
 	}
 
@@ -829,7 +785,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testIndexOfStructuralCharFromIndexSkipsEarlier() {
-		// With fromIndex past the first `;`, the SECOND `;` is returned.
 		assertEquals(3, LambdaCallParser.indexOfStructuralChar("a;b;c", 2, ';'));
 	}
 
@@ -840,7 +795,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testIndexOfStructuralCharIgnoresInsideCharLiteral() {
-		// The only structural `;` is the one AFTER the closing `'`.
 		final var text = "char c = ';';";
 		assertEquals(text.lastIndexOf(';'), LambdaCallParser.indexOfStructuralChar(text, 0, ';'));
 	}
@@ -869,13 +823,11 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testIndexOfStructuralEmptyNeedleReturnsZero() {
-		// Explicit guard: empty needle returns 0 without scanning.
 		assertEquals(0, LambdaCallParser.indexOfStructural("anything", ""));
 	}
 
 	@Test
 	public void testIndexOfStructuralFindsNeedleAtStart() {
-		// Needle matched at position 0 (boundary case).
 		assertEquals(0, LambdaCallParser.indexOfStructural(": rest of text", ": "));
 	}
 
@@ -886,7 +838,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testIndexOfStructuralIgnoresInsideBlockComment() {
-		// `: ` inside a block comment is skipped.
 		assertEquals(-1, LambdaCallParser.indexOfStructural("x /* key: value */ = 1;", ": "));
 	}
 
@@ -905,7 +856,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testIndexOfStructuralIgnoresInsideString() {
-		// `: ` inside a string literal is skipped; the structural one after is returned.
 		final var text = "x = \"key: value\"; for (var i : list)";
 		final var expected = text.lastIndexOf(": ");
 		assertEquals(expected, LambdaCallParser.indexOfStructural(text, ": "));
@@ -913,7 +863,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testIndexOfStructuralIgnoresInsideTextBlock() {
-		// `: ` inside a Java text block is skipped.
 		assertEquals(-1, LambdaCallParser.indexOfStructural("var s = \"\"\"key: value\"\"\";", ": "));
 	}
 
@@ -929,7 +878,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testStripCommentBlockCommentStartsButNotEnds() {
-		// Multi-line block comment that starts but doesn't end on this line
 		assertEquals("foo ", LambdaCallParser.stripComment("foo /* unterminated"));
 	}
 
@@ -1001,14 +949,12 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testStripCommentsJoinedCharLiteralPreserved() {
-		// `'/'` is a char literal; the `/` must not be treated as a comment start.
 		final var lines = List.of("char c = '/';");
 		assertEquals("char c = '/';", LambdaCallParser.stripCommentsJoined(lines, 0, 0, 0));
 	}
 
 	@Test
 	public void testStripCommentsJoinedEndLineEqualsStartLine() {
-		// Single-line span with startCol > 0 — only text from startCol onward is kept.
 		final var lines = List.of("prefix source.forEach(body);");
 		assertEquals("source.forEach(body);", LambdaCallParser.stripCommentsJoined(lines, 0, "prefix ".length(), 0));
 	}
@@ -1023,14 +969,12 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testStripCommentsJoinedEscapedQuoteInString() {
-		// `\"` inside a string must not terminate the literal early.
 		final var lines = List.of("var s = \"a\\\"b\";");
 		assertEquals("var s = \"a\\\"b\";", LambdaCallParser.stripCommentsJoined(lines, 0, 0, 0));
 	}
 
 	@Test
 	public void testStripCommentsJoinedLineCommentTerminatesEarly() {
-		// `//` on line 1 drops the rest of line 1; line 2 is included normally.
 		final var lines = List.of(
 				"first line",
 				"middle // ignore this",
@@ -1041,7 +985,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testStripCommentsJoinedMultiLine() {
-		// Multi-line span with no comments: lines joined by a single space.
 		final var lines = List.of(
 				"alpha",
 				"beta",
@@ -1052,9 +995,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testStripCommentsJoinedMultiLineBlockComment() {
-		// Block comment spans lines 0-2; the whole comment (including continuation
-		// lines) is stripped because `ScanState` preserves `inBlockComment` via
-		// `endOfLine()`.
 		final var lines = List.of(
 				"code /* start",
 				"middle",
@@ -1065,9 +1005,6 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testStripCommentsJoinedMultiLineStartColOffset() {
-		// startCol > 0 on a multi-line span: the offset applies only to the first line,
-		// subsequent lines start at column 0. This is how PreferBulkOperationFixer uses it
-		// (startCol = openParenCol + 1 for the first line).
 		final var lines = List.of(
 				"prefix body_start",
 				"\tbody_end"
@@ -1077,21 +1014,18 @@ public class LambdaCallParserTest {
 
 	@Test
 	public void testStripCommentsJoinedSingleLine() {
-		// Single-line span with startCol == 0: equivalent to stripComment on the line.
 		final var lines = List.of("foo(); // comment");
 		assertEquals("foo(); ", LambdaCallParser.stripCommentsJoined(lines, 0, 0, 0));
 	}
 
 	@Test
 	public void testStripCommentsJoinedStringLiteralPreserved() {
-		// `"//"` is a string literal; its content must not be treated as a comment.
 		final var lines = List.of("var s = \"//\";");
 		assertEquals("var s = \"//\";", LambdaCallParser.stripCommentsJoined(lines, 0, 0, 0));
 	}
 
 	@Test
 	public void testStripCommentSlashAtEnd() {
-		// A single `/` at end of line is not a comment start
 		assertEquals("foo / ", LambdaCallParser.stripComment("foo / "));
 	}
 }

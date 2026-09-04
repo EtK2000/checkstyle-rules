@@ -3,20 +3,20 @@ package com.etk2000.checkstyle.inputs.noenumtrailingsemicolon;
 // === case: annotated_constant ===
 enum ViolationAnnotatedConstant {
 	@Deprecated
-	X; // violation: Remove trailing semicolon from enum (no body declarations follow).
+	X; // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 }
 // === end ===
 
 // === case: annotated_enum ===
 @Deprecated
 enum ViolationAnnotated {
-	X; // violation: Remove trailing semicolon from enum (no body declarations follow).
+	X; // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 }
 // === end ===
 
 // === case: block_comment_before_closing_brace ===
 enum ViolationBlockCommentBeforeBrace {
-	X; // violation: Remove trailing semicolon from enum (no body declarations follow).
+	X; // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 	/* this comment does not make the semicolon necessary */
 }
 // === end ===
@@ -24,21 +24,21 @@ enum ViolationBlockCommentBeforeBrace {
 // === case: constructor_args ===
 enum ViolationConstructorArgs {
 	X(1),
-	Y(2); // violation: Remove trailing semicolon from enum (no body declarations follow).
+	Y(2); // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 }
 // === end ===
 
 // === case: implements_interface ===
 // imports: java.io.Serializable
 enum ViolationWithInterface implements Serializable {
-	X; // violation: Remove trailing semicolon from enum (no body declarations follow).
+	X; // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 }
 // === end ===
 
 // === case: inner_enum_in_class ===
 class ViolationOuter {
 	enum Inner {
-		X; // violation: Remove trailing semicolon from enum (no body declarations follow).
+		X; // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 	}
 }
 // === end ===
@@ -48,7 +48,7 @@ enum ViolationEnumInEnum {
 	X;
 
 	enum InnerViolation {
-		Y; // violation: Remove trailing semicolon from enum (no body declarations follow).
+		Y; // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 	}
 }
 // === end ===
@@ -57,13 +57,13 @@ enum ViolationEnumInEnum {
 enum ViolationMultipleConstants {
 	A,
 	B,
-	C; // violation: Remove trailing semicolon from enum (no body declarations follow).
+	C; // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 }
 // === end ===
 
 // === case: multiline_single_constant ===
 enum InputEnumSemicolonViolation {
-	X; // violation: Remove trailing semicolon from enum (no body declarations follow).
+	X; // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 }
 // === end ===
 
@@ -74,56 +74,56 @@ enum ViolationConstantWithBody {
 		public String toString() {
 			return "x";
 		}
-	}; // violation: Remove trailing semicolon from enum (no body declarations follow).
+	}; // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 }
 // === end ===
 
 // === case: remove_semicolon_before_comment ===
 enum InputEnumSemicolonBeforeCommentSliceViolation {
-	X; // some comment // violation: Remove trailing semicolon from enum (no body declarations follow).
+	X; // some comment // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 }
 // === end ===
 
 // === case: remove_semicolon_collapses_double_space ===
-enum InputEnumSemicolonCollapsesDoubleSpaceSliceViolation { ; } // violation: Remove trailing semicolon from enum (no body declarations follow).
+enum InputEnumSemicolonCollapsesDoubleSpaceSliceViolation { ; } // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 // === end ===
 
 // === case: remove_semicolon_collapses_space_after_only ===
-enum InputEnumSemicolonCollapsesSpaceAfterOnlySliceViolation {; } // violation: Remove trailing semicolon from enum (no body declarations follow).
+enum InputEnumSemicolonCollapsesSpaceAfterOnlySliceViolation {; } // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 // === end ===
 
 // === case: remove_semicolon_collapses_space_before_only ===
-enum InputEnumSemicolonCollapsesSpaceBeforeOnlySliceViolation { ;} // violation: Remove trailing semicolon from enum (no body declarations follow).
+enum InputEnumSemicolonCollapsesSpaceBeforeOnlySliceViolation { ;} // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 // === end ===
 
 // === case: remove_semicolon_inline ===
-enum InputEnumSemicolonInlineSliceViolation { X; } // violation: Remove trailing semicolon from enum (no body declarations follow).
+enum InputEnumSemicolonInlineSliceViolation { X; } // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 // === end ===
 
 // === case: remove_semicolon_on_constant_line ===
 enum ViolationMultiline {
 	ALPHA,
 	BETA,
-	GAMMA; // violation: Remove trailing semicolon from enum (no body declarations follow).
+	GAMMA; // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 }
 // === end ===
 
 // === case: remove_semicolon_only_on_line ===
 enum ViolationNoConstants {
-	; // violation: Remove trailing semicolon from enum (no body declarations follow).
+	; // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 }
 // === end ===
 
 // === case: semicolon_column_zero ===
 enum ViolationSemicolonColumnZero {
 	X
-; // violation: Remove trailing semicolon from enum (no body declarations follow).
+; // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 }
 // === end ===
 
 // === case: semicolon_on_own_line ===
 enum ViolationSemicolonOwnLine {
 	X
-	; // violation: Remove trailing semicolon from enum (no body declarations follow).
+	; // violation: Remove the trailing semicolon from the enum (no body declarations follow).
 }
 // === end ===

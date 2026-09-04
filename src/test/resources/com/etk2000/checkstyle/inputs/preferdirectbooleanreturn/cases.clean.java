@@ -29,6 +29,74 @@ class InputPreferDirectBooleanReturnClean {
 		return s.startsWith("x");
 	}
 
+	boolean bracelessLoopBodyIf(boolean[] flags) {
+		for (var flag : flags)
+			if (flag)
+				return true;
+		return false;
+	}
+
+	boolean budgetBracedParentOneOverMax(boolean flag, String s) {
+		if (flag) {
+			if (s.equals("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+				return true;
+			else
+				return true;
+		}
+		return false;
+	}
+
+	/** One column past {@code opposite_prefix_length_exactly_max}, whose budget counts the shared header. */
+	boolean budgetInlineParentPrefixOneOverMax(boolean flag, String s) {
+		if (flag) if (s.equals("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")) return true;
+		else return false;
+		throw new IllegalStateException();
+	}
+
+	/** One column past {@code opposite_suffix_length_exactly_max}, whose budget counts the trailing {@code &#125;}. */
+	/**
+	 * One column past {@code opposite_masked_atomic_length_exactly_max}. The parenthesis inside the
+	 * literal no longer forces the {@code !(...)} wrap, so the budget measures the two characters that
+	 * wrap would have added.
+	 */
+	boolean budgetNegatedMaskedAtomicOneOverMax(String s) {
+		if (s.equals("(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+			return false;
+		return true;
+	}
+
+	boolean budgetSuffixOneOverMax(boolean flag, String s) {
+		if (flag) {
+			if (s.equals("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+				return true;
+			else
+				return false; }
+		throw new IllegalStateException();
+	}
+
+	boolean budgetWrappedParentOneOverMax(boolean flag, String s) {
+		if (flag)
+			if (s.equals("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+				return true;
+			else
+				return true;
+		return false;
+	}
+
+	/**
+	 * The {@code same_literal_extract_budget_braced_exactly_max} slice's condition, which emits a line
+	 * of exactly the budget under a braced parent. The block an unbraced parent needs indents every
+	 * emitted statement one tab further, so the same collapse no longer fits and is not reported.
+	 */
+	boolean budgetWrappedParentOverMaxByTheAddedTab(boolean flag, String s) {
+		if (flag)
+			if (s.equals("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+				return true;
+			else
+				return true;
+		return false;
+	}
+
 	boolean chainedElseIf(boolean flag, boolean other) {
 		if (flag)
 			return true;
@@ -39,6 +107,19 @@ class InputPreferDirectBooleanReturnClean {
 
 	private boolean compute() {
 		return true;
+	}
+
+	/**
+	 * The one parent where the flagged {@code if}'s next sibling is a non-null non-return node (the
+	 * {@code DO_WHILE} token), which is what keeps the trailing-return form out of every unbraced parent
+	 * and so keeps the block wrap's precondition true.
+	 */
+	boolean doBodyIfHasNoPairedReturn(boolean flag) {
+		do
+			if (flag)
+				return true;
+		while (flag);
+		return false;
 	}
 
 	boolean emptyBracedIfBody(boolean flag) {
@@ -77,6 +158,12 @@ class InputPreferDirectBooleanReturnClean {
 			if (flag)
 				return true;
 		}
+		return false;
+	}
+
+	boolean labeledIf(boolean flag) {
+		label: if (flag)
+			return true;
 		return false;
 	}
 
@@ -133,6 +220,14 @@ class InputPreferDirectBooleanReturnClean {
 		return false;
 	}
 
+	boolean multilineTextBlockReturnValue(boolean flag) {
+		if (flag)
+			return """
+					text
+					""".isEmpty();
+		return false;
+	}
+
 	boolean multilineValueExprExempt(boolean flag, boolean a, boolean b) {
 		if (flag) {
 			return a
@@ -177,6 +272,22 @@ class InputPreferDirectBooleanReturnClean {
 		return false;
 	}
 
+	boolean oppositeLongConditionOverflowsLine(
+			boolean conditionFlagWithAnExtremelyLongDescriptiveParamName,
+			boolean valueFlagWithAnEquallyLongDescriptiveParameterName
+	) {
+		if (conditionFlagWithAnExtremelyLongDescriptiveParamName && valueFlagWithAnEquallyLongDescriptiveParameterName)
+			return true;
+		return false;
+	}
+
+	boolean patternVariableUsedAfterIf(Object o) {
+		if (!(o instanceof String s))
+			return false;
+		final var length = s.length();
+		return length > 0;
+	}
+
 	boolean sameLiteralBothOperandsSideEffect(String a, String b) {
 		if (a.isEmpty() == b.isEmpty())
 			return true;
@@ -191,6 +302,12 @@ class InputPreferDirectBooleanReturnClean {
 
 	boolean sameLiteralParenOrRightOfAnd(boolean flag, String s) {
 		if (s.isEmpty() && (s.isBlank() || flag))
+			return true;
+		return true;
+	}
+
+	boolean sameLiteralTernaryCondition(boolean flag, String a, String b) {
+		if (flag ? a.isEmpty() : b.isEmpty())
 			return true;
 		return true;
 	}

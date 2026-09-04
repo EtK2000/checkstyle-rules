@@ -8,11 +8,11 @@ import javax.annotation.Nullable;
 class NoArrayTrailingCommaFixer implements CheckstyleFixer {
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int comma) {
 		final var line = lines.get(lineIndex);
-		if (column < 0 || column >= line.length() || line.charAt(column) != ',')
+		if (comma < 0 || comma >= line.length() || line.charAt(comma) != ',')
 			return null;
-		final var fixed = (line.substring(0, column) + line.substring(column + 1)).stripTrailing();
+		final var fixed = (line.substring(0, comma) + line.substring(comma + 1)).stripTrailing();
 		return new FixResult(lineIndex, lineIndex, List.of(fixed));
 	}
 }

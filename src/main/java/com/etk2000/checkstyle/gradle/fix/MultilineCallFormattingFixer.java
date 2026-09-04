@@ -1,16 +1,19 @@
 package com.etk2000.checkstyle.gradle.fix;
 
 import com.etk2000.checkstyle.JavaLineScanner;
-import com.etk2000.checkstyle.MultilineCallFormattingCheck;
+import com.etk2000.checkstyle.JsonObjectPutCollapse;
+import com.etk2000.checkstyle.LineText;
+import com.etk2000.checkstyle.MultilineCallMoves;
+import com.etk2000.checkstyle.MultilineCallMoves.ClosingParenMove;
+import com.etk2000.checkstyle.MultilineCallMoves.OpeningParenMove;
 import com.etk2000.checkstyle.format.JavaArgListReformatter;
 import com.etk2000.checkstyle.format.JavaPostDelayedReformatter;
 import com.etk2000.checkstyle.format.JavaSpanReindenter;
 import com.etk2000.checkstyle.format.JavaTernaryReformatter;
 import com.etk2000.checkstyle.format.SpanReformat;
 import com.etk2000.checkstyle.format.SpanReformat.CannotReformat;
+import com.etk2000.checkstyle.format.SpanReformat.Reason;
 import com.etk2000.checkstyle.format.SpanReformat.Reformatted;
-import com.etk2000.checkstyle.MultilineCallFormattingCheck.ClosingParenMove;
-import com.etk2000.checkstyle.MultilineCallFormattingCheck.OpeningParenMove;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 
 import java.util.ArrayList;
@@ -43,24 +46,19 @@ import javax.annotation.Nullable;
  * {@code multiline.ternary.colon.wrong.line}): re-lays-out the whole ternary argument into its
  * canonical shape via {@link JavaTernaryReformatter} (condition on the {@code (} line, {@code ?}- and
  * {@code :}-branches each on their own line, {@code )} on its own line), which also resolves any
- * accompanying opening/closing violation on the same ternary. Skipped only when a {@code //} comment
- * would be swallowed by a collapsed segment, or a branch spans a text block / multi-line comment.</li>
+ * accompanying opening/closing violation on the same ternary.</li>
  * <li>shared-line moves ({@code multiline.args.shared.line}): re-lays-out the whole argument/parameter
  * list via {@link JavaArgListReformatter}, collapsed onto one line when the call/def fits within
  * {@link LineLength#MAX_LINE_LENGTH}, otherwise each argument on its own line with the {@code (}/{@code )}
  * on their own lines. Either way this also resolves any accompanying opening/closing violation on the
- * same call. Skipped only for a swallowed comment or a text-block / multi-line-comment argument.</li>
+ * same call.</li>
+ * <li>opening-and-closing pair ({@code multiline.args.on.opening.paren} with {@code .on.closing.paren} on
+ * the same call and nothing else): the same whole-list re-emission via {@link JavaArgListReformatter},
+ * reached from either event.</li>
  * </ul>
  * Except for the single-line collapse, every move re-emits the whole call span and re-indents it via
  * {@link JavaSpanReindenter}, so the fixed output follows the project's canonical indentation
- * regardless of how the input was indented. The shape decisions and geometry are delegated to the
- * check's {@code public static} classifiers
- * ({@link MultilineCallFormattingCheck#collapsibleJsonObjectPutLineSpan},
- * {@link MultilineCallFormattingCheck#closingParenMove},
- * {@link MultilineCallFormattingCheck#openingParenMove},
- * {@link MultilineCallFormattingCheck#resolvableTernaryLayoutQuestion},
- * {@link MultilineCallFormattingCheck#resolvableSharedLineArgs}) so the fixer never re-derives a
- * rule from text and can never disagree with the check.
+ * regardless of how the input was indented.
  */
 final class MultilineCallFormattingFixer implements CheckstyleFixer {
 	/**
@@ -76,11 +74,24 @@ final class MultilineCallFormattingFixer implements CheckstyleFixer {
 			case CannotReformat c -> new SkipResult(switch (c.reason()) {
 				// COMMENT_ON_JOINED_LINE and SPECIAL_ARG are unreachable from this shared-line entry: the
 				// arg-list reformatter lifts a leaked `//` comment onto the previous line rather than bailing,
-				// and a special layout config never produces a shared-line violation. Both are defensive maps
-				// shared with the reformatter, reachable only via the opening/closing entry (reformatPlainOrPushDown)
+				// and a special layout config never produces a shared-line violation
 				case COMMENT_ON_JOINED_LINE, MULTILINE_LITERAL, SPECIAL_ARG -> SkipMessages.MULTILINE_PUT_SKIP_UNSUPPORTED;
 				case STALE -> SkipMessages.MULTILINE_PUT_SKIP_STALE;
 			});
+		};
+	}
+
+	/**
+	 * Re-lays-out the argument list of {@code owner}, a call/definition carrying both
+	 * {@code multiline.args.on.opening.paren} and {@code .on.closing.paren}, via {@link JavaArgListReformatter},
+	 * mapping a refusal to its {@link #openCloseSkipReason}.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static FixAttempt applyOpenCloseReformat(@Nonnull List<String> lines, @Nonnull DetailAST owner) {
+		return switch (JavaArgListReformatter.reformat(lines, owner, LineLength.MAX_LINE_LENGTH, LineLength.TAB_WIDTH)) {
+			case Reformatted r -> new FixResult(r.fromIndex(), r.toIndex(), r.lines());
+			case CannotReformat c -> new SkipResult(openCloseSkipReason(c.reason()));
 		};
 	}
 
@@ -147,17 +158,18 @@ final class MultilineCallFormattingFixer implements CheckstyleFixer {
 	 * at the opening line's indent (per CLAUDE.md's single-line preference). Returns that one-line
 	 * {@link FixResult} when the join is safe (no {@code //} comment on a non-final joined line would be
 	 * swallowed, no text block / multi-line comment is crossed) and the result fits within
-	 * {@link LineLength#MAX_LINE_LENGTH}; otherwise {@code null} so the caller falls back to its
-	 * multi-line split (which keeps interior lines verbatim and is therefore comment-safe).
+	 * {@link LineLength#MAX_LINE_LENGTH}; otherwise {@code null}.
 	 */
 	@CheckReturnValue
 	@Nullable
 	private static FixResult collapseIfFits(@Nonnull List<String> lines, int fromIdx, int toIdx) {
-		if (fromIdx >= toIdx || SpanReformat.beginsInMultilineLiteral(lines, fromIdx, toIdx))
+		if (fromIdx >= toIdx || SpanReformat.beginsInTextBlock(lines, fromIdx, toIdx))
 			return null;
+		var lexer = SpanReformat.lexerStateAt(lines, fromIdx);
 		for (var i = fromIdx; i < toIdx; ++i) {
-			if (SpanReformat.hasTrailingLineComment(lines.get(i)))
+			if (SpanReformat.hasTrailingLineComment(lines.get(i), lexer))
 				return null;
+			lexer = JavaLineScanner.stateAfter(lines.get(i), lexer);
 		}
 
 		final var oneLine = joinRange(lines, fromIdx, toIdx);
@@ -170,7 +182,7 @@ final class MultilineCallFormattingFixer implements CheckstyleFixer {
 	 * Joins {@code lines[fromLine..toLine]} into one string, tightening around
 	 * {@code (}/{@code [}/{@code .}/{@code )}/{@code ,}/{@code ;}/{@code ]} boundaries the same way
 	 * {@link #joinSpan} does. Keeps the first line's leading whitespace and does no bounds or comment
-	 * checks (callers guard those), so it is reusable for the head and tail groups of a move.
+	 * checks (callers guard those).
 	 */
 	@CheckReturnValue
 	@Nonnull
@@ -193,13 +205,38 @@ final class MultilineCallFormattingFixer implements CheckstyleFixer {
 		if (fromLine < 0 || toLine >= lines.size() || fromLine >= toLine)
 			return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_STALE);
 
+		// stripping a continuation line that opens or continues a text block would put its content on
+		// the `"""` line, which does not compile. A block comment is safe here: whole lines are joined in
+		// order, so its `*/` stays inside the joined range
+		if (SpanReformat.beginsInTextBlock(lines, fromLine, toLine))
+			return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_UNSUPPORTED);
+
 		// a `//` comment on any line before the last would be pulled inline and swallow the rest
+		var lexer = SpanReformat.lexerStateAt(lines, fromLine);
 		for (var i = fromLine; i < toLine; ++i) {
-			if (SpanReformat.hasTrailingLineComment(lines.get(i)))
+			if (SpanReformat.hasTrailingLineComment(lines.get(i), lexer))
 				return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_COMMENT);
+			lexer = JavaLineScanner.stateAfter(lines.get(i), lexer);
 		}
 
 		return new FixResult(fromLine, toLine, List.of(joinRange(lines, fromLine, toLine)));
+	}
+
+	/**
+	 * The skip reason for a {@link JavaArgListReformatter} refusal on the opening-and-closing arm.
+	 * {@code COMMENT_ON_JOINED_LINE} is never produced by that reformatter (it lifts a leaked {@code //}
+	 * comment instead) and {@code SPECIAL_ARG} cannot reach this arm (the check classifies such a call as an
+	 * inline-block configuration, never with the plain opening/closing pair), so both are defensive.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static String openCloseSkipReason(@Nonnull Reason reason) {
+		return switch (reason) {
+			case COMMENT_ON_JOINED_LINE -> SkipMessages.MULTILINE_ARGS_SKIP_COMMENT_JOIN;
+			case MULTILINE_LITERAL -> SkipMessages.MULTILINE_ARGS_SKIP_LITERAL_SEPARATOR;
+			case SPECIAL_ARG -> SkipMessages.MULTILINE_ARGS_SKIP_SPECIAL_ARG;
+			case STALE -> SkipMessages.MULTILINE_ARGS_SKIP_STALE;
+		};
 	}
 
 	/**
@@ -216,9 +253,11 @@ final class MultilineCallFormattingFixer implements CheckstyleFixer {
 		if (openIdx < 0 || rparenIdx >= lines.size() || openIdx > argLastIdx || argLastIdx > rparenIdx)
 			return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_STALE);
 
+		var lexer = SpanReformat.lexerStateAt(lines, argLastIdx);
 		for (var i = argLastIdx; i < rparenIdx; ++i) {
-			if (SpanReformat.hasTrailingLineComment(lines.get(i)))
+			if (SpanReformat.hasTrailingLineComment(lines.get(i), lexer))
 				return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_COMMENT);
+			lexer = JavaLineScanner.stateAfter(lines.get(i), lexer);
 		}
 
 		final var broken = new ArrayList<>(lines.subList(openIdx, argLastIdx));
@@ -245,25 +284,27 @@ final class MultilineCallFormattingFixer implements CheckstyleFixer {
 				|| openIdx > headEndIdx || headEndIdx >= tailStartIdx || tailStartIdx > closeIdx)
 			return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_STALE);
 
-		// a `//` comment on a line that gets joined (into the head or the tail) would swallow the rest
+		final var beginsInLiteral = new boolean[closeIdx - openIdx + 1];
+		final var hasComment = new boolean[closeIdx - openIdx + 1];
+		var lexer = SpanReformat.lexerStateAt(lines, openIdx);
+		for (var i = openIdx; i <= closeIdx; ++i) {
+			beginsInLiteral[i - openIdx] = lexer.inTextBlock() || lexer.inBlockComment();
+			hasComment[i - openIdx] = SpanReformat.hasTrailingLineComment(lines.get(i), lexer);
+			lexer = JavaLineScanner.stateAfter(lines.get(i), lexer);
+		}
+
 		for (var i = openIdx; i < headEndIdx; ++i) {
-			if (SpanReformat.hasTrailingLineComment(lines.get(i)))
+			if (hasComment[i - openIdx])
 				return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_COMMENT_JOIN);
 		}
 		for (var i = tailStartIdx; i < closeIdx; ++i) {
-			if (SpanReformat.hasTrailingLineComment(lines.get(i)))
+			if (hasComment[i - openIdx])
 				return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_COMMENT_JOIN);
 		}
 
-		// the head-join and tail-join ranges are collapsed onto one line, so they must not cross a text
-		// block / multi-line comment; a literal in the kept interior is re-indented value-safe by
-		// JavaSpanReindenter (content and closing delimiter stay verbatim)
-		final var beginsInLiteral = new boolean[closeIdx - openIdx + 1];
-		var lexer = JavaLineScanner.LexerState.NONE;
-		for (var i = openIdx; i <= closeIdx; ++i) {
-			beginsInLiteral[i - openIdx] = lexer.inTextBlock() || lexer.inBlockComment();
-			lexer = JavaLineScanner.stateAfter(lines.get(i), lexer);
-		}
+		// each guard skips its range's own first line: that line is the base `joinRange` appends onto, and a
+		// literal still open at its end necessarily reopens on the next line, which the guard does cover. A
+		// literal that instead closes on the base line leaves the rest of it code, so appending there is safe
 		for (var i = openIdx + 1; i <= headEndIdx; ++i) {
 			if (beginsInLiteral[i - openIdx])
 				return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_UNSUPPORTED);
@@ -282,9 +323,10 @@ final class MultilineCallFormattingFixer implements CheckstyleFixer {
 	}
 
 	/**
-	 * Pushes a call's closing {@code )} (and any trailing {@code ;}/{@code &#123;}/chain) off the last
-	 * argument's line onto its own line: splits the reported line at the {@code )} column, then
-	 * re-indents the whole call span so the {@code )} and every kept line land at their canonical depth.
+	 * Collapses the call onto one line when it fits, else pushes its closing {@code )} (and any trailing
+	 * {@code ;}/{@code &#123;}/chain) off the last argument's line onto its own: splits the reported line
+	 * at the {@code )} column, then re-indents the whole call span so the {@code )} and every kept line
+	 * land at their canonical depth.
 	 */
 	@CheckReturnValue
 	@Nonnull
@@ -294,18 +336,18 @@ final class MultilineCallFormattingFixer implements CheckstyleFixer {
 		if (rparenIdx < 0 || rparenIdx >= lines.size() || openIdx < 0 || openIdx > rparenIdx)
 			return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_STALE);
 
+		final var collapsed = collapseIfFits(lines, openIdx, rparenIdx);
+		if (collapsed != null)
+			return collapsed;
+
 		final var content = lines.get(rparenIdx);
-		final var column = move.rparenColumn();
-		if (column < 0 || column >= content.length())
+		final var column = LineText.charIndexOfColumn(content, move.rparenColumn());
+		if (column < 0 || column >= content.length() || content.charAt(column) != ')')
 			return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_STALE);
 
 		final var left = content.substring(0, column).stripTrailing();
 		if (left.isEmpty())
 			return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_STALE);
-
-		final var collapsed = collapseIfFits(lines, openIdx, rparenIdx);
-		if (collapsed != null)
-			return collapsed;
 
 		final var broken = new ArrayList<>(lines.subList(openIdx, rparenIdx));
 		broken.add(left);
@@ -314,9 +356,10 @@ final class MultilineCallFormattingFixer implements CheckstyleFixer {
 	}
 
 	/**
-	 * Splits a plain call's first argument off the {@code (} line: keeps everything through the
-	 * {@code (} on the opening line, moves the trailing argument text onto its own line, and re-indents
-	 * the whole call span so the moved arguments and the closing {@code )} land at their canonical depth.
+	 * Collapses the call onto one line when it fits, else splits its first argument off the {@code (}
+	 * line: keeps everything through the {@code (} on the opening line, moves the trailing argument text
+	 * onto its own line, and re-indents the whole call span so the moved arguments and the closing
+	 * {@code )} land at their canonical depth.
 	 */
 	@CheckReturnValue
 	@Nonnull
@@ -326,18 +369,18 @@ final class MultilineCallFormattingFixer implements CheckstyleFixer {
 		if (openIdx < 0 || closeIdx >= lines.size() || openIdx > closeIdx)
 			return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_STALE);
 
+		final var collapsed = collapseIfFits(lines, openIdx, closeIdx);
+		if (collapsed != null)
+			return collapsed;
+
 		final var content = lines.get(openIdx);
-		final var parenCol = move.openParenColumn();
+		final var parenCol = LineText.charIndexOfColumn(content, move.openParenColumn());
 		if (parenCol < 0 || parenCol >= content.length() || content.charAt(parenCol) != '(')
 			return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_STALE);
 
 		final var trailing = content.substring(parenCol + 1).strip();
 		if (trailing.isEmpty())
 			return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_STALE);
-
-		final var collapsed = collapseIfFits(lines, openIdx, closeIdx);
-		if (collapsed != null)
-			return collapsed;
 
 		final var broken = new ArrayList<String>();
 		broken.add(content.substring(0, parenCol + 1));
@@ -351,24 +394,18 @@ final class MultilineCallFormattingFixer implements CheckstyleFixer {
 	 * Re-lays-out a plain opening/closing violation's whole argument list via {@link JavaArgListReformatter}
 	 * (collapsing the call when it fits, else each argument on its own line, collapsing any nested multi-line
 	 * plain argument). Falls back to {@code pushDown} (the layout-preserving split) when there is no plain
-	 * arg-list owner or the reformatter declines (an argument needs its own opening-line layout, a {@code //}
-	 * comment would be swallowed, a text block is crossed, or the coordinates are stale).
+	 * arg-list owner or the reformatter declines.
 	 */
 	@CheckReturnValue
 	@Nonnull
 	private static FixAttempt reformatPlainOrPushDown(@Nonnull List<String> lines, @Nonnull DetailAST root, int lineIndex, int column, @Nonnull Supplier<FixAttempt> pushDown) {
-		final var owner = MultilineCallFormattingCheck.resolvableArgListOwner(root, lines, lineIndex, column);
+		final var owner = MultilineCallMoves.resolvableArgListOwner(root, lines, lineIndex, column);
 		if (owner != null
 				&& JavaArgListReformatter.reformat(lines, owner, LineLength.MAX_LINE_LENGTH, LineLength.TAB_WIDTH) instanceof Reformatted r)
 			return new FixResult(r.fromIndex(), r.toIndex(), r.lines());
 		return pushDown.get();
 	}
 
-	/**
-	 * Re-indents {@code brokenLines} (the correctly line-broken content for a call span) via
-	 * {@link JavaSpanReindenter}, seeded from the indentation of the span's opening line, and returns a
-	 * {@link FixResult} replacing {@code lines[fromIdx..toIdx]} with it.
-	 */
 	@CheckReturnValue
 	@Nonnull
 	private static FixResult reindented(@Nonnull List<String> lines, int fromIdx, int toIdx, @Nonnull List<String> brokenLines) {
@@ -377,7 +414,8 @@ final class MultilineCallFormattingFixer implements CheckstyleFixer {
 
 	@Nonnull
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
+		final var column = LineText.columnOfCharIndex(lines.get(lineIndex), charColumn);
 		final var root = FixerAst.parseOrNull(lines);
 		if (root == null)
 			return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_UNSUPPORTED);
@@ -385,32 +423,35 @@ final class MultilineCallFormattingFixer implements CheckstyleFixer {
 		// classification AND application share one firewall: a throw from any check classifier or from a
 		// move's re-emit/re-indent degrades to a skip rather than aborting the whole fix pass
 		try {
-			final var collapseSpan = MultilineCallFormattingCheck.collapsibleJsonObjectPutLineSpan(root, lineIndex, column);
+			final var collapseSpan = JsonObjectPutCollapse.lineSpan(root, lines, lineIndex, column);
 			if (collapseSpan != null)
 				return joinSpan(lines, collapseSpan[0], collapseSpan[1]);
 			// postDelayed reshaping owns its own canonical (one-line unwrap or `}, delay);`), so it must
 			// intercept before the generic opening/closing moves would try a layout-preserving push/pull
-			final var postDelayed = MultilineCallFormattingCheck.resolvablePostDelayed(root, lineIndex, column);
+			final var postDelayed = MultilineCallMoves.resolvablePostDelayed(root, lineIndex, column);
 			if (postDelayed != null)
 				return applyPostDelayedReshape(lines, postDelayed);
-			final var move = MultilineCallFormattingCheck.closingParenMove(root, lines, lineIndex, column);
+			final var move = MultilineCallMoves.closingParenMove(root, lines, lineIndex, column);
 			if (move != null) {
 				if (move.pullUp())
 					return pullUpClosingParen(lines, move);
 				return reformatPlainOrPushDown(lines, root, lineIndex, column, () -> pushDownClosingParen(lines, move));
 			}
-			final var openMove = MultilineCallFormattingCheck.openingParenMove(root, lines, lineIndex, column);
+			final var openMove = MultilineCallMoves.openingParenMove(root, lines, lineIndex, column);
 			if (openMove != null) {
 				if (openMove.pushDown())
 					return reformatPlainOrPushDown(lines, root, lineIndex, column, () -> pushDownOpeningArgs(lines, openMove));
 				return applyOpeningMove(lines, openMove);
 			}
-			final var ternaryQuestion = MultilineCallFormattingCheck.resolvableTernaryLayoutQuestion(root, lines, lineIndex, column);
+			final var ternaryQuestion = MultilineCallMoves.resolvableTernaryLayoutQuestion(root, lines, lineIndex, column);
 			if (ternaryQuestion != null)
 				return applyTernaryReformat(lines, ternaryQuestion);
-			final var sharedLineOwner = MultilineCallFormattingCheck.resolvableSharedLineArgs(root, lines, lineIndex, column);
+			final var sharedLineOwner = MultilineCallMoves.resolvableSharedLineArgs(root, lines, lineIndex, column);
 			if (sharedLineOwner != null)
 				return applyArgListReformat(lines, sharedLineOwner);
+			final var openCloseOwner = MultilineCallMoves.resolvableArgListOwner(root, lines, lineIndex, column);
+			if (openCloseOwner != null)
+				return applyOpenCloseReformat(lines, openCloseOwner);
 			return new SkipResult(SkipMessages.MULTILINE_PUT_SKIP_UNSUPPORTED);
 		}
 		catch (RuntimeException | StackOverflowError | AssertionError e) {

@@ -4,36 +4,6 @@
 	int beta[]
 // === end ===
 
-// === case: backward_scan_hits_block_comment ===
-// target: line=2 col=5
-	int alpha;
-	/* separator */
-	int beta;
-// === end ===
-
-// === case: backward_scan_hits_comment_line ===
-// target: line=2 col=5
-	int alpha;
-	// separator comment
-	int beta;
-// === end ===
-
-// === case: backward_scan_hits_javadoc ===
-// target: line=2 col=5
-	int alpha;
-	/** Javadoc for beta */
-	int beta;
-// === end ===
-
-// === case: backward_scan_hits_multi_line_javadoc ===
-// target: line=4 col=5
-	int alpha;
-	/**
-	 * Javadoc for beta.
-	 */
-	int beta;
-// === end ===
-
 // === case: comma_merge_last_field ===
 // target: line=1 col=3
 			alpha,
@@ -57,12 +27,6 @@
 // target: line=2 col=3
 	boolean alpha,
 	@SuppressWarnings({"unused", "all"})
-			beta;
-// === end ===
-
-// === case: comma_merge_with_block_comment ===
-// target: line=1 col=3
-	int /* , */ alpha,
 			beta;
 // === end ===
 
@@ -111,12 +75,6 @@ class Foo {
 	int beta;
 // === end ===
 
-// === case: prev_line_all_semicolons_in_comments ===
-// target: line=1 col=4
-// foo;
-int beta;
-// === end ===
-
 // === case: prev_line_block_comment_unclosed ===
 // target: line=1 col=5
 	int /* unclosed alpha;
@@ -127,12 +85,6 @@ int beta;
 // target: line=1 col=8
 int a;
 int beta,
-// === end ===
-
-// === case: violation_column_mid_identifier ===
-// target: line=1 col=6
-int alpha;
-int beta;
 // === end ===
 
 // === case: violation_line_block_comment_post_name_no_semicolon ===
@@ -165,11 +117,4 @@ int beta;
 	int prevName;
 	int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,
 	int anotherField;
-// === end ===
-
-// === case: wrap_continuation_breaks_at_same_indent_mixed_tabs_spaces ===
-// target: line=1 col=5
-	int prevName;
-	int alpha,
-    beta;
 // === end ===

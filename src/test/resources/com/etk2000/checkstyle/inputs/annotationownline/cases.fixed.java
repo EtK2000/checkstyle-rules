@@ -6,3 +6,11 @@ class InputAnnotationOwnLineEmbeddedAnnotationWithDeepNestedAnnotationViolation 
 	}
 }
 // === end ===
+
+// === case: order_split_qualified_name ===
+class InputAnnotationOwnLineOrderSplitQualifiedNameViolation {
+	@B
+	@Deprecated
+	void f() {}
+}
+// === end ===

@@ -7,14 +7,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.etk2000.checkstyle.TestResources;
+import com.etk2000.checkstyle.gradle.fix.FixerAst.ThrowingParser;
 import com.puppycrawl.tools.checkstyle.DetailAstImpl;
 import com.puppycrawl.tools.checkstyle.api.CheckstyleException;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -36,8 +39,10 @@ public class PreferStaticImportConstantFixerTest {
 	Path tempDir;
 
 	@AfterEach
+	@BeforeEach
 	public void cleanup() {
 		FixContext.clearFilePath();
+		FixerAst.clearCache();
 	}
 
 	@Nonnull
@@ -57,17 +62,17 @@ public class PreferStaticImportConstantFixerTest {
 
 	@Test
 	public void testAnnotationArgContainingBarePrivateWordDoesNotMisidentifyVisibility() throws Exception {
-		assertSkipResult(fixer, TOPIC, "annotation_arg_containing_bare_private_word_does_not_misidentify_visibility", "cannot auto-fix non-private alias: it may be referenced from outside the class");
+		assertSkipResult(fixer, TOPIC, "annotation_arg_containing_bare_private_word_does_not_misidentify_visibility", "cannot replace the alias: it is not private and may be referenced from outside the class");
 	}
 
 	@Test
 	public void testCinitConflictingTargetFieldReturnsConflictSkip() throws Exception {
-		assertSkipResult(fixer, TOPIC, "cinit_conflicting_target_field_returns_conflict_skip", "cannot add static import: file already imports a different constant with the same name statically");
+		assertSkipResult(fixer, TOPIC, "cinit_conflicting_target_field_returns_conflict_skip", "cannot add the static import: the file already statically imports a different constant with the same name");
 	}
 
 	@Test
 	public void testCinitFixerWithColumnOffIdentReturnsCinitSkip() throws Exception {
-		assertSkipResult(fixer, TOPIC, "cinit_fixer_with_column_off_ident_returns_cinit_skip", "could not auto-fix the split-assignment cinit alias (ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly); manually remove both the field and the cinit assignment, then add the static import");
+		assertSkipResult(fixer, TOPIC, "cinit_fixer_with_column_off_ident_returns_cinit_skip", "cannot replace the split-assignment cinit alias: ambiguous match, mismatched qualifier, non-Class.IDENT RHS, or the file did not re-parse cleanly (remove both the field and the cinit assignment manually, then add the static import)");
 	}
 
 	@Test
@@ -92,7 +97,7 @@ public class PreferStaticImportConstantFixerTest {
 
 	@Test
 	public void testConflictingStaticImportWithLeadingBomReturnsConflictSkip() throws Exception {
-		assertSkipResult(fixer, TOPIC, "conflicting_static_import_with_leading_bom_returns_conflict_skip", "cannot add static import: file already imports a different constant with the same name statically");
+		assertSkipResult(fixer, TOPIC, "conflicting_static_import_with_leading_bom_returns_conflict_skip", "cannot add the static import: the file already statically imports a different constant with the same name");
 	}
 
 	@Test
@@ -166,7 +171,7 @@ public class PreferStaticImportConstantFixerTest {
 				List.of(" X"),
 				0,
 				0,
-				PreferStaticImportConstantFixer::parseLinesToAst
+				FixerAst.DEFAULT_PARSER
 		));
 	}
 
@@ -177,8 +182,16 @@ public class PreferStaticImportConstantFixerTest {
 				lines,
 				0,
 				0,
-				PreferStaticImportConstantFixer::parseLinesToAst
+				FixerAst.DEFAULT_PARSER
 		));
+	}
+
+	@Test
+	public void testFindFieldDefForInlineSharesTheProductionCacheEntry() throws Exception {
+		final var lines = TestResources.loadCaseSlice(TOPIC, "int_alias").inputLines();
+		final var seed = FixerAst.parseOrNull(lines);
+		PreferStaticImportConstantFixer.findFieldDefForInlineUsing(lines, 0, 0, FixerAst.DEFAULT_PARSER);
+		assertSame(seed, FixerAst.parseOrNull(lines));
 	}
 
 	@Test
@@ -227,6 +240,19 @@ public class PreferStaticImportConstantFixerTest {
 					throw new StackOverflowError("deep recursion");
 				}
 		));
+	}
+
+	@Test
+	public void testFindFieldDefForInlineUsingServesTheSecondCallFromTheCache() throws Exception {
+		final var lines = TestResources.loadCaseSlice(TOPIC, "int_alias").inputLines();
+		final var parses = new int[1];
+		final ThrowingParser counting = ls -> {
+			++parses[0];
+			return PreferStaticImportConstantFixer.parseLinesToAst(ls);
+		};
+		PreferStaticImportConstantFixer.findFieldDefForInlineUsing(lines, 0, 0, counting);
+		PreferStaticImportConstantFixer.findFieldDefForInlineUsing(lines, 0, 0, counting);
+		assertEquals(1, parses[0]);
 	}
 
 	@Test
@@ -279,6 +305,33 @@ public class PreferStaticImportConstantFixerTest {
 				}
 		);
 		assertEquals("potential shadow (file does not parse cleanly)", result);
+	}
+
+	@Test
+	public void testFindShadowKindUsingServesTheConservativeAnswerFromACachedFailure() {
+		final List<String> lines = List.of();
+		final var parses = new int[1];
+		final ThrowingParser counting = ls -> {
+			++parses[0];
+			throw new CheckstyleException("bad input");
+		};
+		assertEquals(
+				"potential shadow (file does not parse cleanly)",
+				PreferStaticImportConstantFixer.findShadowKindUsing(lines, "X", Set.of(), counting)
+		);
+		assertEquals(
+				"potential shadow (file does not parse cleanly)",
+				PreferStaticImportConstantFixer.findShadowKindUsing(lines, "X", Set.of(), counting)
+		);
+		assertEquals(1, parses[0]);
+	}
+
+	@Test
+	public void testFindShadowKindUsingSharesTheProductionCacheEntry() throws Exception {
+		final var lines = TestResources.loadCaseSlice(TOPIC, "int_alias").inputLines();
+		final var seed = FixerAst.parseOrNull(lines);
+		PreferStaticImportConstantFixer.findShadowKindUsing(lines, "X", Set.of(), FixerAst.DEFAULT_PARSER);
+		assertSame(seed, FixerAst.parseOrNull(lines));
 	}
 
 	@Test
@@ -394,7 +447,7 @@ public class PreferStaticImportConstantFixerTest {
 
 	@Test
 	public void testMultiVarConflictingTargetAliasReturnsConflictSkip() throws Exception {
-		assertSkipResult(fixer, TOPIC, "multi_var_conflicting_target_alias_returns_conflict_skip", "cannot add static import: file already imports a different constant with the same name statically");
+		assertSkipResult(fixer, TOPIC, "multi_var_conflicting_target_alias_returns_conflict_skip", "cannot add the static import: the file already statically imports a different constant with the same name");
 	}
 
 	@Test
@@ -409,7 +462,7 @@ public class PreferStaticImportConstantFixerTest {
 
 	@Test
 	public void testMultiVarUnresolvableClassReturnsSkip() throws Exception {
-		assertSkipResult(fixer, TOPIC, "multi_var_unresolvable_class_returns_skip", "initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved");
+		assertSkipResult(fixer, TOPIC, "multi_var_unresolvable_class_returns_skip", "cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved");
 	}
 
 	@Test
@@ -444,17 +497,22 @@ public class PreferStaticImportConstantFixerTest {
 
 	@Test
 	public void testParseAliasDotAtEofSkips() throws Exception {
-		assertSkipResult(fixer, TOPIC, "parse_alias_dot_at_eof_skips", "initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved");
+		assertSkipResult(fixer, TOPIC, "parse_alias_dot_at_eof_skips", "cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved");
 	}
 
 	@Test
 	public void testParseAliasEqualsAtEndOfLineSkips() throws Exception {
-		assertSkipResult(fixer, TOPIC, "parse_alias_equals_at_end_of_line_skips", "initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved");
+		assertSkipResult(fixer, TOPIC, "parse_alias_equals_at_end_of_line_skips", "cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved");
 	}
 
 	@Test
 	public void testParseAliasNoEqualsReturnsSkip() throws Exception {
-		assertSkipResult(fixer, TOPIC, "parse_alias_no_equals_returns_skip");
+		assertSkipResult(
+				fixer,
+				TOPIC,
+				"parse_alias_no_equals_returns_skip",
+				SkipMessages.PREFER_STATIC_IMPORT_CONSTANT_SKIP_CINIT
+		);
 	}
 
 	@Test
@@ -487,7 +545,7 @@ public class PreferStaticImportConstantFixerTest {
 
 	@Test
 	public void testRhsDotFollowedByLiteralReturnsSkip() throws Exception {
-		assertSkipResult(fixer, TOPIC, "rhs_dot_followed_by_literal_returns_skip", "initializer is not a SimpleClass.IDENT alias or FQCN cannot be resolved");
+		assertSkipResult(fixer, TOPIC, "rhs_dot_followed_by_literal_returns_skip", "cannot replace the alias: the initializer is not a SimpleClass.IDENT alias or its FQCN cannot be resolved");
 	}
 
 	@Test

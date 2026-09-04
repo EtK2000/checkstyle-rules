@@ -1,6 +1,11 @@
 package com.etk2000.checkstyle.gradle.fix;
 
-import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.AstSpan;
+import com.etk2000.checkstyle.AstSpan.TextPos;
+import com.etk2000.checkstyle.AstSpan.TextSpan;
+import com.etk2000.checkstyle.RedundantCastCheck;
+import com.etk2000.checkstyle.RedundantCastCheck.RedundantCastTarget;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
 
 import java.util.List;
 
@@ -9,196 +14,79 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Fixer for {@code RedundantCastCheck}. Deletes the cast token
- * {@code (Type)} and the whitespace immediately following it, anchored at
- * the column the check reports (always the cast's open paren).
+ * Fixer for {@code RedundantCastCheck}. Replaces the text from the cast's opening parenthesis up to
+ * the expression it applies to, which deletes the cast and anything written between it and its
+ * subject.
  *
- * <p>When the cast is the sole content of a parenthesized receiver such
- * as {@code ((String) obj).method()}, the surrounding parens become
- * syntactically redundant after the cast is removed; this fixer strips
- * them in the same pass to avoid leaving {@code (obj).method()}. Two
- * strip paths exist:
- * <ul>
- *   <li><b>receiver wrap</b>: outer close is followed by {@code .} (the
- *       receiver-of-something pattern), e.g.
- *       {@code return ((String) s).length();} becomes
- *       {@code return s.length();}.
- *   <li><b>bare cast wrap</b>: outer paren is immediately adjacent to
- *       the cast paren (no chars between) and wraps only {@code (Cast)
- *       atom} where atom is a single Java identifier, e.g.
- *       {@code return ((String) s);} becomes {@code return s;}.
- * </ul>
- * Both paths require the outer paren be preceded only by whitespace or
- * by a non-identifier non-{@code )}/{@code ]} character (otherwise it's
- * a method-call argument paren). When the outer paren is the first
- * non-whitespace on its own line, the prior-context scan walks back
- * across blank lines and prior-line trailing whitespace to find the
- * last non-whitespace char on the most recent non-blank prior line.
- * Source like {@code return\n((String) s).length();} is handled this
- * way. When no prior content exists at all (snippet starts at file
- * head), the strip proceeds. When the outer paren is directly adjacent
- * to a keyword (no whitespace), a space is inserted before the receiver
- * to keep the keyword tokenized.
+ * <p>When the check pairs the cast with grouping parentheses, those go in the same edit where they
+ * can, so {@code return ((String) s).length();} becomes {@code return s.length();} rather than
+ * {@code return (s).length();}.
  *
- * <p>Comments between the cast's close paren and the expression are
- * preserved: {@code (String) /* note *\/ null} becomes
- * {@code /* note *\/ null}.
- *
- * <p>Paren matching is literal- and comment-aware: parens inside string
- * literals, text blocks, char literals, line comments, and block comments
- * do not affect the depth count. This prevents source corruption on
- * inputs like {@code ((String) "x)y").length()}.
- *
- * <p>Bails (returns {@link SkipResult}) when the cast spans multiple
- * lines or has no expression on the same line after the close paren.
+ * <p>A comment inside the replaced text moves to the front of the subject, the text it was written
+ * against being what goes.
  */
 class RedundantCastFixer implements CheckstyleFixer {
 	@CheckReturnValue
-	private static boolean isBareCastWrap(
-			@Nonnull String line,
-			int outerOpen,
-			int castOpen,
-			int exprStart,
-			int outerClose
-	) {
-		return outerOpen + 1 == castOpen && isBareIdentifierInner(line, exprStart, outerClose);
-	}
+	@Nullable
+	private static FixAttempt rewrite(@Nonnull List<String> lines, @Nonnull RedundantCastTarget target) {
+		final var castStart = AstSpan.spanStart(lines, target.typecast());
+		final var subjectStart = AstSpan.spanStart(lines, target.subject());
+		if (castStart == null || subjectStart == null)
+			return null;
 
-	@CheckReturnValue
-	private static boolean isBareIdentifierInner(@Nonnull String line, int exprStart, int outerClose) {
-		var i = exprStart;
-		while (i < outerClose && Character.isWhitespace(line.charAt(i)))
-			++i;
-		if (i >= outerClose)
-			return false;
-		if (!Character.isJavaIdentifierStart(line.charAt(i)) && !Character.isHighSurrogate(line.charAt(i)))
-			return false;
-		do ++i;
-		while (i < outerClose && isIdentifierPart(line.charAt(i)));
-		while (i < outerClose) {
-			if (!Character.isWhitespace(line.charAt(i)))
-				return false;
-			++i;
-		}
-		return true;
+		final var stripped = target.wrapOpen() != null && target.wrapClose() != null
+				? stripping(lines, target.wrapOpen(), target.wrapClose(), target.subject(), subjectStart)
+				: null;
+		if (stripped != null)
+			return stripped;
+
+		final var span = new TextSpan(castStart, subjectStart);
+		final var emitted = SpanCarry.separated(lines, span, SpanCarry.carried(lines, span, List.of()));
+		final var fix = SpanRewrite.replacing(lines, span, emitted);
+		return fix != null ? fix : new SkipResult(SkipMessages.REDUNDANT_CAST_SKIP_UNSLICEABLE);
 	}
 
 	/**
-	 * Returns {@code true} when {@code c} is part of a Java identifier OR a
-	 * surrogate half of a supplementary code point. The surrogate-half check
-	 * is conservative defense against supplementary identifier characters
-	 * (U+10000+, e.g. CJK Extension B): treating them as identifier-part
-	 * keeps the receiver-wrap detection from misclassifying a method-call
-	 * paren as a receiver-wrap paren.
+	 * The edit taking the grouping parentheses out along with the cast, or null when that rewrite
+	 * cannot be made and the cast has to come out on its own. The parentheses sit either side of the
+	 * subject, so the region spans all three and the subject is written back into it.
 	 */
 	@CheckReturnValue
-	private static boolean isIdentifierPart(char c) {
-		return Character.isJavaIdentifierPart(c)
-				|| Character.isHighSurrogate(c)
-				|| Character.isLowSurrogate(c);
-	}
-
-	@CheckReturnValue
-	private static boolean isPriorCharAllowed(@Nonnull String line, int pos) {
-		final var c = line.charAt(pos);
-		if (c == ')' || c == ']')
-			return false;
-		if (!isIdentifierPart(c))
-			return true;
-		var wordStart = pos;
-		while (wordStart > 0 && isIdentifierPart(line.charAt(wordStart - 1)))
-			--wordStart;
-		final var word = line.substring(wordStart, pos + 1);
-		return switch (word) {
-			case "return", "throw", "yield" -> true;
-			default -> false;
-		};
-	}
-
-	@CheckReturnValue
-	private static boolean isPriorContextAllowed(
+	@Nullable
+	private static FixResult stripping(
 			@Nonnull List<String> lines,
-			int lineIndex,
-			int outerOpen
+			@Nonnull DetailAST wrapOpen,
+			@Nonnull DetailAST wrapClose,
+			@Nonnull DetailAST subject,
+			@Nonnull TextPos subjectStart
 	) {
-		final var strippedLines = JavaLineScanner.maskAll(lines.subList(0, lineIndex + 1));
-		final var strippedCurrent = strippedLines.get(lineIndex);
-		if (outerOpen >= strippedCurrent.length() || strippedCurrent.charAt(outerOpen) != '(')
-			return false;
-		var beforeOuter = Math.min(outerOpen, strippedCurrent.length()) - 1;
-		while (beforeOuter >= 0 && Character.isWhitespace(strippedCurrent.charAt(beforeOuter)))
-			--beforeOuter;
-		if (beforeOuter >= 0)
-			return isPriorCharAllowed(strippedCurrent, beforeOuter);
-		for (var li = lineIndex - 1; li >= 0; --li) {
-			final var stripped = strippedLines.get(li);
-			var pos = stripped.length() - 1;
-			while (pos >= 0 && Character.isWhitespace(stripped.charAt(pos)))
-				--pos;
-			if (pos >= 0)
-				return isPriorCharAllowed(stripped, pos);
-		}
-		return true;
-	}
+		final var start = AstSpan.spanStart(lines, wrapOpen);
+		final var end = AstSpan.spanEnd(lines, wrapClose);
+		final var subjectEnd = AstSpan.spanEnd(lines, subject);
+		if (start == null || end == null || subjectEnd == null || AstSpan.outOfBounds(lines, start, end))
+			return null;
 
-	@CheckReturnValue
-	private static boolean isReceiverWrap(@Nonnull String line, int outerClose) {
-		if (outerClose >= line.length() - 1)
-			return false;
-		var afterOuter = outerClose + 1;
-		while (afterOuter < line.length() && Character.isWhitespace(line.charAt(afterOuter)))
-			++afterOuter;
-		return afterOuter < line.length() && line.charAt(afterOuter) == '.';
+		// the subject is written back into the region, so a subject of its own across lines would be
+		// folded onto one: an anonymous class body or a wrapped argument list keeps its layout, and
+		// the cast still comes out on its own through the caller's plain path
+		final var subjectText = subjectStart.line() == subjectEnd.line()
+				? AstSpan.sliceSpan(lines, subjectStart, subjectEnd)
+				: null;
+		if (subjectText == null)
+			return null;
+
+		// the subject's own text is copied verbatim, so only the parentheses, the cast and whatever
+		// stands on either side of the subject are being replaced. A comment written in any of that
+		// has to come back, including one past the subject, which the region also swallows
+		final var span = new TextSpan(start, end);
+		final var emitted = SpanCarry.carried(lines, span, List.of(new TextSpan(subjectStart, subjectEnd))) + subjectText;
+		return SpanRewrite.replacing(lines, span, SpanCarry.separated(lines, span, emitted));
 	}
 
 	@Nullable
 	@Override
 	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
-		final var line = lines.get(lineIndex);
-		if (column < 0 || column >= line.length())
-			return null;
-		if (line.charAt(column) != '(')
-			return null;
-
-		final var castClose = JavaLineScanner.matchingCloseParen(line, column);
-		if (castClose < 0)
-			return new SkipResult("multi-line-cast");
-
-		var exprStart = castClose + 1;
-		while (exprStart < line.length() && Character.isWhitespace(line.charAt(exprStart)))
-			++exprStart;
-		if (exprStart >= line.length())
-			return new SkipResult("malformed-cast-no-expression");
-
-		var outerOpen = -1;
-		for (var i = column - 1; i >= 0; --i) {
-			final var c = line.charAt(i);
-			if (c == '(') {
-				outerOpen = i;
-				break;
-			}
-			if (!Character.isWhitespace(c))
-				break;
-		}
-
-		if (outerOpen >= 0) {
-			final var outerClose = JavaLineScanner.matchingCloseParen(line, outerOpen);
-			if (outerClose >= 0
-					&& isPriorContextAllowed(lines, lineIndex, outerOpen)
-					&& (isReceiverWrap(line, outerClose)
-					|| isBareCastWrap(line, outerOpen, column, exprStart, outerClose))) {
-				final var prefix = line.substring(0, outerOpen);
-				final var needsSpace = !prefix.isEmpty()
-						&& isIdentifierPart(prefix.charAt(prefix.length() - 1));
-				final var fixed = prefix
-						+ (needsSpace ? " " : "")
-						+ line.substring(exprStart, outerClose)
-						+ line.substring(outerClose + 1);
-				return new FixResult(lineIndex, lineIndex, List.of(fixed));
-			}
-		}
-
-		final var fixed = line.substring(0, column) + line.substring(exprStart);
-		return new FixResult(lineIndex, lineIndex, List.of(fixed));
+		final var target = FixerAst.locate(lines, lineIndex, column, RedundantCastCheck::targetAt);
+		return target == null ? null : rewrite(lines, target);
 	}
 }

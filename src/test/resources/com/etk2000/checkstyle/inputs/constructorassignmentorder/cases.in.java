@@ -24,7 +24,7 @@ class InputConstructorAssignAlphabeticalThreeFieldsSliceViolation {
 // === end ===
 
 // === case: assignment_shares_line_with_statement ===
-// skip-reason: cannot reorder: multiple statements share a line
+// skip-reason: cannot reorder assignments: multiple statements share a line
 class InputConstructorAssignSharesLineWithStatementSliceViolation {
 	int alpha, beta;
 
@@ -40,7 +40,7 @@ class InputConstructorAssignBareDependencyViolation {
 	int alpha, beta;
 
 	InputConstructorAssignBareDependencyViolation() {
-		this.beta = alpha; // violation: Assignment 'this.beta' references 'this.alpha' which should be assigned before it.
+		this.beta = alpha; // violation: Assignment 'this.beta' must appear after 'this.alpha' (dependency order).
 		this.alpha = 3;
 	}
 }
@@ -63,7 +63,7 @@ class InputConstructorAssignBareLambdaDependencyViolation {
 	Runnable alpha;
 
 	InputConstructorAssignBareLambdaDependencyViolation(int seed) {
-		this.alpha = () -> System.out.println(value); // violation: Assignment 'this.alpha' references 'this.value' which should be assigned before it.
+		this.alpha = () -> System.out.println(value); // violation: Assignment 'this.alpha' must appear after 'this.value' (dependency order).
 		this.value = seed;
 	}
 }
@@ -86,7 +86,7 @@ class InputConstructorAssignBareVarDependencyViolation {
 
 	InputConstructorAssignBareVarDependencyViolation(int x) {
 		final var c = x;
-		this.alpha = c + beta; // violation: Assignment 'this.alpha' references 'this.beta' which should be assigned before it.
+		this.alpha = c + beta; // violation: Assignment 'this.alpha' must appear after 'this.beta' (dependency order).
 		this.beta = c;
 	}
 }
@@ -105,7 +105,7 @@ class InputConstructorAssignBlankBetweenAssignments {
 // === end ===
 
 // === case: block_comment_between_assignments ===
-// skip-reason: cannot reorder: an interleaved comment would be lost
+// skip-reason: cannot reorder assignments: an interleaved comment would be lost
 class InputConstructorAssignBlockCommentBetweenAssignmentsSliceViolation {
 	int alpha, beta;
 
@@ -119,7 +119,7 @@ class InputConstructorAssignBlockCommentBetweenAssignmentsSliceViolation {
 // === end ===
 
 // === case: comment_between_assignments ===
-// skip-reason: cannot reorder: an interleaved comment would be lost
+// skip-reason: cannot reorder assignments: an interleaved comment would be lost
 class InputConstructorAssignCommentBetweenAssignmentsSliceViolation {
 	int alpha, beta;
 
@@ -143,13 +143,13 @@ record InputConstructorAssignCompactCtorReorderSliceViolation(int alpha, int bet
 
 // === case: dependency_cycle ===
 // multi-fix-expected
-// skip-reason: cannot reorder: a field dependency cycle has no valid order
+// skip-reason: cannot reorder assignments: a field dependency cycle has no valid order
 class InputConstructorAssignDependencyCycleSliceViolation {
 	int alpha, beta, gamma;
 
 	InputConstructorAssignDependencyCycleSliceViolation() {
-		this.alpha = this.beta + 1; // violation: Assignment 'this.alpha' references 'this.beta' which should be assigned before it.
-		this.beta = this.gamma + 1; // violation: Assignment 'this.beta' references 'this.gamma' which should be assigned before it.
+		this.alpha = this.beta + 1; // violation: Assignment 'this.alpha' must appear after 'this.beta' (dependency order).
+		this.beta = this.gamma + 1; // violation: Assignment 'this.beta' must appear after 'this.gamma' (dependency order).
 		this.gamma = this.alpha + 1;
 	}
 }
@@ -160,20 +160,20 @@ class InputConstructorAssignDependencyViolation {
 	int alpha, beta;
 
 	InputConstructorAssignDependencyViolation(int alpha) {
-		this.beta = this.alpha + 1; // violation: Assignment 'this.beta' references 'this.alpha' which should be assigned before it.
+		this.beta = this.alpha + 1; // violation: Assignment 'this.beta' must appear after 'this.alpha' (dependency order).
 		this.alpha = alpha;
 	}
 }
 // === end ===
 
 // === case: duplicate_field_assignment ===
-// skip-reason: cannot reorder: a field is assigned more than once
+// skip-reason: cannot reorder assignments: a field is assigned more than once
 class InputConstructorAssignDuplicateFieldAssignmentSliceViolation {
 	int x, y;
 
 	InputConstructorAssignDuplicateFieldAssignmentSliceViolation() {
 		this.x = 1;
-		this.y = x; // violation: Assignment 'this.y' references 'this.x' which should be assigned before it.
+		this.y = x; // violation: Assignment 'this.y' must appear after 'this.x' (dependency order).
 		this.x = 2;
 	}
 }
@@ -196,7 +196,7 @@ class InputConstructorAssignInstanceInitBareDependency {
 	int alpha, value;
 
 	{
-		this.alpha = value + 1; // violation: Assignment 'this.alpha' references 'this.value' which should be assigned before it.
+		this.alpha = value + 1; // violation: Assignment 'this.alpha' must appear after 'this.value' (dependency order).
 		this.value = 5;
 	}
 }
@@ -324,7 +324,7 @@ class InputConstructorAssignMultiBeforeSimple {
 // === end ===
 
 // === case: multiline_local_var_decl_untracked ===
-// skip-reason: cannot reorder: relocating an unused local would move its initializer's side effects
+// skip-reason: cannot reorder assignments: relocating an unused local would move its initializer's side effects
 class InputConstructorAssignMultilineLocalVarDeclUntrackedSliceViolation {
 	int alpha, beta;
 
@@ -342,7 +342,7 @@ class InputConstructorAssignNoShadowDependencyReorderSliceViolation {
 	int alpha, beta;
 
 	InputConstructorAssignNoShadowDependencyReorderSliceViolation() {
-		this.beta = this.alpha + 1; // violation: Assignment 'this.beta' references 'this.alpha' which should be assigned before it.
+		this.beta = this.alpha + 1; // violation: Assignment 'this.beta' must appear after 'this.alpha' (dependency order).
 		this.alpha = 5;
 	}
 }
@@ -401,14 +401,14 @@ class InputConstructorAssignQualifiedChainDependency {
 	String value;
 
 	InputConstructorAssignQualifiedChainDependency(String value) {
-		this.alpha = this.value.length(); // violation: Assignment 'this.alpha' references 'this.value' which should be assigned before it.
+		this.alpha = this.value.length(); // violation: Assignment 'this.alpha' must appear after 'this.value' (dependency order).
 		this.value = value;
 	}
 }
 // === end ===
 
 // === case: shared_line_statements ===
-// skip-reason: cannot reorder: multiple statements share a line
+// skip-reason: cannot reorder assignments: multiple statements share a line
 class InputConstructorAssignSharedLineStatementsSliceViolation {
 	int alpha, beta;
 
@@ -419,7 +419,7 @@ class InputConstructorAssignSharedLineStatementsSliceViolation {
 // === end ===
 
 // === case: statement_after_second_assignment ===
-// skip-reason: cannot reorder: an interleaved statement would change execution order
+// skip-reason: cannot reorder assignments: an interleaved statement would change execution order
 class InputConstructorAssignStatementAfterSecondAssignmentSliceViolation {
 	int alpha, beta, gamma;
 
@@ -433,7 +433,7 @@ class InputConstructorAssignStatementAfterSecondAssignmentSliceViolation {
 // === end ===
 
 // === case: statement_between_assignments ===
-// skip-reason: cannot reorder: an interleaved statement would change execution order
+// skip-reason: cannot reorder assignments: an interleaved statement would change execution order
 class InputConstructorAssignStatementBetweenAssignmentsSliceViolation {
 	int alpha, beta;
 
@@ -598,7 +598,7 @@ class InputConstructorAssignVarDependencyViolation {
 
 	InputConstructorAssignVarDependencyViolation(int beta, int x) {
 		final var computed = x * 2;
-		this.alpha = computed + this.beta; // violation: Assignment 'this.alpha' references 'this.beta' which should be assigned before it.
+		this.alpha = computed + this.beta; // violation: Assignment 'this.alpha' must appear after 'this.beta' (dependency order).
 		this.beta = computed;
 	}
 }

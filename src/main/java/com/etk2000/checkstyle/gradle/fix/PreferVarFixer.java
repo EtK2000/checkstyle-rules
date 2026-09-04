@@ -1,8 +1,8 @@
 package com.etk2000.checkstyle.gradle.fix;
 
-import com.etk2000.checkstyle.JavaLineScanner;
 import com.etk2000.checkstyle.LineText;
 import com.etk2000.checkstyle.PreferVarCheck;
+import com.puppycrawl.tools.checkstyle.api.SeverityLevel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +14,8 @@ import javax.annotation.Nullable;
 class PreferVarFixer implements CheckstyleFixer {
 	private record VarConversion(@Nullable String line, @Nullable String skipReason) {}
 
+	private static final VarConversion SPLIT_ARRAY_INITIALIZER = new VarConversion(null, SkipMessages.PREFER_VAR_SKIP_SPLIT_ARRAY_INITIALIZER);
+	private static final VarConversion UNREADABLE_ARRAY_INITIALIZER = new VarConversion(null, SkipMessages.PREFER_VAR_SKIP_UNREADABLE_ARRAY_INITIALIZER);
 	private static final VarConversion UNRECOGNIZED = new VarConversion(null, null);
 
 	/**
@@ -30,13 +32,30 @@ class PreferVarFixer implements CheckstyleFixer {
 		return after < line.length() && !Character.isJavaIdentifierPart(line.charAt(after));
 	}
 
+	/**
+	 * Whether the call whose diamond ends at {@code from} takes no arguments. The scan follows the
+	 * masked source onto continuation lines: a call split after its diamond has just as little to
+	 * infer from as one written on a single line, and stopping at the line end would splice the
+	 * declared arguments in only for another pass to strip them back out. Masking blanks comment
+	 * and literal content, so whitespace is the only thing to skip.
+	 */
 	@CheckReturnValue
-	private static boolean emptyArgumentsFollow(@Nonnull String line, int from) {
-		final var open = skipToCode(line, from);
-		if (open < 0 || open >= line.length() || line.charAt(open) != '(')
-			return false;
-		final var close = skipToCode(line, open + 1);
-		return close >= 0 && close < line.length() && line.charAt(close) == ')';
+	private static boolean emptyArgumentsFollow(@Nonnull List<String> masked, int lineIndex, int from) {
+		var wantOpen = true;
+		for (var index = lineIndex; index < masked.size(); ++index) {
+			final var scan = masked.get(index);
+			for (var pos = index == lineIndex ? from : 0; pos < scan.length(); ++pos) {
+				final var ch = scan.charAt(pos);
+				if (Character.isWhitespace(ch))
+					continue;
+				if (!wantOpen)
+					return ch == ')';
+				if (ch != '(')
+					return false;
+				wantOpen = false;
+			}
+		}
+		return false;
 	}
 
 	@CheckReturnValue
@@ -53,6 +72,11 @@ class PreferVarFixer implements CheckstyleFixer {
 		return !stripped.stripLeading().startsWith("@");
 	}
 
+	/**
+	 * The index of the first {@code =} (not {@code ==}) at or after {@code from} outside parentheses,
+	 * or -1 when the line has none: an annotation argument's {@code =} ({@code @Ann(value = "x")})
+	 * is not the declaration's.
+	 */
 	@CheckReturnValue
 	private static int findAssignmentEquals(@Nonnull String scan, int from) {
 		var parenDepth = 0;
@@ -60,13 +84,8 @@ class PreferVarFixer implements CheckstyleFixer {
 			final var ch = scan.charAt(i);
 			if (ch == '(')
 				++parenDepth;
-			// the enclosing group closed, so everything after it belongs to an outer construct: without
-			// this the scan leaves a for-each or try-with-resources head and takes an assignment in the
-			// body for the declaration's own
-			else if (ch == ')') {
-				if (--parenDepth < 0)
-					return -1;
-			}
+			else if (ch == ')')
+				--parenDepth;
 			else if (ch == '=' && parenDepth == 0 && i + 1 < scan.length() && scan.charAt(i + 1) != '=')
 				return i;
 		}
@@ -76,24 +95,28 @@ class PreferVarFixer implements CheckstyleFixer {
 	/**
 	 * Fixes explicit array initializers: converts {@code var x = new Type[]{...}}
 	 * to {@code Type[] x = {...}}, or removes {@code new Type[]} from
-	 * {@code Type[] x = new Type[]{...}}.
+	 * {@code Type[] x = new Type[]{...}}. Only called once the check's predicate holds on a buffer
+	 * that parses, so the creation is the declaration's whole initializer: one used as a receiver or
+	 * indexed ({@code new int[]{1, 2}.clone()}) is not a bare {@code new} and never gets here.
 	 */
 	@CheckReturnValue
-	@Nullable
-	private static String fixExplicitArrayInit(@Nonnull String line, @Nonnull String masked, int column) {
+	@Nonnull
+	private static VarConversion fixExplicitArrayInit(@Nonnull String line, @Nonnull String masked, int column) {
 		final var eqIdx = findAssignmentEquals(masked, column);
 		if (eqIdx < 0)
-			return null;
+			return SPLIT_ARRAY_INITIALIZER;
 
 		// searched in the mask so `new ` occurring inside a string literal or a comment is
 		// never taken for a real constructor call
 		final var newIdx = masked.indexOf("new ", eqIdx + 1);
-		if (newIdx < 0)
-			return null;
+		if (newIdx < 0) {
+			final var rest = masked.substring(eqIdx + 1).strip();
+			return rest.isEmpty() || "new".equals(rest) ? SPLIT_ARRAY_INITIALIZER : UNREADABLE_ARRAY_INITIALIZER;
+		}
 
 		final var betweenEqAndNew = line.substring(eqIdx + 1, newIdx);
 		if (!betweenEqAndNew.isBlank())
-			return null;
+			return UNREADABLE_ARRAY_INITIALIZER;
 
 		var pos = newIdx + 4;
 		final var typeStart = pos;
@@ -117,8 +140,10 @@ class PreferVarFixer implements CheckstyleFixer {
 			pos += 2;
 			++bracketCount;
 		}
+		// a type name or `<...>` running to the end of the line wraps the creation, while anything else
+		// in front of the `[]` (`new int [] {1}`, `new @Ann String[]`) is text the scan cannot read
 		if (bracketCount == 0)
-			return null;
+			return masked.substring(pos).isBlank() ? SPLIT_ARRAY_INITIALIZER : UNREADABLE_ARRAY_INITIALIZER;
 
 		final var arrayType = line.substring(typeStart, pos);
 
@@ -126,23 +151,27 @@ class PreferVarFixer implements CheckstyleFixer {
 		// initializer is not taken for it, and refused outright when anything but whitespace
 		// sits between them: that text would be spliced away with the `new Type[]`
 		final var braceIdx = masked.indexOf('{', pos);
-		if (braceIdx < 0 || !line.substring(pos, braceIdx).isBlank())
-			return null;
+		if (braceIdx < 0)
+			return SPLIT_ARRAY_INITIALIZER;
+		if (!line.substring(pos, braceIdx).isBlank())
+			return UNREADABLE_ARRAY_INITIALIZER;
 
 		// read from the mask so an annotation argument's paren inside a string or char literal
 		// (`@SuppressWarnings("(")`) cannot desynchronise the depth count and run the scan off the
 		// end of the line, and so `var ` inside a string is never taken for the declared type
 		final var declStart = skipModifiers(masked, column);
 		if (declaresVarAt(masked, declStart)) {
-			return line.substring(0, declStart) + arrayType + line.substring(declStart + 3, eqIdx + 1)
-					+ " " + line.substring(braceIdx);
+			return new VarConversion(
+					line.substring(0, declStart) + arrayType + line.substring(declStart + 3, eqIdx + 1) + " " + line.substring(braceIdx),
+					null
+			);
 		}
 
 		// the `{...}` shorthand is legal only where the declared type is itself an array, so a
 		// declaration this could not read keeps its `new Type[]`: `var x = {1}` does not compile
 		return masked.substring(Math.min(declStart, eqIdx), eqIdx).contains("[]")
-				? line.substring(0, eqIdx + 1) + " " + line.substring(braceIdx)
-				: null;
+				? new VarConversion(line.substring(0, eqIdx + 1) + " " + line.substring(braceIdx), null)
+				: UNREADABLE_ARRAY_INITIALIZER;
 	}
 
 	/**
@@ -150,6 +179,9 @@ class PreferVarFixer implements CheckstyleFixer {
 	 * {@code <>} on a {@code new} expression when the declared type is
 	 * {@code var}. With {@code var}, the diamond operator infers
 	 * {@code Object} by default, so explicit type arguments are redundant.
+	 * The check reports only a whole initializer {@code new X<...>()}, so the text after the class
+	 * name is read as its type arguments; anything else there (a space, a comment, the name ending
+	 * the line) never closes into a list of bare {@code Object}s and is left alone.
 	 */
 	@CheckReturnValue
 	@Nullable
@@ -171,10 +203,6 @@ class PreferVarFixer implements CheckstyleFixer {
 
 		var pos = newIdx + 4;
 		pos = LineText.qualifiedNameEnd(line, pos);
-
-		if (pos >= line.length() || line.charAt(pos) != '<')
-			return null;
-
 		final var angleStart = pos;
 
 		var depth = 1;
@@ -186,6 +214,8 @@ class PreferVarFixer implements CheckstyleFixer {
 				--depth;
 			++pos;
 		}
+		// type arguments wrapped onto a later line (`new HashMap<Object,` / `Object>()`): reading
+		// up to the line end would take `Object` for the whole list and splice away the comma
 		if (depth != 0)
 			return null;
 
@@ -298,7 +328,6 @@ class PreferVarFixer implements CheckstyleFixer {
 		var ternaryDepth = 0;
 		var nestedDiamond = false;
 		var diamondBelow = false;
-		var terminated = false;
 		scan:
 		for (var scanLineIndex = lineIndex; scanLineIndex < masked.size(); ++scanLineIndex) {
 			final var scan = masked.get(scanLineIndex);
@@ -309,10 +338,8 @@ class PreferVarFixer implements CheckstyleFixer {
 				else if (ch == ')') {
 					// the declaration's own closing paren (a try-with-resources head or a
 					// for-each clause) ends it just as a ';' does
-					if (--parenDepth < 0) {
-						terminated = true;
+					if (--parenDepth < 0)
 						break scan;
-					}
 				}
 				else if (ch == '{')
 					++braceDepth;
@@ -342,15 +369,11 @@ class PreferVarFixer implements CheckstyleFixer {
 					if (textMultiVarBail)
 						return UNRECOGNIZED;
 				}
-				else if (ch == ';') {
-					terminated = true;
+				else if (ch == ';')
 					break scan;
-				}
 				else if (ch == ':') {
-					if (ternaryDepth == 0) {
-						terminated = true;
+					if (ternaryDepth == 0)
 						break scan;
-					}
 					--ternaryDepth;
 				}
 			}
@@ -372,9 +395,6 @@ class PreferVarFixer implements CheckstyleFixer {
 			// a diamond on a continuation line would need a multi-line edit to receive them
 			if (diamondBelow)
 				return new VarConversion(null, SkipMessages.PREFER_VAR_SKIP_UNREACHABLE_DIAMOND);
-			// the declaration never ends, so the scan cannot prove no diamond follows
-			if (!terminated)
-				return new VarConversion(null, SkipMessages.PREFER_VAR_SKIP_UNREACHABLE_DIAMOND);
 		}
 
 		if (typeArgs.isEmpty() || diamonds.isEmpty())
@@ -384,7 +404,7 @@ class PreferVarFixer implements CheckstyleFixer {
 		// carrying constructor arguments infers from them instead, so `List<Object> l =
 		// new ArrayList<>(strings)` would silently rebind to ArrayList<String>
 		if (isAllObjectTypeArgs(typeArgs.substring(1, typeArgs.length() - 1))
-				&& diamonds.stream().allMatch(diamond -> emptyArgumentsFollow(line, diamond + 2)))
+				&& diamonds.stream().allMatch(diamond -> emptyArgumentsFollow(masked, lineIndex, diamond + 2)))
 			return new VarConversion(line.substring(0, typeStart) + "var" + line.substring(pos), null);
 
 		// right-to-left so each splice leaves the earlier indices valid; the type itself is
@@ -398,8 +418,8 @@ class PreferVarFixer implements CheckstyleFixer {
 
 	/**
 	 * Whether every comma-separated type argument in {@code content} (the text between the
-	 * angle brackets) is a bare {@code Object}. Empty content is not, so an existing
-	 * {@code <>} does not qualify.
+	 * angle brackets) is a bare {@code Object} or {@code java.lang.Object}. Empty content is not,
+	 * so an existing {@code <>} does not qualify.
 	 */
 	@CheckReturnValue
 	private static boolean isAllObjectTypeArgs(@Nonnull String content) {
@@ -486,21 +506,17 @@ class PreferVarFixer implements CheckstyleFixer {
 
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
 		final var line = lines.get(lineIndex);
-		// the reported column counts code points while every scan below indexes chars, so a
-		// supplementary character earlier on the line would otherwise shift the splice into
-		// the middle of an identifier and emit a mangled type
-		final var charColumn = LineText.charIndexOfColumn(line, column);
 		// a column that no longer names a position on this line (a sibling fixer shifted the
-		// line earlier in the pass) cannot identify the reported violation, and the -1 LineText
-		// returns for it would throw inside the scans below
+		// line earlier in the pass) cannot identify the reported violation
 		if (charColumn < 0 || charColumn >= line.length())
 			return new SkipResult(SkipMessages.PREFER_VAR_SKIP_STALE_COLUMN);
+		final var column = LineText.columnOfCharIndex(line, charColumn);
 
 		// one mask per fix, threaded into every helper: the per-line variant seeds
 		// LexerState.NONE, which misreads a line continuing a text block
-		final var maskedLines = JavaLineScanner.maskAll(lines);
+		final var maskedLines = FixerAst.maskAll(lines);
 		final var maskedLine = maskedLines.get(lineIndex);
 
 		// only an explicit false refuses, so an unparseable buffer still runs
@@ -509,28 +525,52 @@ class PreferVarFixer implements CheckstyleFixer {
 		)))
 			return new SkipResult(SkipMessages.PREFER_VAR_SKIP_UNRECOGNIZED);
 
-		final var arrayResult = fixExplicitArrayInit(line, maskedLine, charColumn);
-		if (arrayResult != null)
-			return new FixResult(lineIndex, lineIndex, List.of(arrayResult));
-
-		final var diamondResult = fixRedundantObjectTypeArgs(line, maskedLine, charColumn);
-		if (diamondResult != null)
-			return new FixResult(lineIndex, lineIndex, List.of(diamondResult));
-
-		// the array-init path declined, so its initializer spans lines. Falling through would
-		// apply the unrelated type-to-`var` rewrite, leaving the reported violation standing on
-		// a declaration the fixer can no longer recognise
-		if (Boolean.TRUE.equals(FixerAst.withAst(
-				lines, root -> PreferVarCheck.isExplicitArrayInitAt(root, lineIndex, column)
-		)))
-			return new SkipResult(SkipMessages.PREFER_VAR_SKIP_SPLIT_ARRAY_INITIALIZER);
-
-		// the check's own predicate decides multi-var; the text scan can only guess
+		// the check's own predicate decides multi-var; the text scan can only guess. Asked first, so
+		// a stale event replayed on `int[] a = new int[]{1}, b = ...` never takes one declarator's
+		// initializer for the whole declaration
 		final var multiVar = FixerAst.withAst(
 				lines, root -> PreferVarCheck.isMultiVarDeclarationAt(root, lineIndex, column)
 		);
 		if (Boolean.TRUE.equals(multiVar))
 			return new SkipResult(SkipMessages.PREFER_VAR_SKIP);
+
+		// the check's own proof decides whether the `{...}` shorthand keeps the declared array type:
+		// the text scan reads only spelling, and would turn `Object[] a = new String[]{"a"}` into an
+		// `Object[]`. A buffer that does not parse proves nothing, so it never takes the shorthand
+		final var shorthand = Boolean.TRUE.equals(FixerAst.withAst(
+				lines, root -> PreferVarCheck.isExplicitArrayInitAt(root, lineIndex, column)
+		));
+		final var array = shorthand ? fixExplicitArrayInit(line, maskedLine, charColumn) : null;
+		if (array != null && array.line() != null)
+			return new FixResult(lineIndex, lineIndex, List.of(array.line()));
+
+		// an explicit-array event whose shorthand the current text no longer proves (a stale column,
+		// a buffer that stopped parsing, an initializer a sibling rewrote) has nothing else to apply:
+		// the type-to-`var` paths answer a different violation, and would leave this one standing
+		if (PreferVarCheck.MSG_VAR_EXPLICIT_ARRAY.equals(FixContext.getViolationKey()))
+			return new SkipResult(array != null ? array.skipReason() : SkipMessages.PREFER_VAR_SKIP_ARRAY_INITIALIZER_UNPROVEN);
+
+		final var diamondResult = fixRedundantObjectTypeArgs(line, maskedLine, charColumn);
+		if (diamondResult != null)
+			return new FixResult(lineIndex, lineIndex, List.of(diamondResult));
+
+		// falling through would apply the unrelated type-to-`var` rewrite, leaving the reported
+		// violation standing on a declaration the fixer can no longer recognise
+		if (array != null)
+			return new SkipResult(array.skipReason());
+
+		// a "must" rested on the check's type decision, so it is re-read on the current text, and a
+		// re-read that fails on a buffer that parses is no proof either
+		if (FixContext.getViolationSeverity() == SeverityLevel.ERROR && FixerAst.holdsOrFails(
+				lines, root -> PreferVarCheck.primitiveTypeUnpinnedAt(root, lineIndex, column)
+		))
+			return new SkipResult(SkipMessages.PREFER_VAR_SKIP_TYPE_UNPINNED);
+		// a sibling fix in the same pass can take away the proof, as dropping `(List)` from
+		// `final List raw = (List) typed` leaves an initializer that binds `List<String>`
+		if (FixContext.getViolationSeverity() == SeverityLevel.ERROR && FixerAst.holdsOrFails(
+				lines, root -> PreferVarCheck.referenceTypeUnprovenAt(root, lineIndex, column)
+		))
+			return new SkipResult(SkipMessages.PREFER_VAR_SKIP_TYPE_UNPROVEN);
 
 		final var spliceIntoDiamonds = !Boolean.FALSE.equals(FixerAst.withAst(
 				lines, root -> PreferVarCheck.declaredArgumentsMoveToDiamondAt(root, lineIndex, column)

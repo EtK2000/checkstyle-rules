@@ -10,6 +10,7 @@ import com.puppycrawl.tools.checkstyle.api.Violation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -19,6 +20,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+@Isolated
 public class ViolationsByFileListenerTest {
 	@Nonnull
 	private static AuditEvent event(@Nullable String fileName, @Nonnull String message) {
