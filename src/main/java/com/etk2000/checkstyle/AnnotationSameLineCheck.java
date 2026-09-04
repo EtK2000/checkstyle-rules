@@ -1,5 +1,7 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -71,7 +73,7 @@ public class AnnotationSameLineCheck extends AbstractAstCheck {
 		if (!isSameLineContext(ast))
 			return;
 
-		final var annotations = AstUtil.collectAnnotations(ast);
+		final var annotations = AstQuery.collectAnnotations(ast);
 		if (annotations.isEmpty())
 			return;
 
@@ -80,7 +82,7 @@ public class AnnotationSameLineCheck extends AbstractAstCheck {
 		// check same-line violations
 		for (var annotation : annotations) {
 			if (annotation.getLineNo() != declLine) {
-				log(annotation, MSG_KEY, AstUtil.annotationName(annotation));
+				log(annotation, MSG_KEY, AstText.annotationName(annotation));
 				return;
 			}
 		}
@@ -88,7 +90,7 @@ public class AnnotationSameLineCheck extends AbstractAstCheck {
 		// check alphabetical order (only when all annotations are inline)
 		String previousName = null;
 		for (var annotation : annotations) {
-			final var name = AstUtil.annotationName(annotation);
+			final var name = AstText.annotationName(annotation);
 			if (previousName != null && name.compareTo(previousName) < 0)
 				log(annotation, MSG_ORDER, name, previousName);
 			previousName = name;

@@ -62,7 +62,7 @@ class InputSwitchOrderViolation {
 		switch (x) {
 			default:
 				return -1;
-			case 1: // violation: Case 'default' must appear before '1'.
+			case 1: // violation: Case '1' must appear before 'default'.
 				return 1;
 		}
 	}
@@ -104,16 +104,35 @@ class InputSwitchOrderDefaultFirstViolation {
 	int enhanced(int x) {
 		return switch (x) {
 			default -> -1;
-			case 1 -> 1; // violation: Case 'default' must appear before '1'.
+			case 1 -> 1; // violation: Case '1' must appear before 'default'.
 			case 2 -> 2;
 		};
+	}
+
+	int middleAscending(int x) {
+		return switch (x) {
+			case 1 -> 1;
+			default -> -1;
+			case 2 -> 2; // violation: Case '2' must appear before 'default'.
+		};
+	}
+
+	int middleDescending(int x) {
+		switch (x) {
+			case 5:
+				return 5;
+			default:
+				return -1;
+			case 1: // violation: Case '1' must appear before '5'. // violation: Case '1' must appear before 'default'.
+				return 1;
+		}
 	}
 
 	int traditional(int x) {
 		switch (x) {
 			default:
 				return -1;
-			case 1: // violation: Case 'default' must appear before '1'.
+			case 1: // violation: Case '1' must appear before 'default'.
 				return 1;
 			case 2:
 				return 2;

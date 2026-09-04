@@ -64,6 +64,22 @@ class InputPreferMathMethodTernaryAbsLtZeroLeftSliceViolation {
 }
 // === end ===
 
+// === case: abs_pre_decrement_zero_left ===
+class InputPreferMathMethodTernaryAbsPreDecrementZeroLeftSliceViolation {
+	int m(int i) {
+		return 0 > --i ? -i : i; // violation: Use 'Math.abs(--i)' instead of '0 > --i ? -i : i'.
+	}
+}
+// === end ===
+
+// === case: abs_pre_increment ===
+class InputPreferMathMethodTernaryAbsPreIncrementSliceViolation {
+	int m(int i) {
+		return ++i > 0 ? i : -i; // violation: Use 'Math.abs(++i)' instead of '++i > 0 ? i : -i'.
+	}
+}
+// === end ===
+
 // === case: abs_with_array_access ===
 class InputPreferMathMethodTernaryAbsWithArrayAccessSliceViolation {
 	int m(int[] arr) {
@@ -90,6 +106,47 @@ class InputPreferMathMethodTernaryAbsWithLongParamSliceViolation {
 }
 // === end ===
 
+// === case: abs_zero_binary ===
+class InputPreferMathMethodTernaryAbsZeroBinarySliceViolation {
+	int m(int a) {
+		return a < 0b0 ? -a : a; // violation: Use 'Math.abs(a)' instead of 'a < 0b0 ? -a : a'.
+	}
+}
+// === end ===
+
+// === case: abs_zero_double_refuses ===
+// skip-reason: cannot rewrite the comparison: Math.abs and the branches it replaces differ on -0.0, so a floating-point zero is left alone
+class InputPreferMathMethodTernaryAbsZeroDoubleRefusesSliceViolation {
+	double m(double a) {
+		return a < 0.0 ? -a : a; // violation: Use 'Math.abs(a)' instead of 'a < 0.0 ? -a : a'.
+	}
+}
+// === end ===
+
+// === case: abs_zero_hex ===
+class InputPreferMathMethodTernaryAbsZeroHexSliceViolation {
+	int m(int a) {
+		return a < 0x0 ? -a : a; // violation: Use 'Math.abs(a)' instead of 'a < 0x0 ? -a : a'.
+	}
+}
+// === end ===
+
+// === case: abs_zero_underscore ===
+class InputPreferMathMethodTernaryAbsZeroUnderscoreSliceViolation {
+	int m(int a) {
+		return a < 0_0 ? -a : a; // violation: Use 'Math.abs(a)' instead of 'a < 0_0 ? -a : a'.
+	}
+}
+// === end ===
+
+// === case: clamp_after_foreign_max ===
+class InputPreferMathMethodClampAfterForeignMaxSliceViolation {
+	int m(int p, int q, int lo, int hi, int value) {
+		return MyMath.max(p, q) + Math.max(lo, Math.min(hi, value)); // violation [minSdk>=35]: Use 'Math.clamp(value, lo, hi)' instead of 'Math.max(lo, Math.min(hi, value))'.
+	}
+}
+// === end ===
+
 // === case: clamp_cast_arg ===
 class InputPreferMathMethodClampCastArgSliceViolation {
 	int m(int value, long lo, int hi) {
@@ -102,6 +159,14 @@ class InputPreferMathMethodClampCastArgSliceViolation {
 class InputPreferMathMethodClampCommentParenInArgSliceViolation {
 	int m(int lo, int value, int hi) {
 		return Math.max(lo /* ) */, Math.min(hi, value)); // violation [minSdk>=35]: Use 'Math.clamp(value, lo, hi)' instead of 'Math.max(lo, Math.min(hi, value))'.
+	}
+}
+// === end ===
+
+// === case: clamp_foreign_receiver_with_ternary ===
+class InputPreferMathMethodClampForeignReceiverWithTernarySliceViolation {
+	int m(int a, int b, int lo, int hi, int value) {
+		return MyMath.max(lo, Math.min(hi, value)) + (a > b ? a : b); // violation: Use 'Math.max(a, b)' instead of 'a > b ? a : b'.
 	}
 }
 // === end ===
@@ -198,6 +263,18 @@ class InputPreferMathMethodClampStringParenInArgSliceViolation {
 class InputPreferMathMethodClampTernaryArgSliceViolation {
 	int m(int value, int a, int b, int hi, boolean cond) {
 		return Math.max(cond ? a : b, Math.min(hi, value)); // violation [minSdk>=35]: Use 'Math.clamp(value, cond ? a : b, hi)' instead of 'Math.max(cond ? a : b, Math.min(hi, value))'.
+	}
+}
+// === end ===
+
+// === case: if_abs_compound_assign ===
+class InputPreferMathMethodIfAbsCompoundAssignSliceViolation {
+	int m(int a, int r) {
+		if (a < 0) // violation: Replace this if-else with 'Math.abs(a)'.
+			r -= -a;
+		else
+			r -= a;
+		return r;
 	}
 }
 // === end ===
@@ -328,6 +405,59 @@ class InputPreferMathMethodIfAbsDeclThisTargetSliceViolation {
 		else
 			this.x = a;
 		return x;
+	}
+}
+// === end ===
+
+// === case: if_abs_decl_zero_binary ===
+class InputPreferMathMethodIfAbsDeclZeroBinarySliceViolation {
+	int m(int a) {
+		int r;
+		if (a < 0b0) // violation: Replace this if-else with 'Math.abs(a)'.
+			r = -a;
+		else
+			r = a;
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_abs_decl_zero_double_refuses ===
+// skip-reason: cannot rewrite the comparison: Math.abs and the branches it replaces differ on -0.0, so a floating-point zero is left alone
+class InputPreferMathMethodIfAbsDeclZeroDoubleRefusesSliceViolation {
+	double m(double a) {
+		double r;
+		if (a < 0.0) // violation: Replace this if-else with 'Math.abs(a)'.
+			r = -a;
+		else
+			r = a;
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_abs_decl_zero_hex ===
+class InputPreferMathMethodIfAbsDeclZeroHexSliceViolation {
+	int m(int a) {
+		int r;
+		if (a < 0x0) // violation: Replace this if-else with 'Math.abs(a)'.
+			r = -a;
+		else
+			r = a;
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_abs_decl_zero_underscore ===
+class InputPreferMathMethodIfAbsDeclZeroUnderscoreSliceViolation {
+	int m(int a) {
+		int r;
+		if (a < 0_0) // violation: Replace this if-else with 'Math.abs(a)'.
+			r = -a;
+		else
+			r = a;
+		return r;
 	}
 }
 // === end ===
@@ -469,6 +599,18 @@ class InputPreferMathMethodIfAbsIfElseReturnLtZeroLeftSliceViolation {
 }
 // === end ===
 
+// === case: if_abs_pre_increment ===
+class InputPreferMathMethodIfAbsPreIncrementSliceViolation {
+	int m(int i, int r) {
+		if (++i > 0) // violation: Replace this if-else with 'Math.abs(++i)'.
+			r = i;
+		else
+			r = -i;
+		return r;
+	}
+}
+// === end ===
+
 // === case: if_abs_trailing_return_ge ===
 class InputPreferMathMethodIfAbsTrailingReturnGeSliceViolation {
 	int m(int a) {
@@ -573,6 +715,18 @@ class InputPreferMathMethodIfComparisonNotEqualitySliceViolation {
 }
 // === end ===
 
+// === case: if_condition_holds_a_ternary ===
+class InputPreferMathMethodIfConditionHoldsATernarySliceViolation {
+	int m(boolean[] flags, int a, int b, int r) {
+		if (flags[a > b ? a : b]) // violation: Use 'Math.max(a, b)' instead of 'a > b ? a : b'.
+			r = a;
+		else
+			r = b;
+		return r;
+	}
+}
+// === end ===
+
 // === case: if_init_overwrite_merge_into_decl ===
 class InputPreferMathMethodIfInitOverwriteMergeIntoDeclSliceViolation {
 	void m(int a, int b) {
@@ -580,6 +734,137 @@ class InputPreferMathMethodIfInitOverwriteMergeIntoDeclSliceViolation {
 		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
 			r = a;
 		System.out.println(r);
+	}
+}
+// === end ===
+
+// === case: if_max_allman_both ===
+class InputPreferMathMethodIfMaxAllmanBothSliceViolation {
+	int m(int a, int b) {
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+		{
+			return a;
+		}
+		else
+		{
+			return b;
+		}
+	}
+}
+// === end ===
+
+// === case: if_max_array_access_operands ===
+class InputPreferMathMethodIfMaxArrayAccessOperandsSliceViolation {
+	int m(int[] arr, int i, int j, int r) {
+		if (arr[i] > arr[j]) // violation: Replace this if-else with 'Math.max(arr[i], arr[j])'.
+			r = arr[i];
+		else
+			r = arr[j];
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_max_array_target_split_by_comment_refuses ===
+// skip-reason: cannot rewrite the if-else: this shape is not supported
+class InputPreferMathMethodIfMaxArrayTargetSplitByCommentRefusesSliceViolation {
+	void m(int a, int b, int[] r, int i) {
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r[/* idx */
+					i] = a;
+		else
+			r[i] = b;
+	}
+}
+// === end ===
+
+// === case: if_max_bare_return_below_no_collapse ===
+class InputPreferMathMethodIfMaxBareReturnBelowNoCollapseSliceViolation {
+	void m(int a, int b) {
+		int r;
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		else
+			r = b;
+		return;
+	}
+}
+// === end ===
+
+// === case: if_max_char_literal_comment_marker_operand ===
+class InputPreferMathMethodIfMaxCharLiteralCommentMarkerOperandSliceViolation {
+	int m(char c, int r) {
+		if (c > '/') // violation: Replace this if-else with 'Math.max(c, '/')'.
+			r = c;
+		else
+			r = '/';
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_max_comment_before_else ===
+class InputPreferMathMethodIfMaxCommentBeforeElseSliceViolation {
+	int m(int a, int b) {
+		if (a > b) { // violation: Replace this if-else with 'Math.max(a, b)'.
+			return a;
+		}
+		// pick the larger
+		else {
+			return b;
+		}
+	}
+}
+// === end ===
+
+// === case: if_max_comment_before_trailing_return ===
+class InputPreferMathMethodIfMaxCommentBeforeTrailingReturnSliceViolation {
+	int m(int a, int b) {
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			return a;
+		// otherwise the other one
+		return b;
+	}
+}
+// === end ===
+
+// === case: if_max_comment_in_braced_then ===
+class InputPreferMathMethodIfMaxCommentInBracedThenSliceViolation {
+	int m(int a, int b) {
+		if (a > b) { // violation: Replace this if-else with 'Math.max(a, b)'.
+			// a wins
+			return a;
+		}
+		else {
+			return b;
+		}
+	}
+}
+// === end ===
+
+// === case: if_max_comment_inside_condition ===
+class InputPreferMathMethodIfMaxCommentInsideConditionSliceViolation {
+	int m(int a, int b, int r) {
+		if (a /* left */ > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		else
+			r = b;
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_max_comment_unplaceable_refuses ===
+// skip-reason: cannot rewrite the if-else: this shape is not supported
+class InputPreferMathMethodIfMaxCommentUnplaceableRefusesSliceViolation {
+	int m(int a, int b) {
+		int r;
+		if (a > b) // prefer a // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		else
+			r = b;
+		return r; /* note
+		continues */
 	}
 }
 // === end ===
@@ -794,6 +1079,20 @@ class InputPreferMathMethodIfMaxDeclLtSliceViolation {
 }
 // === end ===
 
+// === case: if_max_decl_multi_declarator_refuses ===
+// skip-reason: cannot rewrite the if-else: this shape is not supported
+class InputPreferMathMethodIfMaxDeclMultiDeclaratorRefusesSliceViolation {
+	long m(int b) {
+		int s, r;
+		if (s > b) // violation: Replace this if-else with 'Math.max(s, b)'.
+			r = s;
+		else
+			r = b;
+		return r;
+	}
+}
+// === end ===
+
 // === case: if_max_decl_pre_decrement ===
 class InputPreferMathMethodIfMaxDeclPreDecrementSliceViolation {
 	int m(int a, int b) {
@@ -833,8 +1132,73 @@ class InputPreferMathMethodIfMaxDeclPreIncrementRightOperandSliceViolation {
 }
 // === end ===
 
+// === case: if_max_decl_return_expression_falls_back_to_bare ===
+class InputPreferMathMethodIfMaxDeclReturnExpressionFallsBackToBareSliceViolation {
+	int m(int a, int b) {
+		int r;
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		else
+			r = b;
+		return r + 1;
+	}
+}
+// === end ===
+
+// === case: if_max_decl_split_by_comment_refuses ===
+// skip-reason: cannot rewrite the if-else: this shape is not supported
+class InputPreferMathMethodIfMaxDeclSplitByCommentRefusesSliceViolation {
+	void m(int a, int b) {
+		var // note
+				r = b;
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		System.out.println(r);
+	}
+}
+// === end ===
+
+// === case: if_max_decl_with_initializer_falls_back_to_bare ===
+class InputPreferMathMethodIfMaxDeclWithInitializerFallsBackToBareSliceViolation {
+	int m(int a, int b) {
+		var r = 7;
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		else
+			r = b;
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_max_double_operands ===
+class InputPreferMathMethodIfMaxDoubleOperandsSliceViolation {
+	double m(double a, double b) {
+		double r;
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		else
+			r = b;
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_max_else_if_assign ===
+class InputPreferMathMethodIfMaxElseIfAssignSliceViolation {
+	int m(boolean cond, int a, int b, int r) {
+		if (cond)
+			r = 0;
+		else if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		else
+			r = b;
+		return r;
+	}
+}
+// === end ===
+
 // === case: if_max_else_if_chain ===
-// skip-reason: if-else not auto-fixable
 class InputPreferMathMethodIfMaxElseIfChainSliceViolation {
 	int m(boolean cond, int a, int b) {
 		if (cond)
@@ -843,6 +1207,47 @@ class InputPreferMathMethodIfMaxElseIfChainSliceViolation {
 			return a;
 		else
 			return b;
+	}
+}
+// === end ===
+
+// === case: if_max_else_if_cuddled_brace ===
+class InputPreferMathMethodIfMaxElseIfCuddledBraceSliceViolation {
+	int m(boolean cond, int a, int b) {
+		if (cond) {
+			return 0;
+		} else if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			return a;
+		else
+			return b;
+	}
+}
+// === end ===
+
+// === case: if_max_field_access_operands ===
+class InputPreferMathMethodIfMaxFieldAccessOperandsSliceViolation {
+	int x;
+
+	int m(InputPreferMathMethodIfMaxFieldAccessOperandsSliceViolation other, int r) {
+		if (x > other.x) // violation: Replace this if-else with 'Math.max(x, other.x)'.
+			r = x;
+		else
+			r = other.x;
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_max_field_named_like_target_no_collapse ===
+class InputPreferMathMethodIfMaxFieldNamedLikeTargetNoCollapseSliceViolation {
+	int r;
+
+	int m(int a, int b) {
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		else
+			r = b;
+		return r;
 	}
 }
 // === end ===
@@ -1028,6 +1433,19 @@ class InputPreferMathMethodIfMaxIfReturnPreIncrementSliceViolation {
 }
 // === end ===
 
+// === case: if_max_in_static_initializer ===
+class InputPreferMathMethodIfMaxInStaticInitializerSliceViolation {
+	static int a, b, value;
+
+	static {
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			value = a;
+		else
+			value = b;
+	}
+}
+// === end ===
+
 // === case: if_max_in_try_block ===
 class InputPreferMathMethodIfMaxInTryBlockSliceViolation {
 	int m(int a, int b) {
@@ -1054,6 +1472,18 @@ class InputPreferMathMethodIfMaxInitOverwriteSliceViolation {
 }
 // === end ===
 
+// === case: if_max_init_overwrite_blank_line_above ===
+class InputPreferMathMethodIfMaxInitOverwriteBlankLineAboveSliceViolation {
+	int m(int a, int b) {
+		var r = b;
+
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		return r;
+	}
+}
+// === end ===
+
 // === case: if_max_init_overwrite_braced ===
 class InputPreferMathMethodIfMaxInitOverwriteBracedSliceViolation {
 	int m(int a, int b) {
@@ -1061,6 +1491,55 @@ class InputPreferMathMethodIfMaxInitOverwriteBracedSliceViolation {
 		if (a > b) { // violation: Replace this if-else with 'Math.max(a, b)'.
 			r = a;
 		}
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_max_init_overwrite_comment_above_decl_survives ===
+class InputPreferMathMethodIfMaxInitOverwriteCommentAboveDeclSurvivesSliceViolation {
+	int m(int a, int b) {
+		// the running best
+		var r = b;
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_max_init_overwrite_comment_line_above ===
+class InputPreferMathMethodIfMaxInitOverwriteCommentLineAboveSliceViolation {
+	int m(int a, int b) {
+		var r = b;
+		// start from b
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_max_init_overwrite_multi_decl_refuses ===
+// skip-reason: cannot rewrite the if-else: this shape is not supported
+class InputPreferMathMethodIfMaxInitOverwriteMultiDeclRefusesSliceViolation {
+	long m(int b) {
+		long s, r = b;
+		if (s > b) // violation: Replace this if-else with 'Math.max(s, b)'.
+			r = s;
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_max_labelled_statement_refuses ===
+// skip-reason: cannot rewrite the if-else: this shape is not supported
+class InputPreferMathMethodIfMaxLabelledStatementRefusesSliceViolation {
+	int m(int a, int b, int r) {
+		pick: if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		else
+			r = b;
 		return r;
 	}
 }
@@ -1079,6 +1558,68 @@ class InputPreferMathMethodIfMaxLambdaIfReturnSliceViolation {
 }
 // === end ===
 
+// === case: if_max_line_budget_refuses ===
+// skip-reason: cannot rewrite the if-else: this shape is not supported
+class InputPreferMathMethodIfMaxLineBudgetRefusesSliceViolation {
+	int anotherVeryLongFieldNameUsedToFillTheProjectBudget, aVeryLongFieldNameUsedToFillTheProjectLineBudget;
+
+	int m() {
+		if (aVeryLongFieldNameUsedToFillTheProjectLineBudget // violation: Replace this if-else with 'Math.max(aVeryLongFieldNameUsedToFillTheProjectLineBudget, anotherVeryLongFieldNameUsedToFillTheProjectBudget)'.
+				> anotherVeryLongFieldNameUsedToFillTheProjectBudget)
+			return aVeryLongFieldNameUsedToFillTheProjectLineBudget;
+		return anotherVeryLongFieldNameUsedToFillTheProjectBudget;
+	}
+}
+// === end ===
+
+// === case: if_max_multiline_condition ===
+class InputPreferMathMethodIfMaxMultilineConditionSliceViolation {
+	int m(int a, int b) {
+		if (a // violation: Replace this if-else with 'Math.max(a, b)'.
+				> b)
+			return a;
+		return b;
+	}
+}
+// === end ===
+
+// === case: if_max_multiline_then_body ===
+class InputPreferMathMethodIfMaxMultilineThenBodySliceViolation {
+	int m(int a, int b, int r) {
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r =
+					a;
+		else
+			r = b;
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_max_nested_in_unbraced_if ===
+class InputPreferMathMethodIfMaxNestedInUnbracedIfSliceViolation {
+	int m(boolean cond, int a, int b, int r) {
+		if (cond)
+			if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+				r = a;
+			else
+				r = b;
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_max_then_body_on_if_line ===
+class InputPreferMathMethodIfMaxThenBodyOnIfLineSliceViolation {
+	int m(int a, int b, int r) {
+		if (a > b) r = a; // violation: Replace this if-else with 'Math.max(a, b)'.
+		else
+			r = b;
+		return r;
+	}
+}
+// === end ===
+
 // === case: if_max_this_target ===
 class InputPreferMathMethodIfMaxThisTargetSliceViolation {
 	int x;
@@ -1089,6 +1630,39 @@ class InputPreferMathMethodIfMaxThisTargetSliceViolation {
 		else
 			this.x = b;
 		return x;
+	}
+}
+// === end ===
+
+// === case: if_max_trailing_comment_after_else ===
+class InputPreferMathMethodIfMaxTrailingCommentAfterElseSliceViolation {
+	int m(int a, int b, int r) {
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		else
+			r = b; // the smaller one
+		return r;
+	}
+}
+// === end ===
+
+// === case: if_max_trailing_comment_after_trailing_return ===
+class InputPreferMathMethodIfMaxTrailingCommentAfterTrailingReturnSliceViolation {
+	int m(int a, int b) {
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			return a;
+		return b; // the smaller one
+	}
+}
+// === end ===
+
+// === case: if_max_trailing_return_blank_before_return ===
+class InputPreferMathMethodIfMaxTrailingReturnBlankBeforeReturnSliceViolation {
+	int m(int a, int b) {
+		if (a > b) // violation: Replace this if-else with 'Math.max(a, b)'.
+			return a;
+
+		return b;
 	}
 }
 // === end ===
@@ -1140,6 +1714,20 @@ class InputPreferMathMethodIfMaxTrailingReturnLtSliceViolation {
 		if (a < b) // violation: Replace this if-else with 'Math.max(a, b)'.
 			return b;
 		return a;
+	}
+}
+// === end ===
+
+// === case: if_max_two_comments_merged ===
+class InputPreferMathMethodIfMaxTwoCommentsMergedSliceViolation {
+	int m(int a, int b) {
+		if (a > b) { // first // violation: Replace this if-else with 'Math.max(a, b)'.
+			// second
+			return a;
+		}
+		else {
+			return b;
+		}
 	}
 }
 // === end ===
@@ -1507,6 +2095,19 @@ class InputPreferMathMethodIfReturnElseClauseFalseFallsToTrailingSliceViolation 
 }
 // === end ===
 
+// === case: if_zero_indent_comment_ternary ===
+class InputPreferMathMethodIfZeroIndentCommentTernarySliceViolation {
+	int m(int a, int b, int x, int y) {
+		int r;
+if (a > b) // keep in sync with x > y ? x : y below // violation: Replace this if-else with 'Math.max(a, b)'.
+			r = a;
+		else
+			r = b;
+		return r + x + y;
+	}
+}
+// === end ===
+
 // === case: max_compound_assign_bit_or ===
 class InputPreferMathMethodIfCompoundAssignBitOrSliceViolation {
 	int m(int r, int a, int b) {
@@ -1643,6 +2244,14 @@ class InputPreferMathMethodTernaryMaxWithArrayAccessSliceViolation {
 }
 // === end ===
 
+// === case: max_with_char_literal ===
+class InputPreferMathMethodTernaryMaxWithCharLiteralSliceViolation {
+	int m(int c) {
+		return c > 'a' ? c : 'a'; // violation: Use 'Math.max(c, 'a')' instead of 'c > 'a' ? c : 'a''.
+	}
+}
+// === end ===
+
 // === case: max_with_field_access ===
 class InputPreferMathMethodTernaryMaxWithFieldAccessSliceViolation {
 	int x;
@@ -1661,6 +2270,14 @@ class InputPreferMathMethodTernaryMaxWithLiteralSliceViolation {
 }
 // === end ===
 
+// === case: max_with_mixed_case_underscore_identifiers ===
+class InputPreferMathMethodTernaryMaxWithMixedCaseUnderscoreIdentifiersSliceViolation {
+	int m(int aB_1, int b) {
+		return aB_1 > b ? aB_1 : b; // violation: Use 'Math.max(aB_1, b)' instead of 'aB_1 > b ? aB_1 : b'.
+	}
+}
+// === end ===
+
 // === case: max_with_pre_decrement ===
 class InputPreferMathMethodTernaryMaxWithPreDecrementSliceViolation {
 	int m(int a, int b) {
@@ -1673,6 +2290,30 @@ class InputPreferMathMethodTernaryMaxWithPreDecrementSliceViolation {
 class InputPreferMathMethodTernaryMaxWithPreIncrementSliceViolation {
 	int m(int a, int b) {
 		return ++a > b ? a : b; // violation: Use 'Math.max(++a, b)' instead of '++a > b ? a : b'.
+	}
+}
+// === end ===
+
+// === case: max_with_pre_increment_right_operand ===
+class InputPreferMathMethodTernaryMaxWithPreIncrementRightOperandSliceViolation {
+	int m(int a, int b) {
+		return a > ++b ? a : b; // violation: Use 'Math.max(a, ++b)' instead of 'a > ++b ? a : b'.
+	}
+}
+// === end ===
+
+// === case: max_with_signed_exponent_literal ===
+class InputPreferMathMethodTernaryMaxWithSignedExponentLiteralSliceViolation {
+	double m(double a) {
+		return a > 1.5e-3 ? a : 1.5e-3; // violation: Use 'Math.max(a, 1.5e-3)' instead of 'a > 1.5e-3 ? a : 1.5e-3'.
+	}
+}
+// === end ===
+
+// === case: max_with_signed_right_operand ===
+class InputPreferMathMethodTernaryMaxWithSignedRightOperandSliceViolation {
+	int m(int a, int b) {
+		return a > -b ? a : -b; // violation: Use 'Math.max(a, -b)' instead of 'a > -b ? a : -b'.
 	}
 }
 // === end ===
@@ -1705,6 +2346,52 @@ class InputPreferMathMethodTernaryMinLeSliceViolation {
 class InputPreferMathMethodTernaryMinLtSliceViolation {
 	int m(int a, int b) {
 		return a < b ? a : b; // violation: Use 'Math.min(a, b)' instead of 'a < b ? a : b'.
+	}
+}
+// === end ===
+
+// === case: ternary_chained_inner ===
+class InputPreferMathMethodTernaryChainedInnerSliceViolation {
+	int m(int a, int b, int c) {
+		return a > b ? a : b > c ? b : c; // violation: Use 'Math.max(b, c)' instead of 'b > c ? b : c'.
+	}
+}
+// === end ===
+
+// === case: ternary_multiline_plain ===
+class InputPreferMathMethodTernaryMultilinePlainSliceViolation {
+	int m(int a, int b) {
+		return a > b
+				? a // violation: Use 'Math.max(a, b)' instead of 'a > b ? a : b'.
+				: b;
+	}
+}
+// === end ===
+
+// === case: ternary_multiline_question_at_column_zero_comment ===
+// skip-reason: cannot rewrite the expression: nothing here is a supported Math shape, or folding it would lose a comment
+class InputPreferMathMethodTernaryMultilineQuestionAtColumnZeroCommentSliceViolation {
+	int m(int a, int b, int x, int y) {
+		final var r = a > b
+? a // mirrors x > y ? x : y elsewhere // violation: Use 'Math.max(a, b)' instead of 'a > b ? a : b'.
+: b;
+		return r + x + y;
+	}
+}
+// === end ===
+
+// === case: ternary_non_comparison_first_on_one_line ===
+class InputPreferMathMethodTernaryNonComparisonFirstOnOneLineSliceViolation {
+	int m(boolean flag, int a, int b, int c, int d) {
+		return foo(flag ? a : b, c < d ? c : d); // violation: Use 'Math.min(c, d)' instead of 'c < d ? c : d'.
+	}
+}
+// === end ===
+
+// === case: ternary_two_on_one_line ===
+class InputPreferMathMethodTernaryTwoOnOneLineSliceViolation {
+	int m(int a, int b, int c, int d) {
+		return foo(a > b ? a : b, c < d ? c : d); // violation: Use 'Math.max(a, b)' instead of 'a > b ? a : b'. // violation: Use 'Math.min(c, d)' instead of 'c < d ? c : d'.
 	}
 }
 // === end ===

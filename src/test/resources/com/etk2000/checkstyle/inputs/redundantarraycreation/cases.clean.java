@@ -69,7 +69,7 @@ class InputRedundantArrayCreationClean {
 	}
 
 	void primitiveArrayToReferenceLongVarargs() {
-		Arrays.asList(new long[]{1L});
+		Arrays.asList(new long[]{1});
 	}
 
 	void primitiveArrayToReferenceShortVarargs() {

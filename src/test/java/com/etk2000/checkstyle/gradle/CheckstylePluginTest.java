@@ -8,12 +8,19 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.etk2000.checkstyle.BaseCheckTest;
 import com.etk2000.checkstyle.gradle.fix.CheckstyleFixAction;
 import com.etk2000.checkstyle.gradle.fix.CheckstyleFixTask;
+import com.puppycrawl.tools.checkstyle.Checker;
+import com.puppycrawl.tools.checkstyle.ConfigurationLoader;
+import com.puppycrawl.tools.checkstyle.PropertiesExpander;
+import com.puppycrawl.tools.checkstyle.checks.imports.ImportControlCheck;
 
 import org.gradle.api.plugins.quality.CheckstyleExtension;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.xml.sax.InputSource;
 
 import org.junit.jupiter.api.io.TempDir;
 
@@ -21,11 +28,15 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+@ResourceLock(CheckstylePluginTest.PROJECT_BUILDER)
 public class CheckstylePluginTest {
 	private static final Pattern ALLOWED_METHODS_PATTERN = Pattern.compile(
 			"<property\\s+name=\"allowedMethods\"\\s+value=\"([^\"]+)\""
@@ -54,6 +65,8 @@ public class CheckstylePluginTest {
 	private static final Set<String> FIXABLE_MESSAGES = FixableCheckNames.FIXABLE_MESSAGES;
 	private static final Set<String> FIXABLE_NAMES = FixableCheckNames.all();
 
+	/** The resource lock held by every class building a project, as Gradle documents no thread safety for {@link ProjectBuilder}. */
+	public static final String PROJECT_BUILDER = "org.gradle.testfixtures.ProjectBuilder";
 	private static final String XML_FOOTER = "</checkstyle>";
 	private static final String XML_HEADER = """
 			<?xml version="1.0" encoding="UTF-8"?>
@@ -61,11 +74,7 @@ public class CheckstylePluginTest {
 			""";
 
 	private static void assertNoCustomCheckDeclaresProperty(String propertyName, String rationale) throws IOException {
-		final String xml;
-		try (var in = CheckstylePlugin.class.getResourceAsStream("/com/etk2000/checkstyle/checkstyle.xml")) {
-			assertNotNull(in);
-			xml = new String(in.readAllBytes());
-		}
+		final var xml = shippedConfigXml();
 
 		final var propertyPattern = propertyDeclarationPattern(propertyName);
 		final var matcher = CUSTOM_CHECK_MODULE_PATTERN.matcher(xml);
@@ -96,6 +105,26 @@ public class CheckstylePluginTest {
 		return Pattern.compile("name\\s*=\\s*[\"']" + Pattern.quote(propertyName) + "[\"']");
 	}
 
+	private static Map<String, String> regexpMessagesById(String xml) {
+		final var messages = new HashMap<String, String>();
+		final var moduleMatcher = MODULE_PATTERN.matcher(xml);
+		while (moduleMatcher.find()) {
+			final var body = moduleMatcher.group(1);
+			final var idMatcher = ID_PATTERN.matcher(body);
+			final var messageMatcher = MSG_PATTERN.matcher(body);
+			if (idMatcher.find() && messageMatcher.find())
+				messages.put(idMatcher.group(1), messageMatcher.group(1));
+		}
+		return messages;
+	}
+
+	private static String shippedConfigXml() throws IOException {
+		try (var in = CheckstylePlugin.class.getResourceAsStream("/com/etk2000/checkstyle/checkstyle.xml")) {
+			assertNotNull(in);
+			return new String(in.readAllBytes());
+		}
+	}
+
 	@TempDir
 	Path tempDir;
 
@@ -121,7 +150,6 @@ public class CheckstylePluginTest {
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// severity = "error" (with spaces) doesn't match severity="([^"]+)" regex
 		assertArrayEquals(
 				new int[]{1, 0},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
@@ -136,8 +164,6 @@ public class CheckstylePluginTest {
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// severity="" doesn't match regex [^"]+ so treated as missing -> not fixable
-		// source="" and message="" also don't match their [^"]+ regexes
 		assertArrayEquals(
 				new int[]{1, 0},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
@@ -169,12 +195,11 @@ public class CheckstylePluginTest {
 				<file name="A.java">
 				<error line="1"
 				severity="error"
-				message="No trailing whitespace."
+				message="Line must not end with whitespace."
 				source="com.etk2000.checkstyle.PreferPrefixIncrementCheck"/>
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// [^>] character class matches newlines, so multi-line elements are matched
 		assertArrayEquals(
 				new int[]{1, 1},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
@@ -217,7 +242,6 @@ public class CheckstylePluginTest {
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// \b in <error\b prevents matching <errorSummary>
 		assertArrayEquals(
 				new int[]{0, 0},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
@@ -228,11 +252,10 @@ public class CheckstylePluginTest {
 	public void countViolationsFixableMessagesNotHardcoded() throws Exception {
 		final var xml = """
 				<file name="A.java">
-				<error line="1" severity="error" message="No trailing whitespace."/>
+				<error line="1" severity="error" message="Line must not end with whitespace."/>
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// message is normally fixable, but passing empty set proves the parameter is used
 		assertArrayEquals(
 				new int[]{1, 0},
 				CheckstylePlugin.countViolations(file, Set.of(), Set.of())
@@ -247,7 +270,6 @@ public class CheckstylePluginTest {
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// source is normally fixable, but passing empty set proves the parameter is used
 		assertArrayEquals(
 				new int[]{1, 0},
 				CheckstylePlugin.countViolations(file, Set.of(), Set.of())
@@ -310,10 +332,10 @@ public class CheckstylePluginTest {
 		final var xml = """
 				<file name="A.java">
 				<error line="1" severity="error" message="Use prefix increment." source="com.etk2000.checkstyle.PreferPrefixIncrementCheck"/>
-				<error line="2" severity="error" message="No trailing whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
-				<error line="3" severity="error" message="Use TABs for indentation, not spaces." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
+				<error line="2" severity="error" message="Line must not end with whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
+				<error line="3" severity="error" message="Indentation must use tabs, not spaces." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
 				<error line="4" severity="error" message="Covariant equals." source="com.puppycrawl.tools.checkstyle.checks.coding.CovariantEqualsCheck"/>
-				<error line="5" severity="error" message="No double blank lines." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpMultilineCheck"/>
+				<error line="5" severity="error" message="File must not contain consecutive blank lines." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpMultilineCheck"/>
 				<error line="6" severity="warning" message="prefer.var.local" source="com.etk2000.checkstyle.PreferVarCheck"/>
 				</file>
 				""";
@@ -350,7 +372,7 @@ public class CheckstylePluginTest {
 				<error line="2" severity="warning" message="prefer.var.local" source="com.etk2000.checkstyle.PreferVarCheck"/>
 				</file>
 				<file name="B.java">
-				<error line="1" severity="error" message="No trailing whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
+				<error line="1" severity="error" message="Line must not end with whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
 				</file>
 				""";
 		final var file = writeXml(xml);
@@ -387,7 +409,7 @@ public class CheckstylePluginTest {
 	public void countViolationsNonFixableRegexp() throws Exception {
 		final var xml = """
 				<file name="A.java">
-				<error line="1" severity="error" message="Use TABs for indentation, not spaces." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
+				<error line="1" severity="error" message="Indentation must use tabs, not spaces." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
 				</file>
 				""";
 		final var file = writeXml(xml);
@@ -419,7 +441,6 @@ public class CheckstylePluginTest {
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// regex requires /> (self-closing), so <error ...> is not matched
 		assertArrayEquals(
 				new int[]{0, 0},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
@@ -430,7 +451,7 @@ public class CheckstylePluginTest {
 	public void countViolationsNoSourceAttribute() throws Exception {
 		final var xml = """
 				<file name="A.java">
-				<error line="1" severity="error" message="No trailing whitespace."/>
+				<error line="1" severity="error" message="Line must not end with whitespace."/>
 				</file>
 				""";
 		final var file = writeXml(xml);
@@ -459,11 +480,10 @@ public class CheckstylePluginTest {
 		final var xml = """
 				<file name="A.java">
 				<error line="1" severity="warning" message="prefer.var.local" source="com.etk2000.checkstyle.PreferVarCheck"/>
-				<error line="2" severity="warning" message="No trailing whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
+				<error line="2" severity="warning" message="Line must not end with whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// both from fixable checks but warning severity, so not counted as fixable
 		assertArrayEquals(
 				new int[]{2, 0},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
@@ -474,9 +494,9 @@ public class CheckstylePluginTest {
 	public void countViolationsRegexpOnly() throws Exception {
 		final var xml = """
 				<file name="A.java">
-				<error line="1" severity="error" message="No trailing whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
-				<error line="2" severity="error" message="No double blank lines." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpMultilineCheck"/>
-				<error line="3" severity="error" message="No blank line before closing brace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpMultilineCheck"/>
+				<error line="1" severity="error" message="Line must not end with whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
+				<error line="2" severity="error" message="File must not contain consecutive blank lines." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpMultilineCheck"/>
+				<error line="3" severity="error" message="Closing brace must not be preceded by a blank line." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpMultilineCheck"/>
 				</file>
 				""";
 		final var file = writeXml(xml);
@@ -490,8 +510,8 @@ public class CheckstylePluginTest {
 	public void countViolationsSameMessageMixedSeverity() throws Exception {
 		final var xml = """
 				<file name="A.java">
-				<error line="1" severity="error" message="No trailing whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
-				<error line="2" severity="warning" message="No trailing whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
+				<error line="1" severity="error" message="Line must not end with whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
+				<error line="2" severity="warning" message="Line must not end with whitespace." source="com.puppycrawl.tools.checkstyle.checks.regexp.RegexpSinglelineCheck"/>
 				</file>
 				""";
 		final var file = writeXml(xml);
@@ -510,7 +530,6 @@ public class CheckstylePluginTest {
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// only the error-severity violation is fixable
 		assertArrayEquals(
 				new int[]{2, 1},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
@@ -521,12 +540,10 @@ public class CheckstylePluginTest {
 	public void countViolationsSourceAndMessageBothFixable() throws Exception {
 		final var xml = """
 				<file name="A.java">
-				<error line="1" severity="error" message="No trailing whitespace." source="com.etk2000.checkstyle.PreferPrefixIncrementCheck"/>
+				<error line="1" severity="error" message="Line must not end with whitespace." source="com.etk2000.checkstyle.PreferPrefixIncrementCheck"/>
 				</file>
 				""";
 		final var file = writeXml(xml);
-		// source matches fixable names, so fixable is incremented once via source;
-		// message also matches fixable messages but the else-branch is not reached
 		assertArrayEquals(
 				new int[]{1, 1},
 				CheckstylePlugin.countViolations(file, FIXABLE_NAMES, FIXABLE_MESSAGES)
@@ -548,13 +565,6 @@ public class CheckstylePluginTest {
 		);
 	}
 
-	/**
-	 * Severity for custom checks is single-sourced in the check code (via
-	 * {@code AbstractAstCheck.logWarning}), so no custom-check module in
-	 * checkstyle.xml may set a {@code severity} property. Guards against
-	 * reintroducing a config severity that would silently diverge from the
-	 * code (regexp and other built-in modules may still set severity).
-	 */
 	@Test
 	public void customCheckModulesDeclareNoSeverity() throws Exception {
 		assertNoCustomCheckDeclaresProperty(
@@ -563,13 +573,6 @@ public class CheckstylePluginTest {
 		);
 	}
 
-	/**
-	 * Custom checks are exercised only at their default token set (their tests
-	 * use {@code getDefaultTokens}), so no custom-check module in checkstyle.xml
-	 * may narrow or override the token set with a {@code tokens} property. Guards
-	 * against a config token override silently running a check at a token set no
-	 * test covers (built-in modules like RightCurly may still set tokens).
-	 */
 	@Test
 	public void customCheckModulesDeclareNoTokens() throws Exception {
 		assertNoCustomCheckDeclaresProperty(
@@ -597,44 +600,30 @@ public class CheckstylePluginTest {
 	}
 
 	/**
-	 * Verifies that every fixable regexp module ID in {@link FixableCheckNames#MODULE_IDS}
-	 * has its message in {@link FixableCheckNames#FIXABLE_MESSAGES}, by parsing checkstyle.xml.
+	 * countViolations compares the report's message attribute to these constants verbatim, but the
+	 * report holds the text after MessageFormat (quotes, braces) and XML escaping (quotes, ampersand,
+	 * angle brackets), so a message carrying any of those would silently stop counting as fixable.
 	 */
 	@Test
-	public void fixableMessagesSyncWithCheckstyleXml() throws Exception {
-		final String xml;
-		try (var in = CheckstylePlugin.class.getResourceAsStream("/com/etk2000/checkstyle/checkstyle.xml")) {
-			assertNotNull(in);
-			xml = new String(in.readAllBytes());
-		}
+	public void fixableMessagesHaveNoCharactersTheReportRewrites() {
+		for (var message : FIXABLE_MESSAGES)
+			assertTrue(message.chars().noneMatch(c -> "\"&'<>{}".indexOf(c) >= 0), message);
+	}
 
-		// extract id/message pairs from regexp modules in checkstyle.xml
+	@Test
+	public void fixableMessagesSyncWithCheckstyleXml() throws Exception {
 		final var messagesFromXml = new HashSet<String>();
-		final var moduleMatcher = MODULE_PATTERN.matcher(xml);
-		while (moduleMatcher.find()) {
-			final var body = moduleMatcher.group(1);
-			final var idMatcher = ID_PATTERN.matcher(body);
-			final var messageMatcher = MSG_PATTERN.matcher(body);
-			if (idMatcher.find() && messageMatcher.find()) {
-				final var id = idMatcher.group(1);
-				if (FixableCheckNames.MODULE_IDS.contains(id))
-					messagesFromXml.add(messageMatcher.group(1));
-			}
+		for (var entry : regexpMessagesById(shippedConfigXml()).entrySet()) {
+			if (FixableCheckNames.MODULE_IDS.contains(entry.getKey()))
+				messagesFromXml.add(entry.getValue());
 		}
 
 		assertEquals(FixableCheckNames.FIXABLE_MESSAGES, messagesFromXml);
 	}
 
-	/**
-	 * Verifies that the fixer's allowedMethods for PreferVarCheck matches checkstyle.xml.
-	 */
 	@Test
 	public void fixerAllowedMethodsSyncWithCheckstyleXml() throws Exception {
-		final String xml;
-		try (var in = CheckstylePlugin.class.getResourceAsStream("/com/etk2000/checkstyle/checkstyle.xml")) {
-			assertNotNull(in);
-			xml = new String(in.readAllBytes());
-		}
+		final var xml = shippedConfigXml();
 
 		final var moduleMatcher = PREFER_VAR_MODULE_PATTERN.matcher(xml);
 		assertTrue(moduleMatcher.find(), "PreferVarCheck module not found in checkstyle.xml");
@@ -673,6 +662,21 @@ public class CheckstylePluginTest {
 	}
 
 	@Test
+	public void fixTasksGetTheCheckstyleConfigDirectory() throws Exception {
+		final var projectDir = Files.createDirectory(tempDir.resolve("configDirectoryProject")).toFile();
+		final var project = ProjectBuilder.builder().withProjectDir(projectDir).build();
+		project.getConfigurations().create("compileOnly");
+		new CheckstylePlugin().apply(project);
+
+		final var expected = project.getExtensions().getByType(CheckstyleExtension.class).getConfigDirectory().get().getAsFile();
+		for (var name : List.of("checkstyleFix", "checkstyleFixHint", "checkstyleFixTest")) {
+			final var task = (CheckstyleFixTask) project.getTasks().findByName(name);
+			assertNotNull(task, name);
+			assertEquals(expected, task.getConfigDirectory().get().getAsFile(), name);
+		}
+	}
+
+	@Test
 	public void hintTaskRegisteredAsDryRun() throws Exception {
 		final var projectDir = Files.createDirectory(tempDir.resolve("hintProject")).toFile();
 		final var project = ProjectBuilder.builder().withProjectDir(projectDir).build();
@@ -696,6 +700,49 @@ public class CheckstylePluginTest {
 		final var task = (CheckstyleFixTask) project.getTasks().findByName("checkstyleFixHint");
 		assertNotNull(task);
 		assertTrue(task.getTestSource().isPresent());
+	}
+
+	/**
+	 * No file in the tree imports {@code AstResolve} from the fix package, so {@code check} alone
+	 * never evaluates the rule and a typo in the subpackage nesting or the class name would leave a
+	 * silent no-op behind a green build.
+	 */
+	@Test
+	public void importControlBarsAstResolveFromTheFixPackage() throws Exception {
+		final var rule = new File("config/checkstyle/import-control.xml");
+		assertTrue(rule.isFile(), "rule file not found at " + rule.getAbsolutePath());
+
+		for (var barred : new String[]{
+				"import com.etk2000.checkstyle.ast.AstResolve;",
+				"import static com.etk2000.checkstyle.ast.AstResolve.resolveVariableType;"
+		}) {
+			final var events = BaseCheckTest.runCheckInline(
+					ImportControlCheck.class,
+					"package com.etk2000.checkstyle.gradle.fix;\n" + barred + "\nclass T {}",
+					"file",
+					rule.getPath()
+			);
+			assertEquals(1, events.size(), barred);
+			assertTrue(
+					events.getFirst().getMessage().contains("AstResolve"),
+					"message must name the barred class: " + events.getFirst().getMessage()
+			);
+		}
+
+		// PreferStaticImportConstantFixer depends on AstText staying reachable from the fix package
+		assertTrue(BaseCheckTest.runCheckInline(
+				ImportControlCheck.class,
+				"package com.etk2000.checkstyle.gradle.fix;\nimport com.etk2000.checkstyle.ast.AstText;\nclass T {}",
+				"file",
+				rule.getPath()
+		).isEmpty());
+
+		assertTrue(BaseCheckTest.runCheckInline(
+				ImportControlCheck.class,
+				"package com.etk2000.checkstyle;\nimport com.etk2000.checkstyle.ast.AstResolve;\nclass T {}",
+				"file",
+				rule.getPath()
+		).isEmpty());
 	}
 
 	@Test
@@ -723,6 +770,39 @@ public class CheckstylePluginTest {
 	@Test
 	public void selectFixTaskNameTestOnly() {
 		assertEquals("checkstyleFixTest", CheckstylePlugin.selectFixTaskName(0, 3));
+	}
+
+	/**
+	 * The plugin extracts only {@code checkstyle.xml} and points {@code config_loc} at the
+	 * consumer's own {@code config/checkstyle}, so any {@code ${config_loc}} reference the shipped
+	 * config makes must tolerate that directory being empty.
+	 */
+	@Test
+	public void shippedConfigLoadsWithAnEmptyConfigLoc() throws Exception {
+		final var emptyConfigLoc = Files.createDirectory(tempDir.resolve("empty-config-loc"));
+		final var properties = new Properties();
+		properties.setProperty("config_loc", emptyConfigLoc.toString());
+		properties.setProperty("minSdk", "35");
+
+		final var shipped = CheckstylePlugin.class.getResource("/com/etk2000/checkstyle/checkstyle.xml");
+		assertNotNull(shipped);
+		final var config = ConfigurationLoader.loadConfiguration(
+				new InputSource(shipped.toExternalForm()),
+				new PropertiesExpander(properties),
+				ConfigurationLoader.IgnoredModulesOptions.EXECUTE
+		);
+		assertEquals("Checker", config.getName());
+
+		// configure(), not just loadConfiguration(): a module whose file property points at a
+		// missing path parses fine and fails when the module is instantiated
+		final var checker = new Checker();
+		try {
+			checker.setModuleClassLoader(getClass().getClassLoader());
+			checker.configure(config);
+		}
+		finally {
+			checker.destroy();
+		}
 	}
 
 	@Test
@@ -839,6 +919,27 @@ public class CheckstylePluginTest {
 		final var version = props.getProperty("checkstyle.version");
 		assertNotNull(version);
 		assertTrue(version.matches("\\d+\\.\\d+(\\.\\d+)?"));
+	}
+
+	@Test
+	public void testResourcesRegexpMessagesSyncWithCheckstyleXml() throws Exception {
+		final var shipped = regexpMessagesById(shippedConfigXml());
+		assertEquals(
+				Set.of(
+						"BlankLineAfterBreak",
+						"NoBlankLineAfterClassBrace",
+						"NoBlankLineBeforeClosingBrace",
+						"NoDoubleBlankLines",
+						"NoSpaceIndent",
+						"NoTrailingNewline",
+						"NoTrailingWhitespace"
+				),
+				shipped.keySet()
+		);
+		assertEquals(
+				shipped,
+				regexpMessagesById(Files.readString(Path.of("config", "checkstyle", "checkstyle-test-resources.xml")))
+		);
 	}
 
 	private File writeXml(String body) throws Exception {

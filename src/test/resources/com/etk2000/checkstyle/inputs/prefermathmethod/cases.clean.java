@@ -44,6 +44,26 @@ class InputPreferMathMethodClean {
 		return r;
 	}
 
+	int ifBranchIsBreak(int a, int b) {
+		var r = 0;
+		for (var i = 0; i < a; ++i) {
+			if (a > b)
+				break;
+			else
+				r = b;
+		}
+		return r;
+	}
+
+	int ifBranchIsChainedAssign(int a, int b, int s) {
+		int r;
+		if (a > b)
+			r = s = a;
+		else
+			r = s = b;
+		return r + s;
+	}
+
 	int ifBranchIsLoop(int a, int b) {
 		var r = 0;
 		if (a > b) {
@@ -67,6 +87,15 @@ class InputPreferMathMethodClean {
 			throw new RuntimeException();
 		else
 			throw new IllegalStateException();
+	}
+
+	int ifCastOperand(double x, int b) {
+		final int r;
+		if ((int) x > b)
+			r = (int) x;
+		else
+			r = b;
+		return r;
 	}
 
 	int ifCompoundAssignDifferentOps(int r, int a, int b) {
@@ -142,6 +171,12 @@ class InputPreferMathMethodClean {
 		return r;
 	}
 
+	int ifEmptyStatementBody(int a, int b) {
+		if (a > b)
+			; // deliberately nothing
+		return b;
+	}
+
 	int ifEmptyTrueBlock(int a, int b) {
 		if (a > b) {}
 		else {
@@ -189,6 +224,13 @@ class InputPreferMathMethodClean {
 		return r;
 	}
 
+	int ifInitOverwriteTargetNotLastDeclarator(int a, int b) {
+		int r, s = a;
+		if (a > b)
+			r = a;
+		return r + s;
+	}
+
 	int ifMultiStatementBlock(int a, int b) {
 		final int r;
 		if (a > b) {
@@ -211,6 +253,22 @@ class InputPreferMathMethodClean {
 		return r;
 	}
 
+	int ifNegativeZeroComparisonForAbs(int a) {
+		final int r;
+		if (a < -0)
+			r = -a;
+		else
+			r = a;
+		return r;
+	}
+
+	int ifNoElseAssignDeclWithoutInitializer(int a, int b) {
+		int r;
+		if (a > b)
+			r = a;
+		return r;
+	}
+
 	int ifNoElseCompoundAssign(int r, int a, int b) {
 		if (a > b)
 			r += a;
@@ -226,6 +284,15 @@ class InputPreferMathMethodClean {
 	int ifNonZeroComparisonForAbs(int a) {
 		final int r;
 		if (a < 1)
+			r = -a;
+		else
+			r = a;
+		return r;
+	}
+
+	int ifNonZeroHexForAbs(int a) {
+		final int r;
+		if (a < 0x1)
 			r = -a;
 		else
 			r = a;

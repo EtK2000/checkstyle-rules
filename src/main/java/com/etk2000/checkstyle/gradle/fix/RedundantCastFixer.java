@@ -30,24 +30,13 @@ import javax.annotation.Nullable;
  * </ul>
  * Both paths require the outer paren be preceded only by whitespace or
  * by a non-identifier non-{@code )}/{@code ]} character (otherwise it's
- * a method-call argument paren). When the outer paren is the first
- * non-whitespace on its own line, the prior-context scan walks back
- * across blank lines and prior-line trailing whitespace to find the
- * last non-whitespace char on the most recent non-blank prior line.
- * Source like {@code return\n((String) s).length();} is handled this
- * way. When no prior content exists at all (snippet starts at file
- * head), the strip proceeds. When the outer paren is directly adjacent
+ * a method-call argument paren). When the outer paren is directly adjacent
  * to a keyword (no whitespace), a space is inserted before the receiver
  * to keep the keyword tokenized.
  *
  * <p>Comments between the cast's close paren and the expression are
  * preserved: {@code (String) /* note *\/ null} becomes
  * {@code /* note *\/ null}.
- *
- * <p>Paren matching is literal- and comment-aware: parens inside string
- * literals, text blocks, char literals, line comments, and block comments
- * do not affect the depth count. This prevents source corruption on
- * inputs like {@code ((String) "x)y").length()}.
  *
  * <p>Bails (returns {@link SkipResult}) when the cast spans multiple
  * lines or has no expression on the same line after the close paren.
@@ -162,13 +151,13 @@ class RedundantCastFixer implements CheckstyleFixer {
 
 		final var castClose = JavaLineScanner.matchingCloseParen(line, column);
 		if (castClose < 0)
-			return new SkipResult("multi-line-cast");
+			return new SkipResult(SkipMessages.REDUNDANT_CAST_SKIP_MULTILINE);
 
 		var exprStart = castClose + 1;
 		while (exprStart < line.length() && Character.isWhitespace(line.charAt(exprStart)))
 			++exprStart;
 		if (exprStart >= line.length())
-			return new SkipResult("malformed-cast-no-expression");
+			return new SkipResult(SkipMessages.REDUNDANT_CAST_SKIP_MALFORMED);
 
 		var outerOpen = -1;
 		for (var i = column - 1; i >= 0; --i) {

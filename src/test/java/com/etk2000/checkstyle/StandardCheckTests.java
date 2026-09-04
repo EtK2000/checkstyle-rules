@@ -18,13 +18,15 @@ import com.puppycrawl.tools.checkstyle.checks.modifier.RedundantModifierCheck;
 import org.junit.jupiter.api.DynamicNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -102,7 +104,7 @@ public class StandardCheckTests {
 			new Entry(ClassStructureOrderCheck.class),
 			new Entry(ConstructorAssignmentOrderCheck.class, true),
 			new Entry(ControlFlowBracesCheck.class, true),
-			new Entry(EmptyBodyCheck.class),
+			new Entry(EmptyBodyCheck.class, true),
 			new Entry(EmptySwitchCheck.class),
 			new Entry(ExplicitInitializationCheck.class, true),
 			new Entry(FieldConsolidationCheck.class, true),
@@ -125,7 +127,7 @@ public class StandardCheckTests {
 			new Entry(PreferCollectionInterfaceCheck.class, true),
 			new Entry(PreferDirectBooleanReturnCheck.class, true),
 			new Entry(PreferDoWhileCheck.class, true),
-			new Entry(PreferExactAssertionCheck.class, true, List.of("junit4", "junit4wildcard", "junit5", "junit5wildcard", "mixedimports", "nonstaticj4withj5static", "nostaticimport", "typewildcard", "unknownreceiver")),
+			new Entry(PreferExactAssertionCheck.class, true, List.of("bothframeworks", "commentimports", "junit4", "junit4wildcard", "junit5", "junit5wildcard", "lookalikeexact", "lookalikefqn", "lookalikej4", "lookalikej5", "lookalikewildcard", "mixedimports", "nonstaticj4withj5static", "nostaticimport", "typewildcard", "unknownreceiver", "wrapfqn", "wrapsemi", "wrapstatic")),
 			new Entry(PreferImportCheck.class, true),
 			new Entry(PreferLambdaCheck.class),
 			new Entry(PreferLiteralSuffixCheck.class, true),
@@ -145,13 +147,24 @@ public class StandardCheckTests {
 			new Entry(PreferSpecificApiCheck.class, true, Map.of("minSdk", "35"), List.of("junit5")),
 			new Entry(PreferStandardCharsetsCheck.class, true, Map.of("minSdk", "18")),
 			new Entry(PreferStandardCharsetsCheck.class, true, Map.of("minSdk", "19")),
+			new Entry(PreferStandardCharsetsCheck.class, true, Map.of("minSdk", "32")),
+			new Entry(PreferStandardCharsetsCheck.class, true, Map.of("minSdk", "33")),
+			new Entry(PreferStandardCharsetsCheck.class, true, Map.of("minSdk", "34")),
+			new Entry(PreferStandardCharsetsCheck.class, true, Map.of("minSdk", "35")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minOccurrences", "1")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minSdk", "18"), List.of("objects")),
+			// exactly at MIN_SDK_OBJECTS: the fixed output matches the minSdk-29 row byte for byte,
+			// so this row pins the constant through the gated markers without a duplicate fixture
+			new Entry(PreferStaticImportCheck.class, false, Map.of("minSdk", "19"), List.of("objects")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minSdk", "2147483647"), List.of("chained", "collectors", "conflicts", "explicitshadow", "importconflict", "nestedtypeshadows", "objects", "predicate", "samefileshadow", "wildcard")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minSdk", "23"), List.of("collectors")),
+			// exactly at MIN_SDK_COLLECTORS
+			new Entry(PreferStaticImportCheck.class, false, Map.of("minSdk", "24"), List.of("collectors")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minSdk", "29"), List.of("objects")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minSdk", "30"), List.of("objects")),
 			new Entry(PreferStaticImportCheck.class, true, Map.of("minSdk", "32"), List.of("predicate")),
+			// exactly at MIN_SDK_PREDICATE_NOT
+			new Entry(PreferStaticImportCheck.class, false, Map.of("minSdk", "33"), List.of("predicate")),
 			new Entry(PreferStaticImportConstantCheck.class, true),
 			new Entry(PreferVarCheck.class, true),
 			new Entry(PreferVarCheck.class, false, Map.of("allowedMethods", "genericMethod")),
@@ -183,7 +196,9 @@ public class StandardCheckTests {
 		final var cleanFile = resolveVariantFile(topic, "cases.clean", propSuffix, fixtureKey);
 		if (cleanFile == null)
 			return;
-		assertTrue(BaseCheckTest.runCheck(e.checkClass(), topic + "/" + cleanFile, PropertiesUtil.propertiesAsArray(e.properties())).isEmpty());
+		final var violations = BaseCheckTest.runCheck(e.checkClass(), topic + "/" + cleanFile, PropertiesUtil.propertiesAsArray(e.properties()));
+		final var reported = violations.stream().map(v -> v.getLine() + ": " + v.getMessage()).toList();
+		assertTrue(violations.isEmpty(), "unexpected violations in " + cleanFile + ": " + reported);
 		if (e.hasFixer())
 			StandardFixerCases.assertCleanFixerFixedPoint(e.checkClass(), e.properties(), topic, cleanFile);
 	}
@@ -232,31 +247,23 @@ public class StandardCheckTests {
 		return stem + ".java";
 	}
 
-	/**
-	 * Every slice in {@code casesIn} carrying a {@code // multi-fix-expected}
-	 * directive, mapped to whether it also carries a {@code // skip-reason:} (which
-	 * wins over the directive in {@code StandardFixerCases.casesFor}).
-	 */
+	/** The name of every slice in {@code casesIn} carrying a {@code // multi-fix-expected} directive. */
 	@CheckReturnValue
 	@Nonnull
-	private static Map<String, Boolean> slicesWithMultiFixDirective(@Nonnull Path casesIn) throws IOException {
-		final var found = new LinkedHashMap<String, Boolean>();
+	private static Set<String> slicesWithMultiFixDirective(@Nonnull Path casesIn) throws IOException {
+		final var found = new LinkedHashSet<String>();
 		String current = null;
 		var sawDirective = false;
-		var sawSkipReason = false;
 		for (var line : Files.readAllLines(casesIn)) {
 			final var trimmed = line.trim();
 			if (trimmed.startsWith(CASE_MARKER)) {
 				current = trimmed.substring(CASE_MARKER.length(), trimmed.length() - " ===".length()).trim();
 				sawDirective = false;
-				sawSkipReason = false;
 			}
 			else if (trimmed.startsWith("// multi-fix-expected"))
 				sawDirective = true;
-			else if (trimmed.startsWith("// skip-reason:"))
-				sawSkipReason = true;
 			else if (trimmed.equals("// === end ===") && current != null && sawDirective)
-				found.put(current, sawSkipReason);
+				found.add(current);
 		}
 		return found;
 	}
@@ -293,7 +300,7 @@ public class StandardCheckTests {
 	 * topic directory holding {@code cases.*.java} fixtures must either have an
 	 * {@code ENTRIES} row or be declared in {@link #NON_CHECK_CASES_TOPICS}. A
 	 * new topic added to disk without registering it fails here, as does a
-	 * stale or redundant allowlist entry.
+	 * stale or redundant whitelist entry.
 	 */
 	@Test
 	public void everyCasesTopicIsRegistered() throws IOException {
@@ -337,9 +344,9 @@ public class StandardCheckTests {
 				final var casesIn = topicDir.resolve("cases.in.java");
 				if (!Files.exists(casesIn))
 					continue;
-				for (var slice : slicesWithMultiFixDirective(casesIn).entrySet()) {
+				for (var slice : slicesWithMultiFixDirective(casesIn)) {
 					if (!withFixer.contains(topic))
-						issues.add(topic + "/" + slice.getKey() + ": topic has no fixer, so no fix-multi test can run");
+						issues.add(topic + "/" + slice + ": topic has no fixer, so no fix-multi test can run");
 				}
 			}
 		}
@@ -373,6 +380,7 @@ public class StandardCheckTests {
 			fail("ENTRIES must be sorted alphabetically by container label: " + String.join("; ", issues));
 	}
 
+	@Execution(ExecutionMode.CONCURRENT)
 	@TestFactory
 	public Stream<DynamicNode> tests() {
 		return ENTRIES.stream().flatMap(e -> {

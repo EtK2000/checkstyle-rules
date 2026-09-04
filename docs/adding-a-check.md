@@ -1,35 +1,24 @@
 # Adding a New Check
 
-How to add a custom checkstyle rule to the plugin.
-
-## Structure
-
-A check has three parts: the check class, message key, and test resources.
-
 ## 1. Check class
 
-In `src/main/java/com/etk2000/checkstyle/`, create a public class extending `AbstractCheck`:
+In `src/main/java/com/etk2000/checkstyle/`, create a public class extending one of three bases.
+Pick the narrowest that fits:
+
+| Base | Use when | Gives you |
+| ---- | -------- | --------- |
+| `AbstractAstCheck` | the default | `getAcceptableTokens`/`getRequiredTokens` delegating to `getDefaultTokens`, plus `logWarning` |
+| `AbstractMinSdkCheck` | the check suggests an API that needs a minimum Android API level | the reflective `minSdk` property and `minSdkAtLeast(int)` |
+| `AbstractResolvingCheck` | the check resolves simple type names against the file's imports or package | a per-file import/package scope, `resolve(String)` (memoized for the file) and `receiverTypeName(DetailAST)` |
 
 ```java
-public class MyNewCheck extends AbstractCheck {
+public class MyNewCheck extends AbstractAstCheck {
     private static final String MSG_KEY = "my.new.violation";
-
-    @Nonnull
-    @Override
-    public int[] getAcceptableTokens() {
-        return getDefaultTokens();
-    }
 
     @Nonnull
     @Override
     public int[] getDefaultTokens() {
         return new int[]{TokenTypes.METHOD_CALL}; // tokens to visit
-    }
-
-    @Nonnull
-    @Override
-    public int[] getRequiredTokens() {
-        return getDefaultTokens();
     }
 
     @Override
@@ -41,8 +30,14 @@ public class MyNewCheck extends AbstractCheck {
 }
 ```
 
-All three token methods must return the same array. `visitToken()` is called once per matching
-token in the AST.
+`AbstractResolvingCheck` differs in two ways that are easy to get wrong:
+
+- Its `beginTree`, `visitToken` and `finishTree` are `final`. Override `beginFile(rootAST)` for
+  per-file setup, `finishFile(rootAST)` for teardown (it runs while the scope is still populated),
+  and `visitScopedToken(ast)` instead of `visitToken`.
+- It reads the scope off the compilation unit's own children before `beginFile` runs, so
+  `resolve` and `receiverTypeName` already answer there, and do **not** list `IMPORT` or
+  `PACKAGE_DEF` in `getDefaultTokens()`. `AbstractResolvingCheckTest` fails the build if you do.
 
 ### Choosing tokens
 
@@ -62,53 +57,61 @@ Use Checkstyle's `-t` flag or print the AST in a test to explore the tree struct
 - Use `@Nonnull`/`@Nullable` on all non-primitive parameters
 - Static methods before instance methods, sorted alphabetically
 - For complex receiver type resolution, use `ReflectionUtil`
-- For AST traversal utilities, use `AstUtil`
+- For AST traversal utilities, use the `com.etk2000.checkstyle.ast` package
 
-### AstUtil reference
+### The `ast` package
 
-Common utilities in `AstUtil` (check before writing your own):
+Four siblings, so a check loads only the half it needs. `ast/package-info.java` is the routing
+table; `tools/outline AstQuery` lists any one of them without reading it.
 
-- `displayText(DetailAST)`: human-readable text for messages. Handles operators, dots, brackets,
-  increment/decrement. Use for violation message construction
-- `exprText(DetailAST)`: structural text for equality comparison. Concatenates leaf text without
-  operators. Use for comparing whether two AST expressions refer to the same thing
-- `isPureExpression(DetailAST)`: checks if an expression has no side effects (identifiers, field
-  accesses, literals, array accesses, unary operators). Use for gating transformations that
+| Class | Owns | Reach for it when |
+| ----- | ---- | ----------------- |
+| `AstText` | names, types, annotations, expressions as source text | you need the text a node spells |
+| `AstDisplay` | `displayText` alone | you are building a violation message that quotes an expression |
+| `AstQuery` | navigation and type-free predicates | you are walking or classifying nodes |
+| `AstResolve` | same-file and reflective type resolution | you need to know what type a name has |
+
+Dependencies run one way: `AstResolve -> AstQuery -> AstText`, and `AstDisplay -> AstText`.
+`AstResolve` is the only one that touches `ReflectionUtil`.
+
+Check these before writing your own:
+
+- `AstDisplay.displayText(DetailAST)`: human-readable text for messages. Handles operators, dots,
+  brackets, increment/decrement. Use for violation message construction
+- `AstText.exprText(DetailAST)`: structural text for equality comparison. Concatenates leaf text
+  without operators. Use for comparing whether two AST expressions refer to the same thing
+- `AstQuery.isPureExpression(DetailAST)`: checks if an expression has no side effects (identifiers,
+  field accesses, literals, array accesses, unary operators). Use for gating transformations that
   require operand purity
-- `isZeroLiteral(DetailAST)`: checks if a numeric literal is zero. Handles all Java literal forms
-  (hex, binary, underscore, exponent, suffixes). Use instead of comparing `getText()` against `"0"`
-- `resolveVariableType(DetailAST, String)`: finds the declared type of a variable by walking up
-  scopes. Returns null for primitives and `var`
-- `getReceiverTypeName(DetailAST)`: finds the type of a method call's receiver
-- `hasSuppressWarnings(DetailAST, String)`: checks if a MODIFIERS node contains
+- `AstQuery.isZeroLiteral(DetailAST)`: checks if a numeric literal is zero. Handles all Java literal
+  forms (hex, binary, underscore, exponent, suffixes). Use instead of comparing `getText()` against
+  `"0"`
+- `AstQuery.hasSuppressWarnings(DetailAST, String)`: checks if a MODIFIERS node contains
   `@SuppressWarnings` with a specific key. Use for per-type suppression support (see
   `docs/suppress-warnings.md`)
+- `AstResolve.resolveVariableType(DetailAST, String)`: finds the declared type of a variable by
+  walking up scopes. Returns null for primitives and `var`
+- `AbstractResolvingCheck.receiverTypeName(DetailAST)`: the type of a method call's receiver,
+  resolved through the file's imports and package. Extend `AbstractResolvingCheck` and call this
+  rather than reaching into `AstResolve` yourself
 
-When adding general-purpose utilities, add them to `AstUtil` with tests in `AstUtilTest` rather
-than keeping them private in the check class. This prevents duplication when another check needs
-the same logic.
+When adding a general-purpose utility, put it in whichever sibling owns that concern, with tests in
+the matching `Ast*Test`, rather than keeping it private in the check class. This prevents
+duplication when another check needs the same logic.
 
 ### MinSdk gating
 
-If the suggested API requires a minimum Android SDK version, accept a `minSdk` property:
+If the suggested API requires a minimum Android SDK version, extend `AbstractMinSdkCheck` (or
+`AbstractResolvingCheck`, which extends it). It owns the `minSdk` property and its `final` setter,
+which rejects a non-positive level. Don't declare your own. Gate each suggestion on a named
+constant whose Javadoc says which API it unlocks:
 
 ```java
-private int minSdk = Integer.MAX_VALUE;
+private static final int MIN_SDK_STANDARD_CHARSETS = 19;
 
-/**
- * Sets the minimum SDK version for the target platform.
- * <p>Called by Checkstyle via reflection when {@code minSdk} is set in the config.</p>
- */
-@SuppressWarnings("unused")
-public void setMinSdk(int minSdk) {
-    this.minSdk = minSdk;
-}
+if (minSdkAtLeast(MIN_SDK_STANDARD_CHARSETS))
+    log(...);
 ```
-
-The `@SuppressWarnings("unused")` documents that Checkstyle calls the setter via reflection. Add
-Javadoc explaining which APIs the gate affects.
-
-And check it before logging: `if (minSdk >= REQUIRED_API) log(...)`.
 
 Configure the property in **both** XML files:
 
@@ -128,7 +131,6 @@ Configure the property in **both** XML files:
 
 Forgetting the test-resources config means the check runs on test resource files with
 `minSdk = Integer.MAX_VALUE` (all gates open), which may not match the intended behavior.
-```
 
 ## 2. Message key
 
@@ -191,29 +193,27 @@ shortcut (they bypass `assertCheckMatchesMarkers`, so drifted markers
 and missing minSdk predicates go undetected).
 
 ```java
-new Entry(MyNewCheck .class),                       // check-only
-new
-
-Entry(MyNewCheck .class, /*hasFixer*/ true)     // check + per-slice fixer tests
+new Entry(MyNewCheck.class),                     // check-only
+new Entry(MyNewCheck.class, /*hasFixer*/ true)   // check + per-slice fixer tests
 ```
 
 Entries must stay alphabetically sorted (a dedicated test in the same class
 enforces this). The auto-pipeline expands each entry to:
 
-- `<CheckClass> > clean` — runs the check against `cases.clean.java`,
+- `<CheckClass> > clean`: runs the check against `cases.clean.java`,
   asserts zero violations. When `hasFixer=true` it also runs the entry's own
   fixer over the clean file to a fixed point and asserts it is unchanged (the
   file is clean for that check/fixer, so its fixer must be a no-op).
-- `<CheckClass> > violations` — runs the check against `cases.in.java`,
+- `<CheckClass> > violations`: runs the check against `cases.in.java`,
   matches every `// violation:` marker 1:1 against the check's output via
   `BaseCheckTest.assertCheckMatchesMarkers`.
-- `<CheckClass> > <slice_name> > violations` — same matcher run against
+- `<CheckClass> > <slice_name> > violations`: same matcher run against
   each `// === case: NAME ===` slice (with the file prefix prepended) so
   type-resolving checks see the right import context.
-- `<CheckClass> > <slice_name> > fix` — applies the fixer to each
+- `<CheckClass> > <slice_name> > fix`: applies the fixer to each
   single-violation slice and asserts the post-fix output equals the
   matching Fixed slice. Emitted only when `hasFixer=true`.
-- `<CheckClass> > <slice_name> > imports-unchanged` — emitted only when
+- `<CheckClass> > <slice_name> > imports-unchanged`: emitted only when
   `hasFixer=true` AND the check is gated off under the entry's
   properties. Asserts the Fixed slice's imports equal the Violation
   slice's (no fix runs, so no diff allowed).
@@ -233,10 +233,8 @@ When a check uses `minSdk` gating, register **every** variant (both
 gated-on and gated-off):
 
 ```java
-new Entry(MyNewCheck .class, true,Map.of("minSdk", "18")),  // gated off
-        new
-
-Entry(MyNewCheck .class, true,Map.of("minSdk", "19")),  // gated on
+new Entry(MyNewCheck.class, true, Map.of("minSdk", "18")),  // gated off
+new Entry(MyNewCheck.class, true, Map.of("minSdk", "19")),  // gated on
 ```
 
 Marker predicates are mandatory under variant registration: every
@@ -247,8 +245,7 @@ under the gated-off variant. Without the predicate the
 "expected N, got 0". For each variant, add a sibling
 `cases.out.<variant>.java` holding the expected post-fix output (for the
 gated-off variant the Fixed slices are byte-identical to the Violation
-slices). See "MinSdk-gated checks: variants and marker predicates" in
-`docs/testing.md`.
+slices).
 
 Underneath, `BaseCheckTest.runCheck(MyNewCheck.class, "input.java", "minSdk", "19")`
 is the raw primitive; `StandardCheckTests` calls it for you with the
@@ -268,6 +265,9 @@ Run `./gradlew check`. This checks:
 
 Add the check to the appropriate table in `README.md` (custom checks, regex rules, or
 built-in checks).
+
+If you also added a doc under `docs/`, add a hook line for it to [docs/README.md](README.md) in the
+same commit. That index is the only cheap way to find prior art across 150+ docs.
 
 ## 8. Register suppression for test resources
 
@@ -306,17 +306,29 @@ existing suppression keys.
 - **AST structure varies by context**: see `docs/ast-structure.md` for the full reference.
   Always verify AST structure empirically.
 
-- **`AstUtil.typeText()` returns empty string for primitives**: if your check logs type names in
+- **`AstText.typeText()` returns empty string for primitives**: if your check logs type names in
   violation messages (e.g. "use X instead of '{0}'"), handle primitive types explicitly. The TYPE
   node for `int`, `boolean`, etc. contains keyword tokens (`LITERAL_INT`, `LITERAL_BOOLEAN`), not
-  `IDENT` tokens, so `AstUtil.typeText()` returns `""`. Use a switch on the child token type to
+  `IDENT` tokens, so `AstText.typeText()` returns `""`. Use a switch on the child token type to
   map to the primitive name.
 
-- **`DetailAST.getColumnNo()` is a raw char index, NOT tab-expanded**: it is the 0-based character
-  offset on the line (each tab counts as one char). Tab expansion applies only to the *reported*
-  violation column (`AuditEvent.getColumn()`), which the fixer harness converts back to a char index
-  via `CheckstyleFixAction.tabColumnToCharIndex` before matching it against `getColumnNo()`. So a
-  fixer can slice a raw line at `getColumnNo()` directly (see `JavaTernaryReformatter`).
+- **`DetailAST.getColumnNo()` is a code-point index, NOT a char index and NOT tab-expanded**: the
+  lexer counts a code-point stream, so a tab counts as one and a supplementary character (an emoji,
+  a CJK-extension or astral letter) counts as one where `String` counts two. Tab expansion applies
+  only to the *reported* violation column (`AuditEvent.getColumn()`), which the fix pipeline
+  converts to a char index via `CheckstyleFixAction.eventCharIndex` before any fixer sees it; a
+  fixer matching that against `getColumnNo()` converts it back with `LineText.columnOfCharIndex`.
+
+  An AST column may be compared against another AST position directly, but it **must** be
+  converted with `LineText.charIndexOfColumn` before it indexes a line, since `substring`, `charAt`
+  and `startsWith(s, col)` all index chars. Skipping the conversion reads early on any line containing
+  a supplementary character, which silently truncates a slice or lands an anchor check on the wrong
+  character. `PreferCollectionInterfaceCheck` (the span it hands its fixer) is the model to copy.
+  Note `charIndexOfColumn` answers `-1` for a column past the line's end; treat that as "refuse to
+  fix", never as a clamp.
+
+  Adding a char length to a code-point column mixes the units the same way: convert the token's
+  start first, then add `getText().length()`.
 
 - **Cross-check ALL files, not just representative ones**: when your check is related to another
   check (e.g., both handle annotations on parameters), cross-check EVERY test resource file from

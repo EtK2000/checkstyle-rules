@@ -151,7 +151,6 @@ public class SwitchCaseOrderCheck extends AbstractAstCheck {
 				text = text.substring(0, text.length() - 1);
 		}
 		else if (!text.isEmpty() && isHexLiteral(text)) {
-			// hex literals can only have L suffix
 			final var last = Character.toLowerCase(text.charAt(text.length() - 1));
 			if (last == 'l')
 				text = text.substring(0, text.length() - 1);
@@ -165,7 +164,6 @@ public class SwitchCaseOrderCheck extends AbstractAstCheck {
 				&& (text.charAt(2) == 'b' || text.charAt(2) == 'B'))
 			return -Long.parseLong(text.substring(3), 2);
 
-		// handle hex, octal via decode for integer types
 		try {
 			return Long.decode(text);
 		}
@@ -195,7 +193,7 @@ public class SwitchCaseOrderCheck extends AbstractAstCheck {
 			if (prevWasDefault && !isDefault) {
 				final var currentLabel = getFirstLabel(child);
 				if (!currentLabel.text.isEmpty())
-					log(child, MSG_ORDER, "Case", "default", currentLabel.text);
+					log(child, MSG_ORDER, "Case", currentLabel.text, "default");
 			}
 
 			if (!isDefault) {

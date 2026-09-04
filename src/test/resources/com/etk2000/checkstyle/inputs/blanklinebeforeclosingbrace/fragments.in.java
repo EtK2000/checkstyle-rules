@@ -60,6 +60,26 @@ content
 }
 // === end ===
 
+// === case: fix_blank_after_text_block_close ===
+// target: line=3 col=0
+class T {
+	String s = """
+		x
+		""";
+
+}
+// === end ===
+
+// === case: fix_blank_inside_block_comment ===
+// target: line=1 col=0
+class T {
+	/* note
+
+	}
+	*/
+}
+// === end ===
+
 // === case: last_line ===
 // target: col=0
 	int x;
@@ -69,4 +89,16 @@ content
 // target: col=0
 	int x;
 	int y;
+// === end ===
+
+// === case: skip_blank_inside_text_block ===
+// target: line=3 col=0
+class T {
+	String json = """
+		{
+			"a": 1
+
+		}
+		""";
+}
 // === end ===

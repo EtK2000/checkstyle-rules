@@ -387,12 +387,21 @@ If no empirical checks are needed, write "None — all findings resolved statica
 <one of:>
 - **CLEAN** — no findings at any severity AND no verification items outstanding. Include a brief summary of what was audited so the invoker can verify scope.
 - **CLEAN PENDING VERIFICATION** — no static findings, but N verification items are outstanding. The invoker must run them before treating the audit as complete.
-- **N findings (H: x, M: y, L: z)** — summary counts. List HIGH titles inline. Note if verification items are also outstanding.
+- **N findings (H: x, M: y, L: z)** — summary counts, derived by COUNTING the severity labels you actually emitted, after writing the findings list; never estimated while drafting. A tally that disagrees with the labels sends the reader back to count by hand and casts doubt on the rest of the report. List HIGH titles inline. Note if verification items are also outstanding.
 - **BLOCKED** — couldn't audit because <reason: file missing, scope unclear, external dependency I can't reason about>.
 
 ## Scope notes
 <anything that limited the audit: files you couldn't find, domains you skipped because they didn't apply, ambiguity about what the code is supposed to do. Also every positive observation, such as "this guard is correct" or "this closes a finding from a previous audit". Positives go HERE, never in the numbered findings list: a findings list padded with things that are already right hides the real ones.>
+
+## Handling
+- Show this report to the user.
+- HIGH: propose a concrete fix (file:line diff sketch); do NOT apply it.
+- MED/LOW: list them and ask which the user wants addressed.
+- `Patch:` blocks are pre-typed edits. List them in the summary so the user sees what would be applied; do not re-type or paraphrase them. Apply only after approval, one Edit per anchor, batched in a single turn — a patch is not permission to auto-apply.
+- WAIT for instructions before applying anything. Fixes applied between this report and stopping create new pending entries and another audit cycle.
 ```
+
+The Handling section is fixed text: reproduce it verbatim at the end of every report.
 
 A finding does not get downgraded or omitted because the vulnerable code predates the change under audit. "Pre-existing" is context worth stating in the finding, never a reason to lower its severity or drop it.
 

@@ -2,482 +2,746 @@ package com.etk2000.checkstyle.gradle.fix;
 
 import static com.etk2000.checkstyle.gradle.fix.LineLength.MAX_LINE_LENGTH;
 
-import com.etk2000.checkstyle.JavaLineScanner;
-import com.etk2000.checkstyle.JavaLineScanner.LexerState;
+import com.etk2000.checkstyle.FieldConsolidationCheck;
+import com.etk2000.checkstyle.FieldInitializers;
+import com.etk2000.checkstyle.FieldSortingCheck;
+import com.etk2000.checkstyle.LineColumns;
 import com.etk2000.checkstyle.LineText;
+import com.etk2000.checkstyle.SourceComments;
+import com.etk2000.checkstyle.SourceComments.Comment;
+import com.etk2000.checkstyle.SourceComments.LineCountWindows;
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstText;
+import com.etk2000.checkstyle.ast.DocComments;
 
-import org.jetbrains.annotations.VisibleForTesting;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+/**
+ * Folds the whole run of field declarations around a {@link FieldConsolidationCheck} violation
+ * into one declaration, in one rewrite read off the parse.
+ *
+ * <p>The merged declaration lists the run's declarators in the order FieldSorting wants among one
+ * declaration's names, or as written where FieldSorting is suppressed, so it needs no second pass
+ * to sort them. When that order is the source
+ * order and none of its names spans lines up to the {@code ,} or {@code ;} after it, the first
+ * declaration is kept as written up to its {@code ;}, except that C-style array brackets on its
+ * names move onto its type; otherwise only its part ahead of its first name is. Every other
+ * declarator follows as written, its initializer and the comments inside it included and its own
+ * brackets dropped, wrapped greedily at {@link LineLength#MAX_LINE_LENGTH} columns after a
+ * {@code ,}; one spanning several lines is joined onto one
+ * ({@link FieldConsolidationCheck#oneLineInitializer}). The first declaration's trailing comment
+ * stays trailing. Every other comment of the run, ahead of a later declaration, among the
+ * declarators or trailing them, moves above the merged declaration, joined into one line comment
+ * by {@link FieldRewriteVerifier#joinComments}; one repeating a comment the merged declaration
+ * keeps is dropped.
+ *
+ * <p>A run is skipped whole, never merged in part, when a comment to move spans several lines, when a comment left in place closes on a later declaration's line, when the first
+ * declaration's line opens inside a block comment that starts after other code (the moved comments
+ * would have no line of their own), when a tool directive moves, trails the first declaration,
+ * sits on the line the other names join or sits in a rebuilt declarator, when a
+ * {@linkplain SourceComments#isRangeDirective range directive} sits on a line of the run or
+ * counts lines reaching one of its declarations, or when
+ * {@link FieldRewriteVerifier} finds the rewrite changed more than the layout or moved a pair of
+ * fields that may not trade places. An event on a declaration with no partner ahead of it, left
+ * behind by a merge earlier in the pass, is stale.
+ */
 class FieldConsolidationFixer implements CheckstyleFixer {
-	private static final String SKIP_BLOCK_COMMENT = "block comment on the field declaration line";
-	private static final String SKIP_MIXED_ARRAY_BRACKETS = SkipMessages.get("field.consolidate.skip.mixed.array.brackets");
-	private static final String SKIP_MULTILINE_DECLARATION = SkipMessages.get("field.consolidate.skip.multiline");
-	private static final String SKIP_PREV_FIELD = "could not locate the preceding field declaration";
-	private static final String SKIP_TRAILING_CONTENT = SkipMessages.get("field.consolidate.skip.trailing.content");
+	/**
+	 * One run's merged declaration: the lines {@code out} that replace those from line {@code start}
+	 * to its first declaration's {@code ;} on {@code semiLine}, and each later declaration's first
+	 * line and the line past its last, {@code moved}, which leave. {@code end} is the line of the
+	 * run's last {@code ;}.
+	 */
+	private record Block(int start, int semiLine, int end, @Nonnull List<String> out, @Nonnull List<long[]> moved) implements Rendered {}
+
+	/** One declaration of a run: its declarators, and the positions of its first token and its {@code ;}. */
+	private record Declaration(@Nonnull List<DetailAST> declarators, long start, long semi) {}
+
+	/** The field declarators of the parse under {@code root}, by the line their name is on. */
+	private record FieldLines(@Nonnull DetailAST root, @Nonnull Map<Integer, List<DetailAST>> byLine) {}
+
+	/** A run that cannot be merged, and the skip reason why. */
+	private record Refused(@Nonnull String reason) implements Rendered {}
 
 	/**
-	 * The index just past the last bracket of the C-style array suffix the
-	 * declarator name ending at {@code from} carries, or {@code from} itself when
-	 * it carries none. Whitespace before and inside the suffix is tolerated
-	 * ({@code int alpha [];} is a legal declaration), but whitespace after the last
-	 * bracket is left to the caller, which reads it as the separator leading to the
-	 * next declarator or to the terminator.
+	 * The skip reason of each run of the buffer {@code lines} already refused or failing
+	 * verification, by the position of its first token, and the parse of it last seen,
+	 * {@code root}. Kept by content rather than by parse, since the verifier's own parses push the
+	 * buffer's out of the shared cache.
+	 */
+	private record Refusals(@Nonnull List<String> lines, @Nonnull DetailAST root, @Nonnull Map<Long, String> byStart) {}
+
+	/**
+	 * The {@link #runs} last found, the class body of the parse they were found in, the lines and
+	 * comments they were read with, the {@linkplain SourceComments#lineCountWindows lines counted}
+	 * by those comments, the runs' {@linkplain #declarations declarations}, the run each
+	 * declarator of a later declaration belongs to, and whether FieldSorting is suppressed in the
+	 * class body ({@link #fieldSortingSuppressed}), which keeps the fields in the order written.
+	 */
+	private record RunsMemo(
+			@Nonnull DetailAST objBlock,
+			@Nonnull LineColumns lines,
+			@Nonnull List<Comment> comments,
+			@Nonnull LineCountWindows lineCountWindows,
+			@Nonnull List<List<List<DetailAST>>> runs,
+			@Nullable List<List<Declaration>> declarations,
+			@Nonnull Map<DetailAST, Integer> laterRunOf,
+			boolean inOrder
+	) {}
+
+	/** What {@link #render} makes of one run. */
+	private sealed interface Rendered permits Block, Refused {}
+
+	private static final char BOM = 0xFEFF;
+	private static final String SKIP_CARRIED_COMMENT = SkipMessages.get("field.consolidate.skip.carried.comment");
+	private static final String SKIP_DIRECTIVE = SkipMessages.get("field.consolidate.skip.directive");
+	private static final String SKIP_DIRECTIVE_WIDENED = SkipMessages.get("field.consolidate.skip.directive.widened");
+	private static final String SKIP_MOVED_COMMENT = SkipMessages.get("field.consolidate.skip.moved.comment");
+	private static final String SKIP_PINNED = SkipMessages.get("field.consolidate.skip.pinned");
+	private static final String SKIP_RANGE_DIRECTIVE = SkipMessages.get("field.consolidate.skip.range.directive");
+	private static final String SKIP_STALE = SkipMessages.get("field.consolidate.skip.stale");
+	private static final String SKIP_UNVERIFIED = SkipMessages.get("field.consolidate.skip.unverified");
+	private static final ThreadLocal<FieldLines> FIELD_LINES = new ThreadLocal<>();
+	private static final ThreadLocal<Refusals> REFUSALS = new ThreadLocal<>();
+	private static final ThreadLocal<RunsMemo> RUNS_MEMO = new ThreadLocal<>();
+
+	/**
+	 * The rewrite of the lines from the first {@code blocks} start to the last one's end: each
+	 * block's merged declaration in place of its first declaration, its later declarations gone,
+	 * and every other line as it was. A later declaration leaves with the blank lines right above
+	 * it, so no blank line doubles up or ends up ahead of a closing brace.
 	 */
 	@CheckReturnValue
-	private static int declaratorBracketsEnd(@Nonnull String line, int from, int end) {
-		var bracketsEnd = from;
-		for (var pos = from; pos < end; ++pos) {
-			final var c = line.charAt(pos);
-			if (c == '[' || c == ']')
-				bracketsEnd = pos + 1;
-			else if (!Character.isWhitespace(c))
-				break;
-		}
-		return bracketsEnd;
-	}
-
-	@CheckReturnValue
 	@Nonnull
-	@VisibleForTesting
-	static List<LexerState> entryStates(@Nonnull List<String> lines) {
-		final var states = new ArrayList<LexerState>(lines.size());
-		var state = LexerState.NONE;
-		for (var line : lines) {
-			states.add(state);
-			state = JavaLineScanner.stateAfter(line, state);
-		}
-		return states;
-	}
-
-	@Nullable
-	private static String extractFieldNames(@Nonnull String line, int column) {
-		if (column < 0 || column >= line.length())
-			return null;
-		if (!Character.isJavaIdentifierStart(line.charAt(column)))
-			return null;
-
-		final var sb = new StringBuilder();
-		var pos = column;
-		while (pos < line.length()) {
-			if (!Character.isJavaIdentifierStart(line.charAt(pos)))
-				break;
-			final var nameStart = pos;
-			while (pos < line.length() && Character.isJavaIdentifierPart(line.charAt(pos)))
-				++pos;
-			sb.append(line, nameStart, pos);
-
-			pos = declaratorBracketsEnd(line, pos, line.length());
-
-			while (pos < line.length() && Character.isWhitespace(line.charAt(pos)))
-				++pos;
-
-			if (pos < line.length() && line.charAt(pos) == ',') {
-				sb.append(", ");
-				do ++pos;
-				while (pos < line.length() && Character.isWhitespace(line.charAt(pos)));
+	private static FixResult assemble(@Nonnull List<String> lines, @Nonnull List<Block> blocks) {
+		final var ordered = new ArrayList<>(blocks);
+		ordered.sort(Comparator.comparingInt(Block::start));
+		final var moved = new ArrayList<long[]>();
+		for (var block : ordered)
+			moved.addAll(block.moved());
+		moved.sort(Comparator.comparingLong(span -> span[0]));
+		final var start = ordered.getFirst().start();
+		final var end = ordered.stream().mapToInt(Block::end).max().orElseThrow();
+		final var out = new ArrayList<String>();
+		final var blanks = new ArrayList<String>();
+		var next = 0;
+		var line = start;
+		while (line <= end) {
+			final var source = lines.get(line - 1);
+			if (next < ordered.size() && ordered.get(next).start() == line) {
+				out.addAll(blanks);
+				blanks.clear();
+				out.addAll(ordered.get(next).out());
+				line = ordered.get(next).semiLine();
+				++next;
 			}
-			else
-				break;
-		}
-		var result = sb.toString();
-		if (result.endsWith(", "))
-			result = result.substring(0, result.length() - 2);
-		return result.isEmpty() ? null : result;
-	}
-
-	@CheckReturnValue
-	private static int findFieldNamesStart(@Nonnull String line, int semiIdx) {
-		var pos = semiIdx - 1;
-		while (true) {
-			// whitespace as well as brackets: a declarator's C-style suffix may sit
-			// away from its name (`int alpha [];`) as well as after the terminator
-			while (pos >= 0 && (line.charAt(pos) == '[' || line.charAt(pos) == ']' || Character.isWhitespace(line.charAt(pos))))
-				--pos;
-			if (pos < 0 || !Character.isJavaIdentifierPart(line.charAt(pos)))
-				break;
-			while (pos >= 0 && Character.isJavaIdentifierPart(line.charAt(pos)))
-				--pos;
-			var tempPos = pos;
-			while (tempPos >= 0 && Character.isWhitespace(line.charAt(tempPos)))
-				--tempPos;
-			if (tempPos >= 0 && line.charAt(tempPos) == ',') {
-				pos = tempPos - 1;
-				continue;
+			else if (holds(moved, line))
+				blanks.clear();
+			else if (source.isBlank())
+				blanks.add(source);
+			else {
+				out.addAll(blanks);
+				blanks.clear();
+				out.add(source);
 			}
-			break;
+			++line;
 		}
-		return pos + 1;
+		return new FixResult(start - 1, end - 1, out);
 	}
 
+	/**
+	 * Just past the last C-style array bracket after {@code declarator}'s name, or past the name
+	 * when it carries none.
+	 */
 	@CheckReturnValue
-	@VisibleForTesting
-	static int findFieldSemicolon(@Nonnull String line, @Nonnull LexerState state) {
-		return JavaLineScanner.stripCommentsAndStrings(line, state).indexOf(';');
-	}
-
-	@CheckReturnValue
-	private static int findFirstIdentStart(@Nonnull String line) {
-		for (var i = 0; i < line.length(); ++i) {
-			if (Character.isJavaIdentifierStart(line.charAt(i)))
-				return i;
+	private static long bracketsEnd(@Nonnull DetailAST declarator) {
+		final var ident = declarator.findFirstToken(TokenTypes.IDENT);
+		final var identStart = position(ident);
+		var end = endOf(ident);
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(declarator.findFirstToken(TokenTypes.TYPE));
+		while (!stack.isEmpty()) {
+			final var node = stack.pop();
+			if (!AstText.isImaginaryToken(node) && position(node) > identStart)
+				end = Math.max(end, endOf(node));
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+				stack.push(child);
 		}
-		return -1;
+		return end;
 	}
 
-	private static int findPrevFieldLine(@Nonnull List<String> lines, int lineIndex, @Nonnull List<LexerState> entryStates) {
-		for (var i = lineIndex - 1; i >= 0; --i) {
-			final var line = lines.get(i);
-			if (findFieldSemicolon(line, entryStates.get(i)) >= 0 || findTrailingComma(line, entryStates.get(i)) >= 0)
-				return i;
-			final var trimmed = line.trim();
-			if (!trimmed.startsWith("@") && !trimmed.isEmpty())
+	/**
+	 * The line comments moved above a declaration starting on {@code line} go above: {@code line},
+	 * or when a block comment opened on an earlier line closes on it ahead of the declaration, the
+	 * line that comment opens on, followed back the same way, since a comment put on {@code line}
+	 * would land inside it. -1 when that line holds code ahead of the comment, which the moved
+	 * comments would then be put above.
+	 */
+	@CheckReturnValue
+	private static int carriedCommentStart(@Nonnull LineColumns lines, @Nonnull List<Comment> comments, int line) {
+		var start = line;
+		var i = SourceComments.commentsFrom(comments, DocComments.position(start, 0)) - 1;
+		while (i >= 0 && DocComments.line(comments.get(i).end()) == start) {
+			var to = comments.get(i).start();
+			start = DocComments.line(to);
+			--i;
+			while (i >= 0 && DocComments.line(comments.get(i).end()) == start) {
+				if (!SourceComments.isBlank(lines, comments.get(i).end(), to))
+					return -1;
+				to = comments.get(i).start();
+				if (DocComments.line(to) != start)
+					break;
+				--i;
+			}
+			if (DocComments.line(to) == start && !SourceComments.isBlank(lines, DocComments.position(start, 0), to))
 				return -1;
 		}
-		return -1;
+		return start;
 	}
 
 	@CheckReturnValue
-	@VisibleForTesting
-	static int findTrailingComma(@Nonnull String line, @Nonnull LexerState state) {
-		final var masked = JavaLineScanner.stripCommentsAndStrings(line, state);
-		var lastComma = -1;
-		var depth = 0;
-		for (var i = 0; i < masked.length(); ++i) {
-			final var c = masked.charAt(i);
-			if (c == '(' || c == '{' || c == '[')
-				++depth;
-			else if (c == ')' || c == '}' || c == ']')
-				--depth;
-			else if (c == ',' && depth == 0)
-				lastComma = i;
+	private static int charIndex(@Nonnull LineColumns lines, long position) {
+		return lines.charIndex(DocComments.line(position), (int) position);
+	}
+
+	/** Drops the memoized {@link #runs}, field lines and refusals, which hold a whole parse or buffer. */
+	static void clearCache() {
+		FIELD_LINES.remove();
+		REFUSALS.remove();
+		RUNS_MEMO.remove();
+	}
+
+	/** How many C-style array dimensions {@code declarator} carries after its name. */
+	@CheckReturnValue
+	private static int cStyleDimensions(@Nonnull DetailAST declarator) {
+		final var identStart = position(declarator.findFirstToken(TokenTypes.IDENT));
+		var dimensions = 0;
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(declarator.findFirstToken(TokenTypes.TYPE));
+		while (!stack.isEmpty()) {
+			final var node = stack.pop();
+			if (node.getType() == TokenTypes.ARRAY_DECLARATOR && position(node) > identStart)
+				++dimensions;
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+				stack.push(child);
 		}
-		return lastComma;
+		return dimensions;
+	}
+
+	/** The run declaration {@code group} makes up, or null when it has no {@code ;} of its own. */
+	@CheckReturnValue
+	@Nullable
+	private static Declaration declaration(@Nonnull List<DetailAST> group) {
+		final var semi = FieldConsolidationCheck.semi(group);
+		return semi == null ? null : new Declaration(group, DocComments.firstToken(group.getFirst()), position(semi));
+	}
+
+	/** The {@link #declaration declarations} of every run of {@code runs}, or null when one has no {@code ;} of its own. */
+	@CheckReturnValue
+	@Nullable
+	private static List<List<Declaration>> declarations(@Nonnull List<List<List<DetailAST>>> runs) {
+		final var all = new ArrayList<List<Declaration>>(runs.size());
+		for (var groups : runs) {
+			final var run = new ArrayList<Declaration>(groups.size());
+			for (var group : groups) {
+				final var declaration = declaration(group);
+				if (declaration == null)
+					return null;
+				run.add(declaration);
+			}
+			all.add(run);
+		}
+		return all;
+	}
+
+	/** Just past {@code declarator}'s last token from its name on, its declaration's {@code ;} aside. */
+	@CheckReturnValue
+	private static long declaratorEnd(@Nonnull DetailAST declarator) {
+		final var identStart = position(declarator.findFirstToken(TokenTypes.IDENT));
+		var end = identStart;
+		final var stack = new ArrayDeque<DetailAST>();
+		stack.push(declarator);
+		while (!stack.isEmpty()) {
+			final var node = stack.pop();
+			if (!AstText.isImaginaryToken(node) && node.getType() != TokenTypes.SEMI && position(node) >= identStart)
+				end = Math.max(end, endOf(node));
+			for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+				stack.push(child);
+		}
+		return end;
 	}
 
 	/**
-	 * Net generic-angle-bracket balance ({@code <} minus {@code >}) over
-	 * {@code masked[start, end)}. A nonzero result means the region's type
-	 * prefix has a generic that opened or closed on a different physical line,
-	 * i.e. the declaration spans multiple lines. {@code masked} must already be
-	 * run through {@link JavaLineScanner#stripCommentsAndStrings} so brackets
-	 * inside literals and comments are not counted.
+	 * {@code declarator} as written from its name to its last token, its C-style brackets
+	 * dropped. A declarator spanning lines keeps its line breaks.
 	 */
-	@CheckReturnValue
-	private static int genericBracketDepth(@Nonnull String masked, int start, int end) {
-		var depth = 0;
-		for (var i = start; i < end; ++i) {
-			final var c = masked.charAt(i);
-			if (c == '<')
-				++depth;
-			else if (c == '>')
-				--depth;
-		}
-		return depth;
-	}
-
-	// firstCommentMarker rather than the mask, which erases the markers we need to inspect
-	@CheckReturnValue
-	@VisibleForTesting
-	static boolean hasBlockCommentBefore(@Nonnull String line, int end, @Nonnull LexerState state) {
-		final var marker = JavaLineScanner.firstCommentMarker(line, state);
-		return marker >= 0 && marker < end && marker + 1 < line.length() && line.charAt(marker + 1) == '*';
-	}
-
-	private static boolean hasCStyleArrayBrackets(@Nonnull String line, int semiIdx) {
-		var i = semiIdx - 1;
-		while (i >= 0 && Character.isWhitespace(line.charAt(i)))
-			--i;
-		return i >= 0 && line.charAt(i) == ']';
-	}
-
-	/**
-	 * Returns true if {@code tail} is nothing but a comment that closes on its own
-	 * line, so the merge can re-emit it after the surviving terminator. A tail that
-	 * leaves a block comment open would carry the following lines into the comment.
-	 */
-	@CheckReturnValue
-	private static boolean isCarryableComment(@Nonnull String tail) {
-		// a terminator is only ever located in code context, so the text after it
-		// starts in normal lexer state
-		final var state = JavaLineScanner.stateAfter(tail, LexerState.NONE);
-		return !state.inBlockComment() && !state.inTextBlock()
-				&& JavaLineScanner.stripCommentsAndStrings(tail, LexerState.NONE).isBlank();
-	}
-
-	private static boolean isCommentLine(@Nonnull String line) {
-		final var trimmed = line.trim();
-		return trimmed.startsWith("//") || trimmed.startsWith("/*");
-	}
-
 	@CheckReturnValue
 	@Nonnull
-	private static List<String> parseFieldNames(@Nonnull String names) {
-		final var result = new ArrayList<String>();
-		var pos = 0;
-		while (pos < names.length()) {
-			while (pos < names.length() && Character.isWhitespace(names.charAt(pos)))
-				++pos;
-			if (pos >= names.length() || !Character.isJavaIdentifierStart(names.charAt(pos)))
-				break;
-			final var start = pos;
-			while (pos < names.length() && Character.isJavaIdentifierPart(names.charAt(pos)))
-				++pos;
-			while (pos < names.length() && (names.charAt(pos) == '[' || names.charAt(pos) == ']'))
-				++pos;
-			result.add(names.substring(start, pos));
-			while (pos < names.length() && (names.charAt(pos) == ',' || Character.isWhitespace(names.charAt(pos))))
-				++pos;
-		}
-		return result;
+	static String declaratorText(@Nonnull LineColumns lines, @Nonnull DetailAST declarator) {
+		return declarator.findFirstToken(TokenTypes.IDENT).getText() + text(lines, bracketsEnd(declarator), declaratorEnd(declarator));
+	}
+
+	/** Just past {@code token}'s text, which only a text block's content spreads over several lines. */
+	@CheckReturnValue
+	private static long endOf(@Nonnull DetailAST token) {
+		final var text = token.getText();
+		final var lastBreak = text.lastIndexOf('\n');
+		if (lastBreak < 0)
+			return DocComments.position(token.getLineNo(), token.getColumnNo() + text.codePointCount(0, text.length()));
+		final var breaks = (int) text.chars().filter(c -> c == '\n').count();
+		return DocComments.position(token.getLineNo() + breaks, text.codePointCount(lastBreak + 1, text.length()));
 	}
 
 	/**
-	 * The previous field's declaration prefix (everything before
-	 * {@code terminatorIdx}) with its C-style declarator brackets hoisted onto the
-	 * base type: {@code int alpha[], beta[]} becomes {@code int[] alpha, beta}.
-	 * The merged declaration renders one base type followed by bare names, so the
-	 * brackets have to move for the merge to keep the previous field's type.
-	 *
-	 * <p>Returns {@code null} rather than a prefix that would change a type: when
-	 * the declarators do not all carry the same bracket suffix
-	 * ({@code int alpha, beta[]}), one shared base type cannot express them and
-	 * hoisting the odd one out would retype its siblings; when the declaration's
-	 * type sits on an earlier line, there is no base type here to hoist onto.
+	 * Whether FieldSorting is suppressed in {@code objBlock}: by a {@code @SuppressWarnings} on its
+	 * type, or by the run's configured filters on any line of the body, where the run never sorts
+	 * fields, so a merge must not either.
+	 */
+	@CheckReturnValue
+	private static boolean fieldSortingSuppressed(@Nonnull DetailAST objBlock) {
+		if (FieldSortingCheck.isSuppressed(objBlock))
+			return true;
+		final var last = AstQuery.lastLine(objBlock);
+		for (var line = objBlock.getLineNo(); line <= last; ++line) {
+			if (FixContext.isSuppressed(FieldSortingCheck.class, line))
+				return true;
+		}
+		return false;
+	}
+
+	@Nullable
+	private static FixAttempt fixRun(@Nonnull List<String> lines, @Nonnull List<String> parsed, @Nonnull DetailAST root, int line, int column) {
+		final var target = target(root, line, column);
+		if (target == null)
+			return null;
+		final var objBlock = target.getParent();
+		final var cached = RUNS_MEMO.get();
+		final var comments = cached != null && cached.objBlock() == objBlock ? cached.comments() : SourceComments.scan(parsed);
+		final var groupedRuns = runs(parsed, comments, objBlock);
+		final var memo = RUNS_MEMO.get();
+		final var columns = memo.lines();
+		final var targetRun = memo.laterRunOf().get(target);
+		if (targetRun == null)
+			return new SkipResult(SKIP_STALE);
+		final var refusals = refusals(lines, root);
+		final var runStart = DocComments.firstToken(groupedRuns.get(targetRun).getFirst().getFirst());
+		final var refusal = refusals.get(runStart);
+		if (refusal != null)
+			return new SkipResult(refusal);
+		final var all = memo.declarations();
+		if (all == null)
+			return null;
+		final var inOrder = memo.inOrder();
+		final var rendered = render(columns, all.get(targetRun), comments, memo.lineCountWindows(), inOrder);
+		if (rendered instanceof Refused refused) {
+			refusals.put(runStart, refused.reason());
+			return new SkipResult(refused.reason());
+		}
+		final var own = (Block) rendered;
+		// a run interleaved with this one has its events inside this rewrite, which the pipeline puts
+		// off to the next pass, so it is folded in now; one that cannot be merged stays as written
+		final var blocks = new ArrayList<>(List.of(own));
+		final var left = new ArrayList<>(all);
+		left.remove(targetRun.intValue());
+		boolean grown;
+		do {
+			grown = false;
+			final var start = blocks.stream().mapToInt(Block::start).min().orElseThrow();
+			final var end = blocks.stream().mapToInt(Block::end).max().orElseThrow();
+			for (var it = left.iterator(); it.hasNext(); ) {
+				final var run = it.next();
+				if (DocComments.line(run.getFirst().start()) > end || DocComments.line(run.getLast().semi()) < start)
+					continue;
+				it.remove();
+				if (render(columns, run, comments, memo.lineCountWindows(), inOrder) instanceof Block block) {
+					blocks.add(block);
+					grown = true;
+				}
+			}
+		}
+		while (grown);
+		final var folded = verified(lines, assemble(lines, blocks));
+		final var attempt = folded instanceof SkipResult && blocks.size() > 1 ? verified(lines, assemble(lines, List.of(own))) : folded;
+		if (attempt instanceof SkipResult(var reason))
+			refusals.put(runStart, reason);
+		return attempt;
+	}
+
+	/** True when one of {@code spans}, each a start and an exclusive end, sorted and apart, holds {@code position}. */
+	@CheckReturnValue
+	private static boolean holds(@Nonnull List<long[]> spans, long position) {
+		var low = 0;
+		var high = spans.size() - 1;
+		while (low <= high) {
+			final var mid = (low + high) >>> 1;
+			final var span = spans.get(mid);
+			if (position < span[0])
+				high = mid - 1;
+			else if (position >= span[1])
+				low = mid + 1;
+			else
+				return true;
+		}
+		return false;
+	}
+
+	/**
+	 * {@code declarator} as a merged declaration lists it: its {@link #declaratorText}, or when that
+	 * spans lines, its name and its {@linkplain FieldConsolidationCheck#oneLineInitializer
+	 * initializer joined onto one line}, which a declarator of a run always has.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static String mergedText(@Nonnull LineColumns lines, @Nonnull DetailAST declarator) {
+		final var text = declaratorText(lines, declarator);
+		if (text.indexOf('\n') < 0)
+			return text;
+		return declarator.findFirstToken(TokenTypes.IDENT).getText() + " = " + FieldConsolidationCheck.oneLineInitializer(lines, declarator);
+	}
+
+	@CheckReturnValue
+	private static long position(@Nonnull DetailAST node) {
+		return DocComments.position(node.getLineNo(), node.getColumnNo());
+	}
+
+	/**
+	 * The skip reasons of the {@link Refusals} of the buffer {@code lines}, parsed as {@code root},
+	 * kept from earlier events while it is unchanged. The same parse is the same buffer, so only a
+	 * new one is compared.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static Map<Long, String> refusals(@Nonnull List<String> lines, @Nonnull DetailAST root) {
+		final var memo = REFUSALS.get();
+		if (memo != null && memo.root() == root)
+			return memo.byStart();
+		final var kept = memo != null && memo.lines().equals(lines)
+				? new Refusals(memo.lines(), root, memo.byStart())
+				: new Refusals(List.copyOf(lines), root, new HashMap<>());
+		REFUSALS.set(kept);
+		return kept.byStart();
+	}
+
+	/**
+	 * The merged declaration {@code run} folds into, its names sorted unless {@code inOrder} (a
+	 * type that suppresses FieldSorting), or a {@link Refused} when a comment that has
+	 * to move spans several lines or has {@linkplain #carriedCommentStart no line of its own} to go
+	 * to, when one left in place closes on a later declaration's line, or when one that moves, trails
+	 * the first declaration, sits in the head on the line the other names join or sits in a rebuilt
+	 * declarator is a {@link SourceComments#isDirective tool directive}. A comment in a kept
+	 * span (the first declaration up to its {@code ;}, or up to its first name when its names are
+	 * reordered, its brackets move or one of its names spans lines up to the {@code ,} or {@code ;}
+	 * after it, and each rebuilt declarator's own text) stays in place, and so do one trailing the
+	 * first declaration and one starting on no line of the run's declarations; every other one is
+	 * moved above the first declaration, and above a block comment its line opens inside. A run is
+	 * also refused when a {@linkplain SourceComments#isRangeDirective range directive} sits on a
+	 * line from its first declaration to its last one's {@code ;}, or one of {@code lineCountWindows}
+	 * holds a line of one of its declarations, since the merge would move names into or out of the
+	 * lines the directive acts on.
+	 */
+	@Nonnull
+	private static Rendered render(
+			@Nonnull LineColumns parsed,
+			@Nonnull List<Declaration> run,
+			@Nonnull List<Comment> comments,
+			@Nonnull LineCountWindows lineCountWindows,
+			boolean inOrder
+	) {
+		final var first = run.getFirst();
+		final var firstDeclarator = first.declarators().getFirst();
+		final var startLine = DocComments.line(first.start());
+		final var lineStart = DocComments.position(startLine, 0);
+		final var semiLine = DocComments.line(first.semi());
+		final var endLine = DocComments.line(run.getLast().semi());
+		if (SourceComments.rangeDirectiveOn(comments, startLine, endLine))
+			return new Refused(SKIP_RANGE_DIRECTIVE);
+		for (var declaration : run) {
+			if (lineCountWindows.reaches(DocComments.line(declaration.start()), DocComments.line(declaration.semi())))
+				return new Refused(SKIP_RANGE_DIRECTIVE);
+		}
+		final var kept = new ArrayList<long[]>();
+		final var declarators = new ArrayList<DetailAST>();
+		for (var declaration : run)
+			declarators.addAll(declaration.declarators());
+		final var ordered = inOrder ? declarators : sorted(parsed, declarators);
+		final var cores = new ArrayList<DetailAST>();
+		final String head;
+		final var dimensions = cStyleDimensions(firstDeclarator);
+		var split = false;
+		for (var declarator : first.declarators()) {
+			final var bound = FieldConsolidationCheck.declaratorBound(declarator);
+			split |= bound == null || bound.getLineNo() != declarator.findFirstToken(TokenTypes.IDENT).getLineNo();
+		}
+		final var rebuilt = dimensions > 0 || split || !ordered.equals(declarators);
+		if (rebuilt) {
+			final var ident = position(firstDeclarator.findFirstToken(TokenTypes.IDENT));
+			var typeEnd = lineStart;
+			final var stack = new ArrayDeque<DetailAST>();
+			stack.push(firstDeclarator.findFirstToken(TokenTypes.TYPE));
+			while (!stack.isEmpty()) {
+				final var node = stack.pop();
+				if (!AstText.isImaginaryToken(node) && position(node) < ident)
+					typeEnd = Math.max(typeEnd, endOf(node));
+				for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+					stack.push(child);
+			}
+			kept.add(new long[]{lineStart, ident});
+			head = text(parsed, lineStart, typeEnd) + "[]".repeat(dimensions) + text(parsed, typeEnd, ident);
+			cores.addAll(ordered);
+		}
+		else {
+			kept.add(new long[]{lineStart, first.semi()});
+			head = text(parsed, lineStart, first.semi()).stripTrailing();
+			cores.addAll(ordered.subList(first.declarators().size(), ordered.size()));
+		}
+		for (var declarator : cores) {
+			final var ident = declarator.findFirstToken(TokenTypes.IDENT);
+			kept.add(new long[]{position(ident), endOf(ident)});
+			kept.add(new long[]{bracketsEnd(declarator), declaratorEnd(declarator)});
+		}
+
+		final var movedSpans = new ArrayList<long[]>();
+		for (var k = 1; k < run.size(); ++k)
+			movedSpans.add(new long[]{DocComments.line(run.get(k).start()), DocComments.line(run.get(k).semi()) + 1L});
+		final var keptTexts = new HashSet<String>();
+		final var moved = new LinkedHashSet<String>();
+		final var joinLine = rebuilt ? DocComments.line(position(firstDeclarator.findFirstToken(TokenTypes.IDENT))) : semiLine;
+		final var keptCores = new ArrayList<long[]>();
+		for (var span : kept.subList(1, kept.size())) {
+			if (span[0] < span[1])
+				keptCores.add(span);
+		}
+		keptCores.sort(Comparator.comparingLong(span -> span[0]));
+		for (var c = SourceComments.commentsFrom(comments, lineStart); c < comments.size() && DocComments.line(comments.get(c).start()) <= endLine; ++c) {
+			final var comment = comments.get(c);
+			final var commentLine = DocComments.line(comment.start());
+			if (commentLine > semiLine && !holds(movedSpans, commentLine)) {
+				// one closing on a later declaration's line would lose its */ when that line leaves
+				if (holds(movedSpans, DocComments.line(comment.end())))
+					return new Refused(SKIP_MOVED_COMMENT);
+				continue;
+			}
+			final int keptAt;
+			if (comment.start() >= kept.getFirst()[0] && comment.start() < kept.getFirst()[1])
+				keptAt = 0;
+			else
+				keptAt = holds(keptCores, comment.start()) ? 1 : -1;
+			final var trailing = comment.start() > first.semi() && commentLine == semiLine;
+			final var onJoinLine = keptAt == 0 && (commentLine == joinLine || DocComments.line(comment.end()) == joinLine);
+			// one trailing the first declaration, kept in the head on the line the other names join,
+			// or inside a declarator the merge lines up with others (every kept span past the head)
+			// ends up on a line holding names it was never written for, and a line-scoped tool
+			// directive there would cover them too
+			if ((trailing || onJoinLine || keptAt > 0) && SourceComments.isDirective(comment.text()))
+				return new Refused(SKIP_DIRECTIVE_WIDENED);
+			if (keptAt >= 0)
+				keptTexts.add(comment.text());
+			else if (DocComments.line(comment.end()) != commentLine)
+				return new Refused(SKIP_MOVED_COMMENT);
+			else if (trailing)
+				keptTexts.add(comment.text());
+			else if (!keptTexts.contains(comment.text()))
+				moved.add(comment.text());
+		}
+		moved.removeAll(keptTexts);
+		for (var text : moved) {
+			if (SourceComments.isDirective(text))
+				return new Refused(SKIP_DIRECTIVE);
+		}
+
+		final var semiText = parsed.lines().get(semiLine - 1);
+		final var tail = semiText.substring(charIndex(parsed, first.semi()) + 1);
+		final var indent = LineText.extractIndent(parsed.lines().get(startLine - 1));
+		final var out = new ArrayList<>(List.of(head.split("\n", -1)));
+		var current = out.removeLast();
+		for (var k = 0; k < cores.size(); ++k) {
+			final var core = mergedText(parsed, cores.get(k));
+			final var separator = k == 0 && rebuilt ? "" : ", ";
+			final var closing = k == cores.size() - 1 ? ";" + tail : ",";
+			if (separator.isEmpty() || LineLength.tabExpandedLength(current + separator + core + closing) <= MAX_LINE_LENGTH)
+				current += separator + core;
+			else {
+				out.add(current + ",");
+				current = indent + "\t\t" + core;
+			}
+		}
+		out.add(current + ";" + tail);
+		if (moved.isEmpty())
+			return new Block(startLine, semiLine, endLine, out, movedSpans);
+		final var blockStart = carriedCommentStart(parsed, comments, startLine);
+		if (blockStart < 0)
+			return new Refused(SKIP_CARRIED_COMMENT);
+		out.addAll(0, parsed.lines().subList(blockStart - 1, startLine - 1));
+		out.addFirst(LineText.extractIndent(parsed.lines().get(blockStart - 1)) + FieldRewriteVerifier.joinComments(new ArrayList<>(moved)));
+		return new Block(blockStart, semiLine, endLine, out, movedSpans);
+	}
+
+	/**
+	 * The runs {@link FieldConsolidationCheck#runs} finds in {@code objBlock}, read off
+	 * {@code lines}, whose {@code comments} tell which declarations are documented or led by a tool
+	 * directive.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	static List<List<List<DetailAST>>> runs(@Nonnull List<String> lines, @Nonnull List<Comment> comments, @Nonnull DetailAST objBlock) {
+		// a parse is shared while the buffer is unchanged, so the events of one class body that
+		// is left as written (a refused run) find their runs here rather than redoing them
+		final var memo = RUNS_MEMO.get();
+		if (memo != null && memo.objBlock() == objBlock)
+			return memo.runs();
+		var root = objBlock;
+		while (root.getParent() != null)
+			root = root.getParent();
+		final var docStarts = new TreeSet<Long>();
+		for (var comment : comments) {
+			if (DocComments.isDocComment(comment.text()))
+				docStarts.add(comment.start());
+		}
+		final var docs = new DocComments(DocComments.tokenPositions(root), docStarts);
+		final var columns = new LineColumns(lines);
+		final var inOrder = fieldSortingSuppressed(objBlock);
+		final var runs = FieldConsolidationCheck.runs(objBlock, columns, () -> docs, () -> comments, inOrder);
+		final var laterRunOf = new IdentityHashMap<DetailAST, Integer>();
+		for (var r = 0; r < runs.size(); ++r) {
+			for (var group : runs.get(r).subList(1, runs.get(r).size())) {
+				for (var declarator : group)
+					laterRunOf.putIfAbsent(declarator, r);
+			}
+		}
+		RUNS_MEMO.set(new RunsMemo(objBlock, columns, comments, SourceComments.lineCountWindows(comments), runs, declarations(runs), laterRunOf, inOrder));
+		return runs;
+	}
+
+	/**
+	 * {@code declarators} in the order {@link FieldSortingFixer#orderDeclarators} gives one
+	 * declaration's names, each after the names it reads and the earlier ones it is
+	 * {@linkplain FieldInitializers#pinnedAfter pinned after}, so the merge leaves FieldSorting
+	 * nothing to reorder, or as written when they wait for each other in a cycle.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	private static List<DetailAST> sorted(@Nonnull LineColumns lines, @Nonnull List<DetailAST> declarators) {
+		final var names = new ArrayList<String>(declarators.size());
+		final var texts = new ArrayList<String>(declarators.size());
+		final var byText = new HashMap<String, DetailAST>();
+		for (var declarator : declarators) {
+			final var text = mergedText(lines, declarator);
+			names.add(FieldSortingCheck.fieldName(declarator));
+			texts.add(text);
+			byText.put(text, declarator);
+		}
+		final var isFinal = declarators.getFirst().findFirstToken(TokenTypes.MODIFIERS).findFirstToken(TokenTypes.FINAL) != null;
+		final var waitsFor = new HashMap<String, Set<String>>();
+		for (var entry : FieldSortingCheck.fieldDependencies(declarators).entrySet())
+			waitsFor.put(entry.getKey(), new HashSet<>(entry.getValue()));
+		for (var entry : FieldInitializers.pinnedAfter(declarators).entrySet())
+			waitsFor.computeIfAbsent(entry.getKey(), name -> new HashSet<>()).addAll(entry.getValue());
+		final var ordered = FieldSortingFixer.orderDeclarators(names, texts, waitsFor, isFinal);
+		if (ordered == null)
+			return declarators;
+		final var reordered = new ArrayList<DetailAST>(ordered.size());
+		for (var text : ordered)
+			reordered.add(byText.get(text));
+		return reordered;
+	}
+
+	/**
+	 * The field declarator named on {@code line} nearest {@code column}, one at or past it
+	 * winning a tie: a sibling fixer may have shifted the name along its line.
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String rewritePrevPrefixToJavaStyle(@Nonnull String prevLine, int terminatorIdx) {
-		final var namesStart = findFieldNamesStart(prevLine, terminatorIdx);
-		final var bareNames = new StringBuilder();
-		String brackets = null;
-		var pos = namesStart;
-		while (pos < terminatorIdx) {
-			if (!Character.isJavaIdentifierStart(prevLine.charAt(pos)))
-				return null;
-			final var nameStart = pos;
-			while (pos < terminatorIdx && Character.isJavaIdentifierPart(prevLine.charAt(pos)))
-				++pos;
-			bareNames.append(prevLine, nameStart, pos);
-
-			final var bracketsStart = pos;
-			pos = declaratorBracketsEnd(prevLine, pos, terminatorIdx);
-			final var declaratorBrackets = prevLine.substring(bracketsStart, pos).strip();
-			if (brackets == null)
-				brackets = declaratorBrackets;
-			else if (!brackets.equals(declaratorBrackets))
-				return null;
-
-			final var separatorStart = pos;
-			while (pos < terminatorIdx && (prevLine.charAt(pos) == ',' || Character.isWhitespace(prevLine.charAt(pos))))
-				++pos;
-			bareNames.append(prevLine, separatorStart, pos);
+	private static DetailAST target(@Nonnull DetailAST root, int line, int column) {
+		var fields = FIELD_LINES.get();
+		if (fields == null || fields.root() != root) {
+			final var byLine = new HashMap<Integer, List<DetailAST>>();
+			final var stack = new ArrayDeque<DetailAST>();
+			stack.push(root);
+			while (!stack.isEmpty()) {
+				final var node = stack.pop();
+				if (node.getType() == TokenTypes.VARIABLE_DEF && node.getParent() != null && node.getParent().getType() == TokenTypes.OBJBLOCK)
+					byLine.computeIfAbsent(node.findFirstToken(TokenTypes.IDENT).getLineNo(), key -> new ArrayList<>()).add(node);
+				for (var child = node.getFirstChild(); child != null; child = child.getNextSibling())
+					stack.push(child);
+			}
+			fields = new FieldLines(root, byLine);
+			FIELD_LINES.set(fields);
 		}
-		if (brackets == null || brackets.isEmpty())
-			return prevLine.substring(0, terminatorIdx);
+		DetailAST best = null;
+		var bestScore = Long.MAX_VALUE;
+		for (var node : fields.byLine().getOrDefault(line, List.of())) {
+			final var ident = node.findFirstToken(TokenTypes.IDENT);
+			final var score = Math.abs((long) ident.getColumnNo() - column) * 2 + (ident.getColumnNo() < column ? 1 : 0);
+			if (score < bestScore) {
+				best = node;
+				bestScore = score;
+			}
+		}
+		return best;
+	}
 
-		var typeEnd = namesStart;
-		while (typeEnd > 0 && Character.isWhitespace(prevLine.charAt(typeEnd - 1)))
-			--typeEnd;
-		if (typeEnd == 0)
-			return null;
-		return prevLine.substring(0, typeEnd) + brackets + prevLine.substring(typeEnd, namesStart) + bareNames;
+	/** The source from {@code from} up to {@code to}, lines joined with {@code \n}. */
+	@CheckReturnValue
+	@Nonnull
+	private static String text(@Nonnull LineColumns lines, long from, long to) {
+		if (to <= from)
+			return "";
+		final var fromLine = DocComments.line(from);
+		final var toLine = DocComments.line(to);
+		final var source = lines.lines();
+		if (fromLine == toLine)
+			return source.get(fromLine - 1).substring(charIndex(lines, from), charIndex(lines, to));
+		final var sb = new StringBuilder(source.get(fromLine - 1).substring(charIndex(lines, from)));
+		for (var l = fromLine + 1; l < toLine; ++l)
+			sb.append('\n').append(source.get(l - 1));
+		return sb.append('\n').append(source.get(toLine - 1), 0, charIndex(lines, to)).toString();
 	}
 
 	/**
-	 * Returns the index of the declaration terminator on {@code line} (its {@code ;},
-	 * or the trailing {@code ,} of a declaration continued on the next line), or
-	 * {@code -1} when the line carries neither.
+	 * {@code result} when it only re-lays the fields out and keeps every pair of fields that may
+	 * not trade places in order, else a skip: the re-parse is what turns a misread run into a skip
+	 * rather than corrupt or retyped output.
 	 */
 	@CheckReturnValue
-	private static int terminatorIndexOf(@Nonnull String line, @Nonnull LexerState state) {
-		final var semiIdx = findFieldSemicolon(line, state);
-		return semiIdx >= 0 ? semiIdx : findTrailingComma(line, state);
+	@Nonnull
+	private static FixAttempt verified(@Nonnull List<String> lines, @Nonnull FixResult result) {
+		if (!FieldRewriteVerifier.preserves(lines, result))
+			return new SkipResult(SKIP_UNVERIFIED);
+		return FieldRewriteVerifier.keepsInitializationOrder(lines, result) ? result : new SkipResult(SKIP_PINNED);
 	}
 
 	@Nullable
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
-		if (lineIndex < 1 || lineIndex >= lines.size())
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
+		if (lineIndex < 0 || lineIndex >= lines.size())
 			return null;
-
-		final var entryStates = entryStates(lines);
-		final var prev = findPrevFieldLine(lines, lineIndex, entryStates);
-		if (prev < 0)
-			return new SkipResult(SKIP_PREV_FIELD);
-
-		final var prevLine = lines.get(prev);
-		var terminatorIdx = findFieldSemicolon(prevLine, entryStates.get(prev));
-		final var prevEndsWithComma = terminatorIdx < 0;
-		if (prevEndsWithComma)
-			terminatorIdx = findTrailingComma(prevLine, entryStates.get(prev));
-		if (terminatorIdx < 0)
-			return null;
-
-		// The previous field's type prefix must be complete on prevLine. An
-		// unbalanced generic there means either the type wraps onto prevLine
-		// from above, or prevLine is itself a wrapped continuation of the
-		// violation field (whose internal generic comma findTrailingComma
-		// mistook for a declarator separator). Both would drive a corrupt
-		// single-line rebuild, so skip instead.
-		final var prevMasked = JavaLineScanner.stripCommentsAndStrings(prevLine, entryStates.get(prev));
-		if (genericBracketDepth(prevMasked, 0, terminatorIdx) != 0)
-			return new SkipResult(SKIP_MULTILINE_DECLARATION);
-
-		final var prevCStyle = hasCStyleArrayBrackets(prevLine, terminatorIdx);
-		final var violationLine = lines.get(lineIndex);
-		final var violationState = entryStates.get(lineIndex);
-		final var violationSemiIdx = findFieldSemicolon(violationLine, violationState);
-
-		// every use below indexes chars, but the reported column counts code points
-		column = LineText.charIndexOfColumn(violationLine, column);
-		if (column < 0)
-			return null;
-
-		// A column mid-identifier (rather than at a name's start) means another
-		// fixer (e.g. FieldSortingFixer) reflowed this group into a wrapped
-		// declaration earlier in the same pass, so the violation is now stale;
-		// acting on it would truncate the name. Defer to the next pass.
-		if (column >= 1 && column < violationLine.length()
-				&& Character.isJavaIdentifierPart(violationLine.charAt(column - 1))
-				&& Character.isJavaIdentifierPart(violationLine.charAt(column)))
-			return null;
-
-		if (column >= 0 && column < violationLine.length()
-				&& !Character.isJavaIdentifierStart(violationLine.charAt(column))) {
-			var newColumn = column;
-			while (newColumn < violationLine.length()
-					&& !Character.isJavaIdentifierStart(violationLine.charAt(newColumn)))
-				++newColumn;
-			if (newColumn >= violationLine.length())
-				return null;
-			column = newColumn;
-		}
-
-		final var names = extractFieldNames(violationLine, column);
-		if (names == null || names.isEmpty())
-			return null;
-
-		// The violation field's type must be complete before its name. An
-		// unbalanced generic in the prefix means the type opened on a line
-		// above, so merging into prevLine would drop the wrapped type segment.
-		final var violationMasked = JavaLineScanner.stripCommentsAndStrings(violationLine, violationState);
-		if (genericBracketDepth(violationMasked, 0, column) != 0)
-			return new SkipResult(SKIP_MULTILINE_DECLARATION);
-
-		if (hasBlockCommentBefore(violationLine, column, violationState))
-			return new SkipResult(SKIP_BLOCK_COMMENT);
-		final var violationEnd = violationSemiIdx >= 0 ? violationSemiIdx : violationLine.length();
-		if (violationEnd < column)
-			return null;
-		final var afterColumnState = JavaLineScanner.stateAfter(violationLine.substring(0, column), violationState);
-		if (hasBlockCommentBefore(violationLine.substring(column), violationEnd - column, afterColumnState))
-			return new SkipResult(SKIP_BLOCK_COMMENT);
-
-		var endLine = lineIndex;
-		var allNames = names;
-		var stoppedAtComment = false;
-		if (violationSemiIdx < 0) {
-			final var violationIndentWidth = LineLength.tabExpandedLength(LineText.extractIndent(violationLine));
-			for (var i = lineIndex + 1; i < lines.size(); ++i) {
-				final var contLine = lines.get(i);
-				if (LineLength.tabExpandedLength(LineText.extractIndent(contLine)) <= violationIndentWidth)
-					break;
-				if (isCommentLine(contLine)) {
-					stoppedAtComment = true;
-					break;
-				}
-				final var contIdentStart = findFirstIdentStart(contLine);
-				if (contIdentStart < 0)
-					break;
-				final var contNames = extractFieldNames(contLine, contIdentStart);
-				// unreachable for well-formed input: findFirstIdentStart guarantees an identifier start at
-				// contIdentStart, so extractFieldNames always yields at least that name; guards a null splice
-				if (contNames == null || contNames.isEmpty())
-					return null;
-				allNames = allNames + ", " + contNames;
-				endLine = i;
-				if (findFieldSemicolon(contLine, entryStates.get(i)) >= 0)
-					break;
-			}
-		}
-
-		final String suffix;
-		if (prevEndsWithComma) {
-			final var lastLine = lines.get(endLine);
-			final var lastSemiIdx = findFieldSemicolon(lastLine, entryStates.get(endLine));
-			if (lastSemiIdx >= 0)
-				suffix = lastLine.substring(lastSemiIdx);
-			else {
-				final var lastCommaIdx = findTrailingComma(lastLine, entryStates.get(endLine));
-				suffix = lastCommaIdx >= 0 ? lastLine.substring(lastCommaIdx) : ",";
-			}
-		}
-		else if (stoppedAtComment) {
-			final var lastLine = lines.get(endLine);
-			final var lastCommaIdx = findTrailingComma(lastLine, entryStates.get(endLine));
-			suffix = lastCommaIdx >= 0 ? lastLine.substring(lastCommaIdx) : prevLine.substring(terminatorIdx);
-		}
-		else if (endLine > lineIndex) {
-			final var lastLine = lines.get(endLine);
-			final var lastSemiIdx = findFieldSemicolon(lastLine, entryStates.get(endLine));
-			suffix = lastSemiIdx >= 0 ? lastLine.substring(lastSemiIdx) : prevLine.substring(terminatorIdx);
+		// the parse refuses a byte-order mark, which carries no code; columns on its line count without it
+		final var bom = !lines.getFirst().isEmpty() && lines.getFirst().charAt(0) == BOM;
+		final List<String> parsed;
+		if (bom) {
+			parsed = new ArrayList<>(lines);
+			parsed.set(0, lines.getFirst().substring(1));
 		}
 		else
-			suffix = prevLine.substring(terminatorIdx);
-
-		// The merge keeps exactly one terminator and one trailing tail, so whatever
-		// follows the other consumed line's terminator is dropped. A dropped comment
-		// silently reattributes the surviving one to both fields, and dropped code is
-		// deleted outright. Carry a lone comment across; refuse anything else.
-		final var lastTerminatorIdx = terminatorIndexOf(lines.get(endLine), entryStates.get(endLine));
-		final var keptTail = suffix.substring(1);
-		final var prevTail = prevLine.substring(terminatorIdx + 1);
-		final var lastTail = lastTerminatorIdx >= 0 ? lines.get(endLine).substring(lastTerminatorIdx + 1) : "";
-		final var droppedTail = keptTail.equals(prevTail) ? lastTail : prevTail;
-		var keptSuffix = suffix;
-		if (!droppedTail.isBlank() && !droppedTail.equals(keptTail)) {
-			if (!keptTail.isBlank() || !isCarryableComment(droppedTail))
-				return new SkipResult(SKIP_TRAILING_CONTENT);
-			keptSuffix = suffix.charAt(0) + droppedTail;
-		}
-		// the reconciliation above compares only prevLine's and the last consumed line's
-		// tails, but every line in [prev, endLine] is replaced. A comment on any line
-		// between them sits inside that span and would be deleted: that includes the
-		// second field's stacked annotation lines, which sit above `lineIndex`.
-		for (var i = prev + 1; i < endLine; ++i) {
-			if (JavaLineScanner.firstCommentMarker(lines.get(i), entryStates.get(i)) >= 0)
-				return new SkipResult(SKIP_TRAILING_CONTENT);
-		}
-
-		final var prevPrefix = prevCStyle ? rewritePrevPrefixToJavaStyle(prevLine, terminatorIdx) : prevLine.substring(0, terminatorIdx);
-		if (prevPrefix == null)
-			return new SkipResult(SKIP_MIXED_ARRAY_BRACKETS);
-		final var merged = prevPrefix + ", " + allNames + keptSuffix;
-
-		if (LineLength.tabExpandedLength(merged) <= MAX_LINE_LENGTH)
-			return new FixResult(prev, endLine, List.of(merged));
-
-		final var newTerminatorIdx = prevPrefix.length() + 2 + allNames.length();
-		final var fieldNamesStart = findFieldNamesStart(merged, newTerminatorIdx);
-		final var prefix = merged.substring(0, fieldNamesStart);
-		final var namesRegion = merged.substring(fieldNamesStart, newTerminatorIdx);
-		final var wrapSuffix = merged.substring(newTerminatorIdx);
-
-		final var namesList = parseFieldNames(namesRegion);
-		// unreachable for well-formed input; guards against findFieldNamesStart mis-locating the names
-		// region, which would otherwise let wrapFieldList drop fields on an empty split
-		if (namesList.size() < 2)
-			return new FixResult(prev, endLine, List.of(merged));
-
-		final var baseIndent = LineText.extractIndent(prevLine);
-		final var contIndent = baseIndent + "\t\t";
-		return new FixResult(prev, endLine, LineLength.wrapFieldList(prefix, namesList, wrapSuffix, contIndent));
+			parsed = lines;
+		final var codePointColumn = Math.max(0, LineText.columnOfCharIndex(lines.get(lineIndex), charColumn) - (bom && lineIndex == 0 ? 1 : 0));
+		return FixerAst.withAst(parsed, root -> fixRun(lines, parsed, root, lineIndex + 1, codePointColumn));
 	}
 }

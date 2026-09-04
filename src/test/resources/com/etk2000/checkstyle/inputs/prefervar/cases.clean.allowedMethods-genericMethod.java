@@ -11,4 +11,10 @@ class InputPreferVarAllowedMethodClean {
 		final String s = genericMethod(1);
 		final List<Integer> list = genericMethod(2);
 	}
+
+	void allowedMethodResource() throws Exception {
+		try (java.io.BufferedReader reader = genericMethod(1)) {
+			System.out.println(reader.readLine());
+		}
+	}
 }

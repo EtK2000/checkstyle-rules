@@ -7,7 +7,7 @@ package com.etk2000.checkstyle.inputs.annotationsameline;
 // === case: annotation_with_params ===
 class InputAnnotationSameLineAnnotationWithParamsSliceViolation {
 	void m(
-			@SuppressWarnings("unchecked") // violation: Annotation 'SuppressWarnings' must be on the same line as the declaration.
+			@SuppressWarnings("unchecked") // violation: Annotation '@SuppressWarnings' must be on the same line as the declaration.
 			String param
 	) {}
 }
@@ -20,7 +20,7 @@ class InputAnnotationSameLineCatchParamSliceViolation {
 			Thread.sleep(1);
 		}
 		catch (
-				@A // violation: Annotation 'A' must be on the same line as the declaration.
+				@A // violation: Annotation '@A' must be on the same line as the declaration.
 				Exception e
 		) {
 			e.printStackTrace();
@@ -32,7 +32,7 @@ class InputAnnotationSameLineCatchParamSliceViolation {
 // === case: contexts_constructor_param ===
 class InputAnnotationSameLineConstructorParamSliceViolation {
 	InputAnnotationSameLineConstructorParamSliceViolation(
-			@A // violation: Annotation 'A' must be on the same line as the declaration.
+			@A // violation: Annotation '@A' must be on the same line as the declaration.
 			String param
 	) {}
 }
@@ -43,7 +43,7 @@ class InputAnnotationSameLineConstructorParamSliceViolation {
 class InputAnnotationSameLineForEachSliceViolation {
 	void m(List<String> list) {
 		for (
-				@A // violation: Annotation 'A' must be on the same line as the declaration.
+				@A // violation: Annotation '@A' must be on the same line as the declaration.
 				var item : list
 		)
 			System.out.println(item);
@@ -56,7 +56,7 @@ class InputAnnotationSameLineForEachSliceViolation {
 class InputAnnotationSameLineForEachMultiSliceViolation {
 	void m(List<String> list) {
 		for (
-				@A // violation: Annotation 'A' must be on the same line as the declaration.
+				@A // violation: Annotation '@A' must be on the same line as the declaration.
 				@B
 				var item : list
 		)
@@ -69,7 +69,7 @@ class InputAnnotationSameLineForEachMultiSliceViolation {
 class InputAnnotationSameLineForInitSliceViolation {
 	void m() {
 		for (
-				@A // violation: Annotation 'A' must be on the same line as the declaration.
+				@A // violation: Annotation '@A' must be on the same line as the declaration.
 				var i = 0; i < 10; ++i
 		)
 			System.out.println(i);
@@ -82,7 +82,7 @@ class InputAnnotationSameLineForInitSliceViolation {
 class InputAnnotationSameLineLambdaParamSliceViolation {
 	void m() {
 		final Consumer<String> c = (
-				@A // violation: Annotation 'A' must be on the same line as the declaration.
+				@A // violation: Annotation '@A' must be on the same line as the declaration.
 				var s
 		) -> {};
 	}
@@ -92,7 +92,7 @@ class InputAnnotationSameLineLambdaParamSliceViolation {
 // === case: contexts_method_param ===
 class InputAnnotationSameLineMethodParamSliceViolation {
 	void m(
-			@A // violation: Annotation 'A' must be on the same line as the declaration.
+			@A // violation: Annotation '@A' must be on the same line as the declaration.
 			String param
 	) {}
 }
@@ -101,7 +101,7 @@ class InputAnnotationSameLineMethodParamSliceViolation {
 // === case: contexts_method_param_multi_annotation ===
 class InputAnnotationSameLineMethodParamMultiSliceViolation {
 	void m(
-			@A // violation: Annotation 'A' must be on the same line as the declaration.
+			@A // violation: Annotation '@A' must be on the same line as the declaration.
 			@B
 			String param
 	) {}
@@ -111,7 +111,7 @@ class InputAnnotationSameLineMethodParamMultiSliceViolation {
 // === case: contexts_method_param_out_of_order ===
 class InputAnnotationSameLineMethodParamOutOfOrderSliceViolation {
 	void m(
-			@B // violation: Annotation 'B' must be on the same line as the declaration.
+			@B // violation: Annotation '@B' must be on the same line as the declaration.
 			@A
 			String param
 	) {}
@@ -121,28 +121,57 @@ class InputAnnotationSameLineMethodParamOutOfOrderSliceViolation {
 // === case: contexts_record_component ===
 class InputAnnotationSameLineRecordComponentSliceViolation {
 	record Data(
-			@A // violation: Annotation 'A' must be on the same line as the declaration.
+			@A // violation: Annotation '@A' must be on the same line as the declaration.
 			String name
 	) {}
 }
 // === end ===
 
+// === case: entry_state_block_comment_before_inline_annotations ===
+// imports: java.util.List
+class InputAnnotationSameLineEntryStateBlockCommentSliceViolation {
+	void m(List<String> list) {
+		for (/* sorted by
+		, uh */ @B @A var item : list) // violation: Annotation '@A' must appear before '@B' (alphabetical order).
+			System.out.println(item);
+	}
+}
+// === end ===
+
+// === case: inline_reorder_after_annotation_with_named_arg ===
+class InputAnnotationSameLineInlineReorderAfterNamedArgSliceViolation {
+	void foo(@B(num = 1) @C @A String param) {} // violation: Annotation '@A' must appear before '@C' (alphabetical order).
+}
+// === end ===
+
+// === case: inline_reorder_after_annotation_with_string_comma ===
+class InputAnnotationSameLineInlineReorderAfterStringCommaSliceViolation {
+	void foo(@B("a, @Y @X") @C @A String param) {} // violation: Annotation '@A' must appear before '@C' (alphabetical order).
+}
+// === end ===
+
+// === case: inline_reorder_after_annotation_with_string_paren ===
+class InputAnnotationSameLineInlineReorderAfterStringParenSliceViolation {
+	void foo(@B("a(b") @C @A String param) {} // violation: Annotation '@A' must appear before '@C' (alphabetical order).
+}
+// === end ===
+
 // === case: inline_reorder_three_annotations ===
 class InputAnnotationSameLineInlineReorderThreeAnnotationsSliceViolation {
-	void foo(@C @A @B String param) {} // violation: Annotation 'A' must appear before 'C' (alphabetical order).
+	void foo(@C @A @B String param) {} // violation: Annotation '@A' must appear before '@C' (alphabetical order).
 }
 // === end ===
 
 // === case: inline_reorder_two_annotations ===
 class InputAnnotationSameLineInlineReorderTwoAnnotationsSliceViolation {
-	void foo(@B @A String param) {} // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+	void foo(@B @A String param) {} // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 }
 // === end ===
 
 // === case: merge_single_annotation_line ===
 class InputAnnotationSameLineMergeSliceViolation {
 	void m(
-			@Deprecated // violation: Annotation 'Deprecated' must be on the same line as the declaration.
+			@Deprecated // violation: Annotation '@Deprecated' must be on the same line as the declaration.
 			String param
 	) {}
 }
@@ -151,7 +180,7 @@ class InputAnnotationSameLineMergeSliceViolation {
 // === case: merge_three_annotation_lines ===
 class InputAnnotationSameLineMergeThreeAnnotationLinesSliceViolation {
 	void m(
-			@A // violation: Annotation 'A' must be on the same line as the declaration.
+			@A // violation: Annotation '@A' must be on the same line as the declaration.
 			@B
 			@C
 			String param
@@ -164,7 +193,7 @@ class InputAnnotationSameLinePreservesDeclarationIndentationSliceViolation {
 	static class Outer {
 		static class Inner {
 			void m(
-					@A // violation: Annotation 'A' must be on the same line as the declaration.
+					@A // violation: Annotation '@A' must be on the same line as the declaration.
 					String param
 			) {}
 		}
@@ -178,7 +207,7 @@ class InputAnnotationSameLineOrderCatchParamSliceViolation {
 		try {
 			Thread.sleep(1);
 		}
-		catch (@B @A Exception e) { // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+		catch (@B @A Exception e) { // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 			e.printStackTrace();
 		}
 	}
@@ -187,7 +216,7 @@ class InputAnnotationSameLineOrderCatchParamSliceViolation {
 
 // === case: reorder_contexts_constructor_param ===
 class InputAnnotationSameLineOrderConstructorParamSliceViolation {
-	InputAnnotationSameLineOrderConstructorParamSliceViolation(@B @A String param) {} // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+	InputAnnotationSameLineOrderConstructorParamSliceViolation(@B @A String param) {} // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 }
 // === end ===
 
@@ -195,7 +224,7 @@ class InputAnnotationSameLineOrderConstructorParamSliceViolation {
 // imports: java.util.List
 class InputAnnotationSameLineOrderForEachSliceViolation {
 	void m(List<String> list) {
-		for (@B @A var item : list) // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+		for (@B @A var item : list) // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 			System.out.println(item);
 	}
 }
@@ -204,7 +233,7 @@ class InputAnnotationSameLineOrderForEachSliceViolation {
 // === case: reorder_contexts_for_init ===
 class InputAnnotationSameLineOrderForInitSliceViolation {
 	void m() {
-		for (@B @A var i = 0; i < 10; ++i) // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+		for (@B @A var i = 0; i < 10; ++i) // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 			System.out.println(i);
 	}
 }
@@ -214,21 +243,21 @@ class InputAnnotationSameLineOrderForInitSliceViolation {
 // imports: java.util.function.Consumer
 class InputAnnotationSameLineOrderLambdaParamSliceViolation {
 	void m() {
-		final Consumer<String> c = (@B @A var s) -> {}; // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+		final Consumer<String> c = (@B @A var s) -> {}; // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 	}
 }
 // === end ===
 
 // === case: reorder_contexts_method_param ===
 class InputAnnotationSameLineOrderMethodParamSliceViolation {
-	void m(@B @A String param) {} // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+	void m(@B @A String param) {} // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 }
 // === end ===
 
 // === case: reorder_contexts_multi_param ===
 class InputAnnotationSameLineOrderMultiParamSliceViolation {
 	void m(
-			@C @A String param1, // violation: Annotation 'A' must appear before 'C' (alphabetical order).
+			@C @A String param1, // violation: Annotation '@A' must appear before '@C' (alphabetical order).
 			@A @B String param2
 	) {}
 }
@@ -236,14 +265,14 @@ class InputAnnotationSameLineOrderMultiParamSliceViolation {
 
 // === case: reorder_contexts_record_component ===
 class InputAnnotationSameLineOrderRecordComponentSliceViolation {
-	record Data(@B @A String name) {} // violation: Annotation 'A' must appear before 'B' (alphabetical order).
+	record Data(@B @A String name) {} // violation: Annotation '@A' must appear before '@B' (alphabetical order).
 }
 // === end ===
 
 // === case: sorts_alphabetically ===
 class InputAnnotationSameLineSortsAlphabeticallySliceViolation {
 	void m(
-			@C // violation: Annotation 'C' must be on the same line as the declaration.
+			@C // violation: Annotation '@C' must be on the same line as the declaration.
 			@A
 			@B
 			String param
@@ -254,7 +283,7 @@ class InputAnnotationSameLineSortsAlphabeticallySliceViolation {
 // === case: two_annotations_on_same_line ===
 class InputAnnotationSameLineTwoAnnotationsOnSameLineSliceViolation {
 	void m(
-			@A @B // violation: Annotation 'A' must be on the same line as the declaration.
+			@A @B // violation: Annotation '@A' must be on the same line as the declaration.
 			String param
 	) {}
 }

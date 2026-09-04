@@ -4,6 +4,9 @@ import static com.etk2000.checkstyle.gradle.fix.FixerTestUtil.assertSkip;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.etk2000.checkstyle.JavaLineScanner.LexerState;
+import com.etk2000.checkstyle.TopLevelScan;
+import com.etk2000.checkstyle.TopLevelScan.Brackets;
+import com.etk2000.checkstyle.TopLevelScan.Underflow;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -12,86 +15,44 @@ import org.junit.jupiter.params.provider.CsvSource;
 public class JitInefficiencyFixerTest {
 	private static final String TOPIC = "jitinefficiency";
 
+	private static final TopLevelScan ASSIGNMENT_SCAN = new TopLevelScan(Brackets.ALL, Underflow.CLAMP);
+
 	private final CheckstyleFixer fixer = new JitInefficiencyFixer();
 
 	@Test
-	public void appendConcatInsideBlockCommentBails() throws Exception {
-		assertSkip(fixer, TOPIC, "append_concat_inside_block_comment_bails");
-	}
-
-	@Test
-	public void appendConcatUnclosedParen() throws Exception {
-		assertSkip(fixer, TOPIC, "append_concat_unclosed_paren");
-	}
-
-	@Test
-	public void boxedConstructorRefusesUnclosedParen() throws Exception {
-		assertSkip(fixer, TOPIC, "boxed_constructor_refuses_unclosed_paren");
-	}
-
-	@Test
-	public void emptyStringConcatLineCommentBeforeEndBails() throws Exception {
-		assertSkip(fixer, TOPIC, "empty_string_concat_line_comment_before_end_bails");
-	}
-
-	@Test
-	public void emptyStringConcatUnterminatedBlockCommentBails() throws Exception {
-		assertSkip(fixer, TOPIC, "empty_string_concat_unterminated_block_comment_bails");
-	}
-
-	@Test
-	public void newStringRefusesUnclosedParen() throws Exception {
-		assertSkip(fixer, TOPIC, "new_string_refuses_unclosed_paren");
-	}
-
-	@Test
-	public void stringConcatArrayLhsClassicForUnparseableHeaderBails() throws Exception {
+	public void anUnparseableBufferYieldsNoFix() throws Exception {
 		assertSkip(fixer, TOPIC, "string_concat_array_lhs_classic_for_unparseable_header_bails");
 	}
 
-	@Test
-	public void stringConcatGapCrossScopeCleanBails() throws Exception {
-		assertSkip(fixer, TOPIC, "string_concat_gap_cross_scope_clean_bails");
-	}
-
-	@Test
-	public void stringConcatGapNestedScopeBails() throws Exception {
-		assertSkip(fixer, TOPIC, "string_concat_gap_nested_scope_bails");
-	}
-
-	@Test
-	public void stringConcatGapTextBlockBails() throws Exception {
-		assertSkip(fixer, TOPIC, "string_concat_gap_text_block_bails");
-	}
-
-	@Test
-	public void stringConcatInLoopInsideBlockCommentBails() throws Exception {
-		assertSkip(fixer, TOPIC, "string_concat_in_loop_inside_block_comment_bails");
-	}
-
-	@Test
-	public void stringConcatLhsMalformedBails() throws Exception {
-		assertSkip(fixer, TOPIC, "string_concat_lhs_malformed_bails");
-	}
-
-	@Test
-	public void stringConcatTier2DoWhileLastLineBails() throws Exception {
-		assertSkip(fixer, TOPIC, "string_concat_tier2_do_while_last_line_bails");
-	}
-
-	@Test
-	public void stringConcatTier2DoWhileMissingSemicolonBails() throws Exception {
-		assertSkip(fixer, TOPIC, "string_concat_tier2_do_while_missing_semicolon_bails");
-	}
-
-	@Test
-	public void stringConcatTier2DoWhileNestedScopeBails() throws Exception {
-		assertSkip(fixer, TOPIC, "string_concat_tier2_do_while_nested_scope_bails");
-	}
-
-	@Test
-	public void stringConcatTier2DoWhileNoMatchingWhileBails() throws Exception {
-		assertSkip(fixer, TOPIC, "string_concat_tier2_do_while_no_matching_while_bails");
+	@CsvSource(delimiter = '|', value = {
+			"a = b|2",
+			"= b|0",
+			"a =|2",
+			"a == b = c|7",
+			"a != b = c|7",
+			"a <= b = c|7",
+			"a >= b = c|7",
+			"a >>= b|-1",
+			"a <<= b|-1",
+			"a >>>= b|-1",
+			"a += b|3",
+			"a -= b|3",
+			"a *= b|3",
+			"a /= b|3",
+			"a %= b|3",
+			"a &= b|3",
+			"'a |= b'|3",
+			"a ^= b|3",
+			"a == b|-1",
+			"a != b|-1",
+			"a <= b|-1",
+			"a >= b|-1",
+			"f(a = b)|-1",
+			"a = b, c = d|2"
+	})
+	@ParameterizedTest
+	public void testAssignmentEqualsTarget(String text, int expected) {
+		assertEquals(expected, ASSIGNMENT_SCAN.indexOf(text, JitInefficiencyFixer.ASSIGNMENT_EQUALS));
 	}
 
 	@CsvSource(delimiter = '|', value = {

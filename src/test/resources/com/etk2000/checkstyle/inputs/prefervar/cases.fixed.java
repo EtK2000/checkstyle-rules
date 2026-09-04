@@ -2,8 +2,7 @@
 // imports: java.util.List
 // imports: javax.annotation.Nonnull
 class InputPreferVarAnnotationPlusFinalSliceViolation {
-	void m() {
-		final var l = List.of("a", "b");
+	void m(List<String> l) {
 		for (@Nonnull var i : l)
 			System.out.println(i);
 	}
@@ -54,6 +53,16 @@ class InputPreferVarBoxedTypeFromQualifiedBoxedInitializerSliceViolation {
 }
 // === end ===
 
+// === case: cast_to_matching_type ===
+class InputPreferVarLiteralMismatchCastToMatchingTypeSliceViolation {
+	void m(Object obj, int x) {
+		final float cf = x;
+		final long cl = x;
+		final var cs = (String) obj;
+	}
+}
+// === end ===
+
 // === case: comma_in_block_comment_not_multi_var ===
 class InputPreferVarCommaInBlockCommentNotMultiVarSliceViolation {
 	void m() {
@@ -99,28 +108,40 @@ class InputPreferVarCommentBetweenTypeAndNameSliceViolation {
 }
 // === end ===
 
-// === case: conditional_initializer_reassigned_beyond_the_arm_type ===
-// imports: java.util.ArrayList
-// imports: java.util.LinkedList
-// imports: java.util.List
-class InputPreferVarConditionalInitializerReassignedBeyondTheArmTypeSliceViolation {
-	void m(boolean flag) {
-		List<String> items = flag ? new ArrayList<>() : new ArrayList<>();
-		items = new LinkedList<>();
-		System.out.println(items);
+// === case: conditional_diamond_whose_class_cannot_take_the_declared_arguments_warns ===
+// imports: java.util.function.Function
+class InputPreferVarConditionalDiamondWhoseClassCannotTakeTheDeclaredArgumentsWarnsSliceViolation {
+	static class MyFunc<T> implements Function<T, Integer> {
+		@Override
+		public Integer apply(T value) {
+			return 0;
+		}
 	}
-}
-// === end ===
 
-// === case: conditional_initializer_with_differing_arms_reassigned ===
-// imports: java.util.ArrayList
-// imports: java.util.LinkedList
-// imports: java.util.List
-class InputPreferVarConditionalInitializerWithDifferingArmsReassignedSliceViolation {
-	void m(boolean flag) {
-		List<String> items = flag ? new ArrayList<>() : new LinkedList<>();
-		items = new LinkedList<>();
-		System.out.println(items);
+	static class MyPair<A> extends Src<A, Integer> {
+	}
+
+	static class Src<A, B> implements AutoCloseable {
+		@Override
+		public void close() {
+		}
+	}
+
+	void m(boolean flag, int key) {
+		final Function<String, Integer> everyArmTernary = flag ? new MyFunc<>() : new MyFunc<>();
+		final Function<String, Integer> everyArmSwitch = switch (key) { default -> new MyFunc<>(); };
+		final Src<String, Integer> firstArmCannotTake = flag ? new MyPair<>() : new Src<>();
+		final Src<String, Integer> secondArmCannotTake = flag ? new Src<>() : new MyPair<>();
+		final Src<String, Integer> switchArmCannotTake = switch (key) { case 1 -> new Src<>(); default -> new MyPair<>(); };
+		final Src<String, Integer> nestedArmCannotTake = flag ? new Src<>() : key == 1 ? new Src<>() : new MyPair<>();
+		final Function<String, Integer> qualifiedArmCannotTake = flag ? new MyFunc<>() : new MyFunc<>();
+		System.out.println(everyArmTernary);
+		System.out.println(everyArmSwitch);
+		System.out.println(firstArmCannotTake);
+		System.out.println(secondArmCannotTake);
+		System.out.println(switchArmCannotTake);
+		System.out.println(nestedArmCannotTake);
+		System.out.println(qualifiedArmCannotTake);
 	}
 }
 // === end ===
@@ -175,10 +196,28 @@ class InputPreferVarDiamondVarInVariableNameSliceViolation {
 }
 // === end ===
 
-// === case: equals_comparison_not_assignment ===
-class InputPreferVarEqualsComparisonNotAssignmentSliceViolation {
-	void m(int x, int y) {
-		final boolean b = x == y;
+// === case: exact_cast_initializer_dropped_by_a_sibling_fix_stays_explicit ===
+// imports: java.util.List
+class InputPreferVarExactCastInitializerDroppedByASiblingFixStaysExplicitSliceViolation {
+	void m(List<String> typed) {
+		final List raw = typed;
+		System.out.println(raw);
+	}
+}
+// === end ===
+
+// === case: explicit_array_init_annotated_declared_dimension_with_an_argument ===
+// imports: java.lang.annotation.ElementType
+// imports: java.lang.annotation.Target
+class InputPreferVarExplicitArrayInitAnnotatedDeclaredDimensionWithAnArgumentSliceViolation {
+	@Target(ElementType.TYPE_USE)
+	@interface Ann {
+		String value();
+	}
+
+	void m() {
+		final String @Ann("x") [] declared = {"d"};
+		System.out.println(declared.length);
 	}
 }
 // === end ===
@@ -255,6 +294,16 @@ class InputPreferVarExplicitArrayInitCStyleNameSpelledVarSliceViolation {
 }
 // === end ===
 
+// === case: explicit_array_init_c_style_typed_matching ===
+class InputPreferVarExplicitArrayInitCStyleTypedMatchingSliceViolation {
+	void m() {
+		final String[] values = {"a"};
+		final int[][] grid = {{1}};
+		System.out.println(values.length + grid.length);
+	}
+}
+// === end ===
+
 // === case: explicit_array_init_comment_equals_before_assignment ===
 class InputPreferVarExplicitArrayInitCommentEqualsBeforeAssignmentSliceViolation {
 	void m() {
@@ -271,6 +320,38 @@ class InputPreferVarExplicitArrayInitMethodCallArgSliceViolation {
 }
 // === end ===
 
+// === case: explicit_array_init_primitive_element_into_a_supertype_warns ===
+class InputPreferVarExplicitArrayInitPrimitiveElementIntoASupertypeWarnsSliceViolation {
+	void m() {
+		final Object[] rows = new int[][]{{1}};
+		final Object[] cStyleRows = new int[][]{{1}};
+		final Cloneable cloneable = new int[]{1};
+		System.out.println(rows.length + cStyleRows.length + cloneable.hashCode());
+	}
+}
+// === end ===
+
+// === case: explicit_array_init_qualified_declared_and_new_type ===
+class InputPreferVarExplicitArrayInitQualifiedDeclaredAndNewTypeSliceViolation {
+	void m() {
+		final String[] both = {"b"};
+		final String[] cStyle = {"c"};
+		final java.util.Date[] dates = {new java.util.Date()};
+		System.out.println(both.length + cStyle.length + dates.length);
+	}
+}
+// === end ===
+
+// === case: explicit_array_init_qualified_declared_type ===
+class InputPreferVarExplicitArrayInitQualifiedDeclaredTypeSliceViolation {
+	void m() {
+		final String[] qualified = {"a"};
+		final String[] simple = {"b"};
+		System.out.println(qualified.length + simple.length);
+	}
+}
+// === end ===
+
 // === case: explicit_array_init_qualified_new_type ===
 class InputPreferVarExplicitArrayInitQualifiedNewTypeSliceViolation {
 	void m() {
@@ -279,31 +360,12 @@ class InputPreferVarExplicitArrayInitQualifiedNewTypeSliceViolation {
 }
 // === end ===
 
-// === case: explicit_array_init_ternary ===
-class InputPreferVarExplicitArrayInitTernarySliceViolation {
-	void m(boolean cond) {
-		final int[] a = cond ? new int[]{1} : new int[]{2};
-	}
-}
-// === end ===
-
-// === case: factory_initializer_reassigned_beyond_the_returned_type ===
-class InputPreferVarFactoryInitializerReassignedBeyondTheReturnedTypeSliceViolation {
-	static class Base {
-	}
-
-	static class Derived extends Base {
-	}
-
-	static Derived makeDerived() {
-		return new Derived();
-	}
-
-	void m(boolean flag) {
-		Base item = makeDerived();
-		if (flag)
-			item = new Base();
-		System.out.println(item);
+// === case: explicit_array_init_supertype_element_with_more_dimensions_warns ===
+class InputPreferVarExplicitArrayInitSupertypeElementWithMoreDimensionsWarnsSliceViolation {
+	void m() {
+		final Object[] rows = new Object[][]{{1}};
+		final Object[] cStyleRows = new Object[][]{{1}};
+		System.out.println(rows.length + cStyleRows.length);
 	}
 }
 // === end ===
@@ -317,7 +379,7 @@ class InputPreferVarFieldAssignedAboveShadowingLocalSliceViolation {
 
 	void m() {
 		items = new LinkedList<>();
-		final var items = new ArrayList<String>();
+		final List<String> items = new ArrayList<>();
 		System.out.println(items);
 	}
 }
@@ -327,8 +389,7 @@ class InputPreferVarFieldAssignedAboveShadowingLocalSliceViolation {
 // imports: java.util.List
 // imports: javax.annotation.Nonnull
 class InputPreferVarForEachAnnotationAndFinalOnPrevLineSliceViolation {
-	void m() {
-		final var list = List.of("a", "b");
+	void m(List<String> list) {
 		for (@Nonnull var item : list)
 			System.out.println(item);
 	}
@@ -339,8 +400,7 @@ class InputPreferVarForEachAnnotationAndFinalOnPrevLineSliceViolation {
 // imports: java.util.List
 // imports: javax.annotation.Nonnull
 class InputPreferVarForEachAnnotationAndFinalOnVarLineSliceViolation {
-	void m() {
-		final var list = List.of("a", "b");
+	void m(List<String> list) {
 		for (@Nonnull var item : list)
 			System.out.println(item);
 	}
@@ -350,8 +410,7 @@ class InputPreferVarForEachAnnotationAndFinalOnVarLineSliceViolation {
 // === case: for_each_final ===
 // imports: java.util.List
 class InputPreferVarForEachFinalSliceViolation {
-	void m() {
-		final var l = List.of("a", "b");
+	void m(List<String> l) {
 		for (var i : l)
 			System.out.println(i);
 	}
@@ -361,23 +420,44 @@ class InputPreferVarForEachFinalSliceViolation {
 // === case: for_each_final_only_prev_line ===
 // imports: java.util.List
 class InputPreferVarForEachFinalOnlyPrevLineSliceViolation {
-	void m() {
-		final var list = List.of("a", "b");
+	void m(List<String> list) {
 		for (var item : list)
 			System.out.println(item);
 	}
 }
 // === end ===
 
-// === case: for_init_reassigned_beyond_the_constructed_type ===
-// imports: java.util.ArrayList
-// imports: java.util.LinkedList
+// === case: for_each_final_qualified_generic_element_type_converts ===
 // imports: java.util.List
-class InputPreferVarForInitReassignedBeyondTheConstructedTypeSliceViolation {
-	void m(boolean flag) {
-		for (List<String> items = new ArrayList<>(); flag; flag = false) {
-			items = new LinkedList<>();
-			System.out.println(items);
+// imports: java.util.Map
+class InputPreferVarForEachFinalQualifiedGenericElementTypeConvertsSliceViolation {
+	void m(List<Map.Entry<String, Integer>> entries) {
+		for (var entry : entries)
+			System.out.println(entry);
+	}
+}
+// === end ===
+
+// === case: generic_return_on_an_enclosing_type_qualified_call_warns ===
+class InputPreferVarGenericReturnOnAnEnclosingTypeQualifiedCallSliceViolation {
+	static class Outer {
+		static class Inner {
+			void m() {
+				final String name = Outer.make();
+				final String qualified = InputPreferVarGenericReturnOnAnEnclosingTypeQualifiedCallSliceViolation.Outer.make();
+				final var any = Outer.make();
+				final String typed = Outer.<String>make();
+				final var label = Outer.label();
+				System.out.println(name + qualified + any + typed + label);
+			}
+		}
+
+		static String label() {
+			return "";
+		}
+
+		static <T> T make() {
+			return null;
 		}
 	}
 }
@@ -395,7 +475,7 @@ class InputPreferVarGenericTypeSliceViolation {
 // === case: multi_dim_array ===
 class InputPreferVarMultiDimArraySliceViolation {
 	void m() {
-		final int[][] m = new int[3][3];
+		final var m = new int[3][3];
 	}
 }
 // === end ===
@@ -409,56 +489,37 @@ class InputPreferVarNestedGenericSliceViolation {
 }
 // === end ===
 
-// === case: overload_selection_changes_on_a_constructor_argument ===
+// === case: overload_selection_ignores_a_this_constructor_of_a_different_arity ===
 // imports: java.util.ArrayList
 // imports: java.util.List
-class InputPreferVarOverloadSelectionChangesOnAConstructorArgumentSliceViolation {
-	static class Sink {
-		Sink(ArrayList<String> values) {
-		}
-
-		Sink(List<String> values) {
-		}
-	}
-
+class InputPreferVarOverloadSelectionIgnoresAThisConstructorOfADifferentAritySliceViolation {
 	void m() {
 		final List<String> items = new ArrayList<>();
-		System.out.println(new Sink(items));
+		class Sink {
+			Sink() {
+				this(items);
+			}
+
+			Sink(List<String> values) {
+			}
+
+			Sink(List<String> values, int limit) {
+			}
+		}
+
+		System.out.println(new Sink());
 	}
 }
 // === end ===
 
-// === case: overload_selection_changes_on_a_super_qualified_call ===
+// === case: overload_selection_through_a_cast_warns ===
 // imports: java.util.ArrayList
 // imports: java.util.List
-class InputPreferVarOverloadSelectionSuperQualifiedBase {
-	void take(ArrayList<String> values) {
-		System.out.println(values);
-	}
-
-	void take(List<String> values) {
-		System.out.println(values);
-	}
-}
-
-class InputPreferVarOverloadSelectionChangesOnASuperQualifiedCallSliceViolation extends InputPreferVarOverloadSelectionSuperQualifiedBase {
-	void m() {
-		final List<String> items = new ArrayList<>();
-		super.take(items);
-	}
-}
-// === end ===
-
-// === case: overload_selection_changes_under_var ===
-// imports: java.util.ArrayList
-// imports: java.util.List
-class InputPreferVarOverloadSelectionChangesUnderVarSliceViolation {
+class InputPreferVarOverloadSelectionThroughACastWarnsSliceViolation {
 	static void take(ArrayList<String> values) {
-		System.out.println(values);
 	}
 
 	static void take(List<String> values) {
-		System.out.println(values);
 	}
 
 	void m() {
@@ -468,40 +529,16 @@ class InputPreferVarOverloadSelectionChangesUnderVarSliceViolation {
 }
 // === end ===
 
-// === case: overload_selection_differs_at_a_later_argument ===
-// imports: java.util.ArrayList
-// imports: java.util.List
-class InputPreferVarOverloadSelectionDiffersAtALaterArgumentSliceViolation {
-	static void take(int count, ArrayList<String> values) {
-		System.out.println(count + values.size());
-	}
-
-	static void take(int count, List<String> values) {
-		System.out.println(count + values.size());
-	}
-
-	void m() {
-		final List<String> items = new ArrayList<>();
-		take(1, items);
-	}
-}
-// === end ===
-
-// === case: overload_selection_ignores_a_different_arity ===
-// imports: java.util.ArrayList
-// imports: java.util.List
-class InputPreferVarOverloadSelectionIgnoresADifferentAritySliceViolation {
-	static void take(List<String> values) {
-		System.out.println(values);
-	}
-
-	static void take(List<String> values, int count) {
-		System.out.println(count + values.size());
-	}
-
-	void m() {
-		final var items = new ArrayList<String>();
-		take(items);
+// === case: primitive_with_non_literal_expression ===
+class InputPreferVarLiteralMismatchPrimitiveWithNonLiteralExpressionSliceViolation {
+	void m(int a, byte b, boolean flag) {
+		final float fAdd = a + b;
+		final int fCast = (byte) a;
+		final long lMul = a * b;
+		final long lShift = a << b;
+		final long tern = flag ? 1 : 2;
+		final var piParen = (5);
+		final float pfCast = a;
 	}
 }
 // === end ===
@@ -535,15 +572,35 @@ class InputPreferVarQualifiedTypeSliceViolation {
 }
 // === end ===
 
-// === case: reassigned_between_two_unresolvable_names ===
-// imports: java.util.ArrayList
-// imports: java.util.List
-class InputPreferVarReassignedBetweenTwoUnresolvableNamesSliceViolation {
-	void m(boolean flag) {
-		List<String> items = new ArrayList<>();
-		if (flag)
-			items = new Absent();
-		System.out.println(items);
+// === case: qualified_types_are_reported_at_their_first_token_warns ===
+class InputPreferVarQualifiedTypesAreReportedAtTheirFirstTokenWarnsSliceViolation {
+	@interface Marker {
+	}
+
+	static class Outer {
+		static final class Res<T> implements AutoCloseable {
+			@Override
+			public void close() {
+			}
+		}
+	}
+
+	<T> T acquire() {
+		return null;
+	}
+
+	void m(Holder holder, String x, String y) throws Exception {
+		try (@Marker AutoCloseable wide = new Outer.Res<String>()) {
+			System.out.println(wide);
+		}
+		try (@Marker AutoCloseable typed = this.<AutoCloseable>acquire()) {
+			System.out.println(typed);
+		}
+		for (String item : holder.items)
+			System.out.println(item);
+		final java.util.List<String> first = java.util.List.of(x), second = java.util.List.of(y);
+		final java.util.List<String> empty = java.util.Collections.<String>emptyList();
+		System.out.println(String.valueOf(first) + second + empty);
 	}
 }
 // === end ===
@@ -554,7 +611,7 @@ class InputPreferVarReassignedBetweenTwoUnresolvableNamesSliceViolation {
 // imports: java.util.List
 class InputPreferVarReassignedNameShadowedByANestedClassSliceViolation {
 	void m() {
-		final var items = new ArrayList<String>();
+		final List<String> items = new ArrayList<>();
 		final Runnable task = new Runnable() {
 			private List<String> items;
 
@@ -569,54 +626,66 @@ class InputPreferVarReassignedNameShadowedByANestedClassSliceViolation {
 }
 // === end ===
 
-// === case: reassigned_to_a_different_type ===
-// imports: java.util.ArrayList
-// imports: java.util.LinkedList
-// imports: java.util.List
-class InputPreferVarReassignedToADifferentTypeSliceViolation {
-	void m(boolean flag) {
-		List<String> items = new ArrayList<>();
-		if (flag)
-			items = new LinkedList<>();
-		System.out.println(items);
-	}
-}
-// === end ===
-
-// === case: reassigned_to_a_non_constructed_value ===
-// imports: java.util.ArrayList
-// imports: java.util.List
-class InputPreferVarReassignedToANonConstructedValueSliceViolation {
-	void m(boolean flag, List<String> other) {
-		List<String> items = new ArrayList<>();
-		if (flag)
-			items = other;
-		System.out.println(items);
-	}
-}
-// === end ===
-
-// === case: reassigned_to_a_same_simple_name_different_package ===
-// imports: java.util.List
-class InputPreferVarReassignedToASameSimpleNameDifferentPackageSliceViolation {
-	void m(boolean flag) {
-		List<String> items = new java.util.ArrayList<>();
-		if (flag)
-			items = new absent.ArrayList<>();
-		System.out.println(items);
-	}
-}
-// === end ===
-
 // === case: reassigned_to_the_same_fqcn_different_spelling ===
 // imports: java.util.ArrayList
 // imports: java.util.List
 class InputPreferVarReassignedToTheSameFqcnDifferentSpellingSliceViolation {
 	void m(boolean flag) {
-		var items = new ArrayList<String>();
+		List<String> items = new ArrayList<>();
 		if (flag)
 			items = new ArrayList<>();
 		System.out.println(items);
+	}
+}
+// === end ===
+
+// === case: receiver_cast_warns ===
+// imports: java.util.ArrayList
+// imports: java.util.Collection
+class InputPreferVarReceiverCastWarnsSliceViolation {
+	void m() {
+		final Collection<Integer> ids = new ArrayList<>();
+		System.out.println(ids.remove(1));
+	}
+}
+// === end ===
+
+// === case: receiver_method_reference_cast_warns ===
+// imports: java.util.ArrayList
+// imports: java.util.Collection
+// imports: java.util.function.IntFunction
+class InputPreferVarReceiverMethodReferenceCastWarnsSliceViolation {
+	void m() {
+		final Collection<Integer> ids = new ArrayList<>();
+		final IntFunction<Object> remover = ids::remove;
+		System.out.println(remover.apply(1));
+	}
+}
+// === end ===
+
+// === case: receiver_same_file_override_spelled_qualified_warns ===
+// imports: java.util.Date
+class InputPreferVarReceiverSameFileOverrideSpelledQualifiedWarnsSliceViolation {
+	static class Store {
+		String put(Date value) {
+			return "Store";
+		}
+	}
+
+	static class TimedStore extends Store {
+		@Override
+		String put(Date value) {
+			return "TimedStore";
+		}
+	}
+
+	static TimedStore create() {
+		return new TimedStore();
+	}
+
+	void m() {
+		final Store store = create();
+		System.out.println(store.put(new Date()));
 	}
 }
 // === end ===
@@ -632,7 +701,7 @@ class InputPreferVarSiblingBlockSameNameReassignmentSliceViolation {
 			items = new LinkedList<>();
 			System.out.println(items);
 		}
-		final var items = new ArrayList<String>();
+		final List<String> items = new ArrayList<>();
 		System.out.println(items);
 	}
 }
@@ -650,6 +719,32 @@ class InputPreferVarSimpleIntSliceViolation {
 class InputPreferVarSimpleStringSliceViolation {
 	void m() {
 		final var s = "hi";
+	}
+}
+// === end ===
+
+// === case: try_resource_qualified_type_warns ===
+// imports: java.io.BufferedReader
+// imports: java.io.Closeable
+// imports: java.io.IOException
+// imports: java.io.StringReader
+class InputPreferVarTryResourceQualifiedTypeWarnsSliceViolation {
+	static BufferedReader openReader() {
+		return new BufferedReader(new StringReader(""));
+	}
+
+	static String use(BufferedReader reader) {
+		return "reader";
+	}
+
+	static String use(Closeable closeable) {
+		return "closeable";
+	}
+
+	void m() throws IOException {
+		try (Closeable c = openReader()) {
+			System.out.println(use(c));
+		}
 	}
 }
 // === end ===

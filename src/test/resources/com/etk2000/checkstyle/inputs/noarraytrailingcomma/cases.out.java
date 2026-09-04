@@ -1,5 +1,31 @@
 package com.etk2000.checkstyle.inputs.noarraytrailingcomma;
 
+// === case: annotation_array_init ===
+class InputArrayCommaAnnotationArrayInitSliceViolation {
+	@interface Anno {
+		int[] value();
+	}
+
+	@Anno({1, 2})
+	int g = 3;
+}
+// === end ===
+
+// === case: annotation_array_init_nested ===
+class InputArrayCommaAnnotationNestedSliceViolation {
+	@interface Inner {
+		int[] value();
+	}
+
+	@interface Outer {
+		Inner value();
+	}
+
+	@Outer(@Inner({1}))
+	int g = 3;
+}
+// === end ===
+
 // === case: comma_at_start_of_line ===
 class InputArrayCommaStartOfLineSliceViolation {
 	int[] a = {1

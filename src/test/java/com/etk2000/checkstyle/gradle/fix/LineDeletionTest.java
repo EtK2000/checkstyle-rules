@@ -114,7 +114,6 @@ public class LineDeletionTest {
 
 	@Test
 	public void testWhitespaceOnlyLinesAreTreatedAsBlank() {
-		// LineDeletion uses isBlank() not isEmpty(), so tab/space-only lines collapse too
 		final var lines = List.of("code", "\t\t", "alias", "    ", "code");
 		final var result = LineDeletion.deleteRange(lines, 2, 2);
 		assertEquals(2, result.startLine());

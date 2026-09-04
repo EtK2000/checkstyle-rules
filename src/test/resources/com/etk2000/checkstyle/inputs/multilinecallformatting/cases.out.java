@@ -252,8 +252,7 @@ class InputMultilineCallComputeIfAbsentBracelessLambdaNotExemptSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.computeIfAbsent("k", x ->
-				x.trim());
+		cache.computeIfAbsent("k", x -> x.trim());
 	}
 }
 // === end ===
@@ -330,9 +329,13 @@ class InputMultilineCallComputeIfAbsentThreeArgsNotExemptSliceViolation {
 	}
 
 	void m() {
-		computeIfAbsent("k", "v", x -> {
-			System.out.println(x);
-		});
+		computeIfAbsent(
+				"k",
+				"v",
+				x -> {
+					System.out.println(x);
+				}
+		);
 	}
 }
 // === end ===
@@ -369,9 +372,12 @@ class InputMultilineCallComputeIfPresentTwoArgLambdaNotExemptSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.computeIfPresent("k", (k, v) -> {
-			System.out.println(v);
-		});
+		cache.computeIfPresent(
+				"k",
+				(k, v) -> {
+					System.out.println(v);
+				}
+		);
 	}
 }
 // === end ===
@@ -606,10 +612,68 @@ class InputMultilineCallSharedLineFirstTwoSharingSliceViolation {
 }
 // === end ===
 
+// === case: get_quantity_string_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetQuantityStringContextParamNotOnOpeningSliceViolation {
+	void m(Context ctx) {
+		method(ctx.getResources().getQuantityString(
+				1,
+				2
+		));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: get_string_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringContextParamNotOnOpeningSliceViolation {
+	void m(Context ctx) {
+		method(ctx.getString(
+				1
+		));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: get_string_fqn_context_param_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringFqnContextParamNotOnOpeningSliceViolation {
+	void m(android.content.Context ctx) {
+		method(ctx.getString(
+				1
+		));
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
 // === case: get_string_not_on_closing ===
 class InputMultilineCallSpecialMethodGetStringNotOnClosingSliceViolation {
 	void m() {
 		method(requireContext().getString(
+				1
+		));
+	}
+
+	void method(Object a) {
+	}
+
+	Object requireContext() {
+		return null;
+	}
+}
+// === end ===
+
+// === case: get_string_tracked_var_not_on_opening ===
+class InputMultilineCallSpecialMethodGetStringTrackedVarNotOnOpeningSliceViolation {
+	void m() {
+		final var ctx = requireContext();
+		method(ctx.getString(
 				1
 		));
 	}
@@ -692,7 +756,7 @@ class InputMultilineCallSharedLineLastTwoSharingSliceViolation {
 // === end ===
 
 // === case: list_of_fqn_not_on_opening ===
-// skip-reason: multiline formatting fix not yet supported for this shape
+// skip-reason: cannot reformat: this multi-line call shape is not supported yet
 // imports: java.util.List
 class InputMultilineCallSpecialMethodListOfFqnNotOnOpeningSliceViolation {
 	void m() {
@@ -709,7 +773,7 @@ class InputMultilineCallSpecialMethodListOfFqnNotOnOpeningSliceViolation {
 // === end ===
 
 // === case: list_of_fqn_type_witness_not_on_opening ===
-// skip-reason: multiline formatting fix not yet supported for this shape
+// skip-reason: cannot reformat: this multi-line call shape is not supported yet
 // imports: java.util.List
 class InputMultilineCallSpecialMethodListOfFqnTypeWitnessNotOnOpeningSliceViolation {
 	void m() {
@@ -872,9 +936,12 @@ class InputMultilineCallSharedLineNewFooSliceViolation {
 // imports: java.util.function.Consumer
 class InputMultilineCallNonSpecialTwoArgInlineLambdaSliceViolation {
 	void m() {
-		store("k", x -> {
-			System.out.println(x);
-		});
+		store(
+				"k",
+				x -> {
+					System.out.println(x);
+				}
+		);
 	}
 
 	void store(Object a, Consumer<Integer> c) {
@@ -888,6 +955,765 @@ class InputMultilineCallSharedLineNonSpecialOfSliceViolation {
 
 	void m() {
 		obj.of(1, 2, 3);
+	}
+}
+// === end ===
+
+// === case: open_close_android_resource_id_first_arg ===
+class InputMultilineCallOpenCloseAndroidResourceIdFirstArgSliceViolation {
+	Object arg;
+
+	void m() {
+		method(android.R.string.ok, other(arg));
+	}
+
+	void method(Object a, Object b) {
+	}
+
+	Object other(Object... args) {
+		return args[0];
+	}
+}
+// === end ===
+
+// === case: open_close_annotated_param ===
+class InputMultilineCallOpenCloseAnnotatedParamSliceViolation {
+	void m(@SuppressWarnings("unused") int a, int b) {
+	}
+}
+// === end ===
+
+// === case: open_close_anon_class_last_arg ===
+class InputMultilineCallOpenCloseAnonClassLastArgSliceViolation {
+	void m() {
+		method(
+				"k",
+				new Runnable() {
+					@Override
+					public void run() {
+						step();
+					}
+				}
+		);
+	}
+
+	void method(Object a, Runnable b) {
+	}
+
+	void step() {
+	}
+}
+// === end ===
+
+// === case: open_close_anon_class_owner_ctor_args ===
+class InputMultilineCallOpenCloseAnonClassOwnerCtorArgsSliceViolation {
+	abstract static class Base {
+		Base(int a, int b) {
+		}
+
+		abstract void run();
+	}
+
+	Base m() {
+		return new Base(1, 2) {
+			@Override
+			void run() {
+			}
+		};
+	}
+}
+// === end ===
+
+// === case: open_close_array_initializer_last_arg ===
+class InputMultilineCallOpenCloseArrayInitializerLastArgSliceViolation {
+	Object a;
+
+	void m() {
+		method(a, new int[] { 1, 2 });
+	}
+
+	void method(Object a, int[] b) {
+	}
+}
+// === end ===
+
+// === case: open_close_block_comment_last_arg ===
+class InputMultilineCallOpenCloseBlockCommentLastArgSliceViolation {
+	Object a, b;
+
+	void m() {
+		method(
+				a,
+				/* c1
+				c2 */ b
+		);
+	}
+
+	void method(Object a, Object b) {
+	}
+}
+// === end ===
+
+// === case: open_close_block_comment_middle_arg ===
+class InputMultilineCallOpenCloseBlockCommentMiddleArgSliceViolation {
+	Object a, b, c;
+
+	void m() {
+		method(
+				a,
+				/* c1
+				c2 */ b,
+				c
+		);
+	}
+
+	void method(Object... args) {
+	}
+}
+// === end ===
+
+// === case: open_close_block_comment_url_separator_skip ===
+// skip-reason: cannot re-lay-out the argument list: a text block or block comment hides where an argument's separator goes
+class InputMultilineCallOpenCloseBlockCommentUrlSeparatorSkipSliceViolation {
+	Object a, b, c;
+
+	void m() {
+		method(a,
+				/* c1
+				http://x */ b,
+				c);
+	}
+
+	void method(Object... args) {
+	}
+}
+// === end ===
+
+// === case: open_close_block_comment_with_parens_collapse ===
+class InputMultilineCallOpenCloseBlockCommentWithParensCollapseSliceViolation {
+	Object a, b;
+
+	void m() {
+		method(a, /* (x, y) */ b);
+	}
+
+	void method(Object a, Object b) {
+	}
+}
+// === end ===
+
+// === case: open_close_boundary_leading_operator_closing_only ===
+class InputMultilineCallOpenCloseBoundaryLeadingOperatorClosingOnlySliceViolation {
+	int a, b;
+
+	void m() {
+		method(a + b);
+	}
+
+	void method(int a) {
+	}
+}
+// === end ===
+
+// === case: open_close_chain_after_close_collapse ===
+class InputMultilineCallOpenCloseChainAfterCloseCollapseSliceViolation {
+	void bar() {
+	}
+
+	InputMultilineCallOpenCloseChainAfterCloseCollapseSliceViolation foo(int a, int b) {
+		return this;
+	}
+
+	void m() {
+		foo(1, 2).bar();
+	}
+}
+// === end ===
+
+// === case: open_close_chain_after_close_multiline ===
+// imports: java.util.function.Consumer
+class InputMultilineCallOpenCloseChainAfterCloseMultilineSliceViolation {
+	void m() {
+		store(
+				"k",
+				x -> {
+					System.out.println(x);
+				}
+		).run();
+	}
+
+	Runnable store(Object a, Consumer<Integer> c) {
+		return null;
+	}
+}
+// === end ===
+
+// === case: open_close_chained_receiver ===
+class InputMultilineCallOpenCloseChainedReceiverSliceViolation {
+	InputMultilineCallOpenCloseChainedReceiverSliceViolation builder() {
+		return this;
+	}
+
+	void m() {
+		builder().with(1, 2);
+	}
+
+	void with(int a, int b) {
+	}
+}
+// === end ===
+
+// === case: open_close_char_literal_and_string_on_close_line ===
+class InputMultilineCallOpenCloseCharLiteralAndStringOnCloseLineSliceViolation {
+	void m() {
+		method(',', "x) // y");
+	}
+
+	void method(char a, String b) {
+	}
+}
+// === end ===
+
+// === case: open_close_comment_after_head_comma ===
+class InputMultilineCallOpenCloseCommentAfterHeadCommaSliceViolation {
+	Object a, b;
+
+	void m() {
+		method(
+				a, // see f(x, y)
+				b
+		);
+	}
+
+	void method(Object a, Object b) {
+	}
+}
+// === end ===
+
+// === case: open_close_comment_mid_final_arg ===
+class InputMultilineCallOpenCloseCommentMidFinalArgSliceViolation {
+	Object a;
+
+	void m() {
+		method(
+				a,
+				"x" // note
+				+ "y"
+		);
+	}
+
+	void method(Object a, String b) {
+	}
+}
+// === end ===
+
+// === case: open_close_comment_mid_nonfinal_arg ===
+class InputMultilineCallOpenCloseCommentMidNonfinalArgSliceViolation {
+	Object a, c;
+
+	void m() {
+		method(
+				a,
+				"x" // note
+				+ "y",
+				c
+		);
+	}
+
+	void method(Object... args) {
+	}
+}
+// === end ===
+
+// === case: open_close_comment_on_close_line_collapse ===
+class InputMultilineCallOpenCloseCommentOnCloseLineCollapseSliceViolation {
+	Object a, b;
+
+	void m() {
+		method(a, b); // note
+	}
+
+	void method(Object a, Object b) {
+	}
+}
+// === end ===
+
+// === case: open_close_comment_on_close_line_multiline ===
+class InputMultilineCallOpenCloseCommentOnCloseLineMultilineSliceViolation {
+	Object a, b;
+
+	void m() {
+		method(
+				a, // see f(x, y)
+				b
+		); // tail
+	}
+
+	void method(Object a, Object b) {
+	}
+}
+// === end ===
+
+// === case: open_close_comment_own_line_before_braced_lambda ===
+// imports: java.util.function.Consumer
+class InputMultilineCallOpenCloseCommentOwnLineBeforeBracedLambdaSliceViolation {
+	Object a;
+
+	void m() {
+		store(
+				a, // note
+				x -> {
+					System.out.println(x);
+				}
+		);
+	}
+
+	void store(Object a, Consumer<Integer> c) {
+	}
+}
+// === end ===
+
+// === case: open_close_constructor ===
+class InputMultilineCallOpenCloseConstructorSliceViolation {
+	static class Foo {
+		Foo(int a, int b) {
+		}
+	}
+
+	Object m() {
+		return new Foo(1, 2);
+	}
+}
+// === end ===
+
+// === case: open_close_ctor_def ===
+class InputMultilineCallOpenCloseCtorDefSliceViolation {
+	InputMultilineCallOpenCloseCtorDefSliceViolation(int a, int b) {
+	}
+}
+// === end ===
+
+// === case: open_close_exactly_120 ===
+class InputMultilineCallOpenCloseExactly120SliceViolation {
+	void m() {
+		method("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 2);
+	}
+
+	void method(Object a, int b) {
+	}
+}
+// === end ===
+
+// === case: open_close_method_def ===
+class InputMultilineCallOpenCloseMethodDefSliceViolation {
+	void m(int a, int b) {
+	}
+}
+// === end ===
+
+// === case: open_close_method_def_generic_param ===
+// imports: java.util.Map
+class InputMultilineCallOpenCloseMethodDefGenericParamSliceViolation {
+	void m(Map<String, Integer> a, int b) {
+	}
+}
+// === end ===
+
+// === case: open_close_method_def_over_120 ===
+class InputMultilineCallOpenCloseMethodDefOver120SliceViolation {
+	void mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm(
+			int a,
+			int b
+	) {
+	}
+}
+// === end ===
+
+// === case: open_close_nested_both_owners_collapse ===
+class InputMultilineCallOpenCloseNestedBothOwnersCollapseSliceViolation {
+	Object a, b, x;
+
+	void m() {
+		method(x, other(a, b));
+	}
+
+	void method(Object a, Object b) {
+	}
+
+	Object other(Object a, Object b) {
+		return a;
+	}
+}
+// === end ===
+
+// === case: open_close_nested_both_owners_over_120 ===
+class InputMultilineCallOpenCloseNestedBothOwnersOver120SliceViolation {
+	Object a, b;
+
+	void m() {
+		method(
+				"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				other(a, b)
+		);
+	}
+
+	void method(Object a, Object b) {
+	}
+
+	Object other(Object a, Object b) {
+		return a;
+	}
+}
+// === end ===
+
+// === case: open_close_nested_inner_braced_lambda ===
+// imports: java.util.function.Consumer
+class InputMultilineCallOpenCloseNestedInnerBracedLambdaSliceViolation {
+	Object a, x;
+
+	void m() {
+		method(
+				x,
+				other(
+						a,
+						y -> {
+							System.out.println(y);
+						}
+				)
+		);
+	}
+
+	void method(Object a, Object b) {
+	}
+
+	Object other(Object a, Consumer<Integer> c) {
+		return a;
+	}
+}
+// === end ===
+
+// === case: open_close_nested_inner_closing_only ===
+class InputMultilineCallOpenCloseNestedInnerClosingOnlySliceViolation {
+	Object a, b;
+
+	void m() {
+		method(a, other(b));
+	}
+
+	void method(Object a, Object b) {
+	}
+
+	Object other(Object a) {
+		return a;
+	}
+}
+// === end ===
+
+// === case: open_close_nested_inner_outer_clean ===
+class InputMultilineCallOpenCloseNestedInnerOuterCleanSliceViolation {
+	Object a, b;
+
+	Object foo(Object a, Object b) {
+		return a;
+	}
+
+	void m() {
+		outer(foo(a, b));
+	}
+
+	void outer(Object a) {
+	}
+}
+// === end ===
+
+// === case: open_close_nested_inner_outer_shared ===
+class InputMultilineCallOpenCloseNestedInnerOuterSharedSliceViolation {
+	Object a, b, c;
+
+	void m() {
+		method(other(a, b), c);
+	}
+
+	void method(Object a, Object b) {
+	}
+
+	Object other(Object a, Object b) {
+		return a;
+	}
+}
+// === end ===
+
+// === case: open_close_nested_inner_shared_line ===
+class InputMultilineCallOpenCloseNestedInnerSharedLineSliceViolation {
+	Object a, b, c, d;
+
+	void m() {
+		method(a, other(b, c, d));
+	}
+
+	void method(Object a, Object b) {
+	}
+
+	Object other(Object... args) {
+		return args[0];
+	}
+}
+// === end ===
+
+// === case: open_close_nested_inside_lambda_body ===
+// imports: java.util.function.Consumer
+class InputMultilineCallOpenCloseNestedInsideLambdaBodySliceViolation {
+	Object a, b;
+
+	void foo(Object a, Object b) {
+	}
+
+	void m() {
+		store(
+				"k",
+				x -> {
+					foo(a, b);
+				}
+		);
+	}
+
+	void store(Object a, Consumer<Integer> c) {
+	}
+}
+// === end ===
+
+// === case: open_close_one_line_braced_lambda_collapses ===
+// imports: java.util.function.Consumer
+class InputMultilineCallOpenCloseOneLineBracedLambdaCollapsesSliceViolation {
+	void m() {
+		store(x -> { use(x); }, "k");
+	}
+
+	void store(Consumer<Integer> c, Object a) {
+	}
+
+	void use(Object a) {
+	}
+}
+// === end ===
+
+// === case: open_close_over_120 ===
+class InputMultilineCallOpenCloseOver120SliceViolation {
+	void m() {
+		method(
+				"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				2
+		);
+	}
+
+	void method(Object a, int b) {
+	}
+}
+// === end ===
+
+// === case: open_close_receiver_on_continuation_line ===
+class InputMultilineCallOpenCloseReceiverOnContinuationLineSliceViolation {
+	InputMultilineCallOpenCloseReceiverOnContinuationLineSliceViolation builder() {
+		return this;
+	}
+
+	void m() {
+		builder()
+				.with(1, 2);
+	}
+
+	void with(int a, int b) {
+	}
+}
+// === end ===
+
+// === case: open_close_single_arg_cast ===
+class InputMultilineCallOpenCloseSingleArgCastSliceViolation {
+	long big;
+
+	void m() {
+		method((int) big);
+	}
+
+	void method(int a) {
+	}
+}
+// === end ===
+
+// === case: open_close_single_arg_negation ===
+class InputMultilineCallOpenCloseSingleArgNegationSliceViolation {
+	int a, b;
+
+	void m() {
+		method(!(a > b));
+	}
+
+	void method(boolean a) {
+	}
+}
+// === end ===
+
+// === case: open_close_single_arg_parenthesized ===
+class InputMultilineCallOpenCloseSingleArgParenthesizedSliceViolation {
+	int a, b;
+
+	void m() {
+		method((a + b));
+	}
+
+	void method(int a) {
+	}
+}
+// === end ===
+
+// === case: open_close_single_arg_trailing_operator ===
+class InputMultilineCallOpenCloseSingleArgTrailingOperatorSliceViolation {
+	int a, b;
+
+	void m() {
+		method(a + b);
+	}
+
+	void method(int a) {
+	}
+}
+// === end ===
+
+// === case: open_close_string_literal_structural_chars ===
+class InputMultilineCallOpenCloseStringLiteralStructuralCharsSliceViolation {
+	void m() {
+		method("a(b,c)//d/*e", ')');
+	}
+
+	void method(String a, char b) {
+	}
+}
+// === end ===
+
+// === case: open_close_super_ctor ===
+class InputMultilineCallOpenCloseSuperCtorSliceViolation {
+	static class Base {
+		Base(int a, int b, int c) {
+		}
+	}
+
+	static class Inner extends Base {
+		Inner() {
+			super(1, 2, 3);
+		}
+	}
+}
+// === end ===
+
+// === case: open_close_switch_expression_last_arg ===
+class InputMultilineCallOpenCloseSwitchExpressionLastArgSliceViolation {
+	int k;
+	Object a;
+
+	void m() {
+		method(
+				a,
+				switch (k) {
+					case 1 -> "x";
+					default -> "y";
+				}
+		);
+	}
+
+	void method(Object a, String b) {
+	}
+}
+// === end ===
+
+// === case: open_close_ternary_multiline_last_arg ===
+class InputMultilineCallOpenCloseTernaryMultilineLastArgSliceViolation {
+	boolean flag;
+	Object a;
+
+	void m() {
+		method(a, flag ? "x" : "y");
+	}
+
+	void method(Object a, String b) {
+	}
+}
+// === end ===
+
+// === case: open_close_text_block_delimiter_comment_skip ===
+// skip-reason: cannot re-lay-out the argument list: a text block or block comment hides where an argument's separator goes
+class InputMultilineCallOpenCloseTextBlockDelimiterCommentSkipSliceViolation {
+	Object a, b;
+
+	void m() {
+		method(a,
+				"""
+				text""" // note
+				, b);
+	}
+
+	void method(Object... args) {
+	}
+}
+// === end ===
+
+// === case: open_close_text_block_last_arg ===
+class InputMultilineCallOpenCloseTextBlockLastArgSliceViolation {
+	Object a;
+
+	void m() {
+		method(
+				a,
+				"""
+				hello
+				"""
+		);
+	}
+
+	void method(Object a, String b) {
+	}
+}
+// === end ===
+
+// === case: open_close_text_block_middle_arg ===
+class InputMultilineCallOpenCloseTextBlockMiddleArgSliceViolation {
+	Object a, b;
+
+	void m() {
+		method(
+				a,
+				"""
+				text""",
+				b
+		);
+	}
+
+	void method(Object... args) {
+	}
+}
+// === end ===
+
+// === case: open_close_two_args_collapse ===
+class InputMultilineCallOpenCloseTwoArgsCollapseSliceViolation {
+	void m() {
+		method(1, 2);
+	}
+
+	void method(int a, int b) {
+	}
+}
+// === end ===
+
+// === case: open_close_two_owners_in_chain ===
+class InputMultilineCallOpenCloseTwoOwnersInChainSliceViolation {
+	void bar(int a, int b) {
+	}
+
+	InputMultilineCallOpenCloseTwoOwnersInChainSliceViolation foo(int a, int b) {
+		return this;
+	}
+
+	void m() {
+		foo(1, 2).bar(3, 4);
 	}
 }
 // === end ===
@@ -1050,6 +1876,21 @@ class InputMultilineCallPostDelayedReturnBodyFallbackSliceViolation {
 		handler.postDelayed(() -> {
 			return;
 		}, 1000);
+	}
+}
+// === end ===
+
+// === case: postdelayed_text_block_body_skip ===
+// skip-reason: cannot reformat: this multi-line call shape is not supported yet
+class InputMultilineCallPostDelayedTextBlockBodySkipSliceViolation {
+	void m() {
+		handler.postDelayed(() -> {
+			doThing("""
+					text
+					""");
+		},
+				1000
+		);
 	}
 }
 // === end ===
@@ -1447,7 +2288,7 @@ class InputMultilineCallPutNewJsonObjectTextBlockValueSliceViolation {
 
 // === case: put_new_jsonobject_trailing_comment ===
 // imports: org.json.JSONObject
-// skip-reason: cannot collapse: a comment sits between new JSONObject() and .put
+// skip-reason: cannot collapse: a comment sits between 'new JSONObject()' and '.put'
 class InputMultilineCallPutNewJsonObjectTrailingCommentSliceViolation {
 	void m() {
 		new JSONObject() // note
@@ -1487,9 +2328,7 @@ class InputMultilineCallPutNonInlineBlockValueNotExemptSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put("k", other(
-				"v"
-		));
+		cache.put("k", other("v"));
 	}
 
 	Object other(Object a) {
@@ -1542,9 +2381,13 @@ class InputMultilineCallPutThreeArgsNotExemptSliceViolation {
 	Map<String, String> cache;
 
 	void m() {
-		cache.put("k", "extra", x -> {
-			System.out.println(x);
-		});
+		cache.put(
+				"k",
+				"extra",
+				x -> {
+					System.out.println(x);
+				}
+		);
 	}
 }
 // === end ===
@@ -1744,10 +2587,7 @@ class InputMultilineCallMethodCallResourceIdUnstackedClosingStackedSliceViolatio
 	Object arg;
 
 	void m() {
-		method(R.string.ok,
-				other(
-						arg
-				));
+		method(R.string.ok, other(arg));
 	}
 
 	void method(Object a, Object b) {
@@ -1822,6 +2662,24 @@ class InputMultilineCallSharedLineBlockCommentSliceViolation {
 	}
 
 	void method(Object a, Object b, Object c) {
+	}
+}
+// === end ===
+
+// === case: shared_block_comment_url_separator_skip ===
+// skip-reason: cannot reformat: this multi-line call shape is not supported yet
+class InputMultilineCallSharedLineBlockCommentUrlSeparatorSkipSliceViolation {
+	Object a, b, c;
+
+	void m() {
+		method(
+				a,
+				/* c1
+				http://x */ b, c
+		);
+	}
+
+	void method(Object... args) {
 	}
 }
 // === end ===
@@ -2354,6 +3212,269 @@ class InputMultilineCallTernaryTrailingCommentSliceViolation {
 }
 // === end ===
 
+// === case: text_block_paren_line_cast_sole ===
+class InputMultilineCallTextBlockParenLineCastSoleSliceViolation {
+	void m() {
+		method(
+				(CharSequence) """
+				text"""
+		);
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_closer_off_close_line ===
+class InputMultilineCallTextBlockParenLineCloserOffCloseLineSliceViolation {
+	void m() {
+		method(
+				"""
+				text"""
+		);
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_closer_off_close_line_tricky_content ===
+class InputMultilineCallTextBlockParenLineCloserOffCloseLineTrickyContentSliceViolation {
+	void m() {
+		method(
+				"""
+				don't (stop) http://x, y
+				"""
+		);
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_concat_sole ===
+class InputMultilineCallTextBlockParenLineConcatSoleSliceViolation {
+	Object x;
+
+	void m() {
+		method(
+				"""
+				text""" + x
+		);
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_continuation_args_close_only ===
+class InputMultilineCallTextBlockParenLineContinuationArgsCloseOnlySliceViolation {
+	Object a;
+
+	void m() {
+		method(
+				a,
+				"""
+				text"""
+		);
+	}
+
+	void method(Object... args) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_first_arg_shared_close ===
+class InputMultilineCallTextBlockParenLineFirstArgSharedCloseSliceViolation {
+	Object b;
+
+	void m() {
+		method(
+				"""
+				text""",
+				b
+		);
+	}
+
+	void method(Object... args) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_first_arg_then_more ===
+class InputMultilineCallTextBlockParenLineFirstArgThenMoreSliceViolation {
+	Object b;
+
+	void m() {
+		method(
+				"""
+				text""",
+				b
+		);
+	}
+
+	void method(Object... args) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_formatted_after_arg ===
+class InputMultilineCallTextBlockParenLineFormattedAfterArgSliceViolation {
+	Object a, x;
+
+	void m() {
+		method(
+				a,
+				"""
+				text %s""".formatted(x)
+		);
+	}
+
+	void method(Object... args) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_in_braceless_lambda_arg ===
+class InputMultilineCallTextBlockParenLineInBracelessLambdaArgSliceViolation {
+	void doThing(String s) {
+	}
+
+	void m() {
+		method(() -> doThing("""
+				text""")
+		);
+	}
+
+	void method(Runnable r) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_nested_outer_two_args ===
+class InputMultilineCallTextBlockParenLineNestedOuterTwoArgsSliceViolation {
+	Object a;
+
+	void m() {
+		method(
+				a,
+				String.valueOf("""
+				text""")
+		);
+	}
+
+	void method(Object... args) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_new_owner_closer_off_close_line ===
+class InputMultilineCallTextBlockParenLineNewOwnerCloserOffCloseLineSliceViolation {
+	Object m() {
+		return new StringBuilder(
+				"""
+				text"""
+		);
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_opener_off_open_line ===
+class InputMultilineCallTextBlockParenLineOpenerOffOpenLineSliceViolation {
+	void m() {
+		method(
+				"""
+				text"""
+		);
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_opener_on_shared_continuation ===
+class InputMultilineCallTextBlockParenLineOpenerOnSharedContinuationSliceViolation {
+	Object a, b;
+
+	void m() {
+		method(
+				a,
+				b,
+				"""
+				text"""
+		);
+	}
+
+	void method(Object... args) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_parenthesized_sole ===
+class InputMultilineCallTextBlockParenLineParenthesizedSoleSliceViolation {
+	void m() {
+		method(
+				("""
+				text""")
+		);
+	}
+
+	void method(Object a) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_super_owner_closer_off_close_line ===
+class InputMultilineCallTextBlockParenLineSuperOwnerCloserOffCloseLineSliceViolation {
+	static class Failure extends Exception {
+		Failure() {
+			super(
+					"""
+					text"""
+			);
+		}
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_trailing_closer_off_close_line ===
+class InputMultilineCallTextBlockParenLineTrailingCloserOffCloseLineSliceViolation {
+	Object a;
+
+	void m() {
+		method(
+				a,
+				"""
+				text"""
+		);
+	}
+
+	void method(Object... args) {
+	}
+}
+// === end ===
+
+// === case: text_block_paren_line_two_text_blocks ===
+class InputMultilineCallTextBlockParenLineTwoTextBlocksSliceViolation {
+	void m() {
+		method(
+				"""
+				a""",
+				"""
+				b"""
+		);
+	}
+
+	void method(Object... args) {
+	}
+}
+// === end ===
+
 // === case: this_braceless_lambda_on_body_line ===
 // imports: java.util.function.Consumer
 class InputMultilineCallThisBracelessLambdaOnBodyLineSliceViolation {
@@ -2502,10 +3623,7 @@ class InputMultilineCallMethodCallThisUnstackedCallsClosingStackedSliceViolation
 	Object arg;
 
 	void m() {
-		method(this,
-				other(
-						arg
-				));
+		method(this, other(arg));
 	}
 
 	void method(Object a, Object b) {

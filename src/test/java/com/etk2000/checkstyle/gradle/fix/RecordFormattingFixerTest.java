@@ -13,6 +13,16 @@ public class RecordFormattingFixerTest {
 
 	private final CheckstyleFixer fixer = new RecordFormattingFixer();
 
+	/**
+	 * Char index 29 is the end of the fragment line's 29 chars (27 code points), which names no
+	 * char to fix, so it lands on the {@code charColumn >= line.length()} arm, while 28, the line's
+	 * last char, is its closing brace.
+	 */
+	@Test
+	public void testFixColumnPastCodePointCountReturnsNull() throws Exception {
+		assertSkip(fixer, TOPIC, "fix_column_past_code_point_count_returns_null");
+	}
+
 	@Test
 	public void testFixComponentBitshiftInAnnotation() throws Exception {
 		assertCaseFixMultiViolation(RecordFormattingCheck.class, fixer, TOPIC, "fix_component_bitshift_in_annotation");
@@ -95,7 +105,7 @@ public class RecordFormattingFixerTest {
 
 	@Test
 	public void testFixComponentUnterminatedBlockCommentInHeaderReturnsNull() throws Exception {
-		assertSkipResult(fixer, TOPIC, "fix_component_unterminated_block_comment_in_header_returns_null", "cannot reformat a record header that spans a multi-line comment or text block");
+		assertSkipResult(fixer, TOPIC, "fix_component_unterminated_block_comment_in_header_returns_null", "cannot reformat the record header: it spans a multi-line comment or text block");
 	}
 
 	@Test
@@ -140,16 +150,16 @@ public class RecordFormattingFixerTest {
 
 	@Test
 	public void testFixEmptyBodyCloseOnLineAfterUnterminatedString() throws Exception {
-		assertSkipResult(fixer, TOPIC, "fix_empty_body_close_on_line_after_unterminated_string", "cannot collapse empty record body without losing surrounding content");
+		assertSkipResult(fixer, TOPIC, "fix_empty_body_close_on_line_after_unterminated_string", "cannot collapse the empty record body: content around its braces would be lost");
 	}
 
 	@Test
 	public void testFixOpenBraceAfterUnterminatedBlockComment() throws Exception {
-		assertSkipResult(fixer, TOPIC, "fix_open_brace_after_unterminated_block_comment", "anchor line ends in a comment or unterminated literal");
+		assertSkipResult(fixer, TOPIC, "fix_open_brace_after_unterminated_block_comment", "cannot move the opening brace: its anchor line ends in a comment or an unterminated literal");
 	}
 
 	@Test
 	public void testFixOpenBraceAfterUnterminatedCharLiteral() throws Exception {
-		assertSkipResult(fixer, TOPIC, "fix_open_brace_after_unterminated_char_literal", "anchor line ends in a comment or unterminated literal");
+		assertSkipResult(fixer, TOPIC, "fix_open_brace_after_unterminated_char_literal", "cannot move the opening brace: its anchor line ends in a comment or an unterminated literal");
 	}
 }

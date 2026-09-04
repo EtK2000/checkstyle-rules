@@ -1,9 +1,21 @@
 package com.etk2000.checkstyle.gradle.fix;
 
+import com.etk2000.checkstyle.AstSpan;
+import com.etk2000.checkstyle.AstSpan.TextPos;
+import com.etk2000.checkstyle.AstSpan.TextSpan;
 import com.etk2000.checkstyle.JavaLineScanner;
+import com.etk2000.checkstyle.JavaLineScanner.LexerState;
+import com.etk2000.checkstyle.PreferMathMethodCheck;
+import com.etk2000.checkstyle.PreferMathMethodCheck.IfTarget;
+import com.etk2000.checkstyle.PreferMathMethodCheck.MathTarget;
+import com.etk2000.checkstyle.SpanComments;
+import com.etk2000.checkstyle.format.SpanEdges;
+import com.puppycrawl.tools.checkstyle.api.DetailAST;
+import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -11,687 +23,405 @@ import javax.annotation.Nullable;
 
 class PreferMathMethodFixer implements CheckstyleFixer {
 	/**
-	 * Resolved positions of a single-statement if/else (or if-without-else)
-	 * after accounting for optional braces on either side. {@code thenBodyIndex}
-	 * is the line containing the then-branch statement; {@code elseBodyIndex}
-	 * is the line containing the else-branch statement (or {@code -1} if no
-	 * else); {@code blockEndIndex} is the last physical line of the if-else
-	 * block (the closing {@code \}} after the else body when braced, or the
-	 * else-body line when unbraced; for no-else it's the closing {@code \}}
-	 * of the then-block when braced, or the then-body line when unbraced).
+	 * One rewrite's emitted text, and the source regions it copies verbatim. The regions are what
+	 * tells a comment that travels with copied text apart from one the rewrite would otherwise drop.
 	 */
-	private record IfElseLayout(
-			int thenBodyIndex,
-			int elseBodyIndex,
-			int blockEndIndex,
-			boolean hasElse
-	) {}
+	private record Rendering(@Nonnull String text, @Nonnull List<TextSpan> kept) {}
 
-	private static final Pattern ASSIGN_BODY_PATTERN = Pattern.compile(
-			"^\\s*([\\w.\\[\\]]+)\\s*=\\s*(.+?)\\s*;\\s*$"
-	);
-	private static final Pattern COMPOUND_ASSIGN_BODY_PATTERN = Pattern.compile(
-			"^\\s*([\\w.\\[\\]]+)\\s*([+\\-*/%&|^]=|<<=|>>>?=)\\s*(.+?)\\s*;\\s*$"
-	);
-	private static final Pattern DECL_LINE_PATTERN = Pattern.compile(
-			"^\\s*(?:final\\s+)?(?!(?:assert|break|continue|return|throw|yield)\\b)\\S+\\s+(\\w+)\\s*;\\s*$"
-	);
-	private static final Pattern IF_COMPARISON_PATTERN = Pattern.compile(
-			"^(\\s*)if\\s*\\(\\s*(.+?)\\s*(>=?|<=?)\\s*(.+?)\\s*\\)\\s*(\\{)?\\s*$"
-	);
-	private static final Pattern IF_LINE_PATTERN = Pattern.compile(
-			"^\\s*(?:\\}\\s*)?(?:else\\s+)?if\\s*\\("
-	);
-	private static final Pattern RETURN_BODY_PATTERN = Pattern.compile("^\\s*return\\s+(.+?)\\s*;\\s*$");
-	private static final Pattern RETURN_VAR_PATTERN = Pattern.compile("^\\s*return\\s+(\\w+)\\s*;\\s*$");
-	private static final Pattern TERNARY_PATTERN = Pattern.compile(
-			"((?:\\+\\+|--)?(?:[+\\-]\\s*)?[\\w.\\[\\]]+)\\s*(>=?|<=?)\\s*((?:\\+\\+|--)?(?:[+\\-]\\s*)?[\\w.\\[\\]]+)\\s*\\?\\s*((?:[+\\-]\\s*)?[\\w.\\[\\]]+)\\s*:\\s*((?:[+\\-]\\s*)?[\\w.\\[\\]]+)"
-	);
-	// init capture excludes ',' to reject multi-decls like `int r = a, s = b;`
-	private static final Pattern VAR_DECL_INIT_PATTERN = Pattern.compile(
-			"^(\\s*)(?:final\\s+)?(?:\\w+(?:\\s*\\[\\s*\\])*\\s+)(\\w+)\\s*=\\s*([^,]+?)\\s*;\\s*$"
-	);
-
-	@CheckReturnValue
-	@Nonnull
-	private static String buildClamp(
-			@Nonnull String line,
-			int outerStart,
-			int outerClose,
-			@Nonnull String outerArg,
-			@Nonnull String innerArg1,
-			@Nonnull String innerArg2,
-			boolean isOuterMax
-	) {
-		final String replacement;
-		if (isOuterMax)
-			replacement = "Math.clamp(" + innerArg2 + ", " + outerArg + ", " + innerArg1 + ")";
-		else
-			replacement = "Math.clamp(" + innerArg2 + ", " + innerArg1 + ", " + outerArg + ")";
-		return line.substring(0, outerStart) + replacement + line.substring(outerClose + 1);
-	}
-
+	/**
+	 * The token an argument's region runs up to: its own separating comma, or the closing paren of
+	 * the call it belongs to when it is the last argument. Null when the argument sits somewhere
+	 * that has no such delimiter, which is every operand of a ternary condition.
+	 */
 	@CheckReturnValue
 	@Nullable
-	private static String computeMathExpr(
-			@Nonnull String left,
-			@Nonnull String op,
-			@Nonnull String right,
-			@Nonnull String thenValue,
-			@Nonnull String elseValue
-	) {
-		if (isZero(right)) {
-			final var abs = tryFixAbs(left, op, thenValue, elseValue);
-			if (abs != null)
-				return abs;
-		}
-		if (isZero(left)) {
-			final var abs = tryFixAbsZeroLeft(right, op, thenValue, elseValue);
-			if (abs != null)
-				return abs;
-		}
-		return tryFixMaxMin(left, op, right, thenValue, elseValue);
+	private static DetailAST argumentDelimiter(@Nonnull DetailAST argument) {
+		final var next = argument.getNextSibling();
+		// a non-comma sibling between two arguments is not the last-argument shape, and widening to
+		// the RPAREN would swallow every later argument into this one's region. Reachable only under
+		// a WITH_COMMENTS parse, where a comment node lands between an argument and its comma
+		if (next != null)
+			return next.getType() == TokenTypes.COMMA ? next : null;
+		final var elist = argument.getParent();
+		if (elist == null || elist.getType() != TokenTypes.ELIST)
+			return null;
+		final var close = elist.getNextSibling();
+		return close != null && close.getType() == TokenTypes.RPAREN ? close : null;
 	}
 
 	/**
-	 * Finds the index of {@code target} at paren nesting depth 0, starting from {@code from}.
-	 * Returns -1 if not found before the end of the string or before depth goes negative.
+	 * The source region re-emitted for one argument: its own span, widened to the delimiter that
+	 * ends it so a comment written between the two travels with the argument instead of being
+	 * dropped. A block comment sitting between an argument and its comma is the case that needs it;
+	 * the {@code clamp_comment_paren_in_arg} fixture pins it.
 	 */
 	@CheckReturnValue
-	private static int findAtDepthZero(@Nonnull String s, int from, char target) {
-		// Mask literal/comment content (positions preserved) so a paren or the
-		// target char inside a string/char literal or comment is not counted.
-		final var scan = JavaLineScanner.stripCommentsAndStrings(s, JavaLineScanner.LexerState.NONE);
-		var depth = 0;
-		for (var i = from; i < scan.length(); ++i) {
-			final var c = scan.charAt(i);
-			if (c == '(')
-				++depth;
-			else if (c == ')') {
-				if (depth == 0)
-					return -1;
-				--depth;
-			}
-			else if (c == target && depth == 0)
-				return i;
-		}
-		return -1;
-	}
-
-	@CheckReturnValue
 	@Nullable
-	private static String fixClamp(@Nonnull String line) {
-		final var result = tryFixClampOuter(line, "Math.max(", "Math.min(", true);
-		if (result != null)
-			return result;
-
-		return tryFixClampOuter(line, "Math.min(", "Math.max(", false);
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static FixAttempt fixIfShape(@Nonnull List<String> lines, int lineIndex) {
-		final var ifMatch = IF_COMPARISON_PATTERN.matcher(lines.get(lineIndex));
-		if (!ifMatch.matches())
-			return null;
-		final var indent = ifMatch.group(1);
-		final var leftOp = ifMatch.group(2).strip();
-		final var op = ifMatch.group(3);
-		final var rightOp = ifMatch.group(4).strip();
-		final var ifBraced = ifMatch.group(5) != null;
-
-		final var layout = layoutIfElse(lines, lineIndex, ifBraced);
-		if (layout == null)
-			return null;
-		final var thenLine = lines.get(layout.thenBodyIndex());
-
-		final var thenCompound = COMPOUND_ASSIGN_BODY_PATTERN.matcher(thenLine);
-		if (thenCompound.matches()) {
-			return tryCompoundAssignShape(
-					lines,
-					lineIndex,
-					layout,
-					indent,
-					leftOp,
-					op,
-					rightOp,
-					thenCompound.group(1),
-					thenCompound.group(2),
-					thenCompound.group(3).strip()
-			);
-		}
-
-		final var thenAssign = ASSIGN_BODY_PATTERN.matcher(thenLine);
-		if (thenAssign.matches()) {
-			final var plainResult = tryPlainAssignShape(
-					lines,
-					lineIndex,
-					layout,
-					indent,
-					leftOp,
-					op,
-					rightOp,
-					thenAssign.group(1),
-					thenAssign.group(2).strip()
-			);
-			if (plainResult != null)
-				return plainResult;
-			if (lineIndex >= 1) {
-				return tryInitOverwriteShape(
-						lines,
-						lineIndex,
-						layout,
-						indent,
-						leftOp,
-						op,
-						rightOp,
-						thenAssign.group(1),
-						thenAssign.group(2).strip()
-				);
-			}
-		}
-
-		final var thenReturn = RETURN_BODY_PATTERN.matcher(thenLine);
-		if (thenReturn.matches()) {
-			return tryReturnShape(
-					lines,
-					lineIndex,
-					layout,
-					indent,
-					leftOp,
-					op,
-					rightOp,
-					thenReturn.group(1).strip()
-			);
-		}
-
-		return null;
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static String fixTernary(@Nonnull String line, int column) {
-		final var m = TERNARY_PATTERN.matcher(line);
-		final boolean found;
-		if (column <= 0)
-			found = m.find();
-		else {
-			var matchContainingColumn = false;
-			while (m.find()) {
-				if (m.start() <= column && column < m.end()) {
-					matchContainingColumn = true;
-					break;
-				}
-			}
-			found = matchContainingColumn;
-		}
-		if (!found)
+	private static TextSpan argumentRegion(@Nonnull List<String> lines, @Nonnull DetailAST argument) {
+		final var start = AstSpan.spanStart(lines, argument);
+		var end = AstSpan.spanEnd(lines, argument);
+		if (start == null || end == null)
 			return null;
 
-		final var left = m.group(1).strip();
-		final var op = m.group(2);
-		final var right = m.group(3).strip();
-		final var trueBranch = m.group(4).strip();
-		final var falseBranch = m.group(5).strip();
-
-		if (isZero(right)) {
-			final var absResult = tryFixAbs(left, op, trueBranch, falseBranch);
-			if (absResult != null)
-				return line.substring(0, m.start()) + absResult + line.substring(m.end());
+		final var delimiter = argumentDelimiter(argument);
+		if (delimiter != null) {
+			final var at = AstSpan.tokenStart(lines, delimiter);
+			if (at != null && !AstSpan.outOfBounds(lines, end, at))
+				end = at;
 		}
-		if (isZero(left)) {
-			final var absResult = tryFixAbsZeroLeft(right, op, trueBranch, falseBranch);
-			if (absResult != null)
-				return line.substring(0, m.start()) + absResult + line.substring(m.end());
-		}
-
-		final var maxMinResult = tryFixMaxMin(left, op, right, trueBranch, falseBranch);
-		if (maxMinResult != null)
-			return line.substring(0, m.start()) + maxMinResult + line.substring(m.end());
-
-		return null;
-	}
-
-	@CheckReturnValue
-	private static boolean isNegation(@Nonnull String expr, @Nonnull String variable) {
-		return expr.startsWith("-") && expr.substring(1).strip().equals(variable);
-	}
-
-	@CheckReturnValue
-	private static boolean isZero(@Nonnull String text) {
-		return "0".equals(text);
+		return new TextSpan(start, end);
 	}
 
 	/**
-	 * Resolves the physical line layout of a single-statement if[/else] block
-	 * starting at the if-condition line, handling all four brace combinations
-	 * (UU, BU, UB, BB) plus the cuddled {@code } else {} variant. Returns
-	 * {@code null} if the layout cannot be parsed (e.g. the closing brace is
-	 * missing, the else-body line is absent, or the shape is malformed). When
-	 * the if has no matching {@code else} keyword on the next eligible line,
-	 * {@code hasElse} is {@code false} and {@code elseBodyIndex} is {@code -1};
-	 * callers needing trailing-return semantics should look at
-	 * {@code blockEndIndex + 1}.
+	 * Whether a comment falls in {@code [from, to)}, text the rewrite discards rather than
+	 * relocates. A literal there is not refused: a ternary's discarded tail holds its own branches,
+	 * and those are written again as the call's arguments, so {@code c > 'a' ? c : 'a'} drops a
+	 * copy of {@code 'a'} and loses nothing.
+	 */
+	@CheckReturnValue
+	private static boolean carriesComment(@Nonnull List<String> lines, @Nonnull TextPos from, @Nonnull TextPos to) {
+		if (AstSpan.outOfBounds(lines, from, to))
+			return false;
+		// a gap running across lines is handed to sliceSpan, which already refuses a comment inside
+		// one; doing it here would have to thread the lexer state over the same lines again
+		if (from.line() != to.line())
+			return AstSpan.sliceSpan(lines, from, to) == null;
+		// the gap begins just past a code token, so the state at its start is NONE
+		final var text = lines.get(from.line()).substring(from.index(), to.index());
+		return JavaLineScanner.firstCommentMarker(text, LexerState.NONE) >= 0;
+	}
+
+	/**
+	 * The {@code return <name>;} written directly after {@code ifAst}, or null when the statement
+	 * after it is something else. The rewrite folds such a return into itself, since the value it
+	 * returns is the one the if-else had just finished assigning.
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static IfElseLayout layoutIfElse(@Nonnull List<String> lines, int lineIndex, boolean ifBraced) {
-		final var thenBodyIndex = lineIndex + 1;
-		if (thenBodyIndex >= lines.size())
+	private static DetailAST collapseReturn(@Nonnull DetailAST ifAst, @Nonnull String name) {
+		final var next = ifAst.getNextSibling();
+		if (next == null || next.getType() != TokenTypes.LITERAL_RETURN)
 			return null;
-		if (!ifBraced)
-			return resolveElsePart(lines, thenBodyIndex, thenBodyIndex, thenBodyIndex + 1);
-		final var afterThenIndex = thenBodyIndex + 1;
-		if (afterThenIndex >= lines.size())
-			return null;
-		final var closeLine = lines.get(afterThenIndex).strip();
-		if (closeLine.equals("}"))
-			return resolveElsePart(lines, thenBodyIndex, afterThenIndex, afterThenIndex + 1);
-		if (closeLine.equals("} else") || closeLine.equals("} else {"))
-			return resolveElseBody(lines, thenBodyIndex, afterThenIndex, closeLine.endsWith("{"));
-		return null;
+		final var expr = next.findFirstToken(TokenTypes.EXPR);
+		final var value = expr == null ? null : expr.getFirstChild();
+		return value != null && value.getType() == TokenTypes.IDENT && name.equals(value.getText())
+				? next
+				: null;
 	}
 
+	/**
+	 * Whether rewriting {@code span} down to {@code regions} would discard a comment. The rewrite
+	 * keeps only the argument regions and writes fresh punctuation around them, so every gap between
+	 * them, and the two ends, are dropped. A comment in any of them means refusing the fix, since
+	 * there is nowhere left to put it.
+	 */
+	@CheckReturnValue
+	private static boolean dropsComment(
+			@Nonnull List<String> lines, @Nonnull TextSpan span, @Nonnull List<TextSpan> regions
+	) {
+		final var ordered = new ArrayList<>(regions);
+		ordered.sort(
+				Comparator.<TextSpan>comparingInt(region -> region.start().line())
+						.thenComparingInt(region -> region.start().index())
+		);
+
+		var cursor = span.start();
+		for (var region : ordered) {
+			// a region starting behind the cursor means the regions overlap. carriesComment answers
+			// false for a backwards pair, so falling through would drop a comment written there
+			if (AstSpan.outOfBounds(lines, cursor, region.start())
+					|| carriesComment(lines, cursor, region.start()))
+				return true;
+			cursor = region.end();
+		}
+		return AstSpan.outOfBounds(lines, cursor, span.end())
+				|| carriesComment(lines, cursor, span.end());
+	}
+
+	/**
+	 * The edit writing {@code rendering} over {@code span}, or null when it cannot be written there.
+	 *
+	 * <p>Everything the span held is discarded, so every comment inside it that does not travel with
+	 * a copied region is merged into one comment trailing the statement. Only an {@code else} may
+	 * precede the span on its own line, and it keeps that line with the statement indented under it;
+	 * anything else there (a label, an enclosing one-line {@code if}) would end up cuddled with a
+	 * statement this fixer wrote. A line over the project's budget is refused rather than emitted,
+	 * since nothing downstream wraps it and the fold is what made it long.
+	 */
 	@CheckReturnValue
 	@Nullable
-	private static IfElseLayout resolveElseBody(
-			@Nonnull List<String> lines,
-			int thenBodyIndex,
-			int elseKeywordIndex,
-			boolean elseBraced
+	private static FixResult emitStatement(
+			@Nonnull List<String> lines, @Nonnull TextSpan span, @Nonnull Rendering rendering
 	) {
-		final var elseBodyIndex = elseKeywordIndex + 1;
-		if (elseBodyIndex >= lines.size())
+		final var edges = SpanEdges.of(
+				lines, span.start().line(), span.start().index(), span.end().line(), span.end().index()
+		);
+		final var head = edges.prefix().strip();
+		if (!head.isEmpty() && !"else".equals(head) && !"} else".equals(head))
 			return null;
-		if (elseBraced) {
-			final var elseCloseIndex = elseBodyIndex + 1;
-			if (elseCloseIndex >= lines.size() || !lines.get(elseCloseIndex).strip().equals("}"))
+
+		final var relocated = SpanComments.relocate(lines, span, rendering.kept());
+		final var comment = edges.appendableComment(relocated);
+		// the suffix opens a literal nothing may follow, so the comment the fold displaced has
+		// nowhere to go; dropping it is the one way this rewrite could lose text silently
+		if (comment.isEmpty() && !relocated.isEmpty())
+			return null;
+		final var body = rendering.text() + edges.suffix() + (comment.isEmpty() ? "" : ' ' + comment);
+		final var replacement = head.isEmpty()
+				? List.of(edges.prefix() + body)
+				: List.of(edges.prefix().stripTrailing(), edges.indent() + '\t' + body);
+		for (var line : replacement) {
+			if (LineLength.tabExpandedLength(line) > LineLength.MAX_LINE_LENGTH)
 				return null;
-			return new IfElseLayout(thenBodyIndex, elseBodyIndex, elseCloseIndex, true);
 		}
-		return new IfElseLayout(thenBodyIndex, elseBodyIndex, elseBodyIndex, true);
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static IfElseLayout resolveElsePart(
-			@Nonnull List<String> lines,
-			int thenBodyIndex,
-			int thenBlockEndIndex,
-			int elseSearchIndex
-	) {
-		// Skip blank-only lines between the then-block end and the else keyword.
-		// Java allows arbitrary whitespace there; without this, a `}` + blank line
-		// + `else { ... }` would fall through to `hasElse=false`, and
-		// `tryInitOverwriteShape` would rewrite the if-block while leaving the
-		// orphan else as uncompilable code.
-		var idx = elseSearchIndex;
-		while (idx < lines.size() && lines.get(idx).isBlank())
-			++idx;
-		if (idx >= lines.size())
-			return new IfElseLayout(thenBodyIndex, -1, thenBlockEndIndex, false);
-		final var elseLine = lines.get(idx).strip();
-		if (elseLine.equals("else") || elseLine.equals("else {")) {
-			final var resolved = resolveElseBody(lines, thenBodyIndex, idx, elseLine.endsWith("{"));
-			if (resolved != null)
-				return resolved;
-			return new IfElseLayout(thenBodyIndex, -1, thenBlockEndIndex, false);
-		}
-		// If the first non-blank line could mask an else (comment, or `else if`
-		// chain), refuse to classify the layout. Returning hasElse=false here
-		// would let tryInitOverwriteShape rewrite the if-block while leaving an
-		// orphan else block as uncompilable code. Genuine no-else shapes (a
-		// trailing statement, the method's closing brace) start with neither a
-		// comment marker nor the else keyword and fall through to hasElse=false.
-		if (elseLine.startsWith("else") || elseLine.startsWith("//")
-				|| elseLine.startsWith("/*") || elseLine.startsWith("*"))
-			return null;
-		return new IfElseLayout(thenBodyIndex, -1, thenBlockEndIndex, false);
+		return new FixResult(span.start().line(), span.end().line(), replacement);
 	}
 
 	/**
-	 * Splits a call like "Math.min(arg1, arg2)" into its two arguments,
-	 * using paren-balancing to find the correct comma.
-	 * Returns [arg1, arg2] or null if the structure doesn't match.
+	 * The edit replacing the {@code Math} construct the check classified at the violation's
+	 * position, or null when there is none there or it cannot be rewritten without losing text.
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String[] splitInnerArgs(@Nonnull String call, @Nonnull String prefix) {
-		if (!call.endsWith(")"))
+	private static FixAttempt fixExpression(@Nonnull List<String> lines, int lineIndex, int charColumn) {
+		final var target = FixerAst.locate(lines, lineIndex, charColumn, PreferMathMethodCheck::mathTargetAt);
+		if (target == null)
+			return null;
+		// Math.abs and the ternary it replaces disagree on -0.0, and the check's zero test accepts
+		// every numeric spelling. Rewriting only an integral zero keeps the unsound case reported
+		// but unapplied; docs/todo/float-nan-math-methods.md carries the rest of the argument
+		if ("abs".equals(target.method()) && !isIntegralZero(target.zeroLiteral()))
+			return new SkipResult(SkipMessages.MATH_METHOD_SKIP_FLOAT_ZERO);
+
+		final var span = nodeSpan(lines, target.node());
+		if (span == null)
 			return null;
 
-		final var argsStart = prefix.length();
-		final var argsEnd = call.length() - 1;
-
-		final var commaIdx = findAtDepthZero(call, argsStart, ',');
-		if (commaIdx < 0 || commaIdx >= argsEnd)
+		final var call = mathCall(lines, target);
+		if (call == null || dropsComment(lines, span, call.kept()))
 			return null;
 
-		return new String[]{
-				call.substring(argsStart, commaIdx).strip(),
-				call.substring(commaIdx + 1, argsEnd).strip()
+		return SpanRewrite.replacing(lines, span, call.text());
+	}
+
+	/**
+	 * The edit replacing the if-else statement the check classified at the violation's position, or
+	 * null when nothing it classifies sits there. Once something does, this owns the outcome: no
+	 * other shape is reported at an {@code if}, so a refusal is a skip rather than a fall-through.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static FixAttempt fixIfShape(@Nonnull List<String> lines, int lineIndex, int charColumn) {
+		final var target = FixerAst.locate(lines, lineIndex, charColumn, PreferMathMethodCheck::ifTargetAt);
+		if (target == null)
+			return null;
+		// the same -0.0 divergence the expression path refuses, narrowed against the same wider zero
+		// test on the check; docs/todo/float-nan-math-methods.md carries the argument
+		if ("abs".equals(target.math().method()) && !isIntegralZero(target.math().zeroLiteral()))
+			return new SkipResult(SkipMessages.MATH_METHOD_SKIP_FLOAT_ZERO);
+
+		final var result = rewriteIfShape(lines, target);
+		return result != null ? result : new SkipResult(SkipMessages.MATH_METHOD_SKIP_IF);
+	}
+
+	/**
+	 * The statement replacing the if-else, and the regions of the source it copies into it.
+	 * {@code collapsed} says the rewrite has absorbed both the declaration above and the return
+	 * below, so the assignment it was built around disappears into that return.
+	 */
+	@CheckReturnValue
+	@Nullable
+	private static Rendering ifStatement(
+			@Nonnull List<String> lines,
+			@Nonnull IfTarget target,
+			@Nullable DetailAST declaration,
+			boolean collapsed,
+			@Nonnull Rendering call
+	) {
+		final var assign = target.assign();
+		if (assign == null || collapsed)
+			return new Rendering("return " + call.text() + ";", call.kept());
+
+		final var kept = new ArrayList<>(call.kept());
+		if (declaration != null) {
+			final var ident = declaration.findFirstToken(TokenTypes.IDENT);
+			final var start = AstSpan.spanStart(lines, declaration);
+			final var end = ident == null ? null : AstSpan.tokenEnd(lines, ident);
+			final var head = AstSpan.sliceSpan(lines, start, end);
+			if (head == null || head.isBlank())
+				return null;
+			kept.add(new TextSpan(start, end));
+			return new Rendering(head.strip() + " = " + call.text() + ";", kept);
+		}
+
+		final var lvalue = assign.getFirstChild();
+		final var region = lvalue == null ? null : nodeSpan(lines, lvalue);
+		final var text = region == null ? null : AstSpan.sliceSpan(lines, region.start(), region.end());
+		if (text == null || text.isBlank())
+			return null;
+		kept.add(region);
+		return new Rendering(text.strip() + ' ' + assign.getText() + ' ' + call.text() + ";", kept);
+	}
+
+	/**
+	 * Whether {@code ifAst} stands in an old-style {@code switch} label's block. Such a block is not
+	 * a scope of its own: a local declared under one label is in scope for the whole switch body, so
+	 * a later label can still name one that the {@code return} below this statement makes
+	 * unreachable here. The collapse's premise, that such a declaration is dead, does not hold there.
+	 */
+	@CheckReturnValue
+	private static boolean isCaseScoped(@Nonnull DetailAST ifAst) {
+		final var block = ifAst.getParent();
+		if (block == null)
+			return false;
+		return block.getType() == TokenTypes.CASE_GROUP
+				|| block.getParent() != null && block.getParent().getType() == TokenTypes.CASE_GROUP;
+	}
+
+	@CheckReturnValue
+	private static boolean isIntegralZero(@Nullable DetailAST zeroLiteral) {
+		return zeroLiteral != null
+				&& (zeroLiteral.getType() == TokenTypes.NUM_INT || zeroLiteral.getType() == TokenTypes.NUM_LONG);
+	}
+
+	/**
+	 * Whether {@code def} is the only declarator of its statement. A multi-declarator statement puts
+	 * every name under its own {@code VARIABLE_DEF}, all of them sharing the one type's position, so
+	 * the span of any but the first starts at text the others own and rewriting it would delete them.
+	 */
+	@CheckReturnValue
+	private static boolean isSoleDeclarator(@Nonnull DetailAST def) {
+		final var previous = def.getPreviousSibling();
+		final var next = def.getNextSibling();
+		return (previous == null || previous.getType() != TokenTypes.COMMA)
+				&& (next == null || next.getType() != TokenTypes.COMMA);
+	}
+
+	/** The {@code Math} call {@code target} describes, written from the source its arguments came from. */
+	@CheckReturnValue
+	@Nullable
+	private static Rendering mathCall(@Nonnull List<String> lines, @Nonnull MathTarget target) {
+		final var arguments = target.arguments();
+		// the arity invariant lives in the check's classifier, which the fixer consumes across a
+		// class boundary, so a later edit there would write an uncompilable call to disk rather than
+		// skip the fix
+		final var arity = switch (target.method()) {
+			case "abs" -> 1;
+			case "clamp" -> 3;
+			default -> 2;
 		};
+		if (arguments.size() != arity)
+			return null;
+
+		final var kept = new ArrayList<TextSpan>(arguments.size());
+		final var texts = new ArrayList<String>(arguments.size());
+		for (var argument : arguments) {
+			final var region = argumentRegion(lines, argument);
+			if (region == null)
+				return null;
+			final var text = AstSpan.sliceSpan(lines, region.start(), region.end());
+			if (text == null || text.isBlank())
+				return null;
+			kept.add(region);
+			texts.add(text.strip());
+		}
+		return new Rendering("Math." + target.method() + "(" + String.join(", ", texts) + ")", kept);
 	}
 
-	@CheckReturnValue
-	@Nonnull
-	private static String stripPrefixMutation(@Nonnull String operand) {
-		if (operand.startsWith("++") || operand.startsWith("--"))
-			return operand.substring(2);
-		return operand;
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static FixAttempt tryCompoundAssignShape(
-			@Nonnull List<String> lines,
-			int lineIndex,
-			@Nonnull IfElseLayout layout,
-			@Nonnull String indent,
-			@Nonnull String leftOp,
-			@Nonnull String op,
-			@Nonnull String rightOp,
-			@Nonnull String thenTarget,
-			@Nonnull String thenAssignOp,
-			@Nonnull String thenValue
-	) {
-		if (!layout.hasElse())
-			return null;
-		final var elseMatch = COMPOUND_ASSIGN_BODY_PATTERN.matcher(lines.get(layout.elseBodyIndex()));
-		if (!elseMatch.matches())
-			return null;
-		if (!thenTarget.equals(elseMatch.group(1)) || !thenAssignOp.equals(elseMatch.group(2)))
-			return null;
-		final var elseValue = elseMatch.group(3).strip();
-
-		final var math = computeMathExpr(leftOp, op, rightOp, thenValue, elseValue);
-		if (math == null)
-			return null;
-
-		return new FixResult(
-				lineIndex,
-				layout.blockEndIndex(),
-				List.of(indent + thenTarget + " " + thenAssignOp + " " + math + ";")
-		);
-	}
-
+	/** The span {@code node}'s subtree occupies, or null when either end does not resolve. */
 	@CheckReturnValue
 	@Nullable
-	private static String tryFixAbs(
-			@Nonnull String variable,
-			@Nonnull String op,
-			@Nonnull String trueBranch,
-			@Nonnull String falseBranch
-	) {
-		final var stripped = stripPrefixMutation(variable);
-		if (">".equals(op) || ">=".equals(op)) {
-			if (trueBranch.equals(stripped) && isNegation(falseBranch, stripped))
-				return "Math.abs(" + variable + ")";
-		}
-		if ("<".equals(op) || "<=".equals(op)) {
-			if (isNegation(trueBranch, stripped) && falseBranch.equals(stripped))
-				return "Math.abs(" + variable + ")";
-		}
-		return null;
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static String tryFixAbsZeroLeft(
-			@Nonnull String variable,
-			@Nonnull String op,
-			@Nonnull String trueBranch,
-			@Nonnull String falseBranch
-	) {
-		final var stripped = stripPrefixMutation(variable);
-		if (">".equals(op) || ">=".equals(op)) {
-			if (isNegation(trueBranch, stripped) && falseBranch.equals(stripped))
-				return "Math.abs(" + variable + ")";
-		}
-		if ("<".equals(op) || "<=".equals(op)) {
-			if (trueBranch.equals(stripped) && isNegation(falseBranch, stripped))
-				return "Math.abs(" + variable + ")";
-		}
-		return null;
+	private static TextSpan nodeSpan(@Nonnull List<String> lines, @Nonnull DetailAST node) {
+		final var start = AstSpan.spanStart(lines, node);
+		final var end = AstSpan.spanEnd(lines, node);
+		return start == null || end == null ? null : new TextSpan(start, end);
 	}
 
 	/**
-	 * Tries to parse and fix a clamp pattern starting with {@code outerPrefix}
-	 * (e.g. "Math.max(") containing {@code innerPrefix} (e.g. "Math.min(").
-	 * Uses paren-balancing to correctly split arguments even when they contain
-	 * nested calls, casts, or other parenthesized expressions.
+	 * The uninitialized declaration of {@code name} written directly above {@code ifAst}, or null
+	 * when the statement before it is something else. A declaration the if-else goes on to assign in
+	 * every branch is folded into the rewrite rather than left behind holding nothing.
 	 */
 	@CheckReturnValue
 	@Nullable
-	private static String tryFixClampOuter(
-			@Nonnull String line,
-			@Nonnull String outerPrefix,
-			@Nonnull String innerPrefix,
-			boolean isOuterMax
-	) {
-		final var outerStart = line.indexOf(outerPrefix);
-		if (outerStart < 0)
+	private static DetailAST precedingDeclaration(@Nonnull DetailAST ifAst, @Nonnull String name) {
+		final var parent = ifAst.getParent();
+		if (parent == null)
 			return null;
-
-		final var argsStart = outerStart + outerPrefix.length();
-		final var outerClose = JavaLineScanner.matchingCloseParen(line, argsStart - 1);
-		if (outerClose < 0)
-			return null;
-
-		final var commaIdx = findAtDepthZero(line, argsStart, ',');
-		if (commaIdx < 0 || commaIdx >= outerClose)
-			return null;
-
-		final var firstArg = line.substring(argsStart, commaIdx).strip();
-		final var secondArg = line.substring(commaIdx + 1, outerClose).strip();
-
-		if (secondArg.startsWith(innerPrefix)) {
-			final var innerArgs = splitInnerArgs(secondArg, innerPrefix);
-			if (innerArgs != null)
-				return buildClamp(line, outerStart, outerClose, firstArg, innerArgs[0], innerArgs[1], isOuterMax);
+		DetailAST previous = null;
+		for (var child = parent.getFirstChild(); child != null && child != ifAst; child = child.getNextSibling()) {
+			// a statement's own SEMI is a sibling of it, not a child
+			if (child.getType() != TokenTypes.SEMI)
+				previous = child;
 		}
-
-		if (firstArg.startsWith(innerPrefix)) {
-			final var innerArgs = splitInnerArgs(firstArg, innerPrefix);
-			if (innerArgs != null)
-				return buildClamp(line, outerStart, outerClose, secondArg, innerArgs[0], innerArgs[1], isOuterMax);
-		}
-
-		return null;
+		if (previous == null || previous.getType() != TokenTypes.VARIABLE_DEF
+				|| previous.findFirstToken(TokenTypes.ASSIGN) != null)
+			return null;
+		final var ident = previous.findFirstToken(TokenTypes.IDENT);
+		return ident != null && name.equals(ident.getText()) ? previous : null;
 	}
 
+	/**
+	 * The edit replacing the whole if-else statement, or null when it cannot be written as one.
+	 *
+	 * <p>The extent is the {@code if} itself, widened over whichever neighbours the rewrite consumes:
+	 * the declaration whose initializer stood in for the missing {@code else}, the {@code return}
+	 * that did, and the declaration/return pair a plain assignment collapses into a {@code return}.
+	 */
 	@CheckReturnValue
 	@Nullable
-	private static String tryFixMaxMin(
-			@Nonnull String left,
-			@Nonnull String op,
-			@Nonnull String right,
-			@Nonnull String trueBranch,
-			@Nonnull String falseBranch
-	) {
-		final var strippedLeft = stripPrefixMutation(left);
-		final var strippedRight = stripPrefixMutation(right);
-		final var trueIsLeft = trueBranch.equals(strippedLeft) && falseBranch.equals(strippedRight);
-		final var trueIsRight = trueBranch.equals(strippedRight) && falseBranch.equals(strippedLeft);
-		if (!trueIsLeft && !trueIsRight)
-			return null;
+	private static FixResult rewriteIfShape(@Nonnull List<String> lines, @Nonnull IfTarget target) {
+		final var ifAst = target.math().node();
+		final var assign = target.assign();
+		final var lvalue = assign == null ? null : assign.getFirstChild();
 
-		final boolean isMax;
-		if (">".equals(op) || ">=".equals(op))
-			isMax = trueIsLeft;
-		else
-			isMax = trueIsRight;
-
-		return (isMax ? "Math.max(" : "Math.min(") + left + ", " + right + ")";
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static FixAttempt tryInitOverwriteShape(
-			@Nonnull List<String> lines,
-			int lineIndex,
-			@Nonnull IfElseLayout layout,
-			@Nonnull String indent,
-			@Nonnull String leftOp,
-			@Nonnull String op,
-			@Nonnull String rightOp,
-			@Nonnull String thenTarget,
-			@Nonnull String thenValue
-	) {
-		if (layout.hasElse())
-			return null;
-		// Defense-in-depth: layoutIfElse should already have returned null when
-		// an else block sits past blockEndIndex (separated by blanks or any
-		// non-statement content), but verify directly here too. This fixer
-		// replaces lines through blockEndIndex and a misjudged hasElse=false
-		// would orphan the else, producing uncompilable code.
-		final var pastBlockIndex = layout.blockEndIndex() + 1;
-		if (pastBlockIndex < lines.size()) {
-			final var pastBlockLine = lines.get(pastBlockIndex).strip();
-			if (pastBlockLine.equals("else") || pastBlockLine.equals("else {")
-					|| pastBlockLine.startsWith("} else"))
-				return null;
-		}
-		final var declMatch = VAR_DECL_INIT_PATTERN.matcher(lines.get(lineIndex - 1));
-		if (!declMatch.matches() || !thenTarget.equals(declMatch.group(2)))
-			return null;
-		final var elseValue = declMatch.group(3).strip();
-
-		final var math = computeMathExpr(leftOp, op, rightOp, thenValue, elseValue);
-		if (math == null)
-			return null;
-
-		final var trailingReturnIndex = layout.blockEndIndex() + 1;
-		if (trailingReturnIndex < lines.size()) {
-			final var trailingReturn = RETURN_VAR_PATTERN.matcher(lines.get(trailingReturnIndex));
-			if (trailingReturn.matches() && thenTarget.equals(trailingReturn.group(1))) {
-				return new FixResult(
-						lineIndex - 1,
-						trailingReturnIndex,
-						List.of(indent + "return " + math + ";")
-				);
+		var head = target.declaration();
+		var tail = target.trailingReturn();
+		var collapsed = false;
+		// only a bare name can be both declared above and returned below; a field or an array
+		// element is assigned through something the declaration does not name
+		if (lvalue != null && lvalue.getType() == TokenTypes.IDENT && !isCaseScoped(ifAst)) {
+			final var returned = collapseReturn(ifAst, lvalue.getText());
+			final var declaration = head != null ? head : precedingDeclaration(ifAst, lvalue.getText());
+			if (returned != null && declaration != null) {
+				head = declaration;
+				tail = returned;
+				collapsed = true;
 			}
 		}
-
-		final var declLine = lines.get(lineIndex - 1);
-		final var newDecl = declLine.substring(0, declLine.indexOf('=')) + "= " + math + ";";
-		return new FixResult(lineIndex - 1, layout.blockEndIndex(), List.of(newDecl));
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static FixAttempt tryPlainAssignShape(
-			@Nonnull List<String> lines,
-			int lineIndex,
-			@Nonnull IfElseLayout layout,
-			@Nonnull String indent,
-			@Nonnull String leftOp,
-			@Nonnull String op,
-			@Nonnull String rightOp,
-			@Nonnull String thenTarget,
-			@Nonnull String thenValue
-	) {
-		if (!layout.hasElse())
-			return null;
-		final var elseMatch = ASSIGN_BODY_PATTERN.matcher(lines.get(layout.elseBodyIndex()));
-		if (!elseMatch.matches())
-			return null;
-		if (!thenTarget.equals(elseMatch.group(1)))
-			return null;
-		final var elseValue = elseMatch.group(2).strip();
-
-		final var math = computeMathExpr(leftOp, op, rightOp, thenValue, elseValue);
-		if (math == null)
+		if (head != null && !isSoleDeclarator(head))
 			return null;
 
-		final var declIndex = lineIndex - 1;
-		final var trailingReturnIndex = layout.blockEndIndex() + 1;
-		if (declIndex >= 0 && trailingReturnIndex < lines.size()) {
-			final var declMatch = DECL_LINE_PATTERN.matcher(lines.get(declIndex));
-			final var returnVarMatch = RETURN_VAR_PATTERN.matcher(lines.get(trailingReturnIndex));
-			if (declMatch.matches()
-					&& returnVarMatch.matches()
-					&& thenTarget.equals(declMatch.group(1))
-					&& thenTarget.equals(returnVarMatch.group(1))) {
-				return new FixResult(
-						declIndex,
-						trailingReturnIndex,
-						List.of(indent + "return " + math + ";")
-				);
-			}
-		}
-
-		return new FixResult(
-				lineIndex,
-				layout.blockEndIndex(),
-				List.of(indent + thenTarget + " = " + math + ";")
-		);
-	}
-
-	@CheckReturnValue
-	@Nullable
-	private static FixAttempt tryReturnShape(
-			@Nonnull List<String> lines,
-			int lineIndex,
-			@Nonnull IfElseLayout layout,
-			@Nonnull String indent,
-			@Nonnull String leftOp,
-			@Nonnull String op,
-			@Nonnull String rightOp,
-			@Nonnull String thenValue
-	) {
-		if (layout.hasElse()) {
-			final var elseReturnMatch = RETURN_BODY_PATTERN.matcher(lines.get(layout.elseBodyIndex()));
-			if (elseReturnMatch.matches()) {
-				final var elseValue = elseReturnMatch.group(1).strip();
-				final var math = computeMathExpr(leftOp, op, rightOp, thenValue, elseValue);
-				if (math == null)
-					return null;
-				return new FixResult(
-						lineIndex,
-						layout.blockEndIndex(),
-						List.of(indent + "return " + math + ";")
-				);
-			}
+		final var start = AstSpan.spanStart(lines, head != null ? head : ifAst);
+		final var end = AstSpan.spanEnd(lines, tail != null ? tail : ifAst);
+		if (AstSpan.outOfBounds(lines, start, end))
 			return null;
-		}
+		final var span = AstSpan.extendedOverTrailingComment(lines, start, end);
+		if (SpanRewrite.leavesALiteralOpen(lines, span.start(), span.end()))
+			return null;
 
-		final var trailingReturnIndex = layout.blockEndIndex() + 1;
-		if (trailingReturnIndex < lines.size()) {
-			final var trailingReturnMatch = RETURN_BODY_PATTERN.matcher(lines.get(trailingReturnIndex));
-			if (trailingReturnMatch.matches()) {
-				final var elseValue = trailingReturnMatch.group(1).strip();
-				final var math = computeMathExpr(leftOp, op, rightOp, thenValue, elseValue);
-				if (math == null)
-					return null;
-				return new FixResult(
-						lineIndex,
-						trailingReturnIndex,
-						List.of(indent + "return " + math + ";")
-				);
-			}
-		}
-
-		return null;
+		final var call = mathCall(lines, target.math());
+		if (call == null)
+			return null;
+		final var rendering = ifStatement(lines, target, head, collapsed, call);
+		return rendering == null ? null : emitStatement(lines, span, rendering);
 	}
 
 	@Nonnull
 	@Override
-	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int column) {
-		final var line = lines.get(lineIndex);
+	public FixAttempt fix(@Nonnull List<String> lines, int lineIndex, int charColumn) {
+		// The if-else form is reported under its own key at the `if`, which the expression
+		// classifier does not recognise, so the two shapes cannot answer for each other.
+		if (!PreferMathMethodCheck.MSG_METHOD_IF.equals(FixContext.getViolationKey())) {
+			final var expressionResult = fixExpression(lines, lineIndex, charColumn);
+			if (expressionResult != null)
+				return expressionResult;
+		}
 
-		var result = fixClamp(line);
-		if (result == null)
-			result = fixTernary(line, column);
-		if (result != null)
-			return new FixResult(lineIndex, lineIndex, List.of(result));
-
-		final var ifShapeResult = fixIfShape(lines, lineIndex);
+		final var ifShapeResult = fixIfShape(lines, lineIndex, charColumn);
 		if (ifShapeResult != null)
 			return ifShapeResult;
 
-		if (IF_LINE_PATTERN.matcher(line).find())
-			return new SkipResult(SkipMessages.MATH_METHOD_SKIP_IF);
 		return new SkipResult(SkipMessages.MATH_METHOD_SKIP);
 	}
 }

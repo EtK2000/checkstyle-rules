@@ -38,8 +38,38 @@ class InputRedundantArrayCreationEscapedQuoteInStringSliceViolation {
 }
 // === end ===
 
+// === case: main ===
+// imports: java.util.ArrayList
+// imports: java.util.Arrays
+// imports: java.util.Collections
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputRedundantArrayCreationViolation {
+	void arraysAsList() {
+		List.of("a", "b");
+	}
+
+	void collectionsAddAll() {
+		final var list = new ArrayList<String>();
+		Collections.addAll(list, "a", "b");
+	}
+
+	void constructorVarargs() {
+		new ProcessBuilder("cmd", "arg");
+	}
+
+	void stringFormat() {
+		"%s%s".formatted("a", "b");
+	}
+
+	void stringJoin() {
+		String.join(",", "a", "b");
+	}
+}
+// === end ===
+
 // === case: multiline_array_skipped ===
-// skip-reason: multi-line array initializer
+// skip-reason: cannot remove the array creation: the initializer spans multiple lines
 // imports: java.util.List
 @SuppressWarnings("unused")
 class InputRedundantArrayCreationMultilineArraySkippedSliceViolation {

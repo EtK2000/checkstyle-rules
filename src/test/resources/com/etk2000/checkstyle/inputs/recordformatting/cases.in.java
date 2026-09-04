@@ -79,6 +79,7 @@ class InputRecordFormattingBracesTwoSpacesEmptySliceViolation {
 // === end ===
 
 // === case: components ===
+// multi-fix-expected
 class InputRecordFormattingComponentsViolation {
 	record Mixed2(int a, // violation: First record component must not share the line with the opening paren.
 			int b) {} // violation: Last record component must not share the line with the closing paren.
@@ -138,7 +139,38 @@ class InputRecordFormattingFixBraceNewlineWithBodySliceViolation {
 }
 // === end ===
 
+// === case: fix_comment_before_brace_no_space ===
+class InputRecordFormattingFixCommentBeforeBraceNoSpaceSliceViolation {
+	record R(int a) /* c */{} // violation: Record opening brace must have exactly one space before it.
+}
+// === end ===
+
+// === case: fix_comment_before_brace_two_spaces ===
+class InputRecordFormattingFixCommentBeforeBraceTwoSpacesSliceViolation {
+	record R(int a) /* c */  {} // violation: Record opening brace must have exactly one space before it.
+}
+// === end ===
+
+// === case: fix_comment_only_body_same_line ===
+class InputRecordFormattingFixCommentOnlyBodySameLineSliceViolation {
+	record R(int a) { /* note */ } // violation: Non-empty record body must place '}' on its own line.
+}
+// === end ===
+
+// === case: fix_comment_only_body_same_line_javadoc ===
+class InputRecordFormattingFixCommentOnlyBodySameLineJavadocSliceViolation {
+	record R(int a) { /** note */ } // violation: Non-empty record body must place '}' on its own line.
+}
+// === end ===
+
+// === case: fix_comment_only_body_same_line_trailing_content ===
+class InputRecordFormattingFixCommentOnlyBodySameLineTrailingContentSliceViolation {
+	record R(int a) { /* note */ } // trailing // violation: Non-empty record body must place '}' on its own line.
+}
+// === end ===
+
 // === case: fix_component_bitshift_in_annotation ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentBitshiftInAnnotationSliceViolation {
 	@interface A { int value(); }
 
@@ -148,6 +180,7 @@ class InputRecordFormattingFixComponentBitshiftInAnnotationSliceViolation {
 // === end ===
 
 // === case: fix_component_block_comment_with_comma_in_annotation ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentBlockCommentWithCommaInAnnotationSliceViolation {
 	@interface A { int value(); }
 
@@ -171,6 +204,7 @@ class InputRecordFormattingFixComponentBoundaryExpandOverMaxSliceViolation {
 // === end ===
 
 // === case: fix_component_collapse_mixed_to_single_line ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentCollapseMixedToSingleLineSliceViolation {
 	record R(int a, // violation: First record component must not share the line with the opening paren.
 		int b) {} // violation: Last record component must not share the line with the closing paren.
@@ -178,6 +212,7 @@ class InputRecordFormattingFixComponentCollapseMixedToSingleLineSliceViolation {
 // === end ===
 
 // === case: fix_component_comma_in_annotation_parens ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentCommaInAnnotationParensSliceViolation {
 	@interface A {
 		int b() default 0;
@@ -191,6 +226,7 @@ class InputRecordFormattingFixComponentCommaInAnnotationParensSliceViolation {
 // === end ===
 
 // === case: fix_component_expand_wide_line_to_style_b ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentExpandWideLineToStyleBSliceViolation {
 	record WideRecord(int aaaaaaaa, // violation: First record component must not share the line with the opening paren.
 			int bbbbbbbb, int cccccccc, int dddddddd, int eeeeeeee, int ffffffff, int gggggggg) {} // violation: Each record component must be on its own line. // violation: Each record component must be on its own line. // violation: Each record component must be on its own line. // violation: Each record component must be on its own line. // violation: Each record component must be on its own line. // violation: Last record component must not share the line with the closing paren.
@@ -198,6 +234,7 @@ class InputRecordFormattingFixComponentExpandWideLineToStyleBSliceViolation {
 // === end ===
 
 // === case: fix_component_greater_equal_in_annotation ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentGreaterEqualInAnnotationSliceViolation {
 	@interface A {
 		int value();
@@ -211,6 +248,7 @@ class InputRecordFormattingFixComponentGreaterEqualInAnnotationSliceViolation {
 // === end ===
 
 // === case: fix_component_greater_than_in_annotation_inside_generics ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentGreaterThanInAnnotationInsideGenericsSliceViolation {
 	@interface A { int value(); }
 
@@ -220,6 +258,7 @@ class InputRecordFormattingFixComponentGreaterThanInAnnotationInsideGenericsSlic
 // === end ===
 
 // === case: fix_component_less_than_in_annotation ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentLessThanInAnnotationSliceViolation {
 	@interface A { int value(); }
 
@@ -229,7 +268,7 @@ class InputRecordFormattingFixComponentLessThanInAnnotationSliceViolation {
 // === end ===
 
 // === case: fix_component_middle_line_comment_in_header_skipped ===
-// skip-reason: cannot reformat a record header that contains a line comment
+// skip-reason: cannot reformat the record header: it contains a line comment
 class InputRecordFormattingFixComponentMiddleLineCommentInHeaderSliceViolation {
 	record R(
 		int a, // note
@@ -247,6 +286,7 @@ class InputRecordFormattingFixComponentMultiPerLineCollapsesSliceViolation {
 // === end ===
 
 // === case: fix_component_nested_generics ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentNestedGenericsSliceViolation {
 	record R(java.util.Map<String, java.util.List<Integer>> m, // violation: First record component must not share the line with the opening paren.
 		int x) {} // violation: Last record component must not share the line with the closing paren.
@@ -254,7 +294,7 @@ class InputRecordFormattingFixComponentNestedGenericsSliceViolation {
 // === end ===
 
 // === case: fix_component_opening_line_comment_in_header_skipped ===
-// skip-reason: cannot reformat a record header that contains a line comment
+// skip-reason: cannot reformat the record header: it contains a line comment
 class InputRecordFormattingFixComponentOpeningLineCommentInHeaderSliceViolation {
 	record R( // note
 		int a,
@@ -263,6 +303,7 @@ class InputRecordFormattingFixComponentOpeningLineCommentInHeaderSliceViolation 
 // === end ===
 
 // === case: fix_component_right_shift_in_annotation ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentRightShiftInAnnotationSliceViolation {
 	@interface A { int value(); }
 
@@ -272,7 +313,7 @@ class InputRecordFormattingFixComponentRightShiftInAnnotationSliceViolation {
 // === end ===
 
 // === case: fix_component_text_block_in_annotation_spans_lines_skipped ===
-// skip-reason: cannot reformat a record header that spans a multi-line comment or text block
+// skip-reason: cannot reformat the record header: it spans a multi-line comment or text block
 class InputRecordFormattingFixComponentTextBlockInAnnotationSliceViolation {
 	@interface A { String value(); }
 
@@ -284,6 +325,7 @@ class InputRecordFormattingFixComponentTextBlockInAnnotationSliceViolation {
 // === end ===
 
 // === case: fix_component_with_annotation_comparison_in_generic_bound ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentWithAnnotationComparisonInGenericBoundSliceViolation {
 	@interface A { int value(); }
 
@@ -293,6 +335,7 @@ class InputRecordFormattingFixComponentWithAnnotationComparisonInGenericBoundSli
 // === end ===
 
 // === case: fix_component_with_annotation_greater_than_in_generic_bound ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentWithAnnotationGreaterThanInGenericBoundSliceViolation {
 	@interface A { int value(); }
 
@@ -302,6 +345,7 @@ class InputRecordFormattingFixComponentWithAnnotationGreaterThanInGenericBoundSl
 // === end ===
 
 // === case: fix_component_with_block_comment_in_header ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentWithBlockCommentInHeaderSliceViolation {
 	record R(int a, // violation: First record component must not share the line with the opening paren.
 	/* note */
@@ -310,6 +354,7 @@ class InputRecordFormattingFixComponentWithBlockCommentInHeaderSliceViolation {
 // === end ===
 
 // === case: fix_component_with_bounded_generic ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentWithBoundedGenericSliceViolation {
 	record R<T extends java.util.Map<K, V>>(T a, // violation: First record component must not share the line with the opening paren.
 		T b) {} // violation: Last record component must not share the line with the closing paren.
@@ -317,6 +362,7 @@ class InputRecordFormattingFixComponentWithBoundedGenericSliceViolation {
 // === end ===
 
 // === case: fix_component_with_generic_type_arg ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentWithGenericTypeArgSliceViolation {
 	record R(java.util.Map<String, Integer> m, // violation: First record component must not share the line with the opening paren.
 		int x) {} // violation: Last record component must not share the line with the closing paren.
@@ -324,11 +370,22 @@ class InputRecordFormattingFixComponentWithGenericTypeArgSliceViolation {
 // === end ===
 
 // === case: fix_component_with_string_containing_record_on_prior_line ===
+// multi-fix-expected
 class InputRecordFormattingFixComponentWithStringContainingRecordOnPriorLineSliceViolation {
 	String s = "record FAKE(int x)";
 
 	record Real(int a, // violation: First record component must not share the line with the opening paren.
 		int b) {} // violation: Last record component must not share the line with the closing paren.
+}
+// === end ===
+
+// A column counts code points, so the fixer's brace dispatch converts before indexing the line.
+// Without that a supplementary character earlier on the line shifts the index onto the cuddled
+// inner brace, and the static block gets split instead of the record's own body. This pair is the
+// ASCII control; the astral twin is fix_supplementary_cuddled_inner_brace.
+// === case: fix_cuddled_inner_brace ===
+class InputRecordFormattingFixCuddledInnerBraceSliceViolation {
+	record R(int a) { static { init("x");}} // violation: Non-empty record body must place '}' on its own line.
 }
 // === end ===
 
@@ -346,16 +403,8 @@ class InputRecordFormattingFixEmptyBodyBracesSplitOpenLineHasBlockCommentSliceVi
 }
 // === end ===
 
-// === case: fix_empty_body_braces_split_open_line_has_line_comment ===
-// skip-reason: cannot collapse empty record body without losing surrounding content
-class InputRecordFormattingFixEmptyBodyBracesSplitOpenLineHasLineCommentSliceViolation {
-	record R(int a) { // note
-	} // violation: Empty record body must be '{}' on one line.
-}
-// === end ===
-
 // === case: fix_empty_body_braces_split_trailing_content ===
-// skip-reason: cannot collapse empty record body without losing surrounding content
+// skip-reason: cannot collapse the empty record body: content around its braces would be lost
 class InputRecordFormattingFixEmptyBodyBracesSplitTrailingContentSliceViolation {
 	record R(int a) {
 	} // note // violation: Empty record body must be '{}' on one line.
@@ -411,7 +460,7 @@ class InputRecordFormattingFixNonEmptyBodyStringContainingBraceSliceViolation {
 // === end ===
 
 // === case: fix_open_brace_after_line_comment ===
-// skip-reason: anchor line ends in a comment or unterminated literal
+// skip-reason: cannot move the opening brace: its anchor line ends in a comment or an unterminated literal
 class InputRecordFormattingFixOpenBraceAfterLineCommentSliceViolation {
 	record R(int a) // note
 	{} // violation: Record opening brace must be on the same line as the closing paren (or implements clause).
@@ -422,6 +471,27 @@ class InputRecordFormattingFixOpenBraceAfterLineCommentSliceViolation {
 class InputRecordFormattingFixOpenBraceAfterTerminatedBlockCommentSliceViolation {
 	record R(int a) /* note */
 	{} // violation: Record opening brace must be on the same line as the closing paren (or implements clause).
+}
+// === end ===
+
+// The check's spacing read converts the column too, so these fire for the real reason (zero and
+// two spaces) rather than because the astral character shifted the index. Their clean partners are
+// SupplementaryCommentBeforeBraceA and friends in cases.clean.java.
+// === case: fix_supplementary_comment_no_space ===
+class InputRecordFormattingFixSupplementaryCommentNoSpaceSliceViolation {
+	record R(int a) /* 𝐀 */{} // violation: Record opening brace must have exactly one space before it.
+}
+// === end ===
+
+// === case: fix_supplementary_comment_two_spaces ===
+class InputRecordFormattingFixSupplementaryCommentTwoSpacesSliceViolation {
+	record R(int a) /* 𝐀 */  {} // violation: Record opening brace must have exactly one space before it.
+}
+// === end ===
+
+// === case: fix_supplementary_cuddled_inner_brace ===
+class InputRecordFormattingFixSupplementaryCuddledInnerBraceSliceViolation {
+	record R(int a) { static { init("𝐀");}} // violation: Non-empty record body must place '}' on its own line.
 }
 // === end ===
 

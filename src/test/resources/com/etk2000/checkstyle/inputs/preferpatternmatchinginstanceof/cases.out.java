@@ -50,3 +50,22 @@ class InputPatternInstanceofViolation {
 	}
 }
 // === end ===
+
+// === case: parenthesized ===
+class InputPatternInstanceofParenthesizedViolation {
+	// &&: parenthesizing the left operand puts an LPAREN first under LAND
+	boolean andParenthesized(Object obj) {
+		return (obj instanceof String) && ((String) obj).isEmpty();
+	}
+
+	// &&: both operands parenthesized, so the right one is not the next sibling either
+	boolean andParenthesizedBothOperands(Object obj) {
+		return (obj instanceof String) && (((String) obj).isEmpty());
+	}
+
+	// ternary: parenthesizing the condition puts an LPAREN first under QUESTION
+	int ternaryParenthesized(Object obj) {
+		return (obj instanceof String) ? ((String) obj).length() : -1;
+	}
+}
+// === end ===

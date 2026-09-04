@@ -1,12 +1,11 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstQuery;
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.FullIdent;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Set;
@@ -28,6 +27,11 @@ import javax.annotation.Nullable;
  * ({@code @Cap(java.lang.Integer.MAX_VALUE)}). Expression positions are
  * confirmed by reflection (the qualifier must resolve to a loadable class), so a
  * bare {@code SimpleClass.method()} is left to {@link PreferStaticImportCheck}.
+ * Such a qualifier is not flagged where a variable named like its simple name
+ * may be in scope ({@link VariableScope#lookupVariable}), since the variable
+ * would take over the shortened name, and is a warning, which the fixer leaves
+ * alone, when a class that answer depends on cannot be read; a
+ * class literal and a constructor reference name a type, so they still are.
  *
  * <p>Generic type arguments are flagged uniformly in every enclosing context
  * (declared types, {@code new} expressions, method-call/reference type
@@ -48,6 +52,7 @@ public class PreferImportCheck extends AbstractAstCheck {
 	private static final int MAX_RESOLVABLE_DOTS = 16;
 	private static final String MSG_KEY = "prefer.import";
 	private static final String MSG_KEY_NESTED = "prefer.import.nested";
+	private static final String MSG_KEY_WARNING = "prefer.import.warning";
 
 	private static void buildQualifiedName(@Nonnull DetailAST ast, @Nonnull StringBuilder sb) {
 		if (ast.getType() == TokenTypes.DOT) {
@@ -84,15 +89,49 @@ public class PreferImportCheck extends AbstractAstCheck {
 		}
 	}
 
+	/** The names the single-type and on-demand imports of the file {@code root} heads import. */
+	@CheckReturnValue
+	@Nonnull
+	private static Set<String> importsOf(@Nonnull DetailAST root) {
+		final var imports = new HashSet<String>();
+		for (var child = root.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child.getType() == TokenTypes.IMPORT) {
+				final var fqn = FullIdent.createFullIdentBelow(child).getText();
+				if (!fqn.isEmpty())
+					imports.add(fqn);
+			}
+		}
+		return imports;
+	}
+
+	/**
+	 * Whether shortening {@code qualifiedName}, written at the 0-based {@code line} and code-point
+	 * {@code column} of the file {@code root} heads, to its simple name would make it read as another
+	 * member type outside the file, the one the nearest enclosing body with a member type of that name
+	 * declares or inherits ({@link VariableScope#lookupInheritedMemberType}). Null when no node sits at
+	 * that position.
+	 * Shared with the fixer, which refuses such a site.
+	 */
+	@CheckReturnValue
+	@Nullable
+	public static ScopeLookup inheritedMemberTypeAt(@Nonnull DetailAST root, int line, int column, @Nonnull String qualifiedName) {
+		final var site = AstQuery.findNodeAt(root, line, column, node -> true);
+		if (site == null)
+			return null;
+		final var packageName = AstText.getPackageName(root);
+		final var imports = importsOf(root);
+		return new VariableScope(root, packageName, name -> ReflectionUtil.resolveClassName(name, packageName, imports))
+				.lookupInheritedMemberType(site, qualifiedName);
+	}
+
+	@CheckReturnValue
+	private static boolean isConstructorReference(@Nonnull DetailAST qualifier) {
+		final var parent = qualifier.getParent();
+		return parent.getType() == TokenTypes.METHOD_REF && parent.getLastChild().getType() == TokenTypes.LITERAL_NEW;
+	}
+
 	@CheckReturnValue
 	private static boolean isHandledDotParent(int parentType) {
-		// DOT chains in these positions are either type references (handled by
-		// checkType/the clause cases) or the qualifier of a construct handled by
-		// its own case (method call/ref, new, annotation type), or not an
-		// expression at all (import/package). Only expression-position DOTs
-		// (field access, class literal, annotation-argument values) fall through.
-		// Type-argument and wildcard-bound DOTs are type positions owned by the
-		// TYPE_ARGUMENTS case, so they are excluded here too.
 		return switch (parentType) {
 			case TokenTypes.ANNOTATION, TokenTypes.DOT, TokenTypes.EXTENDS_CLAUSE,
 			     TokenTypes.IMPLEMENTS_CLAUSE, TokenTypes.IMPORT, TokenTypes.LITERAL_NEW,
@@ -153,8 +192,7 @@ public class PreferImportCheck extends AbstractAstCheck {
 
 	/**
 	 * The fully-qualified type prefix of a dotted expression that should be
-	 * shortened, or {@code null} if none resolves. Shared with the fixer so it
-	 * bounds the strip identically. Returns the longest dotted prefix of
+	 * shortened, or {@code null} if none resolves. Returns the longest dotted prefix of
 	 * {@code dottedName} (including the whole string) that loads as a class via
 	 * {@link ReflectionUtil#isResolvableClass}; a single-segment name never
 	 * matches, which keeps bare {@code SimpleClass.member} out of scope.
@@ -170,10 +208,25 @@ public class PreferImportCheck extends AbstractAstCheck {
 	}
 
 	/**
+	 * Whether a static import of the file {@code root} heads brings in a member type of
+	 * {@code qualifiedName}'s simple name other than that type: a static on-demand import with
+	 * {@code onDemand}, a single static import of the name without
+	 * ({@link VariableScope#lookupStaticImportedMemberType}). Shared with the fixer, which refuses a
+	 * shortening the import would take over.
+	 */
+	@CheckReturnValue
+	@Nonnull
+	public static ScopeLookup staticImportedMemberType(@Nonnull DetailAST root, @Nonnull String qualifiedName, boolean onDemand) {
+		final var packageName = AstText.getPackageName(root);
+		final var imports = importsOf(root);
+		return new VariableScope(root, packageName, name -> ReflectionUtil.resolveClassName(name, packageName, imports))
+				.lookupStaticImportedMemberType(qualifiedName, onDemand);
+	}
+
+	/**
 	 * The DOT node naming the qualified type of a single {@code TYPE_ARGUMENT},
 	 * or {@code null} when the argument is a simple name, an unbounded wildcard,
-	 * or a wildcard bound to a simple name. Handles a direct dotted type
-	 * ({@code java.util.Map}) and a wildcard bound ({@code ? extends java.util.Map}).
+	 * or a wildcard bound to a simple name.
 	 */
 	@CheckReturnValue
 	@Nullable
@@ -191,9 +244,9 @@ public class PreferImportCheck extends AbstractAstCheck {
 		return null;
 	}
 
-	private final Set<String> fileTypeNames = new HashSet<>();
-	private final Set<String> imports = new HashSet<>();
+	private final Set<String> fileTypeNames = new HashSet<>(), imports = new HashSet<>();
 	private String packageName;
+	private VariableScope variableScope;
 
 	@Override
 	public void beginTree(@Nullable DetailAST rootAST) {
@@ -205,15 +258,10 @@ public class PreferImportCheck extends AbstractAstCheck {
 		if (rootAST == null)
 			return;
 
-		packageName = AstUtil.getPackageName(rootAST);
-		for (var child = rootAST.getFirstChild(); child != null; child = child.getNextSibling()) {
-			if (child.getType() == TokenTypes.IMPORT) {
-				final var fqn = FullIdent.createFullIdentBelow(child).getText();
-				if (!fqn.isEmpty())
-					imports.add(fqn);
-			}
-		}
+		packageName = AstText.getPackageName(rootAST);
+		imports.addAll(importsOf(rootAST));
 		collectFileTypeNames(rootAST, fileTypeNames);
+		variableScope = new VariableScope(rootAST, packageName, name -> ReflectionUtil.resolveClassName(name, packageName, imports));
 	}
 
 	private void checkType(@Nonnull DetailAST type) {
@@ -236,11 +284,21 @@ public class PreferImportCheck extends AbstractAstCheck {
 		// only a pure dotted-identifier receiver can be a type qualifier; an
 		// impure chain (array index, cast, nested call) is never an FQN, and
 		// feeding it to FullIdent could yield a misleading partial name
-		if (typeChain == null || !AstUtil.isPureDotChainOrIdent(typeChain))
+		if (typeChain == null || !AstQuery.isPureDotChainOrIdent(typeChain))
 			return;
 		final var prefix = resolvableTypePrefix(FullIdent.createFullIdent(typeChain).getText());
-		if (prefix != null)
+		if (prefix == null)
+			return;
+		// a class literal and a constructor reference name a type outright, but any other qualifier
+		// is an ambiguous name, which a variable of the shortened name would take over (JLS 6.5.2)
+		final var namesType = typeChain != qualifier || isConstructorReference(qualifier);
+		final var lookup = namesType
+				? ScopeLookup.ABSENT
+				: variableScope.lookupVariable(qualifier, prefix.substring(prefix.lastIndexOf('.') + 1));
+		if (lookup == ScopeLookup.ABSENT)
 			log(qualifier, MSG_KEY, prefix);
+		else if (lookup == ScopeLookup.UNKNOWN)
+			logWarning(qualifier, MSG_KEY_WARNING, prefix);
 	}
 
 	private void flagTypeArgumentQualifiers(@Nonnull DetailAST typeArguments) {
@@ -303,35 +361,11 @@ public class PreferImportCheck extends AbstractAstCheck {
 			log(anchor, MSG_KEY, qualifiedName);
 	}
 
-	/**
-	 * Whether {@code root} binds to a type visible in this file: a type declared
-	 * in the file, a name resolvable via the file's imports / same package /
-	 * {@code java.lang} (per {@link ReflectionUtil#resolveClassName}), or an
-	 * uncompiled sibling source file of the same simple name.
-	 */
 	@CheckReturnValue
 	private boolean rootNamesTypeInScope(@Nonnull String root) {
 		return fileTypeNames.contains(root)
 				|| ReflectionUtil.resolveClassName(root, packageName, imports) != null
 				|| siblingSourceFileExists(root);
-	}
-
-	@CheckReturnValue
-	private boolean siblingSourceFileExists(@Nonnull String simpleName) {
-		// a same-package sibling names a type, whose source file starts uppercase
-		// by convention; skip the filesystem probe for lowercase package roots
-		if (simpleName.isEmpty() || !Character.isUpperCase(simpleName.charAt(0)))
-			return false;
-		final var filePath = getFilePath();
-		if (filePath == null)
-			return false;
-		try {
-			final var parent = Path.of(filePath).getParent();
-			return parent != null && Files.exists(parent.resolve(simpleName + ".java"));
-		}
-		catch (InvalidPathException | SecurityException ignored) {
-			return false;
-		}
 	}
 
 	@Override

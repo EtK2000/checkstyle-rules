@@ -11,6 +11,6 @@ public class RedundantArrayCreationFixerTest {
 
 	@Test
 	public void testNoBraceOnLineSkips() throws Exception {
-		assertSkipResult(fixer, TOPIC, "no_brace_on_line_skipped", "multi-line array initializer");
+		assertSkipResult(fixer, TOPIC, "no_brace_on_line_skipped", "cannot remove the array creation: the initializer spans multiple lines");
 	}
 }

@@ -1,5 +1,133 @@
 package com.etk2000.checkstyle.inputs.arraytypestyle;
 
+// === case: annotated_base_dimension_field ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+@SuppressWarnings("unused")
+class InputArrayTypeStyleAnnotatedBaseDimensionFieldSliceViolation {
+	@interface A {}
+
+	int @A [] x[]; // violation: Array brackets must be on the type, not after 'x'.
+}
+// === end ===
+
+// === case: annotated_base_dimension_for_init ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+@SuppressWarnings("unused")
+class InputArrayTypeStyleAnnotatedBaseDimensionForInitSliceViolation {
+	@interface A {}
+
+	void m(int[][] grid, int step) {
+		for (int @A [] x[] = grid; x.length < 10; step += 1) // violation: Array brackets must be on the type, not after 'x'.
+			break;
+	}
+}
+// === end ===
+
+// === case: annotated_base_dimension_lambda_param ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+// imports: java.util.function.BiConsumer
+@SuppressWarnings("unused")
+class InputArrayTypeStyleAnnotatedBaseDimensionLambdaParamSliceViolation {
+	@interface A {}
+
+	BiConsumer<int[][], Integer> b = (int @A [] a[], Integer y) -> {}; // violation: Array brackets must be on the type, not after 'a'.
+}
+// === end ===
+
+// === case: annotated_base_dimension_local ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+@SuppressWarnings("unused")
+class InputArrayTypeStyleAnnotatedBaseDimensionLocalSliceViolation {
+	@interface A {}
+
+	void m() {
+		final int @A [] lb[] = {{1}}; // violation: Array brackets must be on the type, not after 'lb'.
+		lb[0][0] = 1;
+	}
+}
+// === end ===
+
+// === case: annotated_base_dimension_method_return ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+@SuppressWarnings("unused")
+class InputArrayTypeStyleAnnotatedBaseDimensionMethodReturnSliceViolation {
+	@interface A {}
+
+	int @A [] method()[] { // violation: Array brackets must be on the type, not after 'method'.
+		return null;
+	}
+}
+// === end ===
+
+// === case: annotated_base_dimension_mixed_depth_in_call_argument_lambda ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+@SuppressWarnings("unused")
+class InputArrayTypeStyleAnnotatedBaseDimensionMixedDepthInCallArgumentLambdaSliceViolation {
+	@interface A {}
+
+	void m() {
+		run(() -> { final int @A [] alpha[], beta; }); // violation: Array brackets must be on the type, not after 'alpha'.
+	}
+
+	void run(Runnable task) {
+		task.run();
+	}
+}
+// === end ===
+
+// === case: annotated_base_dimension_multi_line_method_return ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+@SuppressWarnings("unused")
+class InputArrayTypeStyleAnnotatedBaseDimensionMultiLineMethodReturnSliceViolation {
+	@interface A {}
+
+	int @A [] method()
+			[] // violation: Array brackets must be on the type, not after 'method'.
+			{ return null; }
+}
+// === end ===
+
+// === case: annotated_base_dimension_multi_line_var ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+@SuppressWarnings("unused")
+class InputArrayTypeStyleAnnotatedBaseDimensionMultiLineVarSliceViolation {
+	@interface A {}
+
+	int @A [] x
+			[]; // violation: Array brackets must be on the type, not after 'x'.
+}
+// === end ===
+
+// === case: annotated_base_dimension_param ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+@SuppressWarnings("unused")
+class InputArrayTypeStyleAnnotatedBaseDimensionParamSliceViolation {
+	@interface A {}
+
+	void m(int @A [] x[]) {} // violation: Array brackets must be on the type, not after 'x'.
+}
+// === end ===
+
+// === case: annotated_base_dimension_record_component ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+@SuppressWarnings("unused")
+class InputArrayTypeStyleAnnotatedBaseDimensionRecordComponentSliceViolation {
+	@interface A {}
+
+	record R(int @A [] x[]) {} // violation: Array brackets must be on the type, not after 'x'.
+}
+// === end ===
+
+// === case: annotated_base_dimension_second_of_two ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+@SuppressWarnings("unused")
+class InputArrayTypeStyleAnnotatedBaseDimensionSecondOfTwoSliceViolation {
+	@interface A {}
+
+	int[] @A [] x[]; // violation: Array brackets must be on the type, not after 'x'.
+}
+// === end ===
+
 // === case: annotated_field ===
 class InputArrayTypeStyleAnnotatedFieldSliceViolation {
 	@Deprecated
@@ -17,7 +145,7 @@ class InputArrayTypeStyleAnnotatedParamSliceViolation {
 // === end ===
 
 // === case: annotation_argument_parens_not_treated_as_method_parens ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleAnnotationArgumentParensNotTreatedAsMethodParensSliceViolation {
 	@interface Ann {
@@ -32,7 +160,7 @@ class InputArrayTypeStyleAnnotationArgumentParensNotTreatedAsMethodParensSliceVi
 // === end ===
 
 // === case: block_comment_after_brackets_multi_var_next_line ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleBlockCommentAfterBracketsMultiVarNextLineSliceViolation {
 	int x[] /* c // violation: Array brackets must be on the type, not after 'x'.
@@ -63,7 +191,7 @@ class InputArrayTypeStyleBoundedWildcardCStyleSliceViolation {
 // === end ===
 
 // === case: char_literal_comma_in_multi_var_init ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleCharLiteralCommaInMultiVarInitSliceViolation {
 	void m(char c, char a, char b) {
@@ -73,7 +201,7 @@ class InputArrayTypeStyleCharLiteralCommaInMultiVarInitSliceViolation {
 // === end ===
 
 // === case: char_literal_escaped_quote_multi_var ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleCharLiteralEscapedQuoteMultiVarSliceViolation {
 	char x[] = '\'', y = 'z'; // violation: Array brackets must be on the type, not after 'x'.
@@ -120,7 +248,7 @@ class InputArrayTypeStyleCloseParenInStringLiteralOnMethodReturnSliceViolation {
 // === end ===
 
 // === case: comma_after_brackets_in_variable_decl ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleCommaAfterBracketsInVariableDeclSliceViolation {
 	int x[], y; // violation: Array brackets must be on the type, not after 'x'.
@@ -142,7 +270,7 @@ class InputArrayTypeStyleCommentAfterBracketBeforeAssignmentSliceViolation {
 // === end ===
 
 // === case: comment_between_comma_and_ident_multi_var ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleCommentBetweenCommaAndIdentMultiVarSliceViolation {
 	void m(int[] a) {
@@ -152,7 +280,7 @@ class InputArrayTypeStyleCommentBetweenCommaAndIdentMultiVarSliceViolation {
 // === end ===
 
 // === case: comment_between_ident_and_bracket ===
-// skip-reason: comment between the identifier and the array brackets
+// skip-reason: cannot move the brackets: a comment sits between the name and the brackets
 @SuppressWarnings("unused")
 class InputArrayTypeStyleCommentBetweenIdentAndBracketSliceViolation {
 	int x /* note */ []; // violation: Array brackets must be on the type, not after 'x'.
@@ -244,7 +372,7 @@ class InputArrayTypeStyleForEachMethodNotTreatedAsForKeywordSliceViolation {
 // === end ===
 
 // === case: for_loop_multi_var ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleForLoopMultiVarSliceViolation {
 	void m(int[] a, boolean cond) {
@@ -354,6 +482,8 @@ class InputArrayTypeStyleLocalSimpleSliceViolation {
 // === end ===
 
 // === case: main ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+// multi-fix-expected
 @SuppressWarnings("unused")
 class InputArrayTypeStyleViolation {
 	void multiVarMixed() {
@@ -364,11 +494,6 @@ class InputArrayTypeStyleViolation {
 	void multiVarMixedReversed() {
 		final int epsilon = 0, zeta[] = {1}; // violation: Array brackets must be on the type, not after 'zeta'.
 		zeta[0] = epsilon;
-	}
-
-	void multiVarSame() {
-		final int alpha[] = {1}, beta[] = {2}; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
-		alpha[0] = beta[0];
 	}
 }
 // === end ===
@@ -508,7 +633,7 @@ class InputArrayTypeStyleMultiLineAbstractMethodReturnSliceViolation {
 // === end ===
 
 // === case: multi_line_block_comment_spans_across_lines_followed_by_comma ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineBlockCommentSpansAcrossLinesFollowedByCommaSliceViolation {
 	int x
@@ -527,7 +652,7 @@ fake , */;
 // === end ===
 
 // === case: multi_line_block_comment_spans_lines_containing_comma ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineBlockCommentSpansLinesContainingCommaSliceViolation {
 	int x[] /* // violation: Array brackets must be on the type, not after 'x'.
@@ -578,7 +703,7 @@ class InputArrayTypeStyleMultiLineGenericMethodReturnSliceViolation {
 // === end ===
 
 // === case: multi_line_line_comment_before_comma_on_next_line ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineLineCommentBeforeCommaOnNextLineSliceViolation {
 	int x
@@ -622,7 +747,7 @@ class InputArrayTypeStyleMultiLineMethodReturnWithMultiThrowsSliceViolation {
 // === end ===
 
 // === case: multi_line_multi_var ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineMultiVarSliceViolation {
 	int alpha, beta
@@ -631,7 +756,7 @@ class InputArrayTypeStyleMultiLineMultiVarSliceViolation {
 // === end ===
 
 // === case: multi_line_multi_var_on_bracket_line ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineMultiVarOnBracketLineSliceViolation {
 	int x
@@ -640,7 +765,7 @@ class InputArrayTypeStyleMultiLineMultiVarOnBracketLineSliceViolation {
 // === end ===
 
 // === case: multi_line_multi_var_on_following_line ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineMultiVarOnFollowingLineSliceViolation {
 	int x
@@ -650,7 +775,7 @@ class InputArrayTypeStyleMultiLineMultiVarOnFollowingLineSliceViolation {
 // === end ===
 
 // === case: multi_line_multi_var_spanning_brace_init ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineMultiVarSpanningBraceInitSliceViolation {
 	int x
@@ -668,7 +793,7 @@ class InputArrayTypeStyleMultiLineSimpleVarSliceViolation {
 // === end ===
 
 // === case: multi_line_string_literal_init_with_comma ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineStringLiteralInitWithCommaSliceViolation {
 	String x
@@ -677,7 +802,7 @@ class InputArrayTypeStyleMultiLineStringLiteralInitWithCommaSliceViolation {
 // === end ===
 
 // === case: multi_line_type_use_annotation_on_prev_line ===
-// skip-reason: type-use annotation before the array brackets
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiLineTypeUseAnnotationOnPrevLineSliceViolation {
 	@interface Anno {}
@@ -746,8 +871,42 @@ class InputArrayTypeStyleMultiLineWithStringLiteralInitializerSliceViolation {
 }
 // === end ===
 
+// === case: multi_var_base_type_annotated_brackets ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarBaseTypeAnnotatedBracketsSliceViolation {
+	@interface A {}
+
+	int @A [] alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_base_type_brackets_first_only ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarBaseTypeBracketsFirstOnlySliceViolation {
+	int[] alpha[], beta; // violation: Array brackets must be on the type, not after 'alpha'.
+}
+// === end ===
+
+// === case: multi_var_base_type_brackets_last_only ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarBaseTypeBracketsLastOnlySliceViolation {
+	int[] alpha, beta[]; // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_base_type_brackets_same_depth ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarBaseTypeBracketsSameDepthSliceViolation {
+	int[] alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
 // === case: multi_var_brace_initializer ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarBraceInitializerSliceViolation {
 	int x[] = {1, 2}, y = 3; // violation: Array brackets must be on the type, not after 'x'.
@@ -755,7 +914,7 @@ class InputArrayTypeStyleMultiVarBraceInitializerSliceViolation {
 // === end ===
 
 // === case: multi_var_bracket_index_init ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarBracketIndexInitSliceViolation {
 	void m(int[] arr, int i) {
@@ -765,7 +924,7 @@ class InputArrayTypeStyleMultiVarBracketIndexInitSliceViolation {
 // === end ===
 
 // === case: multi_var_function_call_init ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarFunctionCallInitSliceViolation {
 	int[] foo(int a, int b) {
@@ -778,16 +937,623 @@ class InputArrayTypeStyleMultiVarFunctionCallInitSliceViolation {
 }
 // === end ===
 
+// === case: multi_var_gap_annotation_between_sibling_bracket_pairs ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarGapAnnotationBetweenSiblingBracketPairsSliceViolation {
+	@interface A {}
+
+	int alpha[][], beta[] @A []; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_gap_annotation_on_own_brackets ===
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarGapAnnotationOnOwnBracketsSliceViolation {
+	@interface A {}
+
+	int alpha @A [], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_gap_annotation_on_sibling_brackets ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarGapAnnotationOnSiblingBracketsSliceViolation {
+	@interface A {}
+
+	int alpha[], beta @A []; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_gap_comment_inside_brackets ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarGapCommentInsideBracketsSliceViolation {
+	int alpha[/* note */], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_gap_comment_own ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarGapCommentOwnSliceViolation {
+	int alpha /* note */ [], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_gap_comment_sibling ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarGapCommentSiblingSliceViolation {
+	int alpha[], beta /* note */ []; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_mixed_depth_for_init ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarMixedDepthForInitSliceViolation {
+	void m(int[] first, int[][] grid, boolean cond) {
+		for (int alpha[] = first, beta[][] = grid; cond; alpha = first) // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+			break;
+	}
+}
+// === end ===
+
+// === case: multi_var_mixed_depth_in_call_argument_lambda ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarMixedDepthInCallArgumentLambdaSliceViolation {
+	void m() {
+		run(() -> { final int alpha[], beta; }); // violation: Array brackets must be on the type, not after 'alpha'.
+	}
+
+	void run(Runnable task) {
+		task.run();
+	}
+}
+// === end ===
+
+// === case: multi_var_mixed_depth_none_then_two ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarMixedDepthNoneThenTwoSliceViolation {
+	int alpha, beta[][]; // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_mixed_depth_one_then_two ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarMixedDepthOneThenTwoSliceViolation {
+	int alpha[], beta[][]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_mixed_depth_three_first ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarMixedDepthThreeFirstSliceViolation {
+	int alpha[][], beta[], gamma[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'. // violation: Array brackets must be on the type, not after 'gamma'.
+}
+// === end ===
+
+// === case: multi_var_mixed_depth_three_last ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarMixedDepthThreeLastSliceViolation {
+	int alpha[], beta[], gamma[][]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'. // violation: Array brackets must be on the type, not after 'gamma'.
+}
+// === end ===
+
+// === case: multi_var_mixed_depth_three_middle ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarMixedDepthThreeMiddleSliceViolation {
+	int alpha[], beta[][], gamma[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'. // violation: Array brackets must be on the type, not after 'gamma'.
+}
+// === end ===
+
+// === case: multi_var_mixed_depth_three_none_in_middle ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarMixedDepthThreeNoneInMiddleSliceViolation {
+	int alpha[], beta, gamma[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'gamma'.
+}
+// === end ===
+
+// === case: multi_var_mixed_depth_two_then_none ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarMixedDepthTwoThenNoneSliceViolation {
+	int alpha[][], beta; // violation: Array brackets must be on the type, not after 'alpha'.
+}
+// === end ===
+
+// === case: multi_var_mixed_depth_two_then_one ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarMixedDepthTwoThenOneSliceViolation {
+	int alpha[][], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_own_brackets_on_next_line ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarOwnBracketsOnNextLineSliceViolation {
+	int alpha
+			[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_own_last_bracket_pair_on_next_line ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+// multi-fix-expected
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarOwnLastBracketPairOnNextLineSliceViolation {
+	int alpha[] // violation: Array brackets must be on the type, not after 'alpha'.
+			[], beta[][]; // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
 // === case: multi_var_prev ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarPrevSliceViolation {
 	int alpha, beta[]; // violation: Array brackets must be on the type, not after 'beta'.
 }
 // === end ===
 
+// === case: multi_var_same_depth_adjacent_declarations ===
+// multi-fix-expected
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthAdjacentDeclarationsSliceViolation {
+	int alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+	long delta[]; // violation: Array brackets must be on the type, not after 'delta'.
+	short epsilon[], gamma[]; // violation: Array brackets must be on the type, not after 'epsilon'. // violation: Array brackets must be on the type, not after 'gamma'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_anonymous_class_field ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthAnonymousClassFieldSliceViolation {
+	private final Object holder = new Object() {
+		int alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+	};
+}
+// === end ===
+
+// === case: multi_var_same_depth_array_valued_annotation ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthArrayValuedAnnotationSliceViolation {
+	@SuppressWarnings({"rawtypes", "unused"})
+	int alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_block_comment_spans_lines ===
+// multi-fix-expected
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthBlockCommentSpansLinesSliceViolation {
+	int alpha[] /* note // violation: Array brackets must be on the type, not after 'alpha'.
+			more */, beta[]; // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_brace_init_with_commas ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthBraceInitWithCommasSliceViolation {
+	int alpha[] = {1, 2}, beta[] = {3, 4}; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_call_init_with_commas ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthCallInitWithCommasSliceViolation {
+	void m() {
+		final int alpha[] = pair(1, 2), beta[] = pair(3, 4); // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+		alpha[0] = beta[0];
+	}
+
+	private int[] pair(int first, int second) {
+		return new int[]{first, second};
+	}
+}
+// === end ===
+
+// === case: multi_var_same_depth_cast_and_ternary_init ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthCastAndTernaryInitSliceViolation {
+	void m(Object source, int[] first, int[] second, boolean cond) {
+		final int alpha[] = (int[]) source, beta[] = cond ? first : second; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+		alpha[0] = beta[0];
+	}
+}
+// === end ===
+
+// === case: multi_var_same_depth_char_init_with_comma ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthCharInitWithCommaSliceViolation {
+	char alpha[] = {','}, beta[] = {'\''}; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_comma_on_next_line ===
+// multi-fix-expected
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthCommaOnNextLineSliceViolation {
+	int alpha[] // violation: Array brackets must be on the type, not after 'alpha'.
+			, beta[]; // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_comment_after_comma ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthCommentAfterCommaSliceViolation {
+	int alpha[], /* note */ beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_comment_after_type ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthCommentAfterTypeSliceViolation {
+	int /* note */ alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_comment_between_declarators ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthCommentBetweenDeclaratorsSliceViolation {
+	int alpha[] /* [], note */, beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_declaration_annotation ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthDeclarationAnnotationSliceViolation {
+	@Deprecated
+	int alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_declarators_on_two_lines ===
+// multi-fix-expected
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthDeclaratorsOnTwoLinesSliceViolation {
+	int alpha[], // violation: Array brackets must be on the type, not after 'alpha'.
+			beta[]; // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_enum_field ===
+@SuppressWarnings("unused")
+enum InputArrayTypeStyleMultiVarSameDepthEnumFieldSliceViolation {
+	FIRST;
+
+	int alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_field ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthFieldSliceViolation {
+	int alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_for_init ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthForInitSliceViolation {
+	void m(int[] first, int[] second, boolean cond) {
+		for (int alpha[] = first, beta[] = second; cond; alpha = beta) // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+			break;
+	}
+}
+// === end ===
+
+// === case: multi_var_same_depth_for_init_call_with_commas ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthForInitCallWithCommasSliceViolation {
+	void m(boolean cond) {
+		for (int alpha[] = pair(1, 2), beta[] = pair(3, 4); cond; alpha = beta) // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+			break;
+	}
+
+	private int[] pair(int first, int second) {
+		return new int[]{first, second};
+	}
+}
+// === end ===
+
+// === case: multi_var_same_depth_generic ===
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthGenericSliceViolation {
+	List<String> alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_in_call_argument_lambda ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthInCallArgumentLambdaSliceViolation {
+	void m() {
+		run(() -> { final int alpha[], beta[]; }); // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+	}
+
+	void run(Runnable task) {
+		task.run();
+	}
+}
+// === end ===
+
+// === case: multi_var_same_depth_index_init ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthIndexInitSliceViolation {
+	void m(int[][] grid) {
+		final int alpha[] = grid[0], beta[] = grid[1]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+		alpha[0] = beta[0];
+	}
+}
+// === end ===
+
+// === case: multi_var_same_depth_initializer_spans_lines ===
+// multi-fix-expected
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthInitializerSpansLinesSliceViolation {
+	int alpha[] = {1, // violation: Array brackets must be on the type, not after 'alpha'.
+			2}, beta[] = {3}; // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_interface_constant ===
+@SuppressWarnings("unused")
+interface InputArrayTypeStyleMultiVarSameDepthInterfaceConstantSliceViolation {
+	int ALPHA[] = {1}, BETA[] = {2}; // violation: Array brackets must be on the type, not after 'ALPHA'. // violation: Array brackets must be on the type, not after 'BETA'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_lambda_body_local ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthLambdaBodyLocalSliceViolation {
+	void m() {
+		final Runnable task = () -> {
+			final int alpha[] = {1}, beta[] = {2}; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+			alpha[0] = beta[0];
+		};
+		task.run();
+	}
+}
+// === end ===
+
+// === case: multi_var_same_depth_local_array_init ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthLocalArrayInitSliceViolation {
+	void multiVarSame() {
+		final int alpha[] = {1}, beta[] = {2}; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+		alpha[0] = beta[0];
+	}
+}
+// === end ===
+
+// === case: multi_var_same_depth_method_ref_init ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthMethodRefInitSliceViolation {
+	Runnable alpha[] = {System::gc}, beta[] = {}; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_mixed_init ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthMixedInitSliceViolation {
+	int alpha[] = {1}, beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_nested_generic ===
+// imports: java.util.List
+// imports: java.util.Map
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthNestedGenericSliceViolation {
+	Map<String, List<Integer>> alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_qualified_generic ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthQualifiedGenericSliceViolation {
+	static class Box {
+		static class Item<T> {}
+	}
+
+	Box.Item<String> alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_record_static_field ===
+@SuppressWarnings("unused")
+record InputArrayTypeStyleMultiVarSameDepthRecordStaticFieldSliceViolation() {
+	static int alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_space_between_bracket_pairs ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthSpaceBetweenBracketPairsSliceViolation {
+	int alpha[] [], beta[][]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_static_final_constant ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthStaticFinalConstantSliceViolation {
+	private static final int ALPHA[] = {1}, BETA[] = {2}; // violation: Array brackets must be on the type, not after 'ALPHA'. // violation: Array brackets must be on the type, not after 'BETA'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_static_initializer_local ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthStaticInitializerLocalSliceViolation {
+	static {
+		final int alpha[] = {1}, beta[] = {2}; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+		alpha[0] = beta[0];
+	}
+}
+// === end ===
+
+// === case: multi_var_same_depth_string_init_with_comma ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthStringInitWithCommaSliceViolation {
+	String alpha[] = {","}, beta[] = {"z"}; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_supplementary_char_before_type ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthSupplementaryCharBeforeTypeSliceViolation {
+	/* 𝒜 */ int alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_switch_rule_local ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthSwitchRuleLocalSliceViolation {
+	void m(int key) {
+		switch (key) {
+			case 1 -> {
+				final int alpha[] = {1}, beta[] = {2}; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+				alpha[0] = beta[0];
+			}
+			default -> System.gc();
+		}
+	}
+}
+// === end ===
+
+// === case: multi_var_same_depth_tab_between_type_and_name ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthTabBetweenTypeAndNameSliceViolation {
+	int	alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_text_block_in_first_init ===
+// multi-fix-expected
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthTextBlockInFirstInitSliceViolation {
+	String alpha[] = {"""
+			x"""}, beta[] = {"y"}; // violation@opener: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_text_block_in_last_init ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthTextBlockInLastInitSliceViolation {
+	String alpha[] = {"x"}, beta[] = {"""
+			y"""}; // violation@opener: Array brackets must be on the type, not after 'alpha'. // violation@opener: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_three_declarators ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthThreeDeclaratorsSliceViolation {
+	int alpha[], beta[], gamma[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'. // violation: Array brackets must be on the type, not after 'gamma'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_trailing_line_comment ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthTrailingLineCommentSliceViolation {
+	int alpha[], beta[]; // gamma[], delta // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_two_dim ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthTwoDimSliceViolation {
+	int alpha[][], beta[][]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_two_dim_nested_brace_init ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthTwoDimNestedBraceInitSliceViolation {
+	int alpha[][] = {{1, 2}, {3}}, beta[][] = {{4}}; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_type_args_with_brackets ===
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthTypeArgsWithBracketsSliceViolation {
+	List<int[]> alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_type_on_previous_line ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthTypeOnPreviousLineSliceViolation {
+	void m() {
+		final int
+				alpha[] = {1}, beta[] = {2}; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+		alpha[0] = beta[0];
+	}
+}
+// === end ===
+
+// === case: multi_var_same_depth_type_use_annotation_in_type_args ===
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthTypeUseAnnotationInTypeArgsSliceViolation {
+	@interface A {}
+
+	List<@A String> alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_whitespace_before_brackets ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthWhitespaceBeforeBracketsSliceViolation {
+	int alpha [], beta []; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_whitespace_inside_first_brackets ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthWhitespaceInsideFirstBracketsSliceViolation {
+	int alpha[ ], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_whitespace_inside_later_brackets ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthWhitespaceInsideLaterBracketsSliceViolation {
+	int alpha[], beta[ ]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_same_depth_wildcard_generic ===
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSameDepthWildcardGenericSliceViolation {
+	List<? extends Number> alpha[], beta[]; // violation: Array brackets must be on the type, not after 'alpha'. // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
+// === case: multi_var_sibling_brackets_on_next_line ===
+// skip-reason: cannot move the brackets: multi-variable declaration
+// multi-fix-expected
+@SuppressWarnings("unused")
+class InputArrayTypeStyleMultiVarSiblingBracketsOnNextLineSliceViolation {
+	int alpha[], beta // violation: Array brackets must be on the type, not after 'alpha'.
+			[]; // violation: Array brackets must be on the type, not after 'beta'.
+}
+// === end ===
+
 // === case: multi_var_spanning_brace_init_on_single_line ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarSpanningBraceInitOnSingleLineSliceViolation {
 	void m() {
@@ -798,7 +1564,7 @@ class InputArrayTypeStyleMultiVarSpanningBraceInitOnSingleLineSliceViolation {
 // === end ===
 
 // === case: multi_var_string_escaped_quote ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarStringEscapedQuoteSliceViolation {
 	String x[] = "a\"b", y = "z"; // violation: Array brackets must be on the type, not after 'x'.
@@ -806,7 +1572,7 @@ class InputArrayTypeStyleMultiVarStringEscapedQuoteSliceViolation {
 // === end ===
 
 // === case: multi_var_string_literal_init ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarStringLiteralInitSliceViolation {
 	String x[] = ",", y = "z"; // violation: Array brackets must be on the type, not after 'x'.
@@ -814,7 +1580,7 @@ class InputArrayTypeStyleMultiVarStringLiteralInitSliceViolation {
 // === end ===
 
 // === case: multi_var_with_initializer ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleMultiVarWithInitializerSliceViolation {
 	int gamma[] = {1}, delta = 2; // violation: Array brackets must be on the type, not after 'gamma'.
@@ -852,10 +1618,32 @@ class InputArrayTypeStyleParameterCStyleSliceViolation {
 }
 // === end ===
 
+// === case: qualified_type_use_annotation_c_style ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleQualifiedTypeUseAnnotationCStyleSliceViolation {
+	@interface A {}
+
+	static class Box {
+		class Item {}
+	}
+
+	Box.@A Item x[]; // violation: Array brackets must be on the type, not after 'x'.
+}
+// === end ===
+
 // === case: record_component_c_style ===
 @SuppressWarnings("unused")
 class InputArrayTypeStyleRecordComponentCStyleSliceViolation {
 	record R(int x[]) {} // violation: Array brackets must be on the type, not after 'x'.
+}
+// === end ===
+
+// === case: record_component_declaration_annotation_c_style ===
+@SuppressWarnings("unused")
+class InputArrayTypeStyleRecordComponentDeclarationAnnotationCStyleSliceViolation {
+	@interface A {}
+
+	record R(@A int x[]) {} // violation: Array brackets must be on the type, not after 'x'.
 }
 // === end ===
 
@@ -880,7 +1668,7 @@ class InputArrayTypeStyleStaticArraySliceViolation {
 // === end ===
 
 // === case: string_literal_with_paren_before_bracket ===
-// skip-reason: cannot move brackets in a multi-variable declaration
+// skip-reason: cannot move the brackets: multi-variable declaration
 @SuppressWarnings("unused")
 class InputArrayTypeStyleStringLiteralWithParenBeforeBracketSliceViolation {
 	String s = "(", x[]; // violation: Array brackets must be on the type, not after 'x'.
@@ -934,8 +1722,18 @@ class InputArrayTypeStyleTypeUseAnnotationInTypeArgsCStyleSliceViolation {
 }
 // === end ===
 
+// === case: type_use_annotation_in_type_args_with_base_brackets ===
+// imports: java.util.List
+@SuppressWarnings("unused")
+class InputArrayTypeStyleTypeUseAnnotationInTypeArgsWithBaseBracketsSliceViolation {
+	@interface A {}
+
+	List<@A String>[] x[]; // violation: Array brackets must be on the type, not after 'x'.
+}
+// === end ===
+
 // === case: type_use_annotation_on_bracket ===
-// skip-reason: type-use annotation before the array brackets
+// skip-reason: cannot move the brackets: a type-use annotation precedes them
 @SuppressWarnings("unused")
 class InputArrayTypeStyleTypeUseAnnotationOnBracketSliceViolation {
 	@interface Anno {}

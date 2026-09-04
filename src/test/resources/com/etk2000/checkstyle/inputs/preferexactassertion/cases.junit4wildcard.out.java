@@ -1,7 +1,7 @@
 package com.etk2000.checkstyle.inputs.preferexactassertion;
 
 // === case: junit4_wildcard_unqualified_comparison_fires ===
-// skip-reason: complex assertion form
+// skip-reason: cannot rewrite the assertion: a comparison needs the operand types to rewrite
 // imports: static org.junit.Assert.*
 class Junit4WildcardUnqualifiedComparisonFiresSlice {
 	void m() {

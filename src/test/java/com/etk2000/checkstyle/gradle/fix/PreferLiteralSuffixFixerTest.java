@@ -17,11 +17,11 @@ public class PreferLiteralSuffixFixerTest {
 
 	@Test
 	public void testForwardSubjectAtEol() throws Exception {
-		assertSkipResult(fixer, TOPIC, "forward_subject_at_eol", "complex-cast-subject");
+		assertSkipResult(fixer, TOPIC, "forward_subject_at_eol", "cannot replace the cast with a suffix: the cast subject is a complex expression");
 	}
 
 	@Test
 	public void testMalformedCastNoExpression() throws Exception {
-		assertSkipResult(fixer, TOPIC, "malformed_cast_no_expression", "malformed-cast-no-expression");
+		assertSkipResult(fixer, TOPIC, "malformed_cast_no_expression", "cannot replace the cast with a suffix: no expression follows the cast");
 	}
 }

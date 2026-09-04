@@ -1,13 +1,3 @@
-// === case: same_type_cast_field ===
-class InputRedundantCastSameTypeFieldRefSliceViolation {
-	int sameField;
-
-	void m() {
-		final var x = sameField;
-	}
-}
-// === end ===
-
 // === case: same_type_cast_foreach ===
 // imports: java.util.List
 class InputRedundantCastSameTypeForeachSliceViolation {
@@ -39,7 +29,7 @@ class InputRedundantCastSameTypeParameterSliceViolation {
 class InputRedundantCastSameTypeVarIntSliceViolation {
 	void m() {
 		final var x = 5;
-		final var y = x;
+		final int y = x;
 	}
 }
 // === end ===
@@ -109,7 +99,7 @@ class InputRedundantCastSiblingComparisonSliceViolation {
 	void m() {
 		final var x = 5;
 		final long y = 10;
-		final boolean b = x == y;
+		final var b = x == y;
 	}
 }
 // === end ===
@@ -162,29 +152,11 @@ class InputRedundantCastTernaryLongTargetSliceViolation {
 }
 // === end ===
 
-// === case: widening_byte_to_int ===
-class InputRedundantCastWideningByteToIntSliceViolation {
-	void m() {
-		final byte b = 5;
-		final var x = b;
-	}
-}
-// === end ===
-
-// === case: widening_byte_to_short ===
-class InputRedundantCastWideningByteToShortSliceViolation {
-	void m() {
-		final byte b = 5;
-		final var x = b;
-	}
-}
-// === end ===
-
 // === case: widening_char_to_int ===
 class InputRedundantCastWideningCharToIntSliceViolation {
 	void m() {
 		final var c = 'a';
-		final var x = c;
+		final int x = c;
 	}
 }
 // === end ===
@@ -193,7 +165,7 @@ class InputRedundantCastWideningCharToIntSliceViolation {
 class InputRedundantCastWideningFloatToDoubleSliceViolation {
 	void m() {
 		final var f = 5.0f;
-		final var x = f;
+		final double x = f;
 	}
 }
 // === end ===
@@ -230,7 +202,7 @@ class InputRedundantCastWideningStandaloneAssignSliceViolation {
 class InputRedundantCastWideningIntToDoubleSliceViolation {
 	void m() {
 		final var x = 5;
-		final var x = x;
+		final double x = x;
 	}
 }
 // === end ===
@@ -239,7 +211,7 @@ class InputRedundantCastWideningIntToDoubleSliceViolation {
 class InputRedundantCastWideningIntToFloatSliceViolation {
 	void m() {
 		final var x = 5;
-		final var x = x;
+		final float x = x;
 	}
 }
 // === end ===
@@ -248,7 +220,7 @@ class InputRedundantCastWideningIntToFloatSliceViolation {
 class InputRedundantCastWideningIntToLongSliceViolation {
 	void m() {
 		final var x = 5;
-		final var x = x;
+		final long x = x;
 	}
 }
 // === end ===
@@ -257,7 +229,7 @@ class InputRedundantCastWideningIntToLongSliceViolation {
 class InputRedundantCastWideningLongToDoubleSliceViolation {
 	void m() {
 		final var x = 5L;
-		final var d = x;
+		final double d = x;
 	}
 }
 // === end ===
@@ -266,33 +238,7 @@ class InputRedundantCastWideningLongToDoubleSliceViolation {
 class InputRedundantCastWideningLongToFloatSliceViolation {
 	void m() {
 		final var x = 5L;
-		final var f = x;
-	}
-}
-// === end ===
-
-// === case: widening_on_parameter ===
-class InputRedundantCastWideningOnParameterSliceViolation {
-	void m(int x) {
-		final var y = x;
-	}
-}
-// === end ===
-
-// === case: widening_short_to_int ===
-class InputRedundantCastWideningShortToIntSliceViolation {
-	void m() {
-		final short s = 5;
-		final var x = s;
-	}
-}
-// === end ===
-
-// === case: widening_short_to_long ===
-class InputRedundantCastWideningShortToLongSliceViolation {
-	void m() {
-		final short s = 5;
-		final var x = s;
+		final float f = x;
 	}
 }
 // === end ===

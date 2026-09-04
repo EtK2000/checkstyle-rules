@@ -7,8 +7,6 @@ import java.util.List;
 class InputArrayTypeStyleClean {
 	@interface TypeAnno {}
 
-	// C-style brackets in a class-header extends/implements clause are not a declarator; the check must
-	// stay silent (it registers only method/parameter/record-component/variable declarations).
 	static class ExtendsArrayType extends Number[] {}
 
 	static class ImplementsArrayType implements Cloneable[] {}
@@ -26,6 +24,9 @@ class InputArrayTypeStyleClean {
 	int[][] iaa;
 	List<String>[] lsf;
 	String[] sf;
+	byte[][] eta, theta;
+	char[] alpha, beta;
+	List<int[]> iota, kappa;
 
 	InputArrayTypeStyleClean(int[] param) {}
 
@@ -50,6 +51,13 @@ class InputArrayTypeStyleClean {
 
 	void methodWithArrayParam(@Deprecated int[] a) {
 		a[0] = 1;
+	}
+
+	void multiVarJavaStyle(int[] first, int[] second, boolean cond) {
+		final int[] delta = {1}, gamma = {2};
+		delta[0] = gamma[0];
+		for (int[] epsilon = first, zeta = second; cond; epsilon = zeta)
+			break;
 	}
 
 	void tryWithResources() throws Exception {

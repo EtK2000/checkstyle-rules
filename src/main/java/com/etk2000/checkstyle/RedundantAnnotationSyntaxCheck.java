@@ -1,5 +1,6 @@
 package com.etk2000.checkstyle;
 
+import com.etk2000.checkstyle.ast.AstText;
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
 
@@ -28,7 +29,7 @@ public class RedundantAnnotationSyntaxCheck extends AbstractAstCheck {
 		if (lparen == null)
 			return;
 
-		final var name = AstUtil.annotationName(ast);
+		final var name = AstText.annotationName(ast);
 
 		if (ast.findFirstToken(TokenTypes.RPAREN) != null
 				&& ast.findFirstToken(TokenTypes.ANNOTATION_MEMBER_VALUE_PAIR) == null

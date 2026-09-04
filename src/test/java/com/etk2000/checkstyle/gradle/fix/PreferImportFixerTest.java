@@ -32,6 +32,25 @@ public class PreferImportFixerTest {
 
 	private final PreferImportFixer fixer = new PreferImportFixer();
 
+	/** Fixes the target of {@code mainCase}, a {@code com.example} file with an {@code Entry.java} next to it, after pinning its same-package resolution. */
+	private FixAttempt fixNextToEntry(Path dir, String mainCase) throws Exception {
+		final var dep = TestResources.loadCase(FIX_CONTEXT_TOPIC, "same_package_entry_dep");
+		Files.writeString(dir.resolve("Entry.java"), String.join("\n", dep.inputLines()));
+		final var main = TestResources.loadSnippet(FIX_CONTEXT_TOPIC, mainCase);
+		final var mainFile = dir.resolve("Main.java");
+		final var lines = new ArrayList<>(main.inputLines());
+		Files.writeString(mainFile, String.join("\n", lines));
+		final var maskedLines = FqnResolver.computeLineMasks(lines).maskedLines();
+		assertEquals(FqnResolver.ResolutionSource.SAME_PACKAGE_SIBLING, FqnResolver.resolve(lines, maskedLines, "Entry", mainFile.toString()).source());
+		FixContext.setFilePath(mainFile.toString());
+		try {
+			return fixer.fix(lines, main.firstTarget().line(), main.firstTarget().column());
+		}
+		finally {
+			FixContext.clearFilePath();
+		}
+	}
+
 	@Test
 	public void testDefaultPackageSiblingCollisionSkips(@TempDir Path dir) throws Exception {
 		writeSiblingFile(dir);
@@ -82,6 +101,26 @@ public class PreferImportFixerTest {
 	}
 
 	@Test
+	public void testSamePackageSiblingOutranksOnDemandStaticImport(@TempDir Path dir) throws Exception {
+		final var result = assertInstanceOf(FixResult.class, fixNextToEntry(dir, "static_import_entry_on_demand_main"));
+		assertEquals(List.of("\tEntry field;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testSamePackageSiblingOutranksUnreadableOnDemandStaticImport(@TempDir Path dir) throws Exception {
+		final var result = assertInstanceOf(FixResult.class, fixNextToEntry(dir, "static_import_entry_on_demand_unknown_main"));
+		assertEquals(List.of("\tEntry field;"), result.replacement());
+		assertTrue(result.importsToAdd().isEmpty());
+	}
+
+	@Test
+	public void testSamePackageSiblingSingleStaticImportOfTheNameSkips(@TempDir Path dir) throws Exception {
+		final var result = assertInstanceOf(SkipResult.class, fixNextToEntry(dir, "static_import_entry_single_main"));
+		assertEquals(SkipMessages.IMPORT_SKIP_STATIC_IMPORT_MEMBER_TYPE, result.reason());
+	}
+
+	@Test
 	public void testSamePackageSiblingStrips(@TempDir Path dir) throws Exception {
 		writeSiblingFile(dir);
 		final var main = TestResources.loadSnippet(FIX_CONTEXT_TOPIC, "same_package_sibling_main");
@@ -98,6 +137,12 @@ public class PreferImportFixerTest {
 		finally {
 			FixContext.clearFilePath();
 		}
+	}
+
+	@Test
+	public void testSamePackageSiblingUnreadableSingleStaticImportSkips(@TempDir Path dir) throws Exception {
+		final var result = assertInstanceOf(SkipResult.class, fixNextToEntry(dir, "static_import_entry_single_unknown_main"));
+		assertEquals(SkipMessages.IMPORT_SKIP_STATIC_IMPORT_MEMBER_TYPE_UNKNOWN, result.reason());
 	}
 
 	@Test

@@ -54,6 +54,13 @@ dependencies {
 
 test {
 	useJUnitPlatform()
+	// classes run concurrently, the methods of one class in sequence; a class timing its code or
+	// swapping a JVM-wide setting (Locale, System.out/err) is @Isolated
+	systemProperty 'junit.jupiter.execution.parallel.enabled', 'true'
+	systemProperty 'junit.jupiter.execution.parallel.mode.classes.default', 'concurrent'
+	systemProperty 'junit.jupiter.execution.parallel.mode.default', 'same_thread'
+	// the live set peaks near 500 MB with every core busy, above Gradle's 512 MB default
+	maxHeapSize = '2g'
 }
 
 tasks.withType(Checkstyle).configureEach {
@@ -74,8 +81,17 @@ tasks.register('checkstyleTestResources', Checkstyle) {
 	configProperties = ['minSdk': String.valueOf(Integer.MAX_VALUE)]
 }
 
+tasks.register('checkstyleImportControl', Checkstyle) {
+	source fileTree('src/main/java')
+	include '**/*.java'
+	classpath = files()
+	configFile = file('config/checkstyle/checkstyle-import-control.xml')
+	configDirectory = file('config/checkstyle')
+}
+
 tasks.named('check') {
 	dependsOn 'checkstyleTestResources'
+	dependsOn 'checkstyleImportControl'
 }
 
 // When a Checkstyle task fails because a *check* threw an exception (rather than

@@ -65,7 +65,7 @@ public class RedundantCastFixerTest {
 
 	@Test
 	public void testMalformedNoExpression() throws Exception {
-		assertSkipResult(fixer, TOPIC, "malformed_no_expression", "malformed-cast-no-expression");
+		assertSkipResult(fixer, TOPIC, "malformed_no_expression", "cannot remove the cast: no expression follows it");
 	}
 
 	@Test
@@ -75,7 +75,7 @@ public class RedundantCastFixerTest {
 
 	@Test
 	public void testMultiLineCast() throws Exception {
-		assertSkipResult(fixer, TOPIC, "multi_line_cast", "multi-line-cast");
+		assertSkipResult(fixer, TOPIC, "multi_line_cast", "cannot remove the cast: it spans multiple lines");
 	}
 
 	@Test
@@ -101,6 +101,7 @@ public class RedundantCastFixerTest {
 	@Test
 	public void testSupplementaryIdentifierBeforeOuterParen_doesNotStrip() {
 		final var lines = new ArrayList<>(List.of("Bold𝐀((String) s).y"));
+		// char 7 is the cast's paren, code point 6 since the bold A takes two chars
 		final var result = assertInstanceOf(FixResult.class, fixer.fix(lines, 0, 7));
 		assertEquals("Bold𝐀(s).y", result.replacement().getFirst());
 	}
