@@ -99,13 +99,7 @@
   ```
   The `for` body is two lines (`if` + `stmt`), so it needs braces, but the `if` body is one line
   (`stmt`), so it doesn't
-- Never one-line simple ifs/whiles/fors. Do-while has tier-based formatting:
-  - Tier 2 (body on do line, while on next): simple body (increment/decrement, simple
-    assignment/compound-assignment, single non-chained method call).
-    `do --x;\nwhile (x > 0);`, `do list.add(x);\nwhile (x > 0);`
-  - Tier 3 (body on own line): chained calls, new expressions, complex RHS.
-    `do\n\tcomplex();\nwhile (x > 0);`
-  When body is on the `do` line (tier 2), never use braces
+- Never one-line simple ifs/whiles/fors/do-whiles
 - In switch statements: blank line after `break;` before the next case; no blank line between
   single-line cases (case label + one statement like `return`/`throw`/`yield`). No blank line
   after a braced case (the closing brace provides visual separation)
@@ -177,12 +171,7 @@
 ## Naming & Comments
 
 - Always use understandable variable names (except `i`, `j`, `k` for index iteration)
-- No slop comments. A comment is slop if the same information is already conveyed by the method
-  name, variable names, Javadoc, test name, class name, or surrounding code. This includes
-  section headers that summarize what a Javadoc already says, test markers that restate fixture
-  method names, and parsing comments on self-evident patterns (indexOf, depth-tracking loops).
-  Only TODOs (FIXME for high priority) or explanations of genuinely non-obvious logic. If the
-  code is clear without a comment, don't add one
+- No nonsense comments; only TODOs (FIXME for high priority) or explanations of complex logic
 - Magic numbers/strings should be `static final` variables, consolidated if correlated across
   classes
 
@@ -226,16 +215,8 @@
   Don't add messages when the test name already describes the expected behavior
 - Never remove test cases without asking. When logic changes cause a test to change behavior (e.g.
   clean becomes violation), move it to the correct file rather than deleting it
-- Never remove or rewrite code the user asked for just because it causes a test/check failure. Fix
-  the underlying issue instead. If a new test case exposes a bug in another check, fix that check
-- Never suppress warnings/errors or add any type of suppressions without asking the user
-  first. If an issue is found on any file, investigate whether the check has a bug (missing
-  context handling) before reaching for a suppression
 - After ANY code change (including test resources, comments, reordering), run the full test/check
   suite. See `docs/testing.md` for the correct command
-- Assume the codebase has zero pre-existing compilation errors, test failures, or checkstyle
-  violations. If checks fail after your changes, the failure is caused by your changes.
-  Do not try to verify whether it was pre-existing
 
 # Writing Style
 
